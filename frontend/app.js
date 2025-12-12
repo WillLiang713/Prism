@@ -41,7 +41,7 @@ const elements = {
     // 输出相关
     modelNameA: document.getElementById('modelNameA'),
     statusA: document.getElementById('statusA'),
-    thinkingSectionA: document.getElementById('thinkingA'),
+    thinkingSectionA: document.getElementById('thinkingSectionA'),
     thinkingContentA: document.getElementById('thinkingContentA'),
     responseA: document.getElementById('responseA'),
     tokenCountA: document.getElementById('tokenCountA'),
@@ -49,7 +49,7 @@ const elements = {
 
     modelNameB: document.getElementById('modelNameB'),
     statusB: document.getElementById('statusB'),
-    thinkingSectionB: document.getElementById('thinkingB'),
+    thinkingSectionB: document.getElementById('thinkingSectionB'),
     thinkingContentB: document.getElementById('thinkingContentB'),
     responseB: document.getElementById('responseB'),
     tokenCountB: document.getElementById('tokenCountB'),
