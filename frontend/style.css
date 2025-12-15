@@ -744,7 +744,20 @@ body {
 .modal-content {
     width: min(1200px, 96vw);
     max-height: 92vh;
+    overflow: hidden;
+}
+
+/* 让滚动条只出现在面板内部，避免出界到弹窗容器 */
+.modal-content .config-panel {
+    margin-bottom: 0;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content .config-content {
     overflow: auto;
+    min-height: 0;
 }
 
 .config-header-actions {
