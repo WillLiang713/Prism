@@ -3,7 +3,17 @@ const state = {
     configA: {},
     configB: {},
     isRunning: false,
-    abortControllers: { A: null, B: null }
+    abortControllers: { A: null, B: null },
+    timers: { A: null, B: null },
+    tokenCounter: {
+        displayed: { A: 0, B: 0 },
+        target: { A: 0, B: 0 },
+        final: { A: null, B: null }
+    },
+    thinkingClock: {
+        startsAt: { A: null, B: null },
+        endsAt: { A: null, B: null }
+    }
 };
 
 // DOM元素引用
@@ -40,6 +50,7 @@ const elements = {
     modelNameA: document.getElementById('modelNameA'),
     statusA: document.getElementById('statusA'),
     thinkingSectionA: document.getElementById('thinkingSectionA'),
+    thinkingTimeA: document.getElementById('thinkingTimeA'),
     thinkingContentA: document.getElementById('thinkingContentA'),
     responseA: document.getElementById('responseA'),
     tokenCountA: document.getElementById('tokenCountA'),
@@ -48,6 +59,7 @@ const elements = {
     modelNameB: document.getElementById('modelNameB'),
     statusB: document.getElementById('statusB'),
     thinkingSectionB: document.getElementById('thinkingSectionB'),
+    thinkingTimeB: document.getElementById('thinkingTimeB'),
     thinkingContentB: document.getElementById('thinkingContentB'),
     responseB: document.getElementById('responseB'),
     tokenCountB: document.getElementById('tokenCountB'),
@@ -116,6 +128,14 @@ function bindEvents() {
     elements.sendBtn.addEventListener('click', sendPrompt);
     elements.stopBtn.addEventListener('click', stopGeneration);
     elements.clearBtn.addEventListener('click', clearOutputs);
+
+    // 思考过程折叠/展开
+    ['A', 'B'].forEach(side => {
+        const section = elements[`thinkingSection${side}`];
+        const header = section?.querySelector('.thinking-header');
+        if (!section || !header) return;
+        header.addEventListener('click', () => section.classList.toggle('collapsed'));
+    });
 
     // 监听提供商变化，更新API地址提示
     elements.providerA.addEventListener('change', () => updateApiUrlPlaceholder('A'));
@@ -238,9 +258,15 @@ function clearOutputs() {
     ['A', 'B'].forEach(side => {
         elements[`response${side}`].textContent = '';
         elements[`thinkingContent${side}`].textContent = '';
-        elements[`thinkingSection${side}`].style.display = 'none';
+        elements[`thinkingTime${side}`].textContent = '';
+        const thinkingSection = elements[`thinkingSection${side}`];
+        thinkingSection.classList.remove('collapsed');
+        thinkingSection.style.display = 'none';
         elements[`tokenCount${side}`].textContent = '0 tokens';
-        elements[`timeCost${side}`].textContent = '0ms';
+        elements[`timeCost${side}`].textContent = '0.0s';
+        state.tokenCounter.displayed[side] = 0;
+        state.tokenCounter.target[side] = 0;
+        state.tokenCounter.final[side] = null;
         updateStatus(side, 'ready', '就绪');
     });
 }
@@ -250,6 +276,13 @@ function updateStatus(side, statusClass, statusText) {
     const statusEl = elements[`status${side}`];
     statusEl.className = `status ${statusClass}`;
     statusEl.textContent = statusText;
+}
+
+function estimateTokensFromText(text) {
+    if (!text) return 0;
+    const cjkCount = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+    const asciiCount = Math.max(0, text.length - cjkCount);
+    return Math.max(0, Math.ceil(cjkCount + asciiCount / 4));
 }
 
 // 发送提示词
@@ -282,12 +315,10 @@ async function sendPrompt() {
     elements.sendBtn.disabled = true;
     elements.stopBtn.disabled = false;
 
-    // 同时调用两个模型
-    const startTime = Date.now();
-
+    // 同时调用两个模型（分别计时）
     Promise.all([
-        callModel('A', prompt, configA, startTime),
-        callModel('B', prompt, configB, startTime)
+        callModel('A', prompt, configA, Date.now()),
+        callModel('B', prompt, configB, Date.now())
     ]).finally(() => {
         state.isRunning = false;
         elements.sendBtn.disabled = false;
@@ -302,6 +333,10 @@ function stopGeneration() {
             state.abortControllers[side].abort();
             state.abortControllers[side] = null;
             updateStatus(side, 'ready', '已停止');
+        }
+        if (state.timers[side]) {
+            clearInterval(state.timers[side]);
+            state.timers[side] = null;
         }
     });
 
@@ -325,10 +360,45 @@ function getConfig(side) {
 // 调用模型API
 async function callModel(side, prompt, config, startTime) {
     updateStatus(side, 'loading', '生成中...');
+    state.thinkingClock.startsAt[side] = null;
+    state.thinkingClock.endsAt[side] = null;
+    elements[`thinkingTime${side}`].textContent = '';
+    elements[`timeCost${side}`].textContent = '0.0s';
+    state.tokenCounter.displayed[side] = 0;
+    state.tokenCounter.target[side] = 0;
+    state.tokenCounter.final[side] = null;
+    elements[`tokenCount${side}`].textContent = '0 tokens';
 
     // 创建AbortController用于取消请求
     const abortController = new AbortController();
     state.abortControllers[side] = abortController;
+
+    if (state.timers[side]) {
+        clearInterval(state.timers[side]);
+        state.timers[side] = null;
+    }
+
+    state.timers[side] = setInterval(() => {
+        const thinkingStart = state.thinkingClock.startsAt[side];
+        const thinkingEnd = state.thinkingClock.endsAt[side];
+        if (thinkingStart) {
+            const thinkingSec = ((thinkingEnd || Date.now()) - thinkingStart) / 1000;
+            elements[`thinkingTime${side}`].textContent = `${thinkingSec.toFixed(1)}s`;
+        }
+
+        const finalTokens = state.tokenCounter.final[side];
+        const targetTokens = state.tokenCounter.target[side] || 0;
+        let displayedTokens = state.tokenCounter.displayed[side] || 0;
+
+        if (Number.isFinite(finalTokens) && displayedTokens > finalTokens) displayedTokens = finalTokens;
+        if (displayedTokens < targetTokens) {
+            displayedTokens += Math.max(1, Math.ceil((targetTokens - displayedTokens) / 4));
+            if (displayedTokens > targetTokens) displayedTokens = targetTokens;
+        }
+
+        state.tokenCounter.displayed[side] = displayedTokens;
+        elements[`tokenCount${side}`].textContent = `${displayedTokens} tokens`;
+    }, 200);
 
     try {
         // 根据提供商构建请求
@@ -348,6 +418,13 @@ async function callModel(side, prompt, config, startTime) {
         // 处理流式响应
         await handleStreamResponse(side, response, config, startTime);
 
+        const finalTokens = state.tokenCounter.final[side];
+        if (Number.isFinite(finalTokens) && finalTokens >= 0) {
+            state.tokenCounter.displayed[side] = finalTokens;
+            state.tokenCounter.target[side] = finalTokens;
+            elements[`tokenCount${side}`].textContent = `${finalTokens} tokens`;
+        }
+
         updateStatus(side, 'complete', '完成');
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -359,6 +436,10 @@ async function callModel(side, prompt, config, startTime) {
         }
     } finally {
         state.abortControllers[side] = null;
+        if (state.timers[side]) {
+            clearInterval(state.timers[side]);
+            state.timers[side] = null;
+        }
     }
 }
 
@@ -437,6 +518,9 @@ function buildRequest(config, prompt) {
 
         const modelLower = (model || '').toLowerCase();
 
+        // OpenAI/兼容接口：让流式最后一个包返回 usage，便于显示 tokens
+        body.stream_options = body.stream_options || { include_usage: true };
+
         // OpenAI的思考模式（如果支持）
         if (thinking && modelLower.includes('o1')) {
             // o1系列模型的特殊处理
@@ -447,7 +531,6 @@ function buildRequest(config, prompt) {
         // 参考：extra_body={"enable_thinking": True} => 实际HTTP请求体根级字段 enable_thinking
         if (thinking && modelLower.includes('qwen')) {
             body.enable_thinking = true;
-            body.stream_options = { include_usage: true };
         }
 
         // DeepSeek（OpenAI兼容接口）的思考模式：通过非标准参数 thinking 开启
@@ -519,6 +602,10 @@ async function handleStreamResponse(side, response, config, startTime) {
                         const result = parseAnthropicChunk(json);
                         if (result.thinking) {
                             showThinkingSection();
+                            if (!state.thinkingClock.startsAt[side]) {
+                                state.thinkingClock.startsAt[side] = Date.now();
+                            }
+                            state.thinkingClock.endsAt[side] = Date.now();
                             thinkingText += result.thinking;
                             elements[`thinkingContent${side}`].textContent = thinkingText;
                         }
@@ -526,14 +613,26 @@ async function handleStreamResponse(side, response, config, startTime) {
                             responseText += result.content;
                             renderMarkdown(side, responseText);
                         }
-                        if (result.tokens) {
+                        if (result.content) {
+                            state.tokenCounter.target[side] = Math.max(
+                                state.tokenCounter.target[side] || 0,
+                                estimateTokensFromText(responseText)
+                            );
+                        }
+                        if (Number.isFinite(result.tokens) && result.tokens >= 0) {
                             tokenCount = result.tokens;
+                            state.tokenCounter.final[side] = tokenCount;
+                            state.tokenCounter.target[side] = Math.max(state.tokenCounter.target[side] || 0, tokenCount);
                         }
                     } else {
                         // OpenAI格式
                         const result = parseOpenAIChunk(json);
                         if (result.thinking) {
                             showThinkingSection();
+                            if (!state.thinkingClock.startsAt[side]) {
+                                state.thinkingClock.startsAt[side] = Date.now();
+                            }
+                            state.thinkingClock.endsAt[side] = Date.now();
                             thinkingText += result.thinking;
                             elements[`thinkingContent${side}`].textContent = thinkingText;
                         }
@@ -541,15 +640,22 @@ async function handleStreamResponse(side, response, config, startTime) {
                             responseText += result.content;
                             renderMarkdown(side, responseText);
                         }
-                        if (result.tokens) {
+                        if (result.content) {
+                            state.tokenCounter.target[side] = Math.max(
+                                state.tokenCounter.target[side] || 0,
+                                estimateTokensFromText(responseText)
+                            );
+                        }
+                        if (Number.isFinite(result.tokens) && result.tokens >= 0) {
                             tokenCount = result.tokens;
+                            state.tokenCounter.final[side] = tokenCount;
+                            state.tokenCounter.target[side] = Math.max(state.tokenCounter.target[side] || 0, tokenCount);
                         }
                     }
 
                     // 更新统计信息
-                    const elapsed = Date.now() - startTime;
-                    elements[`tokenCount${side}`].textContent = `${tokenCount} tokens`;
-                    elements[`timeCost${side}`].textContent = `${elapsed}ms`;
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    elements[`timeCost${side}`].textContent = `${elapsed.toFixed(1)}s`;
 
                 } catch (e) {
                     console.error('解析JSON失败:', e, data);

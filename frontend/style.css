@@ -304,6 +304,49 @@ body {
     margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+}
+
+.thinking-time {
+    font-size: 12px;
+    color: #777;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: nowrap;
+}
+
+.thinking-header > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.thinking-header > span:first-child::before {
+    content: '▾';
+    color: #888;
+    font-size: 12px;
+    display: inline-block;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.thinking-header:hover > span:first-child::before {
+    color: #555;
+}
+
+.thinking-section.collapsed .thinking-header {
+    margin-bottom: 0;
+}
+
+.thinking-section.collapsed .thinking-header > span:first-child::before {
+    transform: rotate(-90deg);
+}
+
+.thinking-section.collapsed .thinking-content {
+    display: none;
 }
 
 .thinking-content {
