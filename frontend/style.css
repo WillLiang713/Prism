@@ -476,17 +476,6 @@ body {
     flex-wrap: wrap;
 }
 
-.chat-model {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    padding: 8px 10px;
-    background: white;
-    border: 1px solid #e6e6e6;
-    border-radius: 12px;
-}
-
 .chat-actions {
     margin-left: auto;
     display: inline-flex;
@@ -507,10 +496,6 @@ body {
     background: #4a4a4a;
 }
 
-.chat-model:nth-child(2) .model-badge {
-    background: #1565c0;
-}
-
 .model-name {
     font-size: 13px;
     color: #666;
@@ -521,6 +506,65 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.header-model-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.model-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid #e6e6e6;
+    border-radius: 999px;
+    background: white;
+    min-width: 0;
+}
+
+.chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    flex: 0 0 auto;
+}
+
+.model-chip-a .chip-dot {
+    background: #4a4a4a;
+}
+
+.model-chip-b .chip-dot {
+    background: #1565c0;
+}
+
+.chip-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+    flex: 0 0 auto;
+}
+
+.chip-id {
+    font-size: 13px;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: min(420px, 34vw);
+}
+
+.model-chip .status {
+    padding: 3px 8px;
+}
+
+.model-chip .status::before {
+    display: none;
 }
 
 .status {

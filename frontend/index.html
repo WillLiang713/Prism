@@ -22,15 +22,19 @@
         <div class="chat-layout">
             <section class="chat-panel">
                 <div class="chat-header">
-                    <div class="chat-model">
-                        <span class="model-badge">A</span>
-                        <span class="model-name" id="modelNameA">未配置</span>
-                        <span class="status" id="statusA">就绪</span>
-                    </div>
-                    <div class="chat-model">
-                        <span class="model-badge">B</span>
-                        <span class="model-name" id="modelNameB">未配置</span>
-                        <span class="status" id="statusB">就绪</span>
+                    <div class="header-model-chips" aria-label="当前模型">
+                        <div class="model-chip model-chip-a">
+                            <span class="chip-dot" aria-hidden="true"></span>
+                            <span class="chip-label">A</span>
+                            <span class="chip-id" id="modelNameA">未配置</span>
+                            <span class="status" id="statusA">就绪</span>
+                        </div>
+                        <div class="model-chip model-chip-b">
+                            <span class="chip-dot" aria-hidden="true"></span>
+                            <span class="chip-label">B</span>
+                            <span class="chip-id" id="modelNameB">未配置</span>
+                            <span class="status" id="statusB">就绪</span>
+                        </div>
                     </div>
                     <div class="chat-actions">
                         <button class="btn btn-secondary" id="openConfigBtn">配置</button>
