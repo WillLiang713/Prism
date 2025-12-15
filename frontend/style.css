@@ -852,12 +852,6 @@ body {
     min-height: 0;
 }
 
-.chat-messages:empty::before {
-    content: '新建话题后开始对话...';
-    color: #999;
-    font-style: italic;
-}
-
 .turn {
     display: flex;
     flex-direction: column;
