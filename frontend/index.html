@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI模型对比工具</title>
+    <title>AI模型对比</title>
     <link rel="stylesheet" href="style.css">
     <!-- Markdown解析库 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -18,150 +18,150 @@
 </head>
 <body>
     <div class="container">
-        <!-- 配置面板 -->
-        <div class="config-panel" id="configPanel">
-            <div class="config-header">
-                <h2>配置面板</h2>
-                <button class="toggle-btn" id="toggleConfig">收起</button>
-            </div>
-            <div class="config-content" id="configContent">
-                <div class="config-row">
-                    <!-- 左侧AI配置 -->
-                    <div class="config-section">
-                        <h3>AI模型 A</h3>
-                        <div class="form-group">
-                            <label>API提供商</label>
-                            <select id="providerA">
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
-                                <option value="custom">自定义</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>API密钥</label>
-                            <input type="password" id="apiKeyA" placeholder="输入API密钥">
-                        </div>
-                        <div class="form-group">
-                            <label>模型</label>
-                            <input type="text" id="modelA" placeholder="例如: gpt-4">
-                        </div>
-                        <div class="form-group">
-                            <label>API地址（自定义时）</label>
-                            <input type="text" id="apiUrlA" placeholder="https://api.example.com/v1/chat/completions">
-                        </div>
-                        <div class="form-group">
-                            <label>系统提示词（可选）</label>
-                            <textarea id="systemPromptA" rows="3" placeholder="例如：你是一个专业的编程助手，擅长解释代码和提供最佳实践建议"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="thinkingA">
-                                启用思考模式
-                            </label>
+        <!-- 聊天区域 -->
+        <div class="chat-layout">
+            <!-- 左侧话题与历史 -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-header">
+                        <h3>话题</h3>
+                        <div class="sidebar-actions">
+                            <button class="btn btn-secondary btn-small" id="newTopicBtn">新建</button>
+                            <button class="btn btn-secondary btn-small" id="deleteTopicBtn" title="删除当前话题">删除</button>
                         </div>
                     </div>
+                    <div class="topic-list" id="topicList"></div>
+                </div>
 
-                    <!-- 右侧AI配置 -->
-                    <div class="config-section">
-                        <h3>AI模型 B</h3>
-                        <div class="form-group">
-                            <label>API提供商</label>
-                            <select id="providerB">
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
-                                <option value="custom">自定义</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>API密钥</label>
-                            <input type="password" id="apiKeyB" placeholder="输入API密钥">
-                        </div>
-                        <div class="form-group">
-                            <label>模型</label>
-                            <input type="text" id="modelB" placeholder="例如: claude-3-opus">
-                        </div>
-                        <div class="form-group">
-                            <label>API地址（自定义时）</label>
-                            <input type="text" id="apiUrlB" placeholder="https://api.example.com/v1/messages">
-                        </div>
-                        <div class="form-group">
-                            <label>系统提示词（可选）</label>
-                            <textarea id="systemPromptB" rows="3" placeholder="例如：你是一个专业的编程助手，擅长解释代码和提供最佳实践建议"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="thinkingB">
-                                启用思考模式
-                            </label>
-                        </div>
+                <div class="sidebar-divider"></div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-header">
+                        <h3>历史</h3>
+                    </div>
+                    <div class="history-list" id="historyList"></div>
+                </div>
+            </aside>
+
+            <!-- 右侧对话流 -->
+            <section class="chat-panel">
+                <div class="chat-header">
+                    <div class="chat-model">
+                        <span class="model-badge">A</span>
+                        <span class="model-name" id="modelNameA">未配置</span>
+                        <span class="status" id="statusA">就绪</span>
+                    </div>
+                    <div class="chat-model">
+                        <span class="model-badge">B</span>
+                        <span class="model-name" id="modelNameB">未配置</span>
+                        <span class="status" id="statusB">就绪</span>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn btn-secondary" id="openConfigBtn">配置</button>
                     </div>
                 </div>
-                <div class="config-actions">
-                    <button class="btn btn-primary" id="saveConfig">保存配置</button>
-                    <button class="btn btn-secondary" id="clearConfig">清除配置</button>
+                <div class="chat-messages" id="chatMessages"></div>
+
+                <!-- 输入区域（固定在聊天卡片底部） -->
+                <div class="chat-composer">
+                    <div class="composer-bar">
+                        <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
+                        <button class="btn btn-primary action-btn" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
+                            <span class="action-label label-send">发送</span>
+                            <span class="action-label label-stop">停止</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
+            </section>
         </div>
+    </div>
 
-        <!-- 输入区域 -->
-        <div class="input-section">
-            <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
-            <div class="input-actions">
-                <button class="btn btn-primary" id="sendBtn">发送</button>
-                <button class="btn btn-secondary" id="stopBtn" disabled>停止</button>
-                <button class="btn btn-secondary" id="clearBtn">清空</button>
-            </div>
-        </div>
-
-        <!-- 对比输出区域 -->
-        <div class="comparison-section">
-            <!-- 左侧AI输出 -->
-            <div class="output-panel">
-                <div class="output-header">
-                    <h3>模型 A</h3>
-                    <span class="model-name" id="modelNameA">未配置</span>
-                    <span class="status" id="statusA">就绪</span>
+    <!-- 配置弹窗 -->
+    <div class="modal-overlay" id="configModal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="config-panel" id="configPanel">
+                <div class="config-header">
+                    <h2>配置</h2>
+                    <div class="config-header-actions">
+                        <button class="toggle-btn" id="closeConfigBtn">关闭</button>
+                    </div>
                 </div>
-                <div class="output-content">
-                    <div class="thinking-section" id="thinkingSectionA" style="display: none;">
-                        <div class="thinking-header">
-                            <span>思考过程</span>
-                            <span class="thinking-time" id="thinkingTimeA"></span>
+                <div class="config-content" id="configContent">
+                    <div class="config-row">
+                        <!-- 左侧AI配置 -->
+                        <div class="config-section">
+                            <h3>模型 A</h3>
+                            <div class="form-group">
+                                <label>API提供商</label>
+                                <select id="providerA">
+                                    <option value="openai">OpenAI</option>
+                                    <option value="anthropic">Anthropic</option>
+                                    <option value="custom">自定义</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>API密钥</label>
+                                <input type="password" id="apiKeyA" placeholder="输入API密钥">
+                            </div>
+                            <div class="form-group">
+                                <label>模型</label>
+                                <input type="text" id="modelA" placeholder="例如: gpt-4">
+                            </div>
+                            <div class="form-group">
+                                <label>API地址（自定义时）</label>
+                                <input type="text" id="apiUrlA" placeholder="https://api.example.com/v1/chat/completions">
+                            </div>
+                            <div class="form-group">
+                                <label>系统提示词（可选）</label>
+                                <textarea id="systemPromptA" rows="3" placeholder="例如：你是一个专业的编程助手，擅长解释代码和提供最佳实践建议"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="thinkingA">
+                                    启用思考模式
+                                </label>
+                            </div>
                         </div>
-                        <div class="thinking-content" id="thinkingContentA"></div>
-                    </div>
-                    <div class="response-section">
-                        <div class="response-content" id="responseA"></div>
-                    </div>
-                </div>
-                <div class="output-footer">
-                    <span class="token-count" id="tokenCountA">0 tokens</span>
-                    <span class="time-cost" id="timeCostA">0.0s</span>
-                </div>
-            </div>
 
-            <!-- 右侧AI输出 -->
-            <div class="output-panel">
-                <div class="output-header">
-                    <h3>模型 B</h3>
-                    <span class="model-name" id="modelNameB">未配置</span>
-                    <span class="status" id="statusB">就绪</span>
-                </div>
-                <div class="output-content">
-                    <div class="thinking-section" id="thinkingSectionB" style="display: none;">
-                        <div class="thinking-header">
-                            <span>思考过程</span>
-                            <span class="thinking-time" id="thinkingTimeB"></span>
+                        <!-- 右侧AI配置 -->
+                        <div class="config-section">
+                            <h3>模型 B</h3>
+                            <div class="form-group">
+                                <label>API提供商</label>
+                                <select id="providerB">
+                                    <option value="openai">OpenAI</option>
+                                    <option value="anthropic">Anthropic</option>
+                                    <option value="custom">自定义</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>API密钥</label>
+                                <input type="password" id="apiKeyB" placeholder="输入API密钥">
+                            </div>
+                            <div class="form-group">
+                                <label>模型</label>
+                                <input type="text" id="modelB" placeholder="例如: claude-3-opus">
+                            </div>
+                            <div class="form-group">
+                                <label>API地址（自定义时）</label>
+                                <input type="text" id="apiUrlB" placeholder="https://api.example.com/v1/messages">
+                            </div>
+                            <div class="form-group">
+                                <label>系统提示词（可选）</label>
+                                <textarea id="systemPromptB" rows="3" placeholder="例如：你是一个专业的编程助手，擅长解释代码和提供最佳实践建议"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="thinkingB">
+                                    启用思考模式
+                                </label>
+                            </div>
                         </div>
-                        <div class="thinking-content" id="thinkingContentB"></div>
                     </div>
-                    <div class="response-section">
-                        <div class="response-content" id="responseB"></div>
+                    <div class="config-actions">
+                        <button class="btn btn-primary" id="saveConfig">保存</button>
+                        <button class="btn btn-secondary" id="clearConfig">清除</button>
                     </div>
-                </div>
-                <div class="output-footer">
-                    <span class="token-count" id="tokenCountB">0 tokens</span>
-                    <span class="time-cost" id="timeCostB">0.0s</span>
                 </div>
             </div>
         </div>
