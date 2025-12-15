@@ -1137,7 +1137,10 @@ async function fetchAndUpdateModels(side) {
         slot.models = ids;
         setModelOptions(key, ids);
         setModelHint(key, `已自动获取 ${ids.length} 个模型 ID（可下拉选择或直接输入）。`);
-        updateModelDropdownFilter(key);
+        // 只在下拉框已经打开的情况下更新显示，不自动打开
+        if (isModelDropdownOpen(key)) {
+            renderModelDropdown(key, elements[`model${key}`]?.value || '');
+        }
         slot.lastKey = fetchKey;
         slot.lastFetchedAt = now;
     } catch (e) {
