@@ -7,6 +7,10 @@ const STORAGE_KEYS = {
 const state = {
     isRunning: false,
     abortControllers: { A: null, B: null },
+    modelFetch: {
+        A: { timer: null, inFlight: false, lastKey: '', lastFetchedAt: 0, models: [], datalistFillToken: 0, dropdownLimit: 120 },
+        B: { timer: null, inFlight: false, lastKey: '', lastFetchedAt: 0, models: [], datalistFillToken: 0, dropdownLimit: 120 }
+    },
     chat: {
         topics: [],
         activeTopicId: null,
@@ -35,7 +39,6 @@ const elements = {
 
     // 话题/历史
     newTopicBtn: document.getElementById('newTopicBtn'),
-    deleteTopicBtn: document.getElementById('deleteTopicBtn'),
     topicList: document.getElementById('topicList'),
     historyList: document.getElementById('historyList'),
     chatMessages: document.getElementById('chatMessages'),
@@ -50,6 +53,10 @@ const elements = {
     apiUrlA: document.getElementById('apiUrlA'),
     systemPromptA: document.getElementById('systemPromptA'),
     thinkingA: document.getElementById('thinkingA'),
+    modelListA: document.getElementById('modelListA'),
+    modelHintA: document.getElementById('modelHintA'),
+    modelDropdownA: document.getElementById('modelDropdownA'),
+    modelDropdownBtnA: document.getElementById('modelDropdownBtnA'),
 
     // 模型B配置
     providerB: document.getElementById('providerB'),
@@ -61,6 +68,10 @@ const elements = {
     apiUrlB: document.getElementById('apiUrlB'),
     systemPromptB: document.getElementById('systemPromptB'),
     thinkingB: document.getElementById('thinkingB'),
+    modelListB: document.getElementById('modelListB'),
+    modelHintB: document.getElementById('modelHintB'),
+    modelDropdownB: document.getElementById('modelDropdownB'),
+    modelDropdownBtnB: document.getElementById('modelDropdownBtnB'),
 
     // 头部状态
     modelNameA: document.getElementById('modelNameA'),
@@ -149,12 +160,172 @@ function renderMarkdownToElement(element, text) {
     if (typeof marked !== 'undefined') {
         try {
             element.innerHTML = marked.parse(text || '');
+            enhanceRenderedMarkdown(element);
             return;
         } catch (e) {
             console.error('Markdown渲染失败:', e);
         }
     }
     element.textContent = text || '';
+}
+
+function enhanceRenderedMarkdown(root) {
+    if (!root) return;
+    addCopyButtonsToCodeBlocks(root);
+}
+
+function getLanguageFromCodeEl(codeEl) {
+    const className = (codeEl?.className || '').toString();
+    const m = className.match(/(?:^|\\s)(?:language|lang)-([\\w-]+)(?:\\s|$)/i);
+    return m?.[1] || '';
+}
+
+async function copyTextToClipboard(text) {
+    const content = (text ?? '').toString();
+    if (!content) return false;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(content);
+            return true;
+        } catch {
+            // 回退到 execCommand
+        }
+    }
+
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.value = content;
+        textarea.setAttribute('readonly', 'readonly');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return !!ok;
+    } catch {
+        return false;
+    }
+}
+
+function createCopyButton(getText, options = {}) {
+    const {
+        className = 'message-copy-btn',
+        label = '复制',
+        loadingText = '复制…',
+        successText = '已复制',
+        errorText = '失败',
+        resetDelayMs = 900,
+        icon = false,
+    } = options || {};
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = className;
+
+    if (icon) {
+        btn.classList.add('copy-icon-btn');
+        btn.setAttribute('aria-label', label);
+        btn.title = label;
+
+        const mkSvg = (svgClass, inner) => {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('aria-hidden', 'true');
+            svg.classList.add('icon', svgClass);
+            svg.innerHTML = inner;
+            return svg;
+        };
+
+        btn.appendChild(mkSvg('icon-copy', '<rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path>'));
+        btn.appendChild(mkSvg('icon-check', '<path d="M20 6L9 17l-5-5"></path>'));
+        btn.appendChild(mkSvg('icon-x', '<path d="M18 6L6 18M6 6l12 12"></path>'));
+    } else {
+        btn.textContent = label;
+    }
+
+    btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const original = icon ? (btn.getAttribute('aria-label') || label) : btn.textContent;
+        btn.disabled = true;
+        if (icon) {
+            btn.dataset.copyState = 'loading';
+            btn.title = loadingText;
+        } else {
+            btn.textContent = loadingText;
+        }
+
+        const text = typeof getText === 'function' ? getText() : getText;
+        const ok = await copyTextToClipboard(text);
+        if (icon) {
+            btn.dataset.copyState = ok ? 'success' : 'error';
+            btn.title = ok ? successText : errorText;
+        } else {
+            btn.textContent = ok ? successText : errorText;
+        }
+
+        setTimeout(() => {
+            btn.disabled = false;
+            if (icon) {
+                delete btn.dataset.copyState;
+                btn.title = original;
+            } else {
+                btn.textContent = original;
+            }
+        }, resetDelayMs);
+    });
+
+    return btn;
+}
+
+function addCopyButtonsToCodeBlocks(root) {
+    const codeBlocks = root.querySelectorAll('pre > code');
+    for (const codeEl of codeBlocks) {
+        const preEl = codeEl.parentElement;
+        if (!preEl || preEl.tagName !== 'PRE') continue;
+        if (preEl.closest('.code-block')) continue;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'code-toolbar';
+
+        const lang = document.createElement('span');
+        lang.className = 'code-lang';
+        const language = getLanguageFromCodeEl(codeEl);
+        lang.textContent = language ? language : 'code';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-copy-btn';
+        btn.textContent = '复制';
+
+        btn.addEventListener('click', async () => {
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '复制中...';
+            const ok = await copyTextToClipboard(codeEl.textContent || '');
+            btn.textContent = ok ? '已复制' : '复制失败';
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = original;
+            }, 900);
+        });
+
+        toolbar.appendChild(lang);
+        toolbar.appendChild(btn);
+
+        const parent = preEl.parentNode;
+        if (!parent) continue;
+        parent.insertBefore(wrapper, preEl);
+        wrapper.appendChild(toolbar);
+        wrapper.appendChild(preEl);
+    }
 }
 
 function getProxyPrefix() {
@@ -341,25 +512,67 @@ function bindEvents() {
         elements.promptInput.focus();
     });
 
-    elements.deleteTopicBtn.addEventListener('click', () => {
-        const topic = getActiveTopic();
-        if (!topic) return;
-        if (state.isRunning && !confirm('正在生成中，仍要删除话题并停止当前生成吗？')) return;
-        if (!confirm(`确定要删除话题「${topic.title}」吗？此操作不可恢复。`)) return;
-        if (state.isRunning) stopGeneration();
-        deleteTopic(topic.id);
-        renderAll();
+    // 监听提供商变化，更新API地址提示 + 自动获取模型列表
+    elements.providerA.addEventListener('change', () => {
+        updateProviderUi('A');
+        updateModelHint('A');
+        scheduleFetchModels('A', 0);
+    });
+    elements.providerB.addEventListener('change', () => {
+        updateProviderUi('B');
+        updateModelHint('B');
+        scheduleFetchModels('B', 0);
+    });
+    elements.customFormatA?.addEventListener('change', () => {
+        updateApiUrlPlaceholder('A');
+        updateModelHint('A');
+        scheduleFetchModels('A', 200);
+    });
+    elements.customFormatB?.addEventListener('change', () => {
+        updateApiUrlPlaceholder('B');
+        updateModelHint('B');
+        scheduleFetchModels('B', 200);
     });
 
-    // 监听提供商变化，更新API地址提示
-    elements.providerA.addEventListener('change', () => updateProviderUi('A'));
-    elements.providerB.addEventListener('change', () => updateProviderUi('B'));
-    elements.customFormatA?.addEventListener('change', () => updateApiUrlPlaceholder('A'));
-    elements.customFormatB?.addEventListener('change', () => updateApiUrlPlaceholder('B'));
+    elements.apiKeyA?.addEventListener('input', () => {
+        updateModelHint('A');
+        scheduleFetchModels('A', 400);
+    });
+    elements.apiKeyB?.addEventListener('input', () => {
+        updateModelHint('B');
+        scheduleFetchModels('B', 400);
+    });
+    elements.apiUrlA?.addEventListener('input', () => {
+        updateModelHint('A');
+        scheduleFetchModels('A', 500);
+    });
+    elements.apiUrlB?.addEventListener('input', () => {
+        updateModelHint('B');
+        scheduleFetchModels('B', 500);
+    });
 
     // 监听模型名称变化
-    elements.modelA.addEventListener('input', updateModelNames);
-    elements.modelB.addEventListener('input', updateModelNames);
+    elements.modelA.addEventListener('input', () => {
+        updateModelNames();
+        updateModelDropdownFilter('A');
+    });
+    elements.modelB.addEventListener('input', () => {
+        updateModelNames();
+        updateModelDropdownFilter('B');
+    });
+
+    elements.modelDropdownBtnA?.addEventListener('click', () => toggleModelDropdown('A'));
+    elements.modelDropdownBtnB?.addEventListener('click', () => toggleModelDropdown('B'));
+    elements.modelA?.addEventListener('focus', () => updateModelDropdownFilter('A'));
+    elements.modelB?.addEventListener('focus', () => updateModelDropdownFilter('B'));
+
+    document.addEventListener('mousedown', (e) => {
+        const t = e.target;
+        if (!(t instanceof Node)) return;
+        if (t.closest?.('.model-picker')) return;
+        closeModelDropdown('A');
+        closeModelDropdown('B');
+    });
 
     // Enter 发送（Shift+Enter 换行）
     elements.promptInput.addEventListener('keydown', (e) => {
@@ -377,6 +590,10 @@ function openConfigModal() {
     elements.configModal.classList.add('open');
     elements.configModal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    updateModelHint('A');
+    updateModelHint('B');
+    scheduleFetchModels('A', 0);
+    scheduleFetchModels('B', 0);
 }
 
 function closeConfigModal() {
@@ -384,6 +601,8 @@ function closeConfigModal() {
     elements.configModal.classList.remove('open');
     elements.configModal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    closeModelDropdown('A');
+    closeModelDropdown('B');
 }
 
 function autoGrowPromptInput() {
@@ -438,6 +657,7 @@ function updateProviderUi(side) {
     }
 
     updateApiUrlPlaceholder(side);
+    updateModelHint(side);
 }
 
 function updateApiUrlPlaceholder(side) {
@@ -461,6 +681,331 @@ function updateModelNames() {
     const modelB = elements.modelB.value || '未配置';
     elements.modelNameA.textContent = modelA;
     elements.modelNameB.textContent = modelB;
+}
+
+function getConfigFromForm(side) {
+    return {
+        provider: elements[`provider${side}`]?.value || 'openai',
+        customFormat: elements[`customFormat${side}`]?.value || 'openai',
+        apiKey: elements[`apiKey${side}`]?.value || '',
+        apiUrl: elements[`apiUrl${side}`]?.value || ''
+    };
+}
+
+function setModelHint(side, text) {
+    const el = elements[`modelHint${side}`];
+    if (!el) return;
+    el.textContent = text || '';
+}
+
+function updateModelHint(side) {
+    const config = getConfigFromForm(side);
+    const provider = (config.provider || 'openai').toString();
+    const apiKey = (config.apiKey || '').trim();
+    const apiUrl = (config.apiUrl || '').trim();
+
+    if (provider === 'custom' && !apiUrl) {
+        setModelHint(side, '提示：这里填写模型 ID；自定义提供商需先填写 API 地址，之后会自动获取可用模型列表（也可手动输入）。');
+        return;
+    }
+
+    if (provider !== 'custom' && !apiKey) {
+        setModelHint(side, '提示：这里填写模型 ID；填写 API Key 后会自动获取可用模型列表（也可手动输入）。');
+        return;
+    }
+
+    setModelHint(side, '提示：这里填写模型 ID；将自动获取可用模型列表（可下拉选择或直接输入）。');
+}
+
+function ensureModelListElement(side) {
+    const existing = elements[`modelList${side}`] || document.getElementById(`modelList${side}`);
+    if (existing) return existing;
+    const dl = document.createElement('datalist');
+    dl.id = `modelList${side}`;
+    document.body.appendChild(dl);
+    return dl;
+}
+
+function setModelOptions(side, modelIds) {
+    const listEl = ensureModelListElement(side);
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    const models = Array.isArray(modelIds) ? modelIds : [];
+
+    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    if (!slot) return;
+    const token = ++slot.datalistFillToken;
+
+    const batchSize = 200;
+    const appendBatch = (startIdx) => {
+        if (slot.datalistFillToken !== token) return;
+        const frag = document.createDocumentFragment();
+        for (let i = startIdx; i < Math.min(models.length, startIdx + batchSize); i++) {
+            const opt = document.createElement('option');
+            opt.value = models[i];
+            frag.appendChild(opt);
+        }
+        listEl.appendChild(frag);
+
+        const next = startIdx + batchSize;
+        if (next >= models.length) return;
+
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => appendBatch(next), { timeout: 800 });
+        } else {
+            setTimeout(() => appendBatch(next), 0);
+        }
+    };
+
+    appendBatch(0);
+}
+
+function getCachedModelIds(side) {
+    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    return Array.isArray(slot?.models) ? slot.models : [];
+}
+
+function getModelDropdownLimit(side) {
+    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    if (!slot) return 120;
+    return Math.max(40, Math.min(2000, Number(slot.dropdownLimit) || 120));
+}
+
+function resetModelDropdownLimit(side) {
+    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    if (!slot) return;
+    slot.dropdownLimit = 120;
+}
+
+function increaseModelDropdownLimit(side, delta = 200) {
+    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    if (!slot) return;
+    slot.dropdownLimit = getModelDropdownLimit(side) + Math.max(40, Number(delta) || 200);
+}
+
+function isModelDropdownOpen(side) {
+    const el = elements[`modelDropdown${side}`];
+    return !!el && !el.hidden;
+}
+
+function setModelDropdownButtonState(side, isOpen) {
+    const btn = elements[`modelDropdownBtn${side}`];
+    if (!btn) return;
+    btn.classList.toggle('open', !!isOpen);
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function closeModelDropdown(side) {
+    const el = elements[`modelDropdown${side}`];
+    if (!el) return;
+    el.onscroll = null;
+    el.hidden = true;
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '';
+    setModelDropdownButtonState(side, false);
+}
+
+function renderModelDropdown(side, filterText) {
+    const dropdownEl = elements[`modelDropdown${side}`];
+    if (!dropdownEl) return;
+
+    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    const isLoading = !!slot?.inFlight;
+    const all = getCachedModelIds(side);
+    const q = (filterText || '').toString().trim().toLowerCase();
+    const models = q ? all.filter(m => m.toLowerCase().includes(q)) : all;
+    const limit = getModelDropdownLimit(side);
+
+    dropdownEl.innerHTML = '';
+    if (!models.length) {
+        const empty = document.createElement('div');
+        empty.className = 'model-dropdown-empty';
+        empty.textContent = all.length
+            ? '没有匹配的模型，请继续输入过滤或手动输入。'
+            : (isLoading ? '正在获取模型列表…' : '暂无模型列表：请先填写 API Key/地址后自动获取。');
+        dropdownEl.appendChild(empty);
+        return;
+    }
+
+    const shown = models.slice(0, limit);
+    for (const id of shown) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'model-dropdown-item';
+        btn.textContent = id;
+        btn.dataset.value = id;
+        btn.addEventListener('mousedown', (e) => e.preventDefault());
+        btn.addEventListener('click', () => {
+            const input = elements[`model${side}`];
+            if (input) input.value = id;
+            updateModelNames();
+            closeModelDropdown(side);
+        });
+        dropdownEl.appendChild(btn);
+    }
+
+    if (models.length > shown.length) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'model-dropdown-item';
+        more.style.fontFamily = 'inherit';
+        more.textContent = `加载更多（已显示 ${shown.length}/${models.length}）`;
+        more.addEventListener('mousedown', (e) => e.preventDefault());
+        more.addEventListener('click', () => {
+            increaseModelDropdownLimit(side, 240);
+            renderModelDropdown(side, filterText);
+        });
+        dropdownEl.appendChild(more);
+    }
+}
+
+function openModelDropdown(side) {
+    const dropdownEl = elements[`modelDropdown${side}`];
+    const inputEl = elements[`model${side}`];
+    if (!dropdownEl || !inputEl) return;
+
+    renderModelDropdown(side, inputEl.value);
+    dropdownEl.hidden = false;
+    dropdownEl.setAttribute('aria-hidden', 'false');
+    setModelDropdownButtonState(side, true);
+
+    dropdownEl.onscroll = () => {
+        const remaining = dropdownEl.scrollHeight - dropdownEl.scrollTop - dropdownEl.clientHeight;
+        if (remaining > 40) return;
+        const all = getCachedModelIds(side);
+        const q = (inputEl.value || '').toString().trim().toLowerCase();
+        const models = q ? all.filter(m => m.toLowerCase().includes(q)) : all;
+        if (getModelDropdownLimit(side) >= models.length) return;
+        increaseModelDropdownLimit(side, 240);
+        renderModelDropdown(side, inputEl.value);
+    };
+}
+
+function toggleModelDropdown(side) {
+    if (isModelDropdownOpen(side)) closeModelDropdown(side);
+    else openModelDropdown(side);
+}
+
+function updateModelDropdownFilter(side) {
+    const dropdownEl = elements[`modelDropdown${side}`];
+    const inputEl = elements[`model${side}`];
+    if (!dropdownEl || !inputEl) return;
+
+    if (!isModelDropdownOpen(side)) {
+        const models = getCachedModelIds(side);
+        if (models.length) openModelDropdown(side);
+        return;
+    }
+
+    resetModelDropdownLimit(side);
+    renderModelDropdown(side, inputEl.value);
+}
+
+function normalizeBaseUrlForModels(config) {
+    const providerMode = getProviderMode(config);
+    let url = (config?.apiUrl || '').trim();
+    if (!url) {
+        return providerMode === 'anthropic' ? 'https://api.anthropic.com/v1' : 'https://api.openai.com/v1';
+    }
+
+    try {
+        const u = new URL(url);
+        const path = u.pathname || '';
+        const v1Index = path.indexOf('/v1');
+        if (v1Index >= 0) {
+            return `${u.origin}${path.slice(0, v1Index + 3)}`;
+        }
+        return u.origin;
+    } catch {
+        return '';
+    }
+}
+
+async function fetchModelsOnce(config) {
+    const resp = await fetch('/api/models/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            provider: config?.provider || 'openai',
+            customFormat: config?.customFormat || 'openai',
+            apiKey: config?.apiKey || '',
+            apiUrl: config?.apiUrl || ''
+        })
+    });
+
+    let json = null;
+    try {
+        json = await resp.json();
+    } catch {
+        json = null;
+    }
+
+    if (!resp.ok) {
+        const detail =
+            (typeof json?.detail === 'string' && json.detail) ? json.detail :
+            (typeof json?.error === 'string' && json.error) ? json.error :
+            resp.statusText;
+        throw new Error(`获取模型列表失败（${resp.status || 0}）：${detail || '未知错误'}`);
+    }
+
+    const ids = Array.isArray(json?.models) ? json.models : [];
+    if (!ids.length) throw new Error('获取到的模型列表为空');
+    return ids;
+}
+
+function scheduleFetchModels(side, delayMs = 400) {
+    const key = side === 'A' ? 'A' : 'B';
+    const slot = state.modelFetch[key];
+    if (!slot) return;
+
+    if (slot.timer) clearTimeout(slot.timer);
+    slot.timer = setTimeout(() => {
+        slot.timer = null;
+        void fetchAndUpdateModels(key);
+    }, Math.max(0, delayMs || 0));
+}
+
+async function fetchAndUpdateModels(side) {
+    const key = side === 'A' ? 'A' : 'B';
+    const slot = state.modelFetch[key];
+    if (!slot || slot.inFlight) return;
+
+    const config = getConfigFromForm(key);
+    if (config.provider !== 'custom' && !(config.apiKey || '').trim()) {
+        setModelOptions(key, []);
+        slot.models = [];
+        closeModelDropdown(key);
+        updateModelHint(key);
+        slot.lastKey = '';
+        slot.lastFetchedAt = 0;
+        return;
+    }
+    const base = normalizeBaseUrlForModels(config);
+    const providerMode = getProviderMode(config);
+    const hasKey = !!(config.apiKey || '').trim();
+    const fetchKey = `${providerMode}|${base}|${hasKey ? 'k' : '-'}`;
+
+    const now = Date.now();
+    if (slot.lastKey === fetchKey && now - slot.lastFetchedAt < 60_000) return;
+
+    slot.inFlight = true;
+    try {
+        const ids = await fetchModelsOnce(config);
+        slot.models = ids;
+        setModelOptions(key, ids);
+        setModelHint(key, `已自动获取 ${ids.length} 个模型 ID（可下拉选择或直接输入）。`);
+        updateModelDropdownFilter(key);
+        slot.lastKey = fetchKey;
+        slot.lastFetchedAt = now;
+    } catch (e) {
+        console.warn(`模型${key}模型列表获取失败:`, e?.message || e);
+        slot.models = [];
+        closeModelDropdown(key);
+        setModelOptions(key, []);
+        setModelHint(key, '提示：这里填写模型 ID；自动获取失败，可手动输入。');
+    } finally {
+        slot.inFlight = false;
+    }
 }
 
 function saveConfig() {
@@ -711,8 +1256,30 @@ function renderTopicList() {
         meta.className = 'topic-meta';
         meta.textContent = `${topic.turns?.length || 0} 条 · ${formatTime(topic.updatedAt || topic.createdAt)}`;
 
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'topic-delete-btn';
+        deleteBtn.textContent = '删除';
+        deleteBtn.title = '删除该话题';
+        deleteBtn.setAttribute('aria-label', `删除话题：${topic.title || '未命名话题'}`);
+        deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (state.isRunning && !confirm('正在生成中，仍要删除话题并停止当前生成吗？')) return;
+            if (!confirm(`确定要删除话题「${topic.title || '未命名话题'}」吗？此操作不可恢复。`)) return;
+            if (state.isRunning) stopGeneration();
+            deleteTopic(topic.id);
+            renderAll();
+        });
+
+        const footer = document.createElement('div');
+        footer.className = 'topic-footer';
+        footer.appendChild(meta);
+        footer.appendChild(deleteBtn);
+
         item.appendChild(title);
-        item.appendChild(meta);
+        item.appendChild(footer);
 
         item.addEventListener('click', () => {
             if (state.isRunning && !confirm('正在生成中，仍要切换话题并停止当前生成吗？')) return;
@@ -799,9 +1366,18 @@ function createTurnElement(turn) {
     turnEl.className = 'turn';
     turnEl.dataset.turnId = turn.id;
 
+    const userWrap = document.createElement('div');
+    userWrap.className = 'user-bubble-wrap';
+
     const userBubble = document.createElement('div');
     userBubble.className = 'user-bubble';
     userBubble.textContent = turn.prompt || '';
+
+    const userCopyBtn = createCopyButton(() => turn.prompt || '', { label: '复制用户消息', icon: true });
+    userCopyBtn.classList.add('user-copy-btn');
+
+    userWrap.appendChild(userCopyBtn);
+    userWrap.appendChild(userBubble);
 
     let webSearchEl = null;
     if (turn.webSearch) {
@@ -818,7 +1394,7 @@ function createTurnElement(turn) {
     assistants.appendChild(aCard.el);
     assistants.appendChild(bCard.el);
 
-    turnEl.appendChild(userBubble);
+    turnEl.appendChild(userWrap);
     if (webSearchEl) turnEl.appendChild(webSearchEl);
     turnEl.appendChild(assistants);
 
@@ -878,7 +1454,10 @@ function createAssistantCard(side, turn) {
     thinkingTime.className = 'thinking-time';
     thinkingHeader.appendChild(thinkingLabel);
     thinkingHeader.appendChild(thinkingTime);
-    thinkingHeader.addEventListener('click', () => thinkingSection.classList.toggle('collapsed'));
+    thinkingHeader.addEventListener('click', () => {
+        thinkingSection.dataset.userToggled = '1';
+        thinkingSection.classList.toggle('collapsed');
+    });
 
     const thinkingContent = document.createElement('div');
     thinkingContent.className = 'thinking-content';
@@ -926,7 +1505,8 @@ function createAssistantCard(side, turn) {
         thinkingContentEl: thinkingContent,
         thinkingTimeEl: thinkingTime,
         tokenEl,
-        timeEl
+        timeEl,
+        thinkingAutoCollapseTimer: null
     };
 }
 
@@ -1101,6 +1681,19 @@ function clearActiveTopicMessages() {
     renderAll();
 }
 
+function scheduleAutoCollapseThinking(ui, delayMs = 900) {
+    if (!ui?.thinkingSectionEl) return;
+    if (ui.thinkingSectionEl.dataset.userToggled === '1') return;
+
+    if (ui.thinkingAutoCollapseTimer) clearTimeout(ui.thinkingAutoCollapseTimer);
+    ui.thinkingAutoCollapseTimer = setTimeout(() => {
+        ui.thinkingAutoCollapseTimer = null;
+        if (!ui?.thinkingSectionEl) return;
+        if (ui.thinkingSectionEl.dataset.userToggled === '1') return;
+        ui.thinkingSectionEl.classList.add('collapsed');
+    }, delayMs);
+}
+
 async function callModel(side, prompt, config, turn, ui, startTime) {
     setHeaderStatus(side, 'loading');
     applyStatus(ui.statusEl, 'loading');
@@ -1136,6 +1729,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                 ui.thinkingSectionEl.style.display = 'block';
                 ui.thinkingSectionEl.classList.remove('collapsed');
                 ui.thinkingContentEl.textContent = turn.models[side].thinking;
+                scheduleAutoCollapseThinking(ui);
                 scheduleSaveChat();
             },
             onContentDelta: (delta) => {
@@ -1163,6 +1757,10 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
         applyStatus(ui.statusEl, 'complete');
         setHeaderStatus(side, 'complete');
 
+        if (turn.models[side].thinking && ui?.thinkingSectionEl?.dataset?.userToggled !== '1') {
+            ui.thinkingSectionEl.classList.add('collapsed');
+        }
+
         if (!Number.isFinite(turn.models[side].tokens)) {
             const tokens = estimateTokensFromText(turn.models[side].content);
             turn.models[side].tokens = tokens;
@@ -1185,6 +1783,10 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     } finally {
         if (timeTimer) clearInterval(timeTimer);
         timeTimer = null;
+        if (ui?.thinkingAutoCollapseTimer) {
+            clearTimeout(ui.thinkingAutoCollapseTimer);
+            ui.thinkingAutoCollapseTimer = null;
+        }
         state.abortControllers[side] = null;
     }
 }

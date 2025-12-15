@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 import os
+from urllib.parse import urlparse
 
 app = FastAPI(title="CORS代理服务器")
 
@@ -91,6 +92,86 @@ async def tavily_search(payload: TavilySearchRequest):
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     return resp.json()
+
+# 模型列表拉取（由后端请求第三方，前端只调用本地接口）
+class ModelListRequest(BaseModel):
+    provider: str = Field(default="openai")
+    customFormat: str = Field(default="openai")
+    apiKey: str | None = None
+    apiUrl: str | None = None
+
+
+@app.post("/api/models/list")
+async def list_models(payload: ModelListRequest):
+    provider = (payload.provider or "openai").strip().lower()
+    custom_format = (payload.customFormat or "openai").strip().lower()
+    provider_mode = "anthropic" if (provider == "anthropic" or (provider == "custom" and custom_format == "anthropic")) else "openai"
+
+    raw_api_url = (payload.apiUrl or "").strip()
+    if raw_api_url:
+        parsed = urlparse(raw_api_url)
+        if not parsed.scheme or not parsed.netloc:
+            raise HTTPException(status_code=400, detail="无法解析 API 地址（用于获取模型列表）")
+        path = parsed.path or ""
+        v1_index = path.find("/v1")
+        base = f"{parsed.scheme}://{parsed.netloc}{path[:v1_index + 3]}" if v1_index >= 0 else f"{parsed.scheme}://{parsed.netloc}"
+    else:
+        base = "https://api.anthropic.com/v1" if provider_mode == "anthropic" else "https://api.openai.com/v1"
+
+    url = f"{base}/models"
+    api_key = (payload.apiKey or "").strip()
+    headers: dict[str, str] = {"anthropic-version": "2023-06-01"} if provider_mode == "anthropic" else {}
+    if api_key:
+        if provider_mode == "anthropic":
+            headers["x-api-key"] = api_key
+        else:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(url, headers=headers)
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"模型列表请求失败: {e}") from e
+
+    try:
+        data = resp.json()
+    except Exception:
+        data = None
+
+    if resp.status_code >= 400:
+        detail = ""
+        if isinstance(data, dict):
+            err = data.get("error")
+            if isinstance(err, dict) and isinstance(err.get("message"), str):
+                detail = err["message"]
+            elif isinstance(data.get("message"), str):
+                detail = data["message"]
+        if not detail:
+            detail = resp.text or resp.reason_phrase or ""
+        raise HTTPException(status_code=resp.status_code, detail=f"获取模型列表失败: {detail}")
+
+    items = []
+    if isinstance(data, dict) and isinstance(data.get("data"), list):
+        items = data["data"]
+    elif isinstance(data, dict) and isinstance(data.get("models"), list):
+        items = data["models"]
+    elif isinstance(data, list):
+        items = data
+
+    model_ids: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            mid = (item.get("id") or item.get("name") or item.get("model") or "").strip()
+            if mid:
+                model_ids.append(mid)
+        elif isinstance(item, str) and item.strip():
+            model_ids.append(item.strip())
+
+    model_ids = sorted(set(model_ids))
+    if not model_ids:
+        raise HTTPException(status_code=502, detail="获取到的模型列表为空或格式不支持")
+
+    return {"models": model_ids}
 
 # 代理路由（通配符，必须放在最后）
 @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
