@@ -1547,7 +1547,7 @@ function createTurnElement(turn) {
         userBubble.appendChild(textContent);
     }
 
-    const userCopyBtn = createCopyButton(() => turn.prompt || '', { label: '复制用户消息', icon: true });
+    const userCopyBtn = createCopyButton(() => turn.prompt || '', { label: '复制', icon: true });
     userCopyBtn.classList.add('user-copy-btn');
 
     userWrap.appendChild(userCopyBtn);
