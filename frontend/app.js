@@ -15,6 +15,9 @@ const state = {
         topics: [],
         activeTopicId: null,
         saveTimer: null
+    },
+    images: {
+        selectedImages: [] // 存储当前选择的图片 { id, dataUrl, name, size }
     }
 };
 
@@ -36,6 +39,9 @@ const elements = {
     // 输入相关
     promptInput: document.getElementById('promptInput'),
     sendBtn: document.getElementById('sendBtn'),
+    imageInput: document.getElementById('imageInput'),
+    imageUploadBtn: document.getElementById('imageUploadBtn'),
+    imagePreviewContainer: document.getElementById('imagePreviewContainer'),
 
     // 话题/历史
     newTopicBtn: document.getElementById('newTopicBtn'),
@@ -342,6 +348,105 @@ function truncateText(text, maxLen) {
     return s.slice(0, maxLen) + '…';
 }
 
+// ========== 图片处理函数 ==========
+
+// 将图片文件读取为base64 data URL
+function readImageAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) {
+            reject(new Error('不是有效的图片文件'));
+            return;
+        }
+
+        // 限制图片大小为10MB
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+            reject(new Error('图片大小不能超过10MB'));
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('读取图片失败'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// 添加图片到状态
+async function addImages(files) {
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    for (const file of fileArray) {
+        try {
+            const dataUrl = await readImageAsDataUrl(file);
+            const image = {
+                id: createId(),
+                dataUrl,
+                name: file.name,
+                size: file.size,
+                type: file.type
+            };
+            state.images.selectedImages.push(image);
+        } catch (e) {
+            console.error('添加图片失败:', e);
+            alert(`添加图片失败: ${e.message}`);
+        }
+    }
+
+    renderImagePreviews();
+}
+
+// 从状态中移除图片
+function removeImage(imageId) {
+    state.images.selectedImages = state.images.selectedImages.filter(img => img.id !== imageId);
+    renderImagePreviews();
+}
+
+// 清空所有图片
+function clearImages() {
+    state.images.selectedImages = [];
+    renderImagePreviews();
+}
+
+// 渲染图片预览
+function renderImagePreviews() {
+    const container = elements.imagePreviewContainer;
+    if (!container) return;
+
+    const images = state.images.selectedImages;
+
+    if (images.length === 0) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    container.style.display = 'flex';
+    container.innerHTML = '';
+
+    for (const image of images) {
+        const preview = document.createElement('div');
+        preview.className = 'image-preview-item';
+        preview.dataset.imageId = image.id;
+
+        const img = document.createElement('img');
+        img.src = image.dataUrl;
+        img.alt = image.name;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'image-preview-remove';
+        removeBtn.title = '移除图片';
+        removeBtn.innerHTML = '×';
+        removeBtn.addEventListener('click', () => removeImage(image.id));
+
+        preview.appendChild(img);
+        preview.appendChild(removeBtn);
+        container.appendChild(preview);
+    }
+}
+
 function renderWebSearchSection(container, webSearch) {
     if (!container) return;
     container.innerHTML = '';
@@ -480,7 +585,8 @@ function bindEvents() {
     elements.saveConfig.addEventListener('click', saveConfig);
     elements.clearConfig.addEventListener('click', clearConfig);
 
-    elements.enableWebSearch?.addEventListener('change', () => {
+    elements.enableWebSearch?.addEventListener('change', (e) => {
+        e.currentTarget.blur(); // 立即移除焦点，避免触发输入框容器的选中效果
         try {
             const raw = localStorage.getItem(STORAGE_KEYS.config);
             const config = raw ? JSON.parse(raw) : {};
@@ -583,6 +689,43 @@ function bindEvents() {
     });
 
     elements.promptInput.addEventListener('input', autoGrowPromptInput);
+
+    // 图片上传按钮点击事件
+    elements.imageUploadBtn?.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // 阻止按钮获得焦点，避免触发输入框容器的选中效果
+    });
+    elements.imageUploadBtn?.addEventListener('click', () => {
+        elements.imageInput?.click();
+    });
+
+    // 文件选择事件
+    elements.imageInput?.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            addImages(files);
+        }
+        // 清空input，允许重复选择同一文件
+        e.target.value = '';
+    });
+
+    // 粘贴图片事件
+    elements.promptInput?.addEventListener('paste', async (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        const imageFiles = [];
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) imageFiles.push(file);
+            }
+        }
+
+        if (imageFiles.length > 0) {
+            e.preventDefault();
+            await addImages(imageFiles);
+        }
+    });
 }
 
 function openConfigModal() {
@@ -1371,7 +1514,35 @@ function createTurnElement(turn) {
 
     const userBubble = document.createElement('div');
     userBubble.className = 'user-bubble';
-    userBubble.textContent = turn.prompt || '';
+
+    // 如果有图片，先显示图片
+    if (turn.images && turn.images.length > 0) {
+        const imagesContainer = document.createElement('div');
+        imagesContainer.className = 'user-images';
+
+        for (const image of turn.images) {
+            const imgWrapper = document.createElement('div');
+            imgWrapper.className = 'user-image-item';
+
+            const img = document.createElement('img');
+            img.src = image.dataUrl;
+            img.alt = image.name || '用户上传的图片';
+            img.loading = 'lazy';
+
+            imgWrapper.appendChild(img);
+            imagesContainer.appendChild(imgWrapper);
+        }
+
+        userBubble.appendChild(imagesContainer);
+    }
+
+    // 显示文本消息
+    if (turn.prompt) {
+        const textContent = document.createElement('div');
+        textContent.className = 'user-text';
+        textContent.textContent = turn.prompt;
+        userBubble.appendChild(textContent);
+    }
 
     const userCopyBtn = createCopyButton(() => turn.prompt || '', { label: '复制用户消息', icon: true });
     userCopyBtn.classList.add('user-copy-btn');
@@ -1574,6 +1745,7 @@ async function sendPrompt() {
         id: createId(),
         createdAt: now,
         prompt,
+        images: [...state.images.selectedImages], // 保存当前选择的图片
         webSearch: webSearchConfig.enabled ? { status: 'loading', query: prompt, results: [], answer: '', error: '' } : null,
         models: {
             A: { provider: configA.provider, model: configA.model, thinking: '', content: '', tokens: null, timeCostSec: null, status: 'loading' },
@@ -1601,6 +1773,7 @@ async function sendPrompt() {
 
     elements.promptInput.value = '';
     autoGrowPromptInput();
+    clearImages(); // 清空已选择的图片
     elements.promptInput.focus();
 
     setHeaderStatus('A', 'loading');
@@ -1712,7 +1885,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     let timeTimer = setInterval(updateTime, 200);
 
     try {
-        const { url, headers, body } = buildRequest(config, prompt);
+        const images = turn?.images || [];
+        const { url, headers, body } = buildRequest(config, prompt, images);
         const response = await fetch(url, {
             method: 'POST',
             headers,
@@ -1791,7 +1965,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     }
 }
 
-function buildRequest(config, prompt) {
+function buildRequest(config, prompt, images = []) {
     const { provider, apiKey, model, apiUrl, systemPrompt, thinking } = config;
     const providerMode = getProviderMode(config);
     const timeContext = getTimeContextConfig();
@@ -1799,7 +1973,7 @@ function buildRequest(config, prompt) {
     let url = (apiUrl || '').trim();
     if (!url) {
         if (provider === 'custom') {
-            throw new Error('选择“自定义”时必须填写 API 地址');
+            throw new Error('选择"自定义"时必须填写 API 地址');
         }
         url = providerMode === 'anthropic'
             ? 'https://api.anthropic.com/v1/messages'
@@ -1818,6 +1992,9 @@ function buildRequest(config, prompt) {
         headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
+    // 判断是否有图片
+    const hasImages = Array.isArray(images) && images.length > 0;
+
     let body;
     if (providerMode === 'anthropic') {
         const systemParts = [];
@@ -1827,9 +2004,40 @@ function buildRequest(config, prompt) {
         }
         const combinedSystem = systemParts.join('\n\n');
 
+        // 构建用户消息内容（支持多模态）
+        let userContent;
+        if (hasImages) {
+            // Anthropic格式：content是数组
+            userContent = [];
+            // 先添加文本
+            if (prompt) {
+                userContent.push({ type: 'text', text: prompt });
+            }
+            // 再添加图片
+            for (const img of images) {
+                // 从dataUrl中提取base64数据和媒体类型
+                const match = img.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+                if (match) {
+                    const mediaType = match[1];
+                    const base64Data = match[2];
+                    userContent.push({
+                        type: 'image',
+                        source: {
+                            type: 'base64',
+                            media_type: mediaType,
+                            data: base64Data
+                        }
+                    });
+                }
+            }
+        } else {
+            // 纯文本
+            userContent = prompt;
+        }
+
         body = {
             model,
-            messages: [{ role: 'user', content: prompt }],
+            messages: [{ role: 'user', content: userContent }],
             stream: true,
             max_tokens: 4096
         };
@@ -1844,7 +2052,29 @@ function buildRequest(config, prompt) {
         }
         const combinedSystem = systemParts.join('\n\n');
         if (combinedSystem) messages.push({ role: 'system', content: combinedSystem });
-        messages.push({ role: 'user', content: prompt });
+
+        // 构建用户消息内容（支持多模态）
+        let userContent;
+        if (hasImages) {
+            // OpenAI格式：content是数组
+            userContent = [];
+            // 先添加文本
+            if (prompt) {
+                userContent.push({ type: 'text', text: prompt });
+            }
+            // 再添加图片
+            for (const img of images) {
+                userContent.push({
+                    type: 'image_url',
+                    image_url: { url: img.dataUrl }
+                });
+            }
+        } else {
+            // 纯文本
+            userContent = prompt;
+        }
+
+        messages.push({ role: 'user', content: userContent });
         body = { model, messages, stream: true };
 
         const modelLower = (model || '').toLowerCase();

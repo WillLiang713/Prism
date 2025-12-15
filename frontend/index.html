@@ -69,8 +69,19 @@
                         <!-- 输入区域（固定在聊天卡片底部） -->
                         <div class="chat-composer">
                             <div class="composer-box">
+                                <!-- 图片预览区域 -->
+                                <div class="image-preview-container" id="imagePreviewContainer" style="display: none;"></div>
+
                                 <div class="composer-bar">
-                                    <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
+                                    <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                                    <button class="btn btn-icon" id="imageUploadBtn" title="上传图片" aria-label="上传图片">
+                                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                            <polyline points="21 15 16 10 5 21"></polyline>
+                                        </svg>
+                                    </button>
+                                    <textarea id="promptInput" placeholder="输入你的问题...（支持粘贴图片）"></textarea>
                                     <button class="btn btn-primary action-btn" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
                                         <span class="action-label label-send">发送</span>
                                         <span class="action-label label-stop">停止</span>
