@@ -112,6 +112,13 @@ body {
     margin-bottom: 5px;
 }
 
+.form-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
 .form-group input[type="text"],
 .form-group input[type="password"],
 .form-group select,
@@ -738,7 +745,7 @@ body {
     gap: 10px;
 }
 
-.assistant-card-header .status {
+.assistant-card-header > .status {
     margin-left: auto;
 }
 

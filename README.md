@@ -58,6 +58,8 @@
 
 ### API提供商配置
 
+> 注意：这里的“API提供商”更像是“接口格式/鉴权方式”，不一定等同于厂商名称。第三方/自建接口请用“自定义”，并按接口文档选择兼容格式。
+
 **OpenAI格式：**
 - API地址：`https://api.openai.com/v1/chat/completions`
 - 模型示例：`gpt-4`、`gpt-4-turbo`、`gpt-3.5-turbo`
@@ -69,8 +71,11 @@
 - 思考模式：Claude 3.5+模型支持
 
 **自定义API：**
-- 支持兼容OpenAI或Anthropic格式的第三方API
-- 需要手动填入完整的API地址
+- 用于第三方/自建接口（例如各类 OpenAI/Anthropic 兼容网关）
+- 需要手动填入完整的 API 地址（必填）
+- 需要选择“自定义接口格式”：
+  - OpenAI 兼容：`Authorization: Bearer ...`，常见路径为 `/v1/chat/completions`
+  - Anthropic 兼容：`x-api-key: ...`，常见路径为 `/v1/messages`
 
 ### 系统提示词
 

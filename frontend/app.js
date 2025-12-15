@@ -42,6 +42,9 @@ const elements = {
 
     // 模型A配置
     providerA: document.getElementById('providerA'),
+    providerHintA: document.getElementById('providerHintA'),
+    customFormatGroupA: document.getElementById('customFormatGroupA'),
+    customFormatA: document.getElementById('customFormatA'),
     apiKeyA: document.getElementById('apiKeyA'),
     modelA: document.getElementById('modelA'),
     apiUrlA: document.getElementById('apiUrlA'),
@@ -50,6 +53,9 @@ const elements = {
 
     // 模型B配置
     providerB: document.getElementById('providerB'),
+    providerHintB: document.getElementById('providerHintB'),
+    customFormatGroupB: document.getElementById('customFormatGroupB'),
+    customFormatB: document.getElementById('customFormatB'),
     apiKeyB: document.getElementById('apiKeyB'),
     modelB: document.getElementById('modelB'),
     apiUrlB: document.getElementById('apiUrlB'),
@@ -70,6 +76,8 @@ const elements = {
 document.addEventListener('DOMContentLoaded', () => {
     initMarkdown();
     loadConfig();
+    updateProviderUi('A');
+    updateProviderUi('B');
     initChat();
     bindEvents();
     updateModelNames();
@@ -83,6 +91,15 @@ document.addEventListener('DOMContentLoaded', () => {
     autoGrowPromptInput();
     renderAll();
 });
+
+function getProviderMode(config) {
+    const provider = config?.provider || 'openai';
+    if (provider === 'anthropic') return 'anthropic';
+    if (provider === 'custom') {
+        return (config?.customFormat || 'openai') === 'anthropic' ? 'anthropic' : 'openai';
+    }
+    return 'openai';
+}
 
 function createId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -335,8 +352,10 @@ function bindEvents() {
     });
 
     // 监听提供商变化，更新API地址提示
-    elements.providerA.addEventListener('change', () => updateApiUrlPlaceholder('A'));
-    elements.providerB.addEventListener('change', () => updateApiUrlPlaceholder('B'));
+    elements.providerA.addEventListener('change', () => updateProviderUi('A'));
+    elements.providerB.addEventListener('change', () => updateProviderUi('B'));
+    elements.customFormatA?.addEventListener('change', () => updateApiUrlPlaceholder('A'));
+    elements.customFormatB?.addEventListener('change', () => updateApiUrlPlaceholder('B'));
 
     // 监听模型名称变化
     elements.modelA.addEventListener('input', updateModelNames);
@@ -396,13 +415,43 @@ function onSendButtonClick() {
     else sendPrompt();
 }
 
+function updateProviderUi(side) {
+    const provider = elements[`provider${side}`]?.value || 'openai';
+    const hintEl = elements[`providerHint${side}`];
+    const urlInput = elements[`apiUrl${side}`];
+    const customGroup = elements[`customFormatGroup${side}`];
+
+    if (customGroup) customGroup.style.display = provider === 'custom' ? 'block' : 'none';
+    if (urlInput) {
+        if (provider === 'custom') urlInput.setAttribute('required', 'required');
+        else urlInput.removeAttribute('required');
+    }
+
+    if (hintEl) {
+        if (provider === 'openai') {
+            hintEl.textContent = 'OpenAI 官方接口（Chat Completions 格式）；API地址可留空，默认使用 https://api.openai.com/v1/chat/completions。';
+        } else if (provider === 'anthropic') {
+            hintEl.textContent = 'Anthropic 官方接口（Messages 格式）；API地址可留空，默认使用 https://api.anthropic.com/v1/messages。';
+        } else {
+            hintEl.textContent = '自定义第三方/自建接口：必须填写 API地址，并选择接口格式（OpenAI 兼容或 Anthropic 兼容）。';
+        }
+    }
+
+    updateApiUrlPlaceholder(side);
+}
+
 function updateApiUrlPlaceholder(side) {
     const provider = elements[`provider${side}`].value;
     const urlInput = elements[`apiUrl${side}`];
+    const customFormat = elements[`customFormat${side}`]?.value || 'openai';
+
+    const customPlaceholder = customFormat === 'anthropic'
+        ? 'https://api.example.com/v1/messages'
+        : 'https://api.example.com/v1/chat/completions';
     const placeholders = {
         openai: 'https://api.openai.com/v1/chat/completions',
         anthropic: 'https://api.anthropic.com/v1/messages',
-        custom: '输入自定义API地址'
+        custom: customPlaceholder
     };
     urlInput.placeholder = placeholders[provider] || '';
 }
@@ -425,6 +474,7 @@ function saveConfig() {
         },
         A: {
             provider: elements.providerA.value,
+            customFormat: elements.customFormatA?.value || 'openai',
             apiKey: elements.apiKeyA.value,
             model: elements.modelA.value,
             apiUrl: elements.apiUrlA.value,
@@ -433,6 +483,7 @@ function saveConfig() {
         },
         B: {
             provider: elements.providerB.value,
+            customFormat: elements.customFormatB?.value || 'openai',
             apiKey: elements.apiKeyB.value,
             model: elements.modelB.value,
             apiUrl: elements.apiUrlB.value,
@@ -460,6 +511,7 @@ function loadConfig() {
         }
         if (config.A) {
             elements.providerA.value = config.A.provider || 'openai';
+            if (elements.customFormatA) elements.customFormatA.value = config.A.customFormat || 'openai';
             elements.apiKeyA.value = config.A.apiKey || '';
             elements.modelA.value = config.A.model || '';
             elements.apiUrlA.value = config.A.apiUrl || '';
@@ -468,6 +520,7 @@ function loadConfig() {
         }
         if (config.B) {
             elements.providerB.value = config.B.provider || 'openai';
+            if (elements.customFormatB) elements.customFormatB.value = config.B.customFormat || 'openai';
             elements.apiKeyB.value = config.B.apiKey || '';
             elements.modelB.value = config.B.model || '';
             elements.apiUrlB.value = config.B.apiUrl || '';
@@ -489,6 +542,7 @@ function clearConfig() {
 
     ['A', 'B'].forEach(side => {
         elements[`provider${side}`].value = 'openai';
+        if (elements[`customFormat${side}`]) elements[`customFormat${side}`].value = 'openai';
         elements[`apiKey${side}`].value = '';
         elements[`model${side}`].value = '';
         elements[`apiUrl${side}`].value = '';
@@ -496,6 +550,8 @@ function clearConfig() {
         elements[`thinking${side}`].checked = false;
     });
 
+    updateProviderUi('A');
+    updateProviderUi('B');
     updateModelNames();
     alert('配置已清除');
 }
@@ -503,6 +559,7 @@ function clearConfig() {
 function getConfig(side) {
     return {
         provider: elements[`provider${side}`].value,
+        customFormat: elements[`customFormat${side}`]?.value || 'openai',
         apiKey: elements[`apiKey${side}`].value,
         model: elements[`model${side}`].value,
         apiUrl: elements[`apiUrl${side}`].value,
@@ -782,21 +839,29 @@ function createAssistantCard(side, turn) {
     const header = document.createElement('div');
     header.className = 'assistant-card-header';
 
-    const badge = document.createElement('span');
-    badge.className = 'model-badge';
-    badge.textContent = side;
+    const chip = document.createElement('div');
+    chip.className = `model-chip model-chip-${side.toLowerCase()}`;
+
+    const chipDot = document.createElement('span');
+    chipDot.className = 'chip-dot';
+
+    const chipLabel = document.createElement('span');
+    chipLabel.className = 'chip-label';
+    chipLabel.textContent = side;
 
     const modelName = document.createElement('span');
-    modelName.className = 'model-name';
+    modelName.className = 'chip-id';
     modelName.textContent = modelSnapshot || (side === 'A' ? (elements.modelNameA.textContent || '未配置') : (elements.modelNameB.textContent || '未配置'));
 
     const statusEl = document.createElement('span');
     statusEl.className = 'status';
     applyStatus(statusEl, statusSnapshot);
 
-    header.appendChild(badge);
-    header.appendChild(modelName);
-    header.appendChild(statusEl);
+    chip.appendChild(chipDot);
+    chip.appendChild(chipLabel);
+    chip.appendChild(modelName);
+    chip.appendChild(statusEl);
+    header.appendChild(chip);
 
     const body = document.createElement('div');
     body.className = 'assistant-card-body';
@@ -1126,11 +1191,15 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
 
 function buildRequest(config, prompt) {
     const { provider, apiKey, model, apiUrl, systemPrompt, thinking } = config;
+    const providerMode = getProviderMode(config);
     const timeContext = getTimeContextConfig();
 
-    let url = apiUrl;
+    let url = (apiUrl || '').trim();
     if (!url) {
-        url = provider === 'anthropic'
+        if (provider === 'custom') {
+            throw new Error('选择“自定义”时必须填写 API 地址');
+        }
+        url = providerMode === 'anthropic'
             ? 'https://api.anthropic.com/v1/messages'
             : 'https://api.openai.com/v1/chat/completions';
     }
@@ -1140,7 +1209,7 @@ function buildRequest(config, prompt) {
     if (proxyPrefix && isAbsoluteUrl && !url.startsWith(proxyPrefix)) url = proxyPrefix + url;
 
     const headers = { 'Content-Type': 'application/json' };
-    if (provider === 'anthropic') {
+    if (providerMode === 'anthropic') {
         headers['x-api-key'] = apiKey;
         headers['anthropic-version'] = '2023-06-01';
     } else {
@@ -1148,7 +1217,7 @@ function buildRequest(config, prompt) {
     }
 
     let body;
-    if (provider === 'anthropic') {
+    if (providerMode === 'anthropic') {
         const systemParts = [];
         if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
         if (timeContext.injectCurrentTime) {
@@ -1189,6 +1258,7 @@ function buildRequest(config, prompt) {
 async function handleStreamResponse(side, response, config, handlers) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    const providerMode = getProviderMode(config);
 
     let buffer = '';
 
@@ -1216,7 +1286,7 @@ async function handleStreamResponse(side, response, config, handlers) {
                 continue;
             }
 
-            if (config.provider === 'anthropic') {
+            if (providerMode === 'anthropic') {
                 const result = parseAnthropicChunk(json);
                 if (result.thinking) handlers?.onThinkingDelta?.(result.thinking);
                 if (result.content) handlers?.onContentDelta?.(result.content);

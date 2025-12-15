@@ -114,6 +114,15 @@
                                     <option value="anthropic">Anthropic</option>
                                     <option value="custom">自定义</option>
                                 </select>
+                                <div class="form-hint" id="providerHintA"></div>
+                            </div>
+                            <div class="form-group" id="customFormatGroupA" style="display: none;">
+                                <label>自定义接口格式</label>
+                                <select id="customFormatA">
+                                    <option value="openai">OpenAI 兼容</option>
+                                    <option value="anthropic">Anthropic 兼容</option>
+                                </select>
+                                <div class="form-hint">提示：大多数第三方（如 DeepSeek/Qwen 等）属于 OpenAI 兼容；若你的接口文档是 `/v1/messages` + `x-api-key`，请选择 Anthropic 兼容。</div>
                             </div>
                             <div class="form-group">
                                 <label>API密钥</label>
@@ -124,7 +133,7 @@
                                 <input type="text" id="modelA" placeholder="例如: gpt-4">
                             </div>
                             <div class="form-group">
-                                <label>API地址（自定义时）</label>
+                                <label>API地址（留空用默认；自定义必填）</label>
                                 <input type="text" id="apiUrlA" placeholder="https://api.example.com/v1/chat/completions">
                             </div>
                             <div class="form-group">
@@ -149,6 +158,15 @@
                                     <option value="anthropic">Anthropic</option>
                                     <option value="custom">自定义</option>
                                 </select>
+                                <div class="form-hint" id="providerHintB"></div>
+                            </div>
+                            <div class="form-group" id="customFormatGroupB" style="display: none;">
+                                <label>自定义接口格式</label>
+                                <select id="customFormatB">
+                                    <option value="openai">OpenAI 兼容</option>
+                                    <option value="anthropic">Anthropic 兼容</option>
+                                </select>
+                                <div class="form-hint">提示：大多数第三方（如 DeepSeek/Qwen 等）属于 OpenAI 兼容；若你的接口文档是 `/v1/messages` + `x-api-key`，请选择 Anthropic 兼容。</div>
                             </div>
                             <div class="form-group">
                                 <label>API密钥</label>
@@ -159,7 +177,7 @@
                                 <input type="text" id="modelB" placeholder="例如: claude-3-opus">
                             </div>
                             <div class="form-group">
-                                <label>API地址（自定义时）</label>
+                                <label>API地址（留空用默认；自定义必填）</label>
                                 <input type="text" id="apiUrlB" placeholder="https://api.example.com/v1/messages">
                             </div>
                             <div class="form-group">
