@@ -3,9 +3,7 @@ const state = {
     configA: {},
     configB: {},
     isRunning: false,
-    abortControllers: { A: null, B: null },
-    // CORS代理配置（可选）
-    corsProxy: '' // 例如: 'https://cors-anywhere.herokuapp.com/'
+    abortControllers: { A: null, B: null }
 };
 
 // DOM元素引用
@@ -59,7 +57,6 @@ const elements = {
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig();
-    autoDetectProxy();
     bindEvents();
     updateModelNames();
     initMarkdown();
@@ -104,16 +101,11 @@ function renderMarkdown(side, text) {
     }
 }
 
-// 自动检测并配置代理
-function autoDetectProxy() {
-    // 如果通过HTTP服务器访问（而不是file://协议）
+function getProxyPrefix() {
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-        // 自动设置代理为当前服务器
-        const serverUrl = `${window.location.protocol}//${window.location.host}/`;
-        state.corsProxy = serverUrl;
-
-        console.log(`自动检测到服务器模式，代理地址: ${serverUrl}`);
+        return `${window.location.protocol}//${window.location.host}/`;
     }
+    return '';
 }
 
 // 绑定事件
@@ -165,7 +157,6 @@ function updateModelNames() {
 // 保存配置到localStorage
 function saveConfig() {
     const config = {
-        corsProxy: state.corsProxy,
         A: {
             provider: elements.providerA.value,
             apiKey: elements.apiKeyA.value,
@@ -195,11 +186,6 @@ function loadConfig() {
 
     try {
         const config = JSON.parse(saved);
-
-        // 加载CORS代理配置
-        if (config.corsProxy !== undefined) {
-            state.corsProxy = config.corsProxy;
-        }
 
         // 加载模型A配置
         if (config.A) {
@@ -232,9 +218,6 @@ function clearConfig() {
     if (!confirm('确定要清除所有配置吗？')) return;
 
     localStorage.removeItem('aiPkConfig');
-
-    // 重置CORS代理
-    state.corsProxy = '';
 
     // 重置表单
     ['A', 'B'].forEach(side => {
@@ -394,10 +377,11 @@ function buildRequest(config, prompt) {
             : 'https://api.openai.com/v1/chat/completions';
     }
 
-    // 如果配置了CORS代理，添加代理前缀
-    if (state.corsProxy) {
-        url = state.corsProxy + url;
-    }
+    // 自动使用当前 server.py 作为代理前缀（仅在 http/https 访问时生效）
+    // 若用户已手动填入代理前缀（例如 http://localhost:3000/https://...），则避免重复拼接
+    const proxyPrefix = getProxyPrefix();
+    const isAbsoluteUrl = url.startsWith('http://') || url.startsWith('https://');
+    if (proxyPrefix && isAbsoluteUrl && !url.startsWith(proxyPrefix)) url = proxyPrefix + url;
 
     // 构建请求头
     const headers = {

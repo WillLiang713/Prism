@@ -4,7 +4,7 @@ AI对比工具 - CORS代理服务器 (Python版本)
 使用方法：
 1. 安装依赖：pip install fastapi uvicorn httpx
 2. 运行服务器：python server.py
-3. 在配置中填入：http://localhost:3000/
+3. 访问应用：http://localhost:3000/
 
 工作原理：
 - 接收格式：http://localhost:3000/https://api.openai.com/v1/chat/completions
@@ -123,6 +123,5 @@ if __name__ == "__main__":
     print("AI对比工具服务器已启动")
     print("=" * 50)
     print("访问地址: http://localhost:3000")
-    print("无需配置CORS代理，直接使用即可")
     print("=" * 50)
     uvicorn.run(app, host="0.0.0.0", port=3000)
