@@ -11,10 +11,12 @@ AI对比工具 - CORS代理服务器 (Python版本)
 - 自动转发到真实API地址，并添加CORS头
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 import httpx
+import os
 
 app = FastAPI(title="CORS代理服务器")
 
@@ -52,6 +54,43 @@ async def serve_app():
     """提供JS文件"""
     from fastapi.responses import FileResponse
     return FileResponse("frontend/app.js")
+
+# Tavily 联网搜索（推荐：服务端保存 API Key）
+class TavilySearchRequest(BaseModel):
+    api_key: str | None = None
+    query: str = Field(min_length=1, max_length=2000)
+    search_depth: str = Field(default="basic")  # basic | advanced
+    max_results: int = Field(default=5, ge=1, le=20)
+    include_answer: bool = False
+    include_raw_content: bool = False
+    include_images: bool = False
+    include_domains: list[str] | None = None
+    exclude_domains: list[str] | None = None
+
+
+@app.post("/api/tavily/search")
+async def tavily_search(payload: TavilySearchRequest):
+    api_key = (payload.api_key or os.getenv("TAVILY_API_KEY", "")).strip()
+    if not api_key:
+        raise HTTPException(status_code=500, detail="缺少 Tavily API Key（请设置环境变量 TAVILY_API_KEY 或在请求体中传 api_key）")
+
+    body = payload.model_dump(exclude_none=True)
+    body["api_key"] = api_key
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post("https://api.tavily.com/search", json=body)
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Tavily请求失败: {e}") from e
+
+    if resp.status_code >= 400:
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = resp.text
+        raise HTTPException(status_code=resp.status_code, detail=detail)
+
+    return resp.json()
 
 # 代理路由（通配符，必须放在最后）
 @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])

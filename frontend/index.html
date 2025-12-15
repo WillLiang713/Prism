@@ -9,12 +9,12 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- 代码高亮库 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/core.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/javascript.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/python.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/java.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/cpp.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/java.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/cpp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/bash.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -64,12 +64,21 @@
 
                 <!-- 输入区域（固定在聊天卡片底部） -->
                 <div class="chat-composer">
-                    <div class="composer-bar">
-                        <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
-                        <button class="btn btn-primary action-btn" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
-                            <span class="action-label label-send">发送</span>
-                            <span class="action-label label-stop">停止</span>
-                        </button>
+                    <div class="composer-box">
+                        <div class="composer-bar">
+                            <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
+                            <button class="btn btn-primary action-btn" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
+                                <span class="action-label label-send">发送</span>
+                                <span class="action-label label-stop">停止</span>
+                            </button>
+                        </div>
+                        <div class="composer-options">
+                            <label class="switch">
+                                <input type="checkbox" id="enableWebSearch">
+                                <span class="switch-track" aria-hidden="true"></span>
+                                <span class="switch-text">联网搜索</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -87,6 +96,22 @@
                     </div>
                 </div>
                 <div class="config-content" id="configContent">
+                    <div class="global-config">
+                        <h3>联网搜索（Tavily）</h3>
+                        <div class="form-group">
+                            <label>Tavily API Key</label>
+                            <input type="password" id="tavilyApiKey" placeholder="tvly-...">
+                        </div>
+                    </div>
+                    <div class="global-config">
+                        <h3>时间上下文</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="injectCurrentTime">
+                                在系统提示词中注入当前时间
+                            </label>
+                        </div>
+                    </div>
                     <div class="config-row">
                         <!-- 左侧AI配置 -->
                         <div class="config-section">

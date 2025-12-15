@@ -177,6 +177,36 @@ A: 编辑 `server.py` 文件最后一行的端口号（默认3000）。
 **Q: 支持哪些Markdown语法？**
 A: 支持GitHub Flavored Markdown (GFM)，包括表格、代码块、任务列表等。
 
+## 联网搜索（Tavily）
+
+本项目已在 `server.py` 内置 Tavily 搜索接口：`POST /api/tavily/search`。
+- 推荐做法：在服务端设置环境变量 `TAVILY_API_KEY`。
+- 也支持由前端在请求体里传 `api_key`（方便本地使用，但不建议在公开环境暴露）。
+
+1. 设置环境变量（PowerShell，当前会话）：
+   ```powershell
+   $env:TAVILY_API_KEY="你的TavilyKey"
+   python server.py
+   ```
+
+2. 调用示例（curl）：
+   ```bash
+   curl -X POST http://localhost:3000/api/tavily/search ^
+     -H "Content-Type: application/json" ^
+     -d "{\"query\":\"今天北京天气\",\"search_depth\":\"basic\",\"max_results\":5,\"include_answer\":true}"
+   ```
+
+3. 前端调用示例（浏览器 fetch）：
+   ```js
+   const resp = await fetch('/api/tavily/search', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ query: 'site:fastapi.tiangolo.com StreamingResponse', max_results: 5, api_key: 'tvly-...' })
+   });
+   const data = await resp.json();
+   console.log(data.results);
+   ```
+
 ## 开发说明
 
 ### 添加新的API提供商

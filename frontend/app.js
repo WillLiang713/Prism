@@ -22,6 +22,13 @@ const elements = {
     openConfigBtn: document.getElementById('openConfigBtn'),
     closeConfigBtn: document.getElementById('closeConfigBtn'),
 
+    // 联网搜索（Tavily）
+    enableWebSearch: document.getElementById('enableWebSearch'),
+    tavilyApiKey: document.getElementById('tavilyApiKey'),
+
+    // 时间上下文
+    injectCurrentTime: document.getElementById('injectCurrentTime'),
+
     // 输入相关
     promptInput: document.getElementById('promptInput'),
     sendBtn: document.getElementById('sendBtn'),
@@ -140,9 +147,162 @@ function getProxyPrefix() {
     return '';
 }
 
+function truncateText(text, maxLen) {
+    const s = (text || '').toString();
+    if (!maxLen || maxLen <= 0) return s;
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen) + '…';
+}
+
+function renderWebSearchSection(container, webSearch) {
+    if (!container) return;
+    container.innerHTML = '';
+    if (!webSearch) return;
+
+    const header = document.createElement('div');
+    header.className = 'web-search-header';
+
+    const title = document.createElement('span');
+    title.className = 'web-search-title';
+    title.textContent = '联网搜索（Tavily）';
+
+    const status = document.createElement('span');
+    status.className = `web-search-status ${webSearch.status || 'ready'}`;
+    status.textContent =
+        webSearch.status === 'loading' ? '检索中...' :
+        webSearch.status === 'error' ? '失败' :
+        '完成';
+
+    header.appendChild(title);
+    header.appendChild(status);
+
+    const body = document.createElement('div');
+    body.className = 'web-search-body';
+
+    if (webSearch.status === 'loading') {
+        const hint = document.createElement('div');
+        hint.className = 'web-search-hint';
+        hint.textContent = '正在检索，请稍候…';
+        body.appendChild(hint);
+    } else if (webSearch.status === 'error') {
+        const err = document.createElement('div');
+        err.className = 'web-search-error';
+        err.textContent = webSearch.error || '联网搜索失败';
+        body.appendChild(err);
+    } else {
+        if (webSearch.answer) {
+            const ans = document.createElement('div');
+            ans.className = 'web-search-answer';
+            ans.textContent = truncateText(webSearch.answer, 600);
+            body.appendChild(ans);
+        }
+
+        const results = Array.isArray(webSearch.results) ? webSearch.results : [];
+        if (results.length) {
+            const list = document.createElement('ol');
+            list.className = 'web-search-results';
+            results.slice(0, 5).forEach((r) => {
+                const item = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = r.url || '#';
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = r.title || r.url || '(无标题)';
+                item.appendChild(link);
+
+                const snippet = document.createElement('div');
+                snippet.className = 'web-search-snippet';
+                snippet.textContent = truncateText(r.content || r.snippet || '', 260);
+                if (snippet.textContent) item.appendChild(snippet);
+
+                list.appendChild(item);
+            });
+            body.appendChild(list);
+        } else {
+            const empty = document.createElement('div');
+            empty.className = 'web-search-hint';
+            empty.textContent = '未返回结果。';
+            body.appendChild(empty);
+        }
+    }
+
+    container.appendChild(header);
+    container.appendChild(body);
+}
+
+function buildPromptWithWebSearch(originalPrompt, webSearch) {
+    const results = Array.isArray(webSearch?.results) ? webSearch.results : [];
+    const lines = [];
+    lines.push('你将获得一些联网搜索结果。请优先基于这些结果作答，并在回答末尾给出参考链接列表。');
+
+    if (webSearch?.answer) lines.push(`搜索摘要：${truncateText(webSearch.answer, 1200)}`);
+
+    if (results.length) {
+        const formatted = results.slice(0, 5).map((r, i) => {
+            const title = (r.title || '').trim();
+            const url = (r.url || '').trim();
+            const snippet = truncateText((r.content || r.snippet || '').trim(), 800);
+            return [
+                `[${i + 1}] ${title || url || '(无标题)'}`,
+                url ? `URL: ${url}` : '',
+                snippet ? `摘要: ${snippet}` : ''
+            ].filter(Boolean).join('\n');
+        });
+        lines.push('搜索结果：\n' + formatted.join('\n\n'));
+    }
+
+    lines.push('用户问题：' + originalPrompt);
+    return lines.join('\n\n');
+}
+
+async function tavilySearch(query, apiKey) {
+    if (window.location.protocol === 'file:') {
+        throw new Error('当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000');
+    }
+
+    const resp = await fetch('/api/tavily/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            api_key: apiKey,
+            query,
+            search_depth: 'basic',
+            max_results: 5,
+            include_answer: true,
+            include_raw_content: false,
+            include_images: false
+        })
+    });
+
+    if (!resp.ok) {
+        let detail = '';
+        try {
+            const json = await resp.json();
+            detail = typeof json?.detail === 'string' ? json.detail : JSON.stringify(json);
+        } catch {
+            detail = await resp.text();
+        }
+        throw new Error(`Tavily HTTP ${resp.status}: ${detail || resp.statusText}`);
+    }
+
+    return resp.json();
+}
+
 function bindEvents() {
     elements.saveConfig.addEventListener('click', saveConfig);
     elements.clearConfig.addEventListener('click', clearConfig);
+
+    elements.enableWebSearch?.addEventListener('change', () => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS.config);
+            const config = raw ? JSON.parse(raw) : {};
+            config.webSearch = config.webSearch || {};
+            config.webSearch.enabled = !!elements.enableWebSearch.checked;
+            localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+        } catch (e) {
+            console.error('保存联网搜索开关失败:', e);
+        }
+    });
 
     elements.openConfigBtn?.addEventListener('click', openConfigModal);
     elements.closeConfigBtn?.addEventListener('click', closeConfigModal);
@@ -256,6 +416,13 @@ function updateModelNames() {
 
 function saveConfig() {
     const config = {
+        webSearch: {
+            enabled: !!elements.enableWebSearch?.checked,
+            tavilyApiKey: elements.tavilyApiKey?.value || ''
+        },
+        timeContext: {
+            injectCurrentTime: !!elements.injectCurrentTime?.checked
+        },
         A: {
             provider: elements.providerA.value,
             apiKey: elements.apiKeyA.value,
@@ -284,6 +451,13 @@ function loadConfig() {
     if (!saved) return;
     try {
         const config = JSON.parse(saved);
+        if (config.webSearch) {
+            if (elements.enableWebSearch) elements.enableWebSearch.checked = !!config.webSearch.enabled;
+            if (elements.tavilyApiKey) elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || '';
+        }
+        if (config.timeContext) {
+            if (elements.injectCurrentTime) elements.injectCurrentTime.checked = !!config.timeContext.injectCurrentTime;
+        }
         if (config.A) {
             elements.providerA.value = config.A.provider || 'openai';
             elements.apiKeyA.value = config.A.apiKey || '';
@@ -309,6 +483,10 @@ function clearConfig() {
     if (!confirm('确定要清除所有配置吗？')) return;
     localStorage.removeItem(STORAGE_KEYS.config);
 
+    if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
+    if (elements.tavilyApiKey) elements.tavilyApiKey.value = '';
+    if (elements.injectCurrentTime) elements.injectCurrentTime.checked = false;
+
     ['A', 'B'].forEach(side => {
         elements[`provider${side}`].value = 'openai';
         elements[`apiKey${side}`].value = '';
@@ -333,6 +511,38 @@ function getConfig(side) {
     };
 }
 
+function getWebSearchConfig() {
+    return {
+        enabled: !!elements.enableWebSearch?.checked,
+        tavilyApiKey: (elements.tavilyApiKey?.value || '').trim()
+    };
+}
+
+function getTimeContextConfig() {
+    return {
+        injectCurrentTime: !!elements.injectCurrentTime?.checked
+    };
+}
+
+function formatLocalDateTimeForSystemPrompt(date) {
+    try {
+        const d = date instanceof Date ? date : new Date();
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        const s = d.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        return tz ? `${s} (${tz})` : s;
+    } catch {
+        return new Date().toISOString();
+    }
+}
+
 function initChat() {
     const topicsRaw = localStorage.getItem(STORAGE_KEYS.topics);
     const activeRaw = localStorage.getItem(STORAGE_KEYS.activeTopicId);
@@ -340,7 +550,14 @@ function initChat() {
     if (topicsRaw) {
         try {
             const parsed = JSON.parse(topicsRaw);
-            if (Array.isArray(parsed)) state.chat.topics = parsed;
+            if (Array.isArray(parsed)) {
+                state.chat.topics = parsed;
+                for (const topic of state.chat.topics) {
+                    if (typeof topic?.title === 'string' && /^新话题\s*\d+$/.test(topic.title.trim())) {
+                        topic.title = '新话题';
+                    }
+                }
+            }
         } catch (e) {
             console.error('加载话题失败:', e);
         }
@@ -379,11 +596,10 @@ function saveChatState() {
 }
 
 function createTopic() {
-    const idx = state.chat.topics.length + 1;
     const now = Date.now();
     const topic = {
         id: createId(),
-        title: `新话题 ${idx}`,
+        title: '新话题',
         createdAt: now,
         updatedAt: now,
         turns: []
@@ -530,6 +746,13 @@ function createTurnElement(turn) {
     userBubble.className = 'user-bubble';
     userBubble.textContent = turn.prompt || '';
 
+    let webSearchEl = null;
+    if (turn.webSearch) {
+        webSearchEl = document.createElement('div');
+        webSearchEl.className = 'web-search';
+        renderWebSearchSection(webSearchEl, turn.webSearch);
+    }
+
     const assistants = document.createElement('div');
     assistants.className = 'turn-assistants';
 
@@ -539,9 +762,10 @@ function createTurnElement(turn) {
     assistants.appendChild(bCard.el);
 
     turnEl.appendChild(userBubble);
+    if (webSearchEl) turnEl.appendChild(webSearchEl);
     turnEl.appendChild(assistants);
 
-    return { el: turnEl, cards: { A: aCard, B: bCard } };
+    return { el: turnEl, cards: { A: aCard, B: bCard }, webSearchEl };
 }
 
 function createAssistantCard(side, turn) {
@@ -683,6 +907,7 @@ async function sendPrompt() {
 
     const configA = getConfig('A');
     const configB = getConfig('B');
+    const webSearchConfig = getWebSearchConfig();
 
     if (!configA.apiKey || !configA.model) {
         alert('请先配置模型A');
@@ -704,6 +929,7 @@ async function sendPrompt() {
         id: createId(),
         createdAt: now,
         prompt,
+        webSearch: webSearchConfig.enabled ? { status: 'loading', query: prompt, results: [], answer: '', error: '' } : null,
         models: {
             A: { provider: configA.provider, model: configA.model, thinking: '', content: '', tokens: null, timeCostSec: null, status: 'loading' },
             B: { provider: configB.provider, model: configB.model, thinking: '', content: '', tokens: null, timeCostSec: null, status: 'loading' }
@@ -743,12 +969,39 @@ async function sendPrompt() {
     state.isRunning = true;
     // 发送/停止合并：生成中保持按钮可点击，用于停止
 
+    let promptForModels = prompt;
+    if (turn.webSearch) {
+        if (!webSearchConfig.tavilyApiKey) {
+            turn.webSearch.status = 'error';
+            turn.webSearch.error = '已启用联网搜索，但未填写 Tavily API Key。';
+            renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
+            scheduleSaveChat();
+        } else {
+            try {
+                const data = await tavilySearch(prompt, webSearchConfig.tavilyApiKey);
+                turn.webSearch.status = 'ready';
+                turn.webSearch.answer = data?.answer || '';
+                turn.webSearch.results = Array.isArray(data?.results) ? data.results : [];
+                renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
+                scheduleSaveChat();
+                if (turn.webSearch.results?.length || turn.webSearch.answer) {
+                    promptForModels = buildPromptWithWebSearch(prompt, turn.webSearch);
+                }
+            } catch (e) {
+                turn.webSearch.status = 'error';
+                turn.webSearch.error = e?.message || '联网搜索失败';
+                renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
+                scheduleSaveChat();
+            }
+        }
+    }
+
     const startA = Date.now();
     const startB = Date.now();
 
     await Promise.allSettled([
-        callModel('A', prompt, configA, turn, createdEls.cards.A, startA),
-        callModel('B', prompt, configB, turn, createdEls.cards.B, startB)
+        callModel('A', promptForModels, configA, turn, createdEls.cards.A, startA),
+        callModel('B', promptForModels, configB, turn, createdEls.cards.B, startB)
     ]);
 
     state.isRunning = false;
@@ -873,6 +1126,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
 
 function buildRequest(config, prompt) {
     const { provider, apiKey, model, apiUrl, systemPrompt, thinking } = config;
+    const timeContext = getTimeContextConfig();
 
     let url = apiUrl;
     if (!url) {
@@ -895,17 +1149,30 @@ function buildRequest(config, prompt) {
 
     let body;
     if (provider === 'anthropic') {
+        const systemParts = [];
+        if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
+        if (timeContext.injectCurrentTime) {
+            systemParts.push(`当前时间（本地）：${formatLocalDateTimeForSystemPrompt(new Date())}`);
+        }
+        const combinedSystem = systemParts.join('\n\n');
+
         body = {
             model,
             messages: [{ role: 'user', content: prompt }],
             stream: true,
             max_tokens: 4096
         };
-        if (systemPrompt && systemPrompt.trim()) body.system = systemPrompt.trim();
+        if (combinedSystem) body.system = combinedSystem;
         if (thinking) body.thinking = { type: 'enabled', budget_tokens: 2000 };
     } else {
         const messages = [];
-        if (systemPrompt && systemPrompt.trim()) messages.push({ role: 'system', content: systemPrompt.trim() });
+        const systemParts = [];
+        if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
+        if (timeContext.injectCurrentTime) {
+            systemParts.push(`当前时间（本地）：${formatLocalDateTimeForSystemPrompt(new Date())}`);
+        }
+        const combinedSystem = systemParts.join('\n\n');
+        if (combinedSystem) messages.push({ role: 'system', content: combinedSystem });
         messages.push({ role: 'user', content: prompt });
         body = { model, messages, stream: true };
 
