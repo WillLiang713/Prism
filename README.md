@@ -72,6 +72,7 @@
 启用思考模式后，AI会显示内部思考过程：
 - Anthropic：显示thinking内容
 - OpenAI o1：显示reasoning过程
+- DeepSeek（OpenAI兼容接口）：通过请求体 `thinking: { type: "enabled" }` 开启（SDK里通常以 `extra_body` 传入）
 
 ## 技术架构
 

@@ -451,10 +451,25 @@ function buildRequest(config, prompt) {
             stream: true
         };
 
+        const modelLower = (model || '').toLowerCase();
+
         // OpenAI的思考模式（如果支持）
-        if (thinking && model.includes('o1')) {
+        if (thinking && modelLower.includes('o1')) {
             // o1系列模型的特殊处理
             body.reasoning_effort = 'high';
+        }
+
+        // Qwen（OpenAI兼容接口）的深度思考：通过非标准参数 enable_thinking 开启
+        // 参考：extra_body={"enable_thinking": True} => 实际HTTP请求体根级字段 enable_thinking
+        if (thinking && modelLower.includes('qwen')) {
+            body.enable_thinking = true;
+            body.stream_options = { include_usage: true };
+        }
+
+        // DeepSeek（OpenAI兼容接口）的思考模式：通过非标准参数 thinking 开启
+        // 参考：extra_body={"thinking": {"type": "enabled"}} => 实际HTTP请求体根级字段 thinking
+        if (thinking && modelLower.includes('deepseek')) {
+            body.thinking = { type: 'enabled' };
         }
     }
 
@@ -474,9 +489,16 @@ async function handleStreamResponse(side, response, config, startTime) {
 
     console.log(`[${side}] 开始处理流式响应`);
 
+    const showThinkingSection = () => {
+        const section = elements[`thinkingSection${side}`];
+        if (section.style.display !== 'block') {
+            section.style.display = 'block';
+        }
+    };
+
     // 显示思考区域（如果启用）
     if (config.thinking) {
-        elements[`thinkingSection${side}`].style.display = 'block';
+        showThinkingSection();
     }
 
     while (true) {
@@ -512,6 +534,7 @@ async function handleStreamResponse(side, response, config, startTime) {
                     if (config.provider === 'anthropic') {
                         const result = parseAnthropicChunk(json);
                         if (result.thinking) {
+                            showThinkingSection();
                             thinkingText += result.thinking;
                             elements[`thinkingContent${side}`].textContent = thinkingText;
                         }
@@ -525,6 +548,11 @@ async function handleStreamResponse(side, response, config, startTime) {
                     } else {
                         // OpenAI格式
                         const result = parseOpenAIChunk(json);
+                        if (result.thinking) {
+                            showThinkingSection();
+                            thinkingText += result.thinking;
+                            elements[`thinkingContent${side}`].textContent = thinkingText;
+                        }
                         if (result.content) {
                             responseText += result.content;
                             renderMarkdown(side, responseText);
@@ -569,17 +597,31 @@ function parseAnthropicChunk(chunk) {
 
 // 解析OpenAI响应块
 function parseOpenAIChunk(chunk) {
-    const result = { content: '', tokens: 0 };
+    const result = { thinking: '', content: '', tokens: 0 };
 
     if (chunk.choices && chunk.choices[0]) {
         const delta = chunk.choices[0].delta;
+        // OpenAI兼容：部分供应商会用 reasoning_content / thinking 字段流式返回推理过程
+        if (delta && typeof delta === 'object') {
+            if (typeof delta.reasoning_content === 'string') {
+                result.thinking = delta.reasoning_content;
+            } else if (typeof delta.thinking === 'string') {
+                result.thinking = delta.thinking;
+            } else if (typeof delta.reasoning === 'string') {
+                result.thinking = delta.reasoning;
+            }
+        }
         if (delta.content) {
             result.content = delta.content;
         }
     }
 
     if (chunk.usage) {
-        result.tokens = chunk.usage.completion_tokens || 0;
+        result.tokens =
+            chunk.usage.completion_tokens ||
+            chunk.usage.output_tokens ||
+            chunk.usage.total_tokens ||
+            0;
     }
 
     return result;
