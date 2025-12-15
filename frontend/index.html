@@ -20,30 +20,6 @@
     <div class="container">
         <!-- 聊天区域 -->
         <div class="chat-layout">
-            <!-- 左侧话题与历史 -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <div class="sidebar-header">
-                        <h3>话题</h3>
-                        <div class="sidebar-actions">
-                            <button class="btn btn-secondary btn-small" id="newTopicBtn">新建</button>
-                            <button class="btn btn-secondary btn-small" id="deleteTopicBtn" title="删除当前话题">删除</button>
-                        </div>
-                    </div>
-                    <div class="topic-list" id="topicList"></div>
-                </div>
-
-                <div class="sidebar-divider"></div>
-
-                <div class="sidebar-section">
-                    <div class="sidebar-header">
-                        <h3>历史</h3>
-                    </div>
-                    <div class="history-list" id="historyList"></div>
-                </div>
-            </aside>
-
-            <!-- 右侧对话流 -->
             <section class="chat-panel">
                 <div class="chat-header">
                     <div class="chat-model">
@@ -60,24 +36,51 @@
                         <button class="btn btn-secondary" id="openConfigBtn">配置</button>
                     </div>
                 </div>
-                <div class="chat-messages" id="chatMessages"></div>
 
-                <!-- 输入区域（固定在聊天卡片底部） -->
-                <div class="chat-composer">
-                    <div class="composer-box">
-                        <div class="composer-bar">
-                            <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
-                            <button class="btn btn-primary action-btn" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
-                                <span class="action-label label-send">发送</span>
-                                <span class="action-label label-stop">停止</span>
-                            </button>
+                <div class="chat-body">
+                    <div class="chat-side" aria-label="话题与历史">
+                        <div class="sidebar-section">
+                            <div class="sidebar-header">
+                                <h3>话题</h3>
+                                <div class="sidebar-actions">
+                                    <button class="btn btn-secondary btn-small" id="newTopicBtn">新建</button>
+                                    <button class="btn btn-secondary btn-small" id="deleteTopicBtn" title="删除当前话题">删除</button>
+                                </div>
+                            </div>
+                            <div class="topic-list" id="topicList"></div>
                         </div>
-                        <div class="composer-options">
-                            <label class="switch">
-                                <input type="checkbox" id="enableWebSearch">
-                                <span class="switch-track" aria-hidden="true"></span>
-                                <span class="switch-text">联网搜索</span>
-                            </label>
+
+                        <div class="sidebar-divider"></div>
+
+                        <div class="sidebar-section">
+                            <div class="sidebar-header">
+                                <h3>历史</h3>
+                            </div>
+                            <div class="history-list" id="historyList"></div>
+                        </div>
+                    </div>
+
+                    <div class="chat-thread" aria-label="聊天">
+                        <div class="chat-messages" id="chatMessages"></div>
+
+                        <!-- 输入区域（固定在聊天卡片底部） -->
+                        <div class="chat-composer">
+                            <div class="composer-box">
+                                <div class="composer-bar">
+                                    <textarea id="promptInput" placeholder="输入你的问题..."></textarea>
+                                    <button class="btn btn-primary action-btn" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
+                                        <span class="action-label label-send">发送</span>
+                                        <span class="action-label label-stop">停止</span>
+                                    </button>
+                                </div>
+                                <div class="composer-options">
+                                    <label class="switch">
+                                        <input type="checkbox" id="enableWebSearch">
+                                        <span class="switch-track" aria-hidden="true"></span>
+                                        <span class="switch-text">联网搜索</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -329,22 +329,34 @@ body {
 
 /* 聊天布局 */
 .chat-layout {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 20px;
+    display: flex;
     flex: 1;
     min-height: 0;
 }
 
-.sidebar {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+/* chat-panel 内部布局（话题/历史 + 聊天） */
+.chat-body {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+}
+
+.chat-side {
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 0;
+    border-right: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.chat-thread {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background: white;
 }
 
 .sidebar-section {
@@ -448,7 +460,9 @@ body {
     flex-direction: column;
     height: 100%;
     min-height: 0;
+    min-width: 0;
     overflow: hidden;
+    flex: 1;
 }
 
 .chat-header {
@@ -982,7 +996,13 @@ body {
 
 /* 响应式设计 */
 @media (max-width: 1200px) {
-    .chat-layout {
+    .chat-side {
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+        max-height: 320px;
+    }
+
+    .chat-body {
         grid-template-columns: 1fr;
     }
 
