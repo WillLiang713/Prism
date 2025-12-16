@@ -1599,6 +1599,9 @@ function createAssistantCard(side, turn) {
     chipLabel.className = 'chip-label';
     chipLabel.textContent = side;
 
+    const loadingSpinner = document.createElement('span');
+    loadingSpinner.className = 'chip-loading-spinner';
+
     const modelName = document.createElement('span');
     modelName.className = 'chip-id';
     modelName.textContent = modelSnapshot || (side === 'A' ? (elements.modelNameA.textContent || '未配置') : (elements.modelNameB.textContent || '未配置'));
@@ -1609,6 +1612,7 @@ function createAssistantCard(side, turn) {
 
     chip.appendChild(chipDot);
     chip.appendChild(chipLabel);
+    chip.appendChild(loadingSpinner);
     chip.appendChild(modelName);
     chip.appendChild(statusEl);
     header.appendChild(chip);
@@ -1695,6 +1699,16 @@ function applyStatus(statusEl, status) {
     const next = map[status] || map.ready;
     statusEl.className = `status ${next.cls}`;
     statusEl.textContent = next.text;
+
+    // 同步更新卡片的loading状态类
+    const card = statusEl.closest('.assistant-card');
+    if (card) {
+        if (status === 'loading') {
+            card.classList.add('loading');
+        } else {
+            card.classList.remove('loading');
+        }
+    }
 }
 
 function setHeaderStatus(side, status) {
