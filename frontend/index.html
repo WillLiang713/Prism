@@ -241,6 +241,27 @@
                             </label>
                         </div>
                     </div>
+                    <div class="global-config">
+                        <h3>对话历史</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="enableHistory" checked>
+                                启用对话历史
+                            </label>
+                            <small style="display: block; color: #666; margin-top: 4px;">
+                                启用后，AI能看到之前的对话内容；禁用后，每次对话都是独立的
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                历史轮数限制
+                                <input type="number" id="maxHistoryTurns" min="1" max="50" value="10" style="width: 80px;">
+                            </label>
+                            <small style="display: block; color: #666; margin-top: 4px;">
+                                限制发送给AI的历史对话轮数（1-50轮，默认10轮）
+                            </small>
+                        </div>
+                    </div>
                     <div class="config-actions">
                         <button class="btn btn-primary" id="saveConfig">保存</button>
                         <button class="btn btn-secondary" id="clearConfig">清除</button>

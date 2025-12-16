@@ -36,6 +36,10 @@ const elements = {
     // 时间上下文
     injectCurrentTime: document.getElementById('injectCurrentTime'),
 
+    // 对话历史
+    enableHistory: document.getElementById('enableHistory'),
+    maxHistoryTurns: document.getElementById('maxHistoryTurns'),
+
     // 输入相关
     promptInput: document.getElementById('promptInput'),
     sendBtn: document.getElementById('sendBtn'),
@@ -1183,7 +1187,9 @@ function saveConfig() {
             tavilyApiKey: elements.tavilyApiKey?.value || ''
         },
         timeContext: {
-            injectCurrentTime: !!elements.injectCurrentTime?.checked
+            injectCurrentTime: !!elements.injectCurrentTime?.checked,
+            enableHistory: !!elements.enableHistory?.checked,
+            maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
         },
         A: {
             provider: elements.providerA.value,
@@ -1221,6 +1227,8 @@ function loadConfig() {
         }
         if (config.timeContext) {
             if (elements.injectCurrentTime) elements.injectCurrentTime.checked = !!config.timeContext.injectCurrentTime;
+            if (elements.enableHistory) elements.enableHistory.checked = config.timeContext.enableHistory !== false;
+            if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = config.timeContext.maxHistoryTurns || 10;
         }
         if (config.A) {
             elements.providerA.value = config.A.provider || 'openai';
@@ -1252,6 +1260,8 @@ function clearConfig() {
     if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
     if (elements.tavilyApiKey) elements.tavilyApiKey.value = '';
     if (elements.injectCurrentTime) elements.injectCurrentTime.checked = false;
+    if (elements.enableHistory) elements.enableHistory.checked = true;
+    if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
 
     ['A', 'B'].forEach(side => {
         elements[`provider${side}`].value = 'openai';
@@ -1292,6 +1302,15 @@ function getTimeContextConfig() {
     return {
         injectCurrentTime: !!elements.injectCurrentTime?.checked
     };
+}
+
+function getMaxHistoryTurns() {
+    const value = parseInt(elements.maxHistoryTurns?.value);
+    return (value >= 1 && value <= 50) ? value : 10;
+}
+
+function isHistoryEnabled() {
+    return !!elements.enableHistory?.checked;
 }
 
 function formatLocalDateTimeForSystemPrompt(date) {
@@ -2059,7 +2078,13 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
 
     try {
         const images = turn?.images || [];
-        const { url, headers, body } = buildRequest(config, prompt, images);
+
+        // 获取历史turns（不包含当前turn）
+        const topic = getActiveTopic();
+        const currentTurnIndex = topic?.turns?.findIndex(t => t.id === turn.id) ?? -1;
+        const historyTurns = currentTurnIndex > 0 ? topic.turns.slice(0, currentTurnIndex) : [];
+
+        const { url, headers, body } = buildRequest(config, prompt, images, historyTurns, side);
         const response = await fetch(url, {
             method: 'POST',
             headers,
@@ -2138,7 +2163,69 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     }
 }
 
-function buildRequest(config, prompt, images = []) {
+/**
+ * 将历史turns转换为消息数组
+ * @param {Array} historyTurns - 历史turns数组
+ * @param {string} side - 'A'或'B'
+ * @param {string} providerMode - 'anthropic'或'openai'
+ * @param {number} maxTurns - 最大保留轮数（默认10）
+ * @returns {Array} 消息数组
+ */
+function convertHistoryToMessages(historyTurns, side, providerMode, maxTurns = 10) {
+    if (!Array.isArray(historyTurns) || historyTurns.length === 0) {
+        return [];
+    }
+
+    const recentTurns = historyTurns.slice(-maxTurns);
+    const messages = [];
+
+    for (const turn of recentTurns) {
+        // 跳过未完成或出错的turn
+        if (!turn.models?.[side]?.content || turn.models[side].status !== 'complete') {
+            continue;
+        }
+
+        // 构建用户消息（支持多模态）
+        const hasImages = Array.isArray(turn.images) && turn.images.length > 0;
+        let userContent;
+
+        if (hasImages) {
+            if (providerMode === 'anthropic') {
+                userContent = [];
+                if (turn.prompt) userContent.push({ type: 'text', text: turn.prompt });
+                for (const img of turn.images) {
+                    const match = img.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+                    if (match) {
+                        userContent.push({
+                            type: 'image',
+                            source: { type: 'base64', media_type: match[1], data: match[2] }
+                        });
+                    }
+                }
+            } else {
+                userContent = [];
+                if (turn.prompt) userContent.push({ type: 'text', text: turn.prompt });
+                for (const img of turn.images) {
+                    userContent.push({ type: 'image_url', image_url: { url: img.dataUrl } });
+                }
+            }
+        } else {
+            userContent = turn.prompt;
+        }
+
+        messages.push({ role: 'user', content: userContent });
+
+        // 构建助手消息
+        const assistantContent = turn.models[side].content;
+        if (assistantContent) {
+            messages.push({ role: 'assistant', content: assistantContent });
+        }
+    }
+
+    return messages;
+}
+
+function buildRequest(config, prompt, images = [], historyTurns = [], side = null) {
     const { provider, apiKey, model, apiUrl, systemPrompt, thinking } = config;
     const providerMode = getProviderMode(config);
     const timeContext = getTimeContextConfig();
@@ -2177,7 +2264,12 @@ function buildRequest(config, prompt, images = []) {
         }
         const combinedSystem = systemParts.join('\n\n');
 
-        // 构建用户消息内容（支持多模态）
+        // 构建历史消息
+        const historyMessages = isHistoryEnabled()
+            ? convertHistoryToMessages(historyTurns, side, 'anthropic', getMaxHistoryTurns())
+            : [];
+
+        // 构建当前用户消息内容（支持多模态）
         let userContent;
         if (hasImages) {
             // Anthropic格式：content是数组
@@ -2208,9 +2300,12 @@ function buildRequest(config, prompt, images = []) {
             userContent = prompt;
         }
 
+        // 合并历史消息和当前消息
+        const allMessages = [...historyMessages, { role: 'user', content: userContent }];
+
         body = {
             model,
-            messages: [{ role: 'user', content: userContent }],
+            messages: allMessages,
             stream: true,
             max_tokens: 4096
         };
@@ -2226,7 +2321,13 @@ function buildRequest(config, prompt, images = []) {
         const combinedSystem = systemParts.join('\n\n');
         if (combinedSystem) messages.push({ role: 'system', content: combinedSystem });
 
-        // 构建用户消息内容（支持多模态）
+        // 构建历史消息
+        const historyMessages = isHistoryEnabled()
+            ? convertHistoryToMessages(historyTurns, side, 'openai', getMaxHistoryTurns())
+            : [];
+        messages.push(...historyMessages);
+
+        // 构建当前用户消息内容（支持多模态）
         let userContent;
         if (hasImages) {
             // OpenAI格式：content是数组
