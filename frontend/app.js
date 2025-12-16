@@ -57,6 +57,7 @@ const elements = {
     topicList: document.getElementById('topicList'),
     historyList: document.getElementById('historyList'),
     chatMessages: document.getElementById('chatMessages'),
+    scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
 
     // 模型A配置
     providerA: document.getElementById('providerA'),
@@ -66,7 +67,6 @@ const elements = {
     apiKeyA: document.getElementById('apiKeyA'),
     modelA: document.getElementById('modelA'),
     apiUrlA: document.getElementById('apiUrlA'),
-    systemPromptA: document.getElementById('systemPromptA'),
     thinkingA: document.getElementById('thinkingA'),
     modelListA: document.getElementById('modelListA'),
     modelHintA: document.getElementById('modelHintA'),
@@ -81,7 +81,6 @@ const elements = {
     apiKeyB: document.getElementById('apiKeyB'),
     modelB: document.getElementById('modelB'),
     apiUrlB: document.getElementById('apiUrlB'),
-    systemPromptB: document.getElementById('systemPromptB'),
     thinkingB: document.getElementById('thinkingB'),
     modelListB: document.getElementById('modelListB'),
     modelHintB: document.getElementById('modelHintB'),
@@ -650,6 +649,16 @@ function bindEvents() {
 
     elements.sendBtn.addEventListener('click', onSendButtonClick);
 
+    // 滚动到底部按钮
+    elements.scrollToBottomBtn?.addEventListener('click', () => {
+        scrollToBottom(elements.chatMessages, true);
+    });
+
+    // 监听聊天消息区域的滚动事件，控制按钮显示
+    elements.chatMessages?.addEventListener('scroll', () => {
+        updateScrollToBottomButton();
+    });
+
     elements.newTopicBtn.addEventListener('click', () => {
         if (state.isRunning && !confirm('正在生成中，仍要新建话题并停止当前生成吗？')) return;
         if (state.isRunning) stopGeneration();
@@ -816,6 +825,17 @@ function setSendButtonMode(mode) {
 function onSendButtonClick() {
     if (state.isRunning) stopGeneration();
     else sendPrompt();
+}
+
+// 更新滚动到底部按钮的显示状态
+function updateScrollToBottomButton() {
+    if (!elements.chatMessages || !elements.scrollToBottomBtn) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = elements.chatMessages;
+    const nearBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+    // 如果接近底部，隐藏按钮；否则显示按钮
+    elements.scrollToBottomBtn.style.display = nearBottom ? 'none' : 'flex';
 }
 
 function updateProviderUi(side) {
@@ -1188,7 +1208,6 @@ function saveConfig() {
             apiKey: elements.apiKeyA.value,
             model: elements.modelA.value,
             apiUrl: elements.apiUrlA.value,
-            systemPrompt: elements.systemPromptA.value,
             thinking: elements.thinkingA.checked
         },
         B: {
@@ -1197,7 +1216,6 @@ function saveConfig() {
             apiKey: elements.apiKeyB.value,
             model: elements.modelB.value,
             apiUrl: elements.apiUrlB.value,
-            systemPrompt: elements.systemPromptB.value,
             thinking: elements.thinkingB.checked
         }
     };
@@ -1229,7 +1247,6 @@ function loadConfig() {
             elements.apiKeyA.value = config.A.apiKey || '';
             elements.modelA.value = config.A.model || '';
             elements.apiUrlA.value = config.A.apiUrl || '';
-            elements.systemPromptA.value = config.A.systemPrompt || '';
             elements.thinkingA.checked = !!config.A.thinking;
         }
         if (config.B) {
@@ -1238,7 +1255,6 @@ function loadConfig() {
             elements.apiKeyB.value = config.B.apiKey || '';
             elements.modelB.value = config.B.model || '';
             elements.apiUrlB.value = config.B.apiUrl || '';
-            elements.systemPromptB.value = config.B.systemPrompt || '';
             elements.thinkingB.checked = !!config.B.thinking;
         }
     } catch (e) {
@@ -1262,7 +1278,6 @@ function clearConfig() {
         elements[`apiKey${side}`].value = '';
         elements[`model${side}`].value = '';
         elements[`apiUrl${side}`].value = '';
-        elements[`systemPrompt${side}`].value = '';
         elements[`thinking${side}`].checked = false;
     });
 
@@ -1273,13 +1288,22 @@ function clearConfig() {
 }
 
 function getConfig(side) {
+    // 获取当前选中的提示词内容
+    let systemPrompt = '';
+    if (state.prompts.activeId) {
+        const activePrompt = state.prompts.list.find(p => p.id === state.prompts.activeId);
+        if (activePrompt) {
+            systemPrompt = activePrompt.content;
+        }
+    }
+
     return {
         provider: elements[`provider${side}`].value,
         customFormat: elements[`customFormat${side}`]?.value || 'openai',
         apiKey: elements[`apiKey${side}`].value,
         model: elements[`model${side}`].value,
         apiUrl: elements[`apiUrl${side}`].value,
-        systemPrompt: elements[`systemPrompt${side}`].value,
+        systemPrompt: systemPrompt,
         thinking: elements[`thinking${side}`].checked
     };
 }
@@ -1503,15 +1527,23 @@ function scrollToTurn(turnId) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function isNearBottom(container, thresholdPx = 120) {
+function isNearBottom(container, thresholdPx = 150) {
     if (!container) return true;
     const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
-    return remaining <= thresholdPx;
+    // 增加阈值到 150px，并且考虑浮点数误差
+    return remaining <= thresholdPx || remaining < 1;
 }
 
-function scrollToBottom(container) {
+function scrollToBottom(container, smooth = false) {
     if (!container) return;
-    container.scrollTop = container.scrollHeight;
+    if (smooth) {
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth'
+        });
+    } else {
+        container.scrollTop = container.scrollHeight;
+    }
 }
 
 function renderChatMessages() {
@@ -1525,7 +1557,7 @@ function renderChatMessages() {
         const { el } = createTurnElement(turn);
         elements.chatMessages.appendChild(el);
     }
-    scrollToBottom(elements.chatMessages);
+    updateScrollToBottomButton();
 }
 
 function createTurnElement(turn) {
@@ -1936,12 +1968,10 @@ async function sendPrompt() {
 
     scheduleSaveChat();
 
-    const nearBottom = isNearBottom(elements.chatMessages);
     const createdEls = createTurnElement(turn);
     elements.chatMessages.appendChild(createdEls.el);
     renderTopicList();
     renderHistoryList();
-    if (nearBottom) scrollToBottom(elements.chatMessages);
 
     elements.promptInput.value = '';
     autoGrowPromptInput();
@@ -2086,17 +2116,17 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                 ui.thinkingContentEl.textContent = turn.models[side].thinking;
                 scheduleAutoCollapseThinking(ui);
                 scheduleSaveChat();
+                updateScrollToBottomButton();
             },
             onContentDelta: (delta) => {
                 if (!delta) return;
-                const nearBottom = isNearBottom(elements.chatMessages);
                 turn.models[side].content += delta;
                 renderMarkdownToElement(ui.responseEl, turn.models[side].content);
                 const tokens = estimateTokensFromText(turn.models[side].content);
                 ui.tokenEl.textContent = `${tokens} tokens`;
                 setHeaderTokens(side, tokens);
                 scheduleSaveChat();
-                if (nearBottom) scrollToBottom(elements.chatMessages);
+                updateScrollToBottomButton();
             },
             onTokens: (tokens) => {
                 if (!Number.isFinite(tokens) || tokens < 0) return;
@@ -2516,7 +2546,7 @@ function deletePrompt(promptId) {
 // 应用提示词到模型A和B
 function applyPrompt(promptId) {
     if (!promptId) {
-        // 清除提示词，恢复原有的systemPrompt
+        // 清除提示词
         state.prompts.activeId = null;
         localStorage.removeItem(STORAGE_KEYS.activePromptId);
         renderPromptSelector();
@@ -2526,45 +2556,9 @@ function applyPrompt(promptId) {
     const prompt = state.prompts.list.find(p => p.id === promptId);
     if (!prompt) return;
 
-    // 同时应用到模型A和B的systemPrompt
-    elements.systemPromptA.value = prompt.content;
-    elements.systemPromptB.value = prompt.content;
-
     // 更新选中状态
     state.prompts.activeId = promptId;
     localStorage.setItem(STORAGE_KEYS.activePromptId, promptId);
-
-    // 自动保存配置
-    const config = {
-        webSearch: {
-            enabled: !!elements.enableWebSearch?.checked,
-            tavilyApiKey: elements.tavilyApiKey?.value || ''
-        },
-        history: {
-            enableHistory: !!elements.enableHistory?.checked,
-            maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
-        },
-        A: {
-            provider: elements.providerA.value,
-            customFormat: elements.customFormatA?.value || 'openai',
-            apiKey: elements.apiKeyA.value,
-            model: elements.modelA.value,
-            apiUrl: elements.apiUrlA.value,
-            systemPrompt: elements.systemPromptA.value,
-            thinking: elements.thinkingA.checked
-        },
-        B: {
-            provider: elements.providerB.value,
-            customFormat: elements.customFormatB?.value || 'openai',
-            apiKey: elements.apiKeyB.value,
-            model: elements.modelB.value,
-            apiUrl: elements.apiUrlB.value,
-            systemPrompt: elements.systemPromptB.value,
-            thinking: elements.thinkingB.checked
-        }
-    };
-
-    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
 
     // 更新UI
     renderPromptSelector();

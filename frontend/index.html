@@ -67,7 +67,15 @@
                     </div>
 
                     <div class="chat-thread" aria-label="聊天">
-                        <div class="chat-messages" id="chatMessages"></div>
+                        <div class="chat-messages-wrapper">
+                            <div class="chat-messages" id="chatMessages"></div>
+                            <!-- 滚动到底部按钮 -->
+                            <button class="scroll-to-bottom-btn" id="scrollToBottomBtn" style="display: none;" title="滚动到底部">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                        </div>
 
                         <!-- 输入区域（固定在聊天卡片底部） -->
                         <div class="chat-composer">
@@ -167,10 +175,6 @@
                                 <input type="text" id="apiUrlA" placeholder="https://api.example.com/v1/chat/completions">
                             </div>
                             <div class="form-group">
-                                <label>系统提示词（可选）</label>
-                                <textarea id="systemPromptA" rows="3" placeholder="例如：你是一个专业的编程助手，擅长解释代码和提供最佳实践建议"></textarea>
-                            </div>
-                            <div class="form-group">
                                 <label>
                                     <input type="checkbox" id="thinkingA">
                                     启用思考模式
@@ -216,10 +220,6 @@
                             <div class="form-group">
                                 <label>API地址（留空用默认；自定义必填）</label>
                                 <input type="text" id="apiUrlB" placeholder="https://api.example.com/v1/messages">
-                            </div>
-                            <div class="form-group">
-                                <label>系统提示词（可选）</label>
-                                <textarea id="systemPromptB" rows="3" placeholder="例如：你是一个专业的编程助手，擅长解释代码和提供最佳实践建议"></textarea>
                             </div>
                             <div class="form-group">
                                 <label>
