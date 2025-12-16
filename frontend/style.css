@@ -1141,6 +1141,9 @@ body {
     border-radius: 8px;
     overflow: hidden;
     background: white;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .assistant-card-header {
@@ -1206,6 +1209,8 @@ body {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
+    flex: 1;
+    min-height: 0;
 }
 
 /* Webkit浏览器（Chrome/Edge/Safari）滚动条样式 */
