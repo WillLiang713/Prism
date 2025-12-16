@@ -235,6 +235,15 @@
                             <label>Tavily API Key</label>
                             <input type="password" id="tavilyApiKey" placeholder="tvly-...">
                         </div>
+                        <div class="form-group">
+                            <label>
+                                搜索结果数量
+                                <input type="number" id="tavilyMaxResults" min="1" max="20" value="5" style="width: 80px;">
+                            </label>
+                            <small style="display: block; color: #666; margin-top: 4px;">
+                                每次搜索返回的结果数量（1-20条，默认5条）
+                            </small>
+                        </div>
                     </div>
                     <div class="global-config">
                         <h3>对话历史</h3>

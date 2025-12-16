@@ -1093,6 +1093,8 @@ body {
     padding: 10px 12px 12px;
     font-size: 13px;
     color: #374151;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .web-search-hint,

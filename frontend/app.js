@@ -39,6 +39,7 @@ const elements = {
     // 联网搜索（Tavily）
     enableWebSearch: document.getElementById('enableWebSearch'),
     tavilyApiKey: document.getElementById('tavilyApiKey'),
+    tavilyMaxResults: document.getElementById('tavilyMaxResults'),
 
     // 对话历史
     enableHistory: document.getElementById('enableHistory'),
@@ -522,7 +523,8 @@ function renderWebSearchSection(container, webSearch) {
         if (results.length) {
             const list = document.createElement('ol');
             list.className = 'web-search-results';
-            results.slice(0, 5).forEach((r) => {
+            // 显示所有返回的结果，不再限制为5条
+            results.forEach((r) => {
                 const item = document.createElement('li');
                 const link = document.createElement('a');
                 link.href = r.url || '#';
@@ -559,7 +561,8 @@ function buildPromptWithWebSearch(originalPrompt, webSearch) {
     if (webSearch?.answer) lines.push(`搜索摘要：${truncateText(webSearch.answer, 1200)}`);
 
     if (results.length) {
-        const formatted = results.slice(0, 5).map((r, i) => {
+        // 传递所有搜索结果给AI，不再限制为5条
+        const formatted = results.map((r, i) => {
             const title = (r.title || '').trim();
             const url = (r.url || '').trim();
             const snippet = truncateText((r.content || r.snippet || '').trim(), 800);
@@ -576,7 +579,7 @@ function buildPromptWithWebSearch(originalPrompt, webSearch) {
     return lines.join('\n\n');
 }
 
-async function tavilySearch(query, apiKey) {
+async function tavilySearch(query, apiKey, maxResults = 5) {
     if (window.location.protocol === 'file:') {
         throw new Error('当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000');
     }
@@ -588,7 +591,7 @@ async function tavilySearch(query, apiKey) {
             api_key: apiKey,
             query,
             search_depth: 'basic',
-            max_results: 5,
+            max_results: Math.max(1, Math.min(20, maxResults || 5)),
             include_answer: true,
             include_raw_content: false,
             include_images: false
@@ -1172,7 +1175,8 @@ function saveConfig() {
     const config = {
         webSearch: {
             enabled: !!elements.enableWebSearch?.checked,
-            tavilyApiKey: elements.tavilyApiKey?.value || ''
+            tavilyApiKey: elements.tavilyApiKey?.value || '',
+            maxResults: parseInt(elements.tavilyMaxResults?.value) || 5
         },
         history: {
             enableHistory: !!elements.enableHistory?.checked,
@@ -1211,6 +1215,7 @@ function loadConfig() {
         if (config.webSearch) {
             if (elements.enableWebSearch) elements.enableWebSearch.checked = !!config.webSearch.enabled;
             if (elements.tavilyApiKey) elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || '';
+            if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
         }
         // 加载对话历史配置（兼容旧的 timeContext 配置）
         const historyConfig = config.history || config.timeContext;
@@ -1247,6 +1252,7 @@ function clearConfig() {
 
     if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
     if (elements.tavilyApiKey) elements.tavilyApiKey.value = '';
+    if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
     if (elements.enableHistory) elements.enableHistory.checked = true;
     if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
 
@@ -1279,9 +1285,11 @@ function getConfig(side) {
 }
 
 function getWebSearchConfig() {
+    const maxResults = parseInt(elements.tavilyMaxResults?.value);
     return {
         enabled: !!elements.enableWebSearch?.checked,
-        tavilyApiKey: (elements.tavilyApiKey?.value || '').trim()
+        tavilyApiKey: (elements.tavilyApiKey?.value || '').trim(),
+        maxResults: (maxResults >= 1 && maxResults <= 20) ? maxResults : 5
     };
 }
 
@@ -1960,7 +1968,7 @@ async function sendPrompt() {
             scheduleSaveChat();
         } else {
             try {
-                const data = await tavilySearch(prompt, webSearchConfig.tavilyApiKey);
+                const data = await tavilySearch(prompt, webSearchConfig.tavilyApiKey, webSearchConfig.maxResults);
                 turn.webSearch.status = 'ready';
                 turn.webSearch.answer = data?.answer || '';
                 turn.webSearch.results = Array.isArray(data?.results) ? data.results : [];
