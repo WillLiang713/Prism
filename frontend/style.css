@@ -956,7 +956,7 @@ body {
     position: absolute;
     left: -32px;
     top: 6px;
-    opacity: 1;
+    opacity: 0;
     pointer-events: auto;
     transition: opacity 0.15s ease, transform 0.05s ease;
 }
@@ -1004,7 +1004,8 @@ body {
 }
 
 .user-bubble-wrap:hover .message-copy-btn,
-.user-bubble-wrap:focus-within .message-copy-btn {
+.user-bubble-wrap:focus-within .message-copy-btn,
+.message-copy-btn:hover {
     opacity: 1;
 }
 
