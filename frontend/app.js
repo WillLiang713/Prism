@@ -1,7 +1,9 @@
 const STORAGE_KEYS = {
     config: 'aiPkConfig',
     topics: 'aiPkTopicsV1',
-    activeTopicId: 'aiPkActiveTopicId'
+    activeTopicId: 'aiPkActiveTopicId',
+    prompts: 'aiPkPromptsV1',
+    activePromptId: 'aiPkActivePromptId'
 };
 
 const state = {
@@ -18,6 +20,11 @@ const state = {
     },
     images: {
         selectedImages: [] // 存储当前选择的图片 { id, dataUrl, name, size }
+    },
+    prompts: {
+        list: [],
+        activeId: null,
+        saveTimer: null
     }
 };
 
@@ -91,7 +98,24 @@ const elements = {
     tokenCountA: document.getElementById('tokenCountA'),
     tokenCountB: document.getElementById('tokenCountB'),
     timeCostA: document.getElementById('timeCostA'),
-    timeCostB: document.getElementById('timeCostB')
+    timeCostB: document.getElementById('timeCostB'),
+
+    // 提示词相关
+    promptSelectorBtn: document.getElementById('promptSelectorBtn'),
+    promptSelectorLabel: document.getElementById('promptSelectorLabel'),
+    promptSelectorModal: document.getElementById('promptSelectorModal'),
+    promptSelectorList: document.getElementById('promptSelectorList'),
+    closePromptSelectorBtn: document.getElementById('closePromptSelectorBtn'),
+    openPromptManagerBtn: document.getElementById('openPromptManagerBtn'),
+    promptModal: document.getElementById('promptModal'),
+    closePromptModalBtn: document.getElementById('closePromptModalBtn'),
+    promptList: document.getElementById('promptList'),
+    newPromptBtn: document.getElementById('newPromptBtn'),
+    importPromptsBtn: document.getElementById('importPromptsBtn'),
+    exportPromptsBtn: document.getElementById('exportPromptsBtn'),
+    importPromptsInput: document.getElementById('importPromptsInput'),
+    promptPreviewModal: document.getElementById('promptPreviewModal'),
+    closePromptPreviewBtn: document.getElementById('closePromptPreviewBtn')
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -101,6 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateProviderUi('B');
     initChat();
     bindEvents();
+    initPrompts();
+    bindPromptEvents();
+    renderPromptSelector();
     updateModelNames();
     setHeaderStatus('A', 'ready');
     setHeaderStatus('B', 'ready');
@@ -589,8 +616,18 @@ function bindEvents() {
     elements.saveConfig.addEventListener('click', saveConfig);
     elements.clearConfig.addEventListener('click', clearConfig);
 
+    // 联网搜索开关的label元素，阻止焦点转移
+    const webSearchLabel = elements.enableWebSearch?.parentElement;
+    if (webSearchLabel) {
+        webSearchLabel.addEventListener('mousedown', (e) => {
+            // 只阻止label本身的默认行为，不阻止checkbox的点击
+            if (e.target === webSearchLabel || e.target.classList.contains('switch-track') || e.target.classList.contains('switch-text') || e.target.tagName === 'svg' || e.target.tagName === 'path') {
+                e.preventDefault();
+            }
+        });
+    }
+
     elements.enableWebSearch?.addEventListener('change', (e) => {
-        e.currentTarget.blur(); // 立即移除焦点，避免触发输入框容器的选中效果
         try {
             const raw = localStorage.getItem(STORAGE_KEYS.config);
             const config = raw ? JSON.parse(raw) : {};
@@ -1427,7 +1464,17 @@ function renderAll() {
 
 function renderTopicList() {
     if (!elements.topicList) return;
+
+    // 保存新建按钮
+    const newTopicBtn = elements.topicList.querySelector('.topic-new-btn');
+
+    // 清空列表
     elements.topicList.innerHTML = '';
+
+    // 重新添加新建按钮
+    if (newTopicBtn) {
+        elements.topicList.appendChild(newTopicBtn);
+    }
 
     const topics = [...state.chat.topics].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     for (const topic of topics) {
@@ -2444,4 +2491,600 @@ function parseOpenAIChunk(chunk) {
     }
 
     return result;
+}
+
+// ========== 提示词管理功能 ==========
+
+// 初始化提示词数据
+function initPrompts() {
+    const raw = localStorage.getItem(STORAGE_KEYS.prompts);
+    const activeRaw = localStorage.getItem(STORAGE_KEYS.activePromptId);
+
+    if (raw) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                state.prompts.list = parsed;
+            }
+        } catch (e) {
+            console.error('加载提示词失败:', e);
+        }
+    }
+
+    if (activeRaw && state.prompts.list.some(p => p.id === activeRaw)) {
+        state.prompts.activeId = activeRaw;
+    }
+}
+
+// 防抖保存提示词
+function scheduleSavePrompts() {
+    if (state.prompts.saveTimer) clearTimeout(state.prompts.saveTimer);
+    state.prompts.saveTimer = setTimeout(() => {
+        state.prompts.saveTimer = null;
+        savePromptsState();
+    }, 500);
+}
+
+// 保存提示词状态到localStorage
+function savePromptsState() {
+    try {
+        localStorage.setItem(STORAGE_KEYS.prompts, JSON.stringify(state.prompts.list));
+        if (state.prompts.activeId) {
+            localStorage.setItem(STORAGE_KEYS.activePromptId, state.prompts.activeId);
+        } else {
+            localStorage.removeItem(STORAGE_KEYS.activePromptId);
+        }
+    } catch (e) {
+        console.error('保存提示词失败:', e);
+    }
+}
+
+// 创建新提示词
+function createPrompt(name = '新提示词', content = '', description = '') {
+    const now = Date.now();
+    const prompt = {
+        id: createId(),
+        name: name || '新提示词',
+        description: description || '',
+        content: content || '',
+        createdAt: now,
+        updatedAt: now
+    };
+    state.prompts.list.unshift(prompt);
+    scheduleSavePrompts();
+    return prompt;
+}
+
+// 更新提示词
+function updatePrompt(promptId, updates) {
+    const prompt = state.prompts.list.find(p => p.id === promptId);
+    if (!prompt) return false;
+
+    if (updates.name !== undefined) prompt.name = updates.name;
+    if (updates.description !== undefined) prompt.description = updates.description;
+    if (updates.content !== undefined) prompt.content = updates.content;
+    prompt.updatedAt = Date.now();
+
+    scheduleSavePrompts();
+    return true;
+}
+
+// 删除提示词
+function deletePrompt(promptId) {
+    const before = state.prompts.list.length;
+    state.prompts.list = state.prompts.list.filter(p => p.id !== promptId);
+
+    // 如果删除的是当前选中的提示词，清除选中状态
+    if (state.prompts.activeId === promptId) {
+        state.prompts.activeId = null;
+        localStorage.removeItem(STORAGE_KEYS.activePromptId);
+    }
+
+    if (before !== state.prompts.list.length) {
+        scheduleSavePrompts();
+        return true;
+    }
+    return false;
+}
+
+// 应用提示词到模型A和B
+function applyPrompt(promptId) {
+    if (!promptId) {
+        // 清除提示词，恢复原有的systemPrompt
+        state.prompts.activeId = null;
+        localStorage.removeItem(STORAGE_KEYS.activePromptId);
+        renderPromptSelector();
+        return;
+    }
+
+    const prompt = state.prompts.list.find(p => p.id === promptId);
+    if (!prompt) return;
+
+    // 同时应用到模型A和B的systemPrompt
+    elements.systemPromptA.value = prompt.content;
+    elements.systemPromptB.value = prompt.content;
+
+    // 更新选中状态
+    state.prompts.activeId = promptId;
+    localStorage.setItem(STORAGE_KEYS.activePromptId, promptId);
+
+    // 自动保存配置
+    const config = {
+        webSearch: {
+            enabled: !!elements.enableWebSearch?.checked,
+            tavilyApiKey: elements.tavilyApiKey?.value || ''
+        },
+        timeContext: {
+            injectCurrentTime: !!elements.injectCurrentTime?.checked,
+            enableHistory: !!elements.enableHistory?.checked,
+            maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
+        },
+        A: {
+            provider: elements.providerA.value,
+            customFormat: elements.customFormatA?.value || 'openai',
+            apiKey: elements.apiKeyA.value,
+            model: elements.modelA.value,
+            apiUrl: elements.apiUrlA.value,
+            systemPrompt: elements.systemPromptA.value,
+            thinking: elements.thinkingA.checked
+        },
+        B: {
+            provider: elements.providerB.value,
+            customFormat: elements.customFormatB?.value || 'openai',
+            apiKey: elements.apiKeyB.value,
+            model: elements.modelB.value,
+            apiUrl: elements.apiUrlB.value,
+            systemPrompt: elements.systemPromptB.value,
+            thinking: elements.thinkingB.checked
+        }
+    };
+
+    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+
+    // 更新UI
+    renderPromptSelector();
+}
+
+// 渲染提示词选择器（更新按钮文本）
+function renderPromptSelector() {
+    if (!elements.promptSelectorLabel) return;
+
+    if (!state.prompts.activeId) {
+        elements.promptSelectorLabel.textContent = '默认提示词';
+        return;
+    }
+
+    const prompt = state.prompts.list.find(p => p.id === state.prompts.activeId);
+    elements.promptSelectorLabel.textContent = prompt ? prompt.name : '默认提示词';
+}
+
+// 渲染提示词管理列表
+function renderPromptList() {
+    if (!elements.promptList) return;
+
+    elements.promptList.innerHTML = '';
+
+    if (state.prompts.list.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.textAlign = 'center';
+        empty.style.color = '#999';
+        empty.style.padding = '40px 20px';
+        empty.textContent = '暂无提示词，点击"新建"创建第一个提示词';
+        elements.promptList.appendChild(empty);
+        return;
+    }
+
+    for (const prompt of state.prompts.list) {
+        const item = document.createElement('div');
+        item.className = 'prompt-item';
+        item.dataset.promptId = prompt.id;
+
+        // 头部
+        const header = document.createElement('div');
+        header.className = 'prompt-item-header';
+        const name = document.createElement('div');
+        name.className = 'prompt-item-name';
+        name.textContent = prompt.name;
+
+        const actions = document.createElement('div');
+        actions.className = 'prompt-item-actions';
+
+        const previewBtn = document.createElement('button');
+        previewBtn.type = 'button';
+        previewBtn.className = 'prompt-item-btn';
+        previewBtn.textContent = '预览';
+        previewBtn.addEventListener('click', () => openPromptPreview(prompt));
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'prompt-item-btn';
+        editBtn.textContent = '编辑';
+        editBtn.addEventListener('click', () => enterEditMode(prompt.id));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'prompt-item-btn delete';
+        deleteBtn.textContent = '删除';
+        deleteBtn.addEventListener('click', () => {
+            if (confirm(`确定要删除提示词「${prompt.name}」吗？`)) {
+                deletePrompt(prompt.id);
+                renderPromptList();
+                renderPromptSelector();
+            }
+        });
+
+        actions.appendChild(previewBtn);
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+
+        header.appendChild(name);
+        header.appendChild(actions);
+
+        // 描述（仅在有描述时显示）
+        let content = null;
+        if (prompt.description && prompt.description.trim()) {
+            content = document.createElement('div');
+            content.className = 'prompt-item-content';
+            content.textContent = prompt.description;
+        }
+
+        // 元信息
+        const meta = document.createElement('div');
+        meta.className = 'prompt-item-meta';
+        meta.textContent = `创建于 ${formatTime(prompt.createdAt)}`;
+        if (prompt.updatedAt !== prompt.createdAt) {
+            meta.textContent += ` · 更新于 ${formatTime(prompt.updatedAt)}`;
+        }
+
+        // 编辑表单（默认隐藏）
+        const editForm = document.createElement('div');
+        editForm.className = 'prompt-item-edit-form';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = '提示词名称';
+        nameInput.value = prompt.name;
+
+        const descriptionInput = document.createElement('input');
+        descriptionInput.type = 'text';
+        descriptionInput.placeholder = '提示词描述（可选）';
+        descriptionInput.value = prompt.description || '';
+
+        const contentTextarea = document.createElement('textarea');
+        contentTextarea.placeholder = '提示词内容';
+        contentTextarea.value = prompt.content;
+
+        const editActions = document.createElement('div');
+        editActions.className = 'prompt-item-edit-actions';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'btn btn-primary btn-small';
+        saveBtn.textContent = '保存';
+        saveBtn.addEventListener('click', () => {
+            const newName = nameInput.value.trim();
+            const newDescription = descriptionInput.value.trim();
+            const newContent = contentTextarea.value.trim();
+
+            if (!newName) {
+                alert('请输入提示词名称');
+                return;
+            }
+
+            updatePrompt(prompt.id, { name: newName, description: newDescription, content: newContent });
+            exitEditMode(prompt.id);
+            renderPromptList();
+            renderPromptSelector();
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn btn-secondary btn-small';
+        cancelBtn.textContent = '取消';
+        cancelBtn.addEventListener('click', () => exitEditMode(prompt.id));
+
+        editActions.appendChild(saveBtn);
+        editActions.appendChild(cancelBtn);
+
+        editForm.appendChild(nameInput);
+        editForm.appendChild(descriptionInput);
+        editForm.appendChild(contentTextarea);
+        editForm.appendChild(editActions);
+
+        item.appendChild(header);
+        if (content) item.appendChild(content);
+        item.appendChild(meta);
+        item.appendChild(editForm);
+
+        elements.promptList.appendChild(item);
+    }
+}
+
+// 进入编辑模式
+function enterEditMode(promptId) {
+    const item = elements.promptList?.querySelector(`[data-prompt-id="${promptId}"]`);
+    if (!item) return;
+    item.classList.add('editing');
+}
+
+// 退出编辑模式
+function exitEditMode(promptId) {
+    const item = elements.promptList?.querySelector(`[data-prompt-id="${promptId}"]`);
+    if (!item) return;
+    item.classList.remove('editing');
+}
+
+// 打开提示词管理弹窗
+function openPromptModal() {
+    if (!elements.promptModal) return;
+    elements.promptModal.classList.add('open');
+    elements.promptModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    renderPromptList();
+}
+
+// 关闭提示词管理弹窗
+function closePromptModal() {
+    if (!elements.promptModal) return;
+    elements.promptModal.classList.remove('open');
+    elements.promptModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+// 打开提示词选择弹窗
+function openPromptSelectorModal() {
+    if (!elements.promptSelectorModal) return;
+    elements.promptSelectorModal.classList.add('open');
+    elements.promptSelectorModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    renderPromptSelectorList();
+}
+
+// 关闭提示词选择弹窗
+function closePromptSelectorModal() {
+    if (!elements.promptSelectorModal) return;
+    elements.promptSelectorModal.classList.remove('open');
+    elements.promptSelectorModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+// 渲染提示词选择列表
+function renderPromptSelectorList() {
+    if (!elements.promptSelectorList) return;
+
+    elements.promptSelectorList.innerHTML = '';
+
+    // 添加默认选项
+    const defaultItem = document.createElement('div');
+    defaultItem.className = 'prompt-selector-item prompt-selector-item-default';
+    if (!state.prompts.activeId) {
+        defaultItem.classList.add('active');
+    }
+
+    const defaultName = document.createElement('div');
+    defaultName.className = 'prompt-selector-item-name';
+    defaultName.textContent = '默认提示词';
+    defaultItem.appendChild(defaultName);
+
+    const defaultDesc = document.createElement('div');
+    defaultDesc.className = 'prompt-selector-item-desc';
+    defaultDesc.textContent = '使用系统默认的提示词配置';
+    defaultItem.appendChild(defaultDesc);
+
+    defaultItem.addEventListener('click', () => {
+        applyPrompt(null);
+        closePromptSelectorModal();
+    });
+
+    elements.promptSelectorList.appendChild(defaultItem);
+
+    // 添加自定义提示词
+    for (const prompt of state.prompts.list) {
+        const item = document.createElement('div');
+        item.className = 'prompt-selector-item';
+        if (prompt.id === state.prompts.activeId) {
+            item.classList.add('active');
+        }
+
+        const name = document.createElement('div');
+        name.className = 'prompt-selector-item-name';
+        name.textContent = prompt.name;
+        item.appendChild(name);
+
+        if (prompt.description) {
+            const desc = document.createElement('div');
+            desc.className = 'prompt-selector-item-desc';
+            desc.textContent = prompt.description;
+            item.appendChild(desc);
+        }
+
+        item.addEventListener('click', () => {
+            applyPrompt(prompt.id);
+            closePromptSelectorModal();
+        });
+
+        elements.promptSelectorList.appendChild(item);
+    }
+}
+
+// 导出提示词为JSON文件
+function exportPrompts() {
+    // 构建导出对象
+    const exportData = {
+        version: 1,
+        exportedAt: Date.now(),
+        prompts: state.prompts.list
+    };
+
+    // 创建JSON字符串
+    const jsonStr = JSON.stringify(exportData, null, 2);
+
+    // 创建Blob对象
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+
+    // 生成文件名（prompts_20231215_143022.json）
+    const now = new Date();
+    const filename = `prompts_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}.json`;
+
+    // 创建下载链接
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    // 清理URL对象
+    URL.revokeObjectURL(url);
+}
+
+// 导入提示词
+function importPrompts() {
+    // 触发文件选择器
+    elements.importPromptsInput.click();
+}
+
+// 绑定提示词相关事件
+function bindPromptEvents() {
+    // 打开提示词选择弹窗
+    elements.promptSelectorBtn?.addEventListener('click', openPromptSelectorModal);
+
+    // 关闭提示词选择弹窗
+    elements.closePromptSelectorBtn?.addEventListener('click', closePromptSelectorModal);
+
+    // 点击遮罩关闭选择弹窗
+    elements.promptSelectorModal?.addEventListener('click', (e) => {
+        if (e.target === elements.promptSelectorModal) closePromptSelectorModal();
+    });
+
+    // 打开管理界面
+    elements.openPromptManagerBtn?.addEventListener('click', openPromptModal);
+
+    // 关闭管理界面
+    elements.closePromptModalBtn?.addEventListener('click', closePromptModal);
+
+    // 点击遮罩关闭
+    elements.promptModal?.addEventListener('click', (e) => {
+        if (e.target === elements.promptModal) closePromptModal();
+    });
+
+    // 关闭预览界面
+    elements.closePromptPreviewBtn?.addEventListener('click', closePromptPreview);
+
+    // 点击遮罩关闭预览
+    elements.promptPreviewModal?.addEventListener('click', (e) => {
+        if (e.target === elements.promptPreviewModal) closePromptPreview();
+    });
+
+    // 新建提示词
+    elements.newPromptBtn?.addEventListener('click', () => {
+        const name = prompt('请输入提示词名称', '新提示词');
+        if (name === null) return;
+
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            alert('提示词名称不能为空');
+            return;
+        }
+
+        createPrompt(trimmedName, '');
+        renderPromptList();
+        renderPromptSelector();
+    });
+
+    // 导出提示词
+    elements.exportPromptsBtn?.addEventListener('click', exportPrompts);
+
+    // 导入提示词
+    elements.importPromptsBtn?.addEventListener('click', importPrompts);
+
+    // 文件选择事件
+    elements.importPromptsInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = (event) => {
+            try {
+                // 解析JSON
+                const data = JSON.parse(event.target.result);
+
+                // 验证格式
+                if (!data.version || !Array.isArray(data.prompts)) {
+                    alert('无效的提示词文件格式');
+                    return;
+                }
+
+                // 导入提示词（重新生成ID）
+                let importCount = 0;
+                for (const item of data.prompts) {
+                    if (!item.name) continue; // 跳过无效项
+
+                    const prompt = {
+                        id: createId(), // 重新生成ID避免冲突
+                        name: item.name,
+                        description: item.description || '',
+                        content: item.content || '',
+                        createdAt: item.createdAt || Date.now(),
+                        updatedAt: item.updatedAt || Date.now()
+                    };
+
+                    state.prompts.list.unshift(prompt); // 添加到列表开头
+                    importCount++;
+                }
+
+                // 保存并刷新UI
+                scheduleSavePrompts();
+                renderPromptList();
+                renderPromptSelector();
+
+                alert(`成功导入 ${importCount} 个提示词`);
+
+            } catch (err) {
+                console.error('导入失败:', err);
+                alert('导入失败：文件格式错误或内容无效');
+            }
+        };
+
+        reader.onerror = () => {
+            alert('读取文件失败');
+        };
+
+        reader.readAsText(file);
+
+        // 清空input，允许重复选择同一文件
+        e.target.value = '';
+    });
+}
+
+// 打开提示词预览
+function openPromptPreview(prompt) {
+    if (!elements.promptPreviewModal) return;
+
+    // 设置标题
+    const titleEl = document.getElementById('promptPreviewTitle');
+    if (titleEl) titleEl.textContent = prompt.name;
+
+    // 渲染内容
+    const contentEl = document.getElementById('promptPreviewContent');
+    if (contentEl) {
+        if (prompt.content) {
+            renderMarkdownToElement(contentEl, prompt.content);
+        } else {
+            contentEl.textContent = '(空)';
+        }
+    }
+
+    // 显示模态框
+    elements.promptPreviewModal.classList.add('open');
+    elements.promptPreviewModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+// 关闭提示词预览
+function closePromptPreview() {
+    if (!elements.promptPreviewModal) return;
+    elements.promptPreviewModal.classList.remove('open');
+    elements.promptPreviewModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
 }

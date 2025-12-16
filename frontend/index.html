@@ -37,6 +37,7 @@
                         </div>
                     </div>
                     <div class="chat-actions">
+                        <button class="btn btn-secondary btn-settings" id="openPromptManagerBtn">提示词</button>
                         <button class="btn btn-secondary btn-settings" id="openConfigBtn">设置</button>
                     </div>
                 </div>
@@ -46,11 +47,13 @@
                         <div class="sidebar-section">
                             <div class="sidebar-header">
                                 <h3>话题</h3>
-                                <div class="sidebar-actions">
-                                    <button class="btn btn-secondary btn-small" id="newTopicBtn">新建</button>
-                                </div>
                             </div>
-                            <div class="topic-list" id="topicList"></div>
+                            <div class="topic-list" id="topicList">
+                                <button class="topic-new-btn" id="newTopicBtn">
+                                    <span class="topic-new-icon">+</span>
+                                    <span class="topic-new-text">新建话题</span>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="sidebar-divider"></div>
@@ -81,6 +84,9 @@
                                 </div>
                                 <div class="composer-options">
                                     <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                                    <button class="toolbar-pill prompt-selector-btn" id="promptSelectorBtn" title="选择提示词">
+                                        <span id="promptSelectorLabel">默认提示词</span>
+                                    </button>
                                     <button class="btn btn-toolbar toolbar-pill" id="imageUploadBtn" title="上传图片" aria-label="上传图片">
                                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" aria-hidden="true">
                                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -116,7 +122,7 @@
                 <div class="config-header">
                     <h2>配置</h2>
                     <div class="config-header-actions">
-                        <button class="toggle-btn" id="closeConfigBtn">关闭</button>
+                        <button class="btn btn-secondary btn-small" id="closeConfigBtn">关闭</button>
                     </div>
                 </div>
                 <div class="config-content" id="configContent">
@@ -265,6 +271,68 @@
                     <div class="config-actions">
                         <button class="btn btn-primary" id="saveConfig">保存</button>
                         <button class="btn btn-secondary" id="clearConfig">清除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示词选择弹窗 -->
+    <div class="modal-overlay" id="promptSelectorModal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="config-panel">
+                <div class="config-header">
+                    <h2>选择提示词</h2>
+                    <div class="config-header-actions">
+                        <button class="btn btn-secondary btn-small" id="closePromptSelectorBtn">关闭</button>
+                    </div>
+                </div>
+                <div class="config-content">
+                    <div class="prompt-selector-list" id="promptSelectorList">
+                        <!-- 动态渲染提示词选择列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示词管理弹窗 -->
+    <div class="modal-overlay" id="promptModal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="config-panel">
+                <div class="config-header">
+                    <h2>提示词管理</h2>
+                    <div class="config-header-actions">
+                        <button class="btn btn-secondary btn-small" id="newPromptBtn">新建</button>
+                        <button class="btn btn-secondary btn-small" id="importPromptsBtn">导入</button>
+                        <button class="btn btn-secondary btn-small" id="exportPromptsBtn">导出</button>
+                        <button class="btn btn-secondary btn-small" id="closePromptModalBtn">关闭</button>
+                    </div>
+                </div>
+                <div class="config-content">
+                    <div class="prompt-list" id="promptList">
+                        <!-- 动态渲染提示词列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 隐藏的文件输入 -->
+        <input type="file" id="importPromptsInput" accept=".json" style="display: none;">
+    </div>
+
+    <!-- 提示词预览弹窗 -->
+    <div class="modal-overlay" id="promptPreviewModal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="config-panel">
+                <div class="config-header">
+                    <h2 id="promptPreviewTitle">提示词预览</h2>
+                    <div class="config-header-actions">
+                        <button class="btn btn-secondary btn-small" id="closePromptPreviewBtn">关闭</button>
+                    </div>
+                </div>
+                <div class="config-content">
+                    <div class="prompt-preview-content" id="promptPreviewContent">
+                        <!-- 动态渲染markdown内容 -->
                     </div>
                 </div>
             </div>
