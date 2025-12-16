@@ -1575,6 +1575,106 @@ function createTurnElement(turn) {
     return { el: turnEl, cards: { A: aCard, B: bCard }, webSearchEl };
 }
 
+/**
+ * 打开全屏预览模态层
+ * @param {HTMLElement} cardEl - 卡片DOM元素
+ * @param {string} side - 'a' 或 'b'
+ * @param {Object} turn - 当前turn对象
+ */
+function openFullscreenPreview(cardEl, side, turn) {
+    // 防止重复打开
+    if (document.querySelector('.fullscreen-modal')) {
+        return;
+    }
+
+    // 保存原位置信息
+    const placeholder = document.createElement('div');
+    placeholder.className = 'fullscreen-placeholder';
+    placeholder.style.display = 'none';
+    cardEl.parentNode.insertBefore(placeholder, cardEl);
+
+    // 创建模态层结构
+    const modal = document.createElement('div');
+    modal.className = 'fullscreen-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'fullscreen-overlay';
+
+    const container = document.createElement('div');
+    container.className = 'fullscreen-container';
+
+    // 将卡片移动到全屏容器（而非克隆）
+    cardEl.classList.add('fullscreen-card');
+    container.appendChild(cardEl);
+
+    // 在卡片的header中添加关闭按钮
+    const headerActions = cardEl.querySelector('.assistant-card-header-actions');
+    if (headerActions) {
+        // 创建关闭按钮
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'card-action-btn fullscreen-close-btn';
+        closeBtn.setAttribute('aria-label', '关闭全屏');
+        closeBtn.title = '关闭全屏';
+        closeBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12"></path>
+            </svg>
+        `;
+
+        // 将关闭按钮添加到header-actions的最后
+        headerActions.appendChild(closeBtn);
+
+        // 保存关闭按钮的引用，用于后续绑定事件
+        container._closeBtn = closeBtn;
+    }
+
+    modal.appendChild(overlay);
+    modal.appendChild(container);
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+
+    // 关闭函数
+    const closeModal = () => {
+        // 移除添加的关闭按钮
+        const closeBtn = container._closeBtn;
+        if (closeBtn && closeBtn.parentNode) {
+            closeBtn.remove();
+        }
+
+        // 将卡片移回原位置
+        cardEl.classList.remove('fullscreen-card');
+        placeholder.parentNode.insertBefore(cardEl, placeholder);
+        placeholder.remove();
+
+        // 移除模态层
+        modal.remove();
+        document.body.style.overflow = '';
+
+        // 移除事件监听
+        document.removeEventListener('keydown', handleEscape);
+    };
+
+    // 绑定关闭事件
+    const closeBtn = container._closeBtn;
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+        // 焦点管理
+        closeBtn.focus();
+    }
+    overlay.addEventListener('click', closeModal);
+
+    // ESC键关闭
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+}
+
 function createAssistantCard(side, turn) {
     const modelSnapshot = turn?.models?.[side]?.model || '';
     const contentSnapshot = turn?.models?.[side]?.content || '';
@@ -1616,6 +1716,40 @@ function createAssistantCard(side, turn) {
     chip.appendChild(modelName);
     chip.appendChild(statusEl);
     header.appendChild(chip);
+
+    // 创建按钮容器
+    const headerActions = document.createElement('div');
+    headerActions.className = 'assistant-card-header-actions';
+
+    // 复制按钮（复用现有createCopyButton函数）
+    const copyBtn = createCopyButton(
+        () => turn?.models?.[side]?.content || '',
+        {
+            label: '复制回答',
+            icon: true,
+            className: 'card-action-btn'
+        }
+    );
+
+    // 全屏预览按钮
+    const fullscreenBtn = document.createElement('button');
+    fullscreenBtn.type = 'button';
+    fullscreenBtn.className = 'card-action-btn fullscreen-btn';
+    fullscreenBtn.setAttribute('aria-label', '全屏预览');
+    fullscreenBtn.title = '全屏预览';
+    fullscreenBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+    `;
+
+    fullscreenBtn.addEventListener('click', () => {
+        openFullscreenPreview(card, side, turn);
+    });
+
+    headerActions.appendChild(copyBtn);
+    headerActions.appendChild(fullscreenBtn);
+    header.appendChild(headerActions);
 
     const body = document.createElement('div');
     body.className = 'assistant-card-body';

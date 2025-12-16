@@ -1138,6 +1138,50 @@ body {
     margin-left: auto;
 }
 
+/* 卡片header右侧按钮容器 */
+.assistant-card-header-actions {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
+}
+
+/* 卡片操作按钮基础样式 */
+.card-action-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.card-action-btn:hover {
+    background: #fafafa;
+    border-color: #b0b0b0;
+    color: #4a4a4a;
+}
+
+.card-action-btn:active {
+    transform: scale(0.95);
+}
+
+.card-action-btn .icon {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .assistant-card-body {
     padding: 12px 12px 14px;
     max-height: 450px;
@@ -1675,4 +1719,80 @@ body {
 .user-text {
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+/* ========== 全屏预览模态层 ========== */
+
+.fullscreen-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fullscreen-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+.fullscreen-container {
+    position: relative;
+    width: min(1200px, 95vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+}
+
+/* 全屏卡片样式调整 */
+.fullscreen-card {
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* 全屏模式下隐藏全屏预览按钮 */
+.fullscreen-card .fullscreen-btn {
+    display: none;
+}
+
+.fullscreen-card .assistant-card-body {
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .card-action-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .fullscreen-modal {
+        padding: 0;
+    }
+
+    .fullscreen-container {
+        width: 100%;
+        max-height: 100vh;
+    }
+
+    .fullscreen-card {
+        max-height: 100vh;
+        border-radius: 0;
+    }
 }
