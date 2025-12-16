@@ -920,49 +920,6 @@ function updateModelHint(side) {
     setModelHint(side, '提示：这里填写模型 ID；将自动获取可用模型列表（可下拉选择或直接输入）。');
 }
 
-function ensureModelListElement(side) {
-    const existing = elements[`modelList${side}`] || document.getElementById(`modelList${side}`);
-    if (existing) return existing;
-    const dl = document.createElement('datalist');
-    dl.id = `modelList${side}`;
-    document.body.appendChild(dl);
-    return dl;
-}
-
-function setModelOptions(side, modelIds) {
-    const listEl = ensureModelListElement(side);
-    if (!listEl) return;
-    listEl.innerHTML = '';
-    const models = Array.isArray(modelIds) ? modelIds : [];
-
-    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
-    if (!slot) return;
-    const token = ++slot.datalistFillToken;
-
-    const batchSize = 200;
-    const appendBatch = (startIdx) => {
-        if (slot.datalistFillToken !== token) return;
-        const frag = document.createDocumentFragment();
-        for (let i = startIdx; i < Math.min(models.length, startIdx + batchSize); i++) {
-            const opt = document.createElement('option');
-            opt.value = models[i];
-            frag.appendChild(opt);
-        }
-        listEl.appendChild(frag);
-
-        const next = startIdx + batchSize;
-        if (next >= models.length) return;
-
-        if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => appendBatch(next), { timeout: 800 });
-        } else {
-            setTimeout(() => appendBatch(next), 0);
-        }
-    };
-
-    appendBatch(0);
-}
-
 function getCachedModelIds(side) {
     const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
     return Array.isArray(slot?.models) ? slot.models : [];
@@ -1175,7 +1132,6 @@ async function fetchAndUpdateModels(side) {
 
     const config = getConfigFromForm(key);
     if (config.provider !== 'custom' && !(config.apiKey || '').trim()) {
-        setModelOptions(key, []);
         slot.models = [];
         closeModelDropdown(key);
         updateModelHint(key);
@@ -1195,7 +1151,6 @@ async function fetchAndUpdateModels(side) {
     try {
         const ids = await fetchModelsOnce(config);
         slot.models = ids;
-        setModelOptions(key, ids);
         setModelHint(key, `已自动获取 ${ids.length} 个模型 ID（可下拉选择或直接输入）。`);
         // 只在下拉框已经打开的情况下更新显示，不自动打开
         if (isModelDropdownOpen(key)) {
@@ -1207,7 +1162,6 @@ async function fetchAndUpdateModels(side) {
         console.warn(`模型${key}模型列表获取失败:`, e?.message || e);
         slot.models = [];
         closeModelDropdown(key);
-        setModelOptions(key, []);
         setModelHint(key, '提示：这里填写模型 ID；自动获取失败，可手动输入。');
     } finally {
         slot.inFlight = false;
