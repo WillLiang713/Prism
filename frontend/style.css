@@ -332,14 +332,15 @@ body {
     gap: 6px;
     background: #ffffff;
     border: 1px solid #d1d5db;
-    color: #374151;
+    color: #333;
     border-radius: 999px;
+    font-size: 14px;
     font-weight: 600;
 }
 
 #newTopicBtn::before {
     content: '+';
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1;
     transform: translateY(-0.5px);
 }
@@ -622,6 +623,14 @@ body {
     min-height: 0;
 }
 
+.topic-list {
+    scrollbar-width: none;
+}
+
+.topic-list::-webkit-scrollbar {
+    display: none;
+}
+
 .topic-item,
 .history-item {
     border: 1px solid #e0e0e0;
@@ -874,6 +883,15 @@ body {
     max-width: min(420px, 34vw);
 }
 
+/* 未配置状态样式 */
+.model-chip.unconfigured {
+    opacity: 0.5;
+}
+
+.model-chip.unconfigured .chip-id {
+    color: #9ca3af;
+    font-weight: 400;
+}
 
 .model-chip .status {
     padding: 3px 8px;
@@ -1583,26 +1601,22 @@ body {
 
 /* 滚动条样式 */
 .chat-messages::-webkit-scrollbar,
-.topic-list::-webkit-scrollbar,
 .history-list::-webkit-scrollbar {
     width: 8px;
 }
 
 .chat-messages::-webkit-scrollbar-track,
-.topic-list::-webkit-scrollbar-track,
 .history-list::-webkit-scrollbar-track {
     background: #f5f5f5;
 }
 
 .chat-messages::-webkit-scrollbar-thumb,
-.topic-list::-webkit-scrollbar-thumb,
 .history-list::-webkit-scrollbar-thumb {
     background: #ccc;
     border-radius: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover,
-.topic-list::-webkit-scrollbar-thumb:hover,
 .history-list::-webkit-scrollbar-thumb:hover {
     background: #999;
 }

@@ -820,10 +820,32 @@ function updateApiUrlPlaceholder(side) {
 }
 
 function updateModelNames() {
-    const modelA = elements.modelA.value || '未配置';
-    const modelB = elements.modelB.value || '未配置';
-    elements.modelNameA.textContent = modelA;
-    elements.modelNameB.textContent = modelB;
+    const modelA = elements.modelA.value || '';
+    const modelB = elements.modelB.value || '';
+
+    // 更新模型名称
+    elements.modelNameA.textContent = modelA || '—';
+    elements.modelNameB.textContent = modelB || '—';
+
+    // 根据配置状态添加/移除样式类
+    const chipA = elements.modelNameA.closest('.model-chip');
+    const chipB = elements.modelNameB.closest('.model-chip');
+
+    if (chipA) {
+        if (modelA) {
+            chipA.classList.remove('unconfigured');
+        } else {
+            chipA.classList.add('unconfigured');
+        }
+    }
+
+    if (chipB) {
+        if (modelB) {
+            chipB.classList.remove('unconfigured');
+        } else {
+            chipB.classList.add('unconfigured');
+        }
+    }
 }
 
 function getConfigFromForm(side) {
