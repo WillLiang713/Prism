@@ -2099,7 +2099,10 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                 if (!delta) return;
                 turn.models[side].thinking += delta;
                 ui.thinkingSectionEl.style.display = 'block';
-                ui.thinkingSectionEl.classList.remove('collapsed');
+                // 只有在用户未手动切换时才自动展开
+                if (ui.thinkingSectionEl.dataset.userToggled !== '1') {
+                    ui.thinkingSectionEl.classList.remove('collapsed');
+                }
                 ui.thinkingContentEl.textContent = turn.models[side].thinking;
                 scheduleAutoCollapseThinking(ui);
                 scheduleSaveChat();
