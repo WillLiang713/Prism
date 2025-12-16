@@ -264,6 +264,8 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    cursor: pointer;
+    font-weight: normal;
     user-select: none;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
@@ -424,7 +426,7 @@ body {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     font-size: 13px;
     color: #555;
     user-select: none;
@@ -1895,13 +1897,6 @@ body {
 .prompt-selector-btn {
     max-width: 150px;
     cursor: pointer;
-    font-family: inherit;
-    background: white;
-    border: 1px solid #d0d0d0;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #333;
 }
 
 .prompt-selector-btn span {
@@ -1910,20 +1905,6 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-}
-
-.prompt-selector-btn:hover {
-    background: #fafafa;
-    border-color: #d0d0d0;
-}
-
-.prompt-selector-btn:active {
-    transform: none;
-}
-
-.prompt-selector-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(136, 136, 136, 0.18);
 }
 
 /* 提示词选择弹窗列表 */
