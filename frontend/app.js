@@ -40,9 +40,6 @@ const elements = {
     enableWebSearch: document.getElementById('enableWebSearch'),
     tavilyApiKey: document.getElementById('tavilyApiKey'),
 
-    // 时间上下文
-    injectCurrentTime: document.getElementById('injectCurrentTime'),
-
     // 对话历史
     enableHistory: document.getElementById('enableHistory'),
     maxHistoryTurns: document.getElementById('maxHistoryTurns'),
@@ -864,9 +861,9 @@ function updateModelNames() {
     const modelA = elements.modelA.value || '';
     const modelB = elements.modelB.value || '';
 
-    // 更新模型名称
-    elements.modelNameA.textContent = modelA || '—';
-    elements.modelNameB.textContent = modelB || '—';
+    // 更新模型名称（未配置时不显示任何内容）
+    elements.modelNameA.textContent = modelA || '';
+    elements.modelNameB.textContent = modelB || '';
 
     // 根据配置状态添加/移除样式类
     const chipA = elements.modelNameA.closest('.model-chip');
@@ -1223,8 +1220,7 @@ function saveConfig() {
             enabled: !!elements.enableWebSearch?.checked,
             tavilyApiKey: elements.tavilyApiKey?.value || ''
         },
-        timeContext: {
-            injectCurrentTime: !!elements.injectCurrentTime?.checked,
+        history: {
             enableHistory: !!elements.enableHistory?.checked,
             maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
         },
@@ -1262,10 +1258,11 @@ function loadConfig() {
             if (elements.enableWebSearch) elements.enableWebSearch.checked = !!config.webSearch.enabled;
             if (elements.tavilyApiKey) elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || '';
         }
-        if (config.timeContext) {
-            if (elements.injectCurrentTime) elements.injectCurrentTime.checked = !!config.timeContext.injectCurrentTime;
-            if (elements.enableHistory) elements.enableHistory.checked = config.timeContext.enableHistory !== false;
-            if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = config.timeContext.maxHistoryTurns || 10;
+        // 加载对话历史配置（兼容旧的 timeContext 配置）
+        const historyConfig = config.history || config.timeContext;
+        if (historyConfig) {
+            if (elements.enableHistory) elements.enableHistory.checked = historyConfig.enableHistory !== false;
+            if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = historyConfig.maxHistoryTurns || 10;
         }
         if (config.A) {
             elements.providerA.value = config.A.provider || 'openai';
@@ -1296,7 +1293,6 @@ function clearConfig() {
 
     if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
     if (elements.tavilyApiKey) elements.tavilyApiKey.value = '';
-    if (elements.injectCurrentTime) elements.injectCurrentTime.checked = false;
     if (elements.enableHistory) elements.enableHistory.checked = true;
     if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
 
@@ -1335,12 +1331,6 @@ function getWebSearchConfig() {
     };
 }
 
-function getTimeContextConfig() {
-    return {
-        injectCurrentTime: !!elements.injectCurrentTime?.checked
-    };
-}
-
 function getMaxHistoryTurns() {
     const value = parseInt(elements.maxHistoryTurns?.value);
     return (value >= 1 && value <= 50) ? value : 10;
@@ -1348,25 +1338,6 @@ function getMaxHistoryTurns() {
 
 function isHistoryEnabled() {
     return !!elements.enableHistory?.checked;
-}
-
-function formatLocalDateTimeForSystemPrompt(date) {
-    try {
-        const d = date instanceof Date ? date : new Date();
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-        const s = d.toLocaleString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
-        return tz ? `${s} (${tz})` : s;
-    } catch {
-        return new Date().toISOString();
-    }
 }
 
 function initChat() {
@@ -2278,7 +2249,6 @@ function convertHistoryToMessages(historyTurns, side, providerMode, maxTurns = 1
 function buildRequest(config, prompt, images = [], historyTurns = [], side = null) {
     const { provider, apiKey, model, apiUrl, systemPrompt, thinking } = config;
     const providerMode = getProviderMode(config);
-    const timeContext = getTimeContextConfig();
 
     let url = (apiUrl || '').trim();
     if (!url) {
@@ -2309,9 +2279,6 @@ function buildRequest(config, prompt, images = [], historyTurns = [], side = nul
     if (providerMode === 'anthropic') {
         const systemParts = [];
         if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
-        if (timeContext.injectCurrentTime) {
-            systemParts.push(`当前时间（本地）：${formatLocalDateTimeForSystemPrompt(new Date())}`);
-        }
         const combinedSystem = systemParts.join('\n\n');
 
         // 构建历史消息
@@ -2365,9 +2332,6 @@ function buildRequest(config, prompt, images = [], historyTurns = [], side = nul
         const messages = [];
         const systemParts = [];
         if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
-        if (timeContext.injectCurrentTime) {
-            systemParts.push(`当前时间（本地）：${formatLocalDateTimeForSystemPrompt(new Date())}`);
-        }
         const combinedSystem = systemParts.join('\n\n');
         if (combinedSystem) messages.push({ role: 'system', content: combinedSystem });
 
@@ -2614,8 +2578,7 @@ function applyPrompt(promptId) {
             enabled: !!elements.enableWebSearch?.checked,
             tavilyApiKey: elements.tavilyApiKey?.value || ''
         },
-        timeContext: {
-            injectCurrentTime: !!elements.injectCurrentTime?.checked,
+        history: {
             enableHistory: !!elements.enableHistory?.checked,
             maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
         },
@@ -2650,12 +2613,12 @@ function renderPromptSelector() {
     if (!elements.promptSelectorLabel) return;
 
     if (!state.prompts.activeId) {
-        elements.promptSelectorLabel.textContent = '默认提示词';
+        elements.promptSelectorLabel.textContent = '默认';
         return;
     }
 
     const prompt = state.prompts.list.find(p => p.id === state.prompts.activeId);
-    elements.promptSelectorLabel.textContent = prompt ? prompt.name : '默认提示词';
+    elements.promptSelectorLabel.textContent = prompt ? prompt.name : '默认';
 }
 
 // 渲染提示词管理列表
@@ -2863,7 +2826,7 @@ function renderPromptSelectorList() {
 
     const defaultName = document.createElement('div');
     defaultName.className = 'prompt-selector-item-name';
-    defaultName.textContent = '默认提示词';
+    defaultName.textContent = '默认';
     defaultItem.appendChild(defaultName);
 
     const defaultDesc = document.createElement('div');
