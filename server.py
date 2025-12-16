@@ -188,17 +188,12 @@ async def proxy(full_path: str, request: Request):
         return {"error": "无效的目标URL"}
 
     target_url = full_path
-    print(f"代理请求: {request.method} {target_url}")
 
     # 复制请求头，移除可能导致问题的头
     headers = dict(request.headers)
     headers.pop("host", None)
     headers.pop("origin", None)
     headers.pop("referer", None)
-
-    # 调试日志
-    print(f"转发的请求头: Authorization={'已设置' if 'authorization' in headers else '未设置'}, "
-          f"x-api-key={'已设置' if 'x-api-key' in headers else '未设置'}")
 
     try:
         # 读取请求体
@@ -213,14 +208,7 @@ async def proxy(full_path: str, request: Request):
                     headers=headers,
                     content=body
                 ) as response:
-                    print(f"API响应状态码: {response.status_code}")
-                    print(f"API响应头: {dict(response.headers)}")
-
-                    chunk_count = 0
                     async for chunk in response.aiter_bytes():
-                        chunk_count += 1
-                        if chunk_count <= 3:  # 只打印前3个chunk
-                            print(f"收到chunk {chunk_count}: {len(chunk)} bytes")
                         yield chunk
 
         # 保持原始响应的Content-Type
