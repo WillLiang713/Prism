@@ -391,15 +391,53 @@ body {
 }
 
 .composer-box {
+    position: relative;
     background: #f8f8f8;
     border: 1px solid #e0e0e0;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
+}
+
+.composer-box::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 14px;
+    padding: 2px;
+    background: linear-gradient(90deg,
+        #ff0000 0%,
+        #ff7f00 14.28%,
+        #ffff00 28.56%,
+        #00ff00 42.84%,
+        #00ffff 57.12%,
+        #0000ff 71.4%,
+        #8b00ff 85.68%,
+        #ff0000 100%);
+    background-size: 200% 100%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.composer-box:focus-within::before {
+    opacity: 1;
+    animation: shimmer 6s linear infinite;
 }
 
 .composer-box:focus-within {
     border-color: #888;
-    box-shadow: 0 0 0 3px rgba(136, 136, 136, 0.18);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
 }
 
 .composer-bar {
