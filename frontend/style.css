@@ -1061,11 +1061,11 @@ body {
 }
 
 .copy-icon-btn .icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2;
+    stroke-width: 1.5;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -1095,8 +1095,16 @@ body {
 
 .user-bubble-wrap:hover .message-copy-btn,
 .user-bubble-wrap:focus-within .message-copy-btn,
-.message-copy-btn:hover {
+.message-copy-btn:hover,
+.message-copy-btn[data-copy-state="success"],
+.message-copy-btn[data-copy-state="error"] {
     opacity: 1;
+}
+
+/* 淡出状态：保持成功图标显示，只改变透明度 */
+.message-copy-btn.copy-btn-fade-out {
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .web-search {

@@ -251,7 +251,7 @@ function createCopyButton(getText, options = {}) {
         loadingText = '复制…',
         successText = '已复制',
         errorText = '失败',
-        resetDelayMs = 900,
+        resetDelayMs = 1800,
         icon = false,
     } = options || {};
 
@@ -273,7 +273,7 @@ function createCopyButton(getText, options = {}) {
             return svg;
         };
 
-        btn.appendChild(mkSvg('icon-copy', '<rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path>'));
+        btn.appendChild(mkSvg('icon-copy', '<rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>'));
         btn.appendChild(mkSvg('icon-check', '<path d="M20 6L9 17l-5-5"></path>'));
         btn.appendChild(mkSvg('icon-x', '<path d="M18 6L6 18M6 6l12 12"></path>'));
     } else {
@@ -303,12 +303,25 @@ function createCopyButton(getText, options = {}) {
         }
 
         setTimeout(() => {
-            btn.disabled = false;
-            if (icon) {
-                delete btn.dataset.copyState;
-                btn.title = original;
+            // 成功状态直接消失，不恢复原状态
+            if (icon && ok) {
+                // 添加淡出类，但保持success状态显示对勾图标
+                btn.classList.add('copy-btn-fade-out');
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.classList.remove('copy-btn-fade-out');
+                    delete btn.dataset.copyState;
+                    btn.title = original;
+                }, 300);
             } else {
-                btn.textContent = original;
+                // 错误状态或非图标按钮恢复原状态
+                btn.disabled = false;
+                if (icon) {
+                    delete btn.dataset.copyState;
+                    btn.title = original;
+                } else {
+                    btn.textContent = original;
+                }
             }
         }, resetDelayMs);
     });
