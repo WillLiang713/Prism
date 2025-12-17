@@ -2153,7 +2153,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 20px;
-    animation: fadeIn 0.2s ease;
+    animation: fadeIn 0.1s ease;
 }
 
 @keyframes fadeIn {

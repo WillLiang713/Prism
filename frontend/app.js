@@ -1751,6 +1751,49 @@ function createTurnElement(turn) {
 }
 
 /**
+ * 获取元素在父容器中的路径（用于同步克隆元素）
+ * @param {Node} element - 目标元素
+ * @param {Node} root - 根容器
+ * @returns {Array|null} 路径数组，如 [0, 2, 1] 表示第0个子节点的第2个子节点的第1个子节点
+ */
+function getElementPath(element, root) {
+    const path = [];
+    let current = element;
+
+    while (current && current !== root) {
+        const parent = current.parentNode;
+        if (!parent) return null;
+
+        const index = Array.from(parent.childNodes).indexOf(current);
+        if (index === -1) return null;
+
+        path.unshift(index);
+        current = parent;
+    }
+
+    return current === root ? path : null;
+}
+
+/**
+ * 通过路径获取元素
+ * @param {Node} root - 根容器
+ * @param {Array} path - 路径数组
+ * @returns {Node|null} 找到的元素
+ */
+function getElementByPath(root, path) {
+    let current = root;
+
+    for (const index of path) {
+        if (!current.childNodes || index >= current.childNodes.length) {
+            return null;
+        }
+        current = current.childNodes[index];
+    }
+
+    return current;
+}
+
+/**
  * 打开全屏预览模态层
  * @param {HTMLElement} cardEl - 卡片DOM元素
  * @param {string} side - 'a' 或 'b'
@@ -1761,12 +1804,6 @@ function openFullscreenPreview(cardEl, side, turn) {
     if (document.querySelector('.fullscreen-modal')) {
         return;
     }
-
-    // 保存原位置信息
-    const placeholder = document.createElement('div');
-    placeholder.className = 'fullscreen-placeholder';
-    placeholder.style.display = 'none';
-    cardEl.parentNode.insertBefore(placeholder, cardEl);
 
     // 创建模态层结构
     const modal = document.createElement('div');
@@ -1780,12 +1817,56 @@ function openFullscreenPreview(cardEl, side, turn) {
     const container = document.createElement('div');
     container.className = 'fullscreen-container';
 
-    // 将卡片移动到全屏容器（而非克隆）
-    cardEl.classList.add('fullscreen-card');
-    container.appendChild(cardEl);
+    // 克隆卡片而非移动原始DOM
+    const clonedCard = cardEl.cloneNode(true);
+    clonedCard.classList.add('fullscreen-card');
+    container.appendChild(clonedCard);
 
-    // 在卡片的header中添加关闭按钮
-    const headerActions = cardEl.querySelector('.assistant-card-header-actions');
+    // 建立原卡片与克隆卡片的同步机制
+    const syncObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                // 找到对应的克隆元素并同步内容
+                const targetPath = getElementPath(mutation.target, cardEl);
+                if (targetPath) {
+                    const clonedTarget = getElementByPath(clonedCard, targetPath);
+                    if (clonedTarget && mutation.target.nodeType === Node.ELEMENT_NODE) {
+                        // 同步innerHTML以保持完整的DOM结构
+                        clonedTarget.innerHTML = mutation.target.innerHTML;
+                    } else if (clonedTarget && mutation.target.nodeType === Node.TEXT_NODE) {
+                        clonedTarget.textContent = mutation.target.textContent;
+                    }
+                }
+            } else if (mutation.type === 'attributes') {
+                // 同步属性变化（如class、style等）
+                const targetPath = getElementPath(mutation.target, cardEl);
+                if (targetPath) {
+                    const clonedTarget = getElementByPath(clonedCard, targetPath);
+                    if (clonedTarget && mutation.attributeName) {
+                        const attrValue = mutation.target.getAttribute(mutation.attributeName);
+                        if (attrValue !== null) {
+                            clonedTarget.setAttribute(mutation.attributeName, attrValue);
+                        } else {
+                            clonedTarget.removeAttribute(mutation.attributeName);
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    // 监听原卡片的所有变化
+    syncObserver.observe(cardEl, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeOldValue: false,
+        characterDataOldValue: false
+    });
+
+    // 在克隆卡片的header中添加关闭按钮
+    const headerActions = clonedCard.querySelector('.assistant-card-header-actions');
     if (headerActions) {
         // 创建关闭按钮
         const closeBtn = document.createElement('button');
@@ -1813,16 +1894,8 @@ function openFullscreenPreview(cardEl, side, turn) {
 
     // 关闭函数
     const closeModal = () => {
-        // 移除添加的关闭按钮
-        const closeBtn = container._closeBtn;
-        if (closeBtn && closeBtn.parentNode) {
-            closeBtn.remove();
-        }
-
-        // 将卡片移回原位置
-        cardEl.classList.remove('fullscreen-card');
-        placeholder.parentNode.insertBefore(cardEl, placeholder);
-        placeholder.remove();
+        // 断开同步观察器，防止内存泄漏
+        syncObserver.disconnect();
 
         // 移除模态层
         modal.remove();
