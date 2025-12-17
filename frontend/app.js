@@ -1825,31 +1825,28 @@ function openFullscreenPreview(cardEl, side, turn) {
     // 建立原卡片与克隆卡片的同步机制
     const syncObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
+            // 获取变化元素在克隆卡片中的对应位置
+            const targetPath = getElementPath(mutation.target, cardEl);
+            if (!targetPath) return;
+            
+            const clonedTarget = getElementByPath(clonedCard, targetPath);
+            if (!clonedTarget) return;
+
+            // 同步内容变化
             if (mutation.type === 'childList' || mutation.type === 'characterData') {
-                // 找到对应的克隆元素并同步内容
-                const targetPath = getElementPath(mutation.target, cardEl);
-                if (targetPath) {
-                    const clonedTarget = getElementByPath(clonedCard, targetPath);
-                    if (clonedTarget && mutation.target.nodeType === Node.ELEMENT_NODE) {
-                        // 同步innerHTML以保持完整的DOM结构
-                        clonedTarget.innerHTML = mutation.target.innerHTML;
-                    } else if (clonedTarget && mutation.target.nodeType === Node.TEXT_NODE) {
-                        clonedTarget.textContent = mutation.target.textContent;
-                    }
+                if (mutation.target.nodeType === Node.ELEMENT_NODE) {
+                    clonedTarget.innerHTML = mutation.target.innerHTML;
+                } else if (mutation.target.nodeType === Node.TEXT_NODE) {
+                    clonedTarget.textContent = mutation.target.textContent;
                 }
-            } else if (mutation.type === 'attributes') {
-                // 同步属性变化（如class、style等）
-                const targetPath = getElementPath(mutation.target, cardEl);
-                if (targetPath) {
-                    const clonedTarget = getElementByPath(clonedCard, targetPath);
-                    if (clonedTarget && mutation.attributeName) {
-                        const attrValue = mutation.target.getAttribute(mutation.attributeName);
-                        if (attrValue !== null) {
-                            clonedTarget.setAttribute(mutation.attributeName, attrValue);
-                        } else {
-                            clonedTarget.removeAttribute(mutation.attributeName);
-                        }
-                    }
+            } 
+            // 同步属性变化
+            else if (mutation.type === 'attributes' && mutation.attributeName) {
+                const attrValue = mutation.target.getAttribute(mutation.attributeName);
+                if (attrValue !== null) {
+                    clonedTarget.setAttribute(mutation.attributeName, attrValue);
+                } else {
+                    clonedTarget.removeAttribute(mutation.attributeName);
                 }
             }
         });
