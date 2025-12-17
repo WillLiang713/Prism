@@ -478,17 +478,26 @@ function renderWebSearchSection(container, webSearch) {
 
     const title = document.createElement('span');
     title.className = 'web-search-title';
-    title.textContent = '联网搜索（Tavily）';
+    title.textContent = '联网搜索';
 
     const status = document.createElement('span');
     status.className = `web-search-status ${webSearch.status || 'ready'}`;
-    status.textContent =
-        webSearch.status === 'loading' ? '检索中...' :
-        webSearch.status === 'error' ? '失败' :
-        '完成';
 
-    header.appendChild(title);
+    // 添加spinner元素
+    const spinner = document.createElement('span');
+    spinner.className = 'web-search-status-spinner';
+    status.appendChild(spinner);
+
+    // 添加状态文本
+    const statusText = document.createElement('span');
+    statusText.textContent =
+        webSearch.status === 'loading' ? '搜索中' :
+        webSearch.status === 'error' ? '搜索失败' :
+        '联网搜索';
+    status.appendChild(statusText);
+
     header.appendChild(status);
+    header.appendChild(title);
 
     const body = document.createElement('div');
     body.className = 'web-search-body';
@@ -496,7 +505,7 @@ function renderWebSearchSection(container, webSearch) {
     if (webSearch.status === 'loading') {
         const hint = document.createElement('div');
         hint.className = 'web-search-hint';
-        hint.textContent = '正在检索，请稍候…';
+        hint.textContent = '搜索中…';
         body.appendChild(hint);
     } else if (webSearch.status === 'error') {
         const err = document.createElement('div');
@@ -515,7 +524,6 @@ function renderWebSearchSection(container, webSearch) {
         if (results.length) {
             const list = document.createElement('ol');
             list.className = 'web-search-results';
-            // 显示所有返回的结果，不再限制为5条
             results.forEach((r) => {
                 const item = document.createElement('li');
                 const link = document.createElement('a');
@@ -541,8 +549,20 @@ function renderWebSearchSection(container, webSearch) {
         }
     }
 
+    // 绑定折叠/展开事件
+    header.addEventListener('click', () => {
+        container.classList.toggle('collapsed');
+        container.classList.toggle('expanded');
+        // 用户手动操作后，标记为已手动操作，取消自动折叠
+        container.dataset.userToggled = '1';
+    });
+
     container.appendChild(header);
     container.appendChild(body);
+
+    // 默认折叠状态
+    container.classList.add('collapsed');
+    container.classList.remove('expanded');
 }
 
 function buildPromptWithWebSearch(originalPrompt, webSearch) {
@@ -2005,6 +2025,9 @@ async function sendPrompt() {
     renderTopicList();
     renderHistoryList();
 
+    // 发送后立即滚动到底部
+    scrollToBottom(elements.chatMessages, false);
+
     elements.promptInput.value = '';
     autoGrowPromptInput();
     clearImages(); // 清空已选择的图片
@@ -2195,6 +2218,10 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         scheduleAutoCollapseThinking(ui);
                         scheduleSaveChat();
                         updateScrollToBottomButton();
+                        // 如果用户在底部附近，自动滚动跟随
+                        if (isNearBottom(elements.chatMessages)) {
+                            scrollToBottom(elements.chatMessages, false);
+                        }
                     } else if (chunk.type === 'content' && chunk.data) {
                         turn.models[side].content += chunk.data;
                         renderMarkdownToElement(ui.responseEl, turn.models[side].content);
@@ -2203,6 +2230,10 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         setHeaderTokens(side, tokens);
                         scheduleSaveChat();
                         updateScrollToBottomButton();
+                        // 如果用户在底部附近，自动滚动跟随
+                        if (isNearBottom(elements.chatMessages)) {
+                            scrollToBottom(elements.chatMessages, false);
+                        }
                     } else if (chunk.type === 'tokens' && Number.isFinite(chunk.data)) {
                         turn.models[side].tokens = chunk.data;
                         ui.tokenEl.textContent = `${chunk.data} tokens`;

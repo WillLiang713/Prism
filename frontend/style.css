@@ -1074,7 +1074,17 @@ body {
 
 .web-search {
     align-self: flex-end;
-    max-width: 960px;
+    transition: all 0.3s ease;
+}
+
+/* 折叠状态：小标签样式 */
+.web-search.collapsed {
+    max-width: fit-content;
+}
+
+/* 展开状态：完整卡片样式 */
+.web-search.expanded {
+    max-width: min(600px, 65%);
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
@@ -1084,21 +1094,101 @@ body {
 
 .web-search-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+/* 折叠状态的header：小标签样式 */
+.web-search.collapsed .web-search-header {
+    padding: 6px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.web-search.collapsed .web-search-header:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+/* 展开状态的header：完整样式 */
+.web-search.expanded .web-search-header {
     padding: 10px 12px;
     background: #fafafa;
     border-bottom: 1px solid #eee;
     font-size: 13px;
+    justify-content: space-between;
 }
 
 .web-search-title {
     font-weight: 600;
     color: #111827;
+    order: 1;
+}
+
+/* 折叠状态隐藏完整标题 */
+.web-search.collapsed .web-search-title {
+    display: none;
+}
+
+/* 展开状态的状态标签在右侧 */
+.web-search.expanded .web-search-status {
+    order: 2;
 }
 
 .web-search-status {
     color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+/* 搜索完成状态显示圆点 */
+.web-search-status.ready::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #2e7d32;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+/* 搜索失败状态显示圆点 */
+.web-search-status.error::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #c62828;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+/* 联网搜索loading spinner */
+.web-search-status-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+}
+
+/* loading状态时显示spinner */
+.web-search-status.loading .web-search-status-spinner {
+    display: block;
+}
+
+/* 折叠状态的状态标签 */
+.web-search.collapsed .web-search-status {
+    font-size: 12px;
 }
 
 .web-search-body {
@@ -1107,6 +1197,11 @@ body {
     color: #374151;
     max-height: 300px;
     overflow-y: auto;
+}
+
+/* 折叠状态完全隐藏body */
+.web-search.collapsed .web-search-body {
+    display: none;
 }
 
 .web-search-hint,
