@@ -1,4 +1,4 @@
-# AI模型对比工具
+# Prism
 
 双模型并行对比工具，支持流式输出、思考模式、会话管理。
 
@@ -41,7 +41,7 @@
 ## 文件结构
 
 ```
-AI-PK/
+Prism/
 ├── frontend/       # 前端代码（index.html, style.css, app.js）
 ├── server.py       # Python 后端服务器
 └── README.md       # 说明文档

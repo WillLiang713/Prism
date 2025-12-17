@@ -1,5 +1,5 @@
 """
-AI对比工具 - CORS代理服务器 (Python版本)
+Prism - CORS代理服务器 (Python版本)
 
 使用方法：
 1. 安装依赖：pip install fastapi uvicorn httpx
