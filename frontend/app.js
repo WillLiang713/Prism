@@ -1767,6 +1767,10 @@ function createAssistantCard(side, turn) {
 
     const card = document.createElement('div');
     card.className = `assistant-card assistant-${side.toLowerCase()}`;
+    // 初始状态为loading时添加loading类，触发扫光动画
+    if (statusSnapshot === 'loading') {
+        card.classList.add('loading');
+    }
 
     const header = document.createElement('div');
     header.className = 'assistant-card-header';

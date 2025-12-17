@@ -805,21 +805,21 @@ body {
     align-items: center;
     gap: 8px;
     min-width: 0;
-    padding: 6px 12px;
-    border: 1px solid;
-    border-radius: 8px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
     background: transparent;
     transition: all 0.2s ease;
 }
 
 .model-chip + .model-chip {
-    margin-left: 12px;
+    margin-left: 16px;
 }
 
 /* A模型样式 - 深灰色主题 */
 .model-chip-a {
-    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
-    border-color: #d0d0d0;
+    background: transparent;
+    border-color: transparent;
 }
 
 .model-chip-a .chip-label {
@@ -827,21 +827,21 @@ body {
 }
 
 .model-chip-a .chip-id {
-    color: #2a2a2a;
+    color: #555;
 }
 
-/* B模型样式 - 蓝色主题 */
+/* B模型样式 - 中性灰色主题 */
 .model-chip-b {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border-color: #90caf9;
+    background: transparent;
+    border-color: transparent;
 }
 
 .model-chip-b .chip-label {
-    color: #1565c0;
+    color: #4a4a4a;
 }
 
 .model-chip-b .chip-id {
-    color: #0d47a1;
+    color: #555;
 }
 
 @media (max-width: 520px) {
@@ -874,7 +874,7 @@ body {
 }
 
 .model-chip-b .chip-dot {
-    background: #1565c0;
+    background: #666;
 }
 
 .chip-label {
@@ -885,32 +885,9 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Loading Spinner - 显示在模型ID左边 */
+/* Loading Spinner - 已禁用 */
 .chip-loading-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid transparent;
-    border-top-color: currentColor;
-    border-radius: 50%;
-    flex: 0 0 auto;
-    margin-right: 6px;
     display: none;
-    animation: spin 0.8s linear infinite;
-}
-
-/* loading状态时显示spinner */
-.assistant-card.loading .chip-loading-spinner {
-    display: block;
-}
-
-/* A卡片spinner颜色 */
-.model-chip-a .chip-loading-spinner {
-    color: #4a4a4a;
-}
-
-/* B卡片spinner颜色 */
-.model-chip-b .chip-loading-spinner {
-    color: #1565c0;
 }
 
 .chip-id {
@@ -925,6 +902,21 @@ body {
     min-width: 0;
     max-width: min(380px, 30vw);
     opacity: 0.9;
+}
+
+/* loading状态时模型ID扫光动画 */
+.assistant-card.loading .model-chip .chip-id {
+    background: linear-gradient(
+        90deg,
+        rgba(170, 170, 170, 0.6) 0%,
+        rgba(51, 51, 51, 1) 50%,
+        rgba(170, 170, 170, 0.6) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3.5s linear infinite;
 }
 
 /* 未配置状态样式 - 完全隐藏模型ID */
@@ -1923,6 +1915,22 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* 呼吸动画 - 用于模型ID */
+@keyframes breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+/* 线性扫光动画 - 从右到左 */
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .loading-cursor::after {
