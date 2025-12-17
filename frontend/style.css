@@ -1155,6 +1155,16 @@ body {
     gap: 12px;
 }
 
+/* 单模型时卡片占满宽度 */
+.turn-assistants.single-model {
+    grid-template-columns: 1fr;
+}
+
+/* 双模型时保持原有布局 */
+.turn-assistants.dual-model {
+    grid-template-columns: 1fr 1fr;
+}
+
 .assistant-card {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -1224,12 +1234,9 @@ body {
 
 .assistant-card-body {
     padding: 12px 12px 14px;
-    max-height: 450px;
-    overflow-y: auto;
+    overflow-y: visible;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
-    flex: 1;
-    min-height: 0;
 }
 
 /* Webkit浏览器（Chrome/Edge/Safari）滚动条样式 */

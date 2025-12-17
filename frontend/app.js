@@ -1609,16 +1609,32 @@ function createTurnElement(turn) {
     const assistants = document.createElement('div');
     assistants.className = 'turn-assistants';
 
-    const aCard = createAssistantCard('A', turn);
-    const bCard = createAssistantCard('B', turn);
-    assistants.appendChild(aCard.el);
-    assistants.appendChild(bCard.el);
+    // 只渲染已配置的模型卡片
+    const cards = {};
+    if (turn.models.A) {
+        const aCard = createAssistantCard('A', turn);
+        assistants.appendChild(aCard.el);
+        cards.A = aCard;
+    }
+    if (turn.models.B) {
+        const bCard = createAssistantCard('B', turn);
+        assistants.appendChild(bCard.el);
+        cards.B = bCard;
+    }
+
+    // 根据配置数量添加CSS类，用于自适应布局
+    const configCount = (turn.models.A ? 1 : 0) + (turn.models.B ? 1 : 0);
+    if (configCount === 1) {
+        assistants.classList.add('single-model');
+    } else if (configCount === 2) {
+        assistants.classList.add('dual-model');
+    }
 
     turnEl.appendChild(userWrap);
     if (webSearchEl) turnEl.appendChild(webSearchEl);
     turnEl.appendChild(assistants);
 
-    return { el: turnEl, cards: { A: aCard, B: bCard }, webSearchEl };
+    return { el: turnEl, cards, webSearchEl };
 }
 
 /**
@@ -1924,12 +1940,12 @@ async function sendPrompt() {
     const configB = getConfig('B');
     const webSearchConfig = getWebSearchConfig();
 
-    if (!configA.apiKey || !configA.model) {
-        alert('请先配置模型A');
-        return;
-    }
-    if (!configB.apiKey || !configB.model) {
-        alert('请先配置模型B');
+    // 检查至少配置一个模型
+    const hasA = !!(configA.apiKey && configA.model);
+    const hasB = !!(configB.apiKey && configB.model);
+
+    if (!hasA && !hasB) {
+        alert('请至少配置一个模型');
         return;
     }
 
@@ -1946,11 +1962,32 @@ async function sendPrompt() {
         prompt,
         images: [...state.images.selectedImages], // 保存当前选择的图片
         webSearch: webSearchConfig.enabled ? { status: 'loading', query: prompt, results: [], answer: '', error: '' } : null,
-        models: {
-            A: { provider: configA.provider, model: configA.model, thinking: '', content: '', tokens: null, timeCostSec: null, status: 'loading' },
-            B: { provider: configB.provider, model: configB.model, thinking: '', content: '', tokens: null, timeCostSec: null, status: 'loading' }
-        }
+        models: {}
     };
+
+    // 只为已配置的模型初始化数据
+    if (hasA) {
+        turn.models.A = {
+            provider: configA.provider,
+            model: configA.model,
+            thinking: '',
+            content: '',
+            tokens: null,
+            timeCostSec: null,
+            status: 'loading'
+        };
+    }
+    if (hasB) {
+        turn.models.B = {
+            provider: configB.provider,
+            model: configB.model,
+            thinking: '',
+            content: '',
+            tokens: null,
+            timeCostSec: null,
+            status: 'loading'
+        };
+    }
 
     topic.turns = Array.isArray(topic.turns) ? topic.turns : [];
     topic.turns.push(turn);
@@ -1973,12 +2010,17 @@ async function sendPrompt() {
     clearImages(); // 清空已选择的图片
     elements.promptInput.focus();
 
-    setHeaderStatus('A', 'loading');
-    setHeaderStatus('B', 'loading');
-    setHeaderTokens('A', 0);
-    setHeaderTokens('B', 0);
-    setHeaderTime('A', 0);
-    setHeaderTime('B', 0);
+    // 只为已配置的模型设置状态
+    if (hasA) {
+        setHeaderStatus('A', 'loading');
+        setHeaderTokens('A', 0);
+        setHeaderTime('A', 0);
+    }
+    if (hasB) {
+        setHeaderStatus('B', 'loading');
+        setHeaderTokens('B', 0);
+        setHeaderTime('B', 0);
+    }
     setSendButtonMode('stop');
 
     state.isRunning = true;
@@ -2011,13 +2053,16 @@ async function sendPrompt() {
         }
     }
 
-    const startA = Date.now();
-    const startB = Date.now();
+    // 动态构建调用列表
+    const calls = [];
+    if (hasA && createdEls.cards.A) {
+        calls.push(callModel('A', promptForModels, configA, turn, createdEls.cards.A, Date.now()));
+    }
+    if (hasB && createdEls.cards.B) {
+        calls.push(callModel('B', promptForModels, configB, turn, createdEls.cards.B, Date.now()));
+    }
 
-    await Promise.allSettled([
-        callModel('A', promptForModels, configA, turn, createdEls.cards.A, startA),
-        callModel('B', promptForModels, configB, turn, createdEls.cards.B, startB)
-    ]);
+    await Promise.allSettled(calls);
 
     state.isRunning = false;
     setSendButtonMode('send');
@@ -2030,8 +2075,8 @@ function stopGeneration() {
         if (ctrl) {
             ctrl.abort();
             state.abortControllers[side] = null;
+            setHeaderStatus(side, 'stopped'); // 只在有控制器时设置状态
         }
-        setHeaderStatus(side, 'stopped');
     });
 
     state.isRunning = false;
