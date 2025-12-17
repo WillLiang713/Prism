@@ -697,7 +697,8 @@ body {
 }
 
 .topic-item:hover .topic-delete-btn,
-.topic-item:focus-within .topic-delete-btn {
+.topic-item:focus-within .topic-delete-btn,
+.topic-item.active .topic-delete-btn {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
