@@ -362,13 +362,6 @@ function addCopyButtonsToCodeBlocks(root) {
     }
 }
 
-function getProxyPrefix() {
-    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-        return `${window.location.protocol}//${window.location.host}/`;
-    }
-    return '';
-}
-
 function truncateText(text, maxLen) {
     const s = (text || '').toString();
     if (!maxLen || maxLen <= 0) return s;
@@ -1826,7 +1819,9 @@ function createAssistantCard(side, turn) {
 
     const thinkingContent = document.createElement('div');
     thinkingContent.className = 'thinking-content';
-    thinkingContent.textContent = thinkingSnapshot || '';
+    if (thinkingSnapshot) {
+        renderMarkdownToElement(thinkingContent, thinkingSnapshot);
+    }
 
     thinkingSection.appendChild(thinkingHeader);
     thinkingSection.appendChild(thinkingContent);
@@ -2094,48 +2089,91 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
         const currentTurnIndex = topic?.turns?.findIndex(t => t.id === turn.id) ?? -1;
         const historyTurns = currentTurnIndex > 0 ? topic.turns.slice(0, currentTurnIndex) : [];
 
-        const { url, headers, body } = buildRequest(config, prompt, images, historyTurns, side);
-        const response = await fetch(url, {
+        // 构建请求体（发送到后端）
+        const requestBody = {
+            provider: config.provider,
+            customFormat: config.customFormat || 'openai',
+            apiKey: config.apiKey,
+            model: config.model,
+            apiUrl: config.apiUrl || null,
+            prompt: prompt,
+            images: images,
+            systemPrompt: config.systemPrompt || null,
+            thinking: config.thinking || false,
+            enableHistory: isHistoryEnabled(),
+            maxHistoryTurns: getMaxHistoryTurns(),
+            historyTurns: historyTurns,
+            side: side
+        };
+
+        // 调用后端接口
+        const response = await fetch('/api/chat/stream', {
             method: 'POST',
-            headers,
-            body: JSON.stringify(body),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
             signal: abortController.signal
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
-        await handleStreamResponse(side, response, config, {
-            onThinkingDelta: (delta) => {
-                if (!delta) return;
-                turn.models[side].thinking += delta;
-                ui.thinkingSectionEl.style.display = 'block';
-                // 只有在用户未手动切换时才自动展开
-                if (ui.thinkingSectionEl.dataset.userToggled !== '1') {
-                    ui.thinkingSectionEl.classList.remove('collapsed');
+        // 处理流式响应
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.trim() || line.startsWith(':')) continue;
+                if (!line.startsWith('data: ')) continue;
+
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+
+                try {
+                    const chunk = JSON.parse(data);
+
+                    if (chunk.type === 'thinking' && chunk.data) {
+                        turn.models[side].thinking += chunk.data;
+                        ui.thinkingSectionEl.style.display = 'block';
+                        if (ui.thinkingSectionEl.dataset.userToggled !== '1') {
+                            ui.thinkingSectionEl.classList.remove('collapsed');
+                        }
+                        renderMarkdownToElement(ui.thinkingContentEl, turn.models[side].thinking);
+                        scheduleAutoCollapseThinking(ui);
+                        scheduleSaveChat();
+                        updateScrollToBottomButton();
+                    } else if (chunk.type === 'content' && chunk.data) {
+                        turn.models[side].content += chunk.data;
+                        renderMarkdownToElement(ui.responseEl, turn.models[side].content);
+                        const tokens = estimateTokensFromText(turn.models[side].content);
+                        ui.tokenEl.textContent = `${tokens} tokens`;
+                        setHeaderTokens(side, tokens);
+                        scheduleSaveChat();
+                        updateScrollToBottomButton();
+                    } else if (chunk.type === 'tokens' && Number.isFinite(chunk.data)) {
+                        turn.models[side].tokens = chunk.data;
+                        ui.tokenEl.textContent = `${chunk.data} tokens`;
+                        setHeaderTokens(side, chunk.data);
+                        scheduleSaveChat();
+                    } else if (chunk.type === 'error') {
+                        throw new Error(chunk.data);
+                    }
+                } catch (e) {
+                    if (e.message && e.message !== data) {
+                        throw e;
+                    }
+                    console.error(`解析响应失败:`, e, data);
                 }
-                ui.thinkingContentEl.textContent = turn.models[side].thinking;
-                scheduleAutoCollapseThinking(ui);
-                scheduleSaveChat();
-                updateScrollToBottomButton();
-            },
-            onContentDelta: (delta) => {
-                if (!delta) return;
-                turn.models[side].content += delta;
-                renderMarkdownToElement(ui.responseEl, turn.models[side].content);
-                const tokens = estimateTokensFromText(turn.models[side].content);
-                ui.tokenEl.textContent = `${tokens} tokens`;
-                setHeaderTokens(side, tokens);
-                scheduleSaveChat();
-                updateScrollToBottomButton();
-            },
-            onTokens: (tokens) => {
-                if (!Number.isFinite(tokens) || tokens < 0) return;
-                turn.models[side].tokens = tokens;
-                ui.tokenEl.textContent = `${tokens} tokens`;
-                setHeaderTokens(side, tokens);
-                scheduleSaveChat();
             }
-        });
+        }
 
         updateTime();
         turn.models[side].status = 'complete';
@@ -2174,279 +2212,6 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
         }
         state.abortControllers[side] = null;
     }
-}
-
-/**
- * 将历史turns转换为消息数组
- * @param {Array} historyTurns - 历史turns数组
- * @param {string} side - 'A'或'B'
- * @param {string} providerMode - 'anthropic'或'openai'
- * @param {number} maxTurns - 最大保留轮数（默认10）
- * @returns {Array} 消息数组
- */
-function convertHistoryToMessages(historyTurns, side, providerMode, maxTurns = 10) {
-    if (!Array.isArray(historyTurns) || historyTurns.length === 0) {
-        return [];
-    }
-
-    const recentTurns = historyTurns.slice(-maxTurns);
-    const messages = [];
-
-    for (const turn of recentTurns) {
-        // 跳过未完成或出错的turn
-        if (!turn.models?.[side]?.content || turn.models[side].status !== 'complete') {
-            continue;
-        }
-
-        // 构建用户消息（支持多模态）
-        const hasImages = Array.isArray(turn.images) && turn.images.length > 0;
-        let userContent;
-
-        if (hasImages) {
-            if (providerMode === 'anthropic') {
-                userContent = [];
-                if (turn.prompt) userContent.push({ type: 'text', text: turn.prompt });
-                for (const img of turn.images) {
-                    const match = img.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-                    if (match) {
-                        userContent.push({
-                            type: 'image',
-                            source: { type: 'base64', media_type: match[1], data: match[2] }
-                        });
-                    }
-                }
-            } else {
-                userContent = [];
-                if (turn.prompt) userContent.push({ type: 'text', text: turn.prompt });
-                for (const img of turn.images) {
-                    userContent.push({ type: 'image_url', image_url: { url: img.dataUrl } });
-                }
-            }
-        } else {
-            userContent = turn.prompt;
-        }
-
-        messages.push({ role: 'user', content: userContent });
-
-        // 构建助手消息
-        const assistantContent = turn.models[side].content;
-        if (assistantContent) {
-            messages.push({ role: 'assistant', content: assistantContent });
-        }
-    }
-
-    return messages;
-}
-
-function buildRequest(config, prompt, images = [], historyTurns = [], side = null) {
-    const { provider, apiKey, model, apiUrl, systemPrompt, thinking } = config;
-    const providerMode = getProviderMode(config);
-
-    let url = (apiUrl || '').trim();
-    if (!url) {
-        if (provider === 'custom') {
-            throw new Error('选择"自定义"时必须填写 API 地址');
-        }
-        url = providerMode === 'anthropic'
-            ? 'https://api.anthropic.com/v1/messages'
-            : 'https://api.openai.com/v1/chat/completions';
-    }
-
-    const proxyPrefix = getProxyPrefix();
-    const isAbsoluteUrl = url.startsWith('http://') || url.startsWith('https://');
-    if (proxyPrefix && isAbsoluteUrl && !url.startsWith(proxyPrefix)) url = proxyPrefix + url;
-
-    const headers = { 'Content-Type': 'application/json' };
-    if (providerMode === 'anthropic') {
-        headers['x-api-key'] = apiKey;
-        headers['anthropic-version'] = '2023-06-01';
-    } else {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-
-    // 判断是否有图片
-    const hasImages = Array.isArray(images) && images.length > 0;
-
-    let body;
-    if (providerMode === 'anthropic') {
-        const systemParts = [];
-        if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
-        const combinedSystem = systemParts.join('\n\n');
-
-        // 构建历史消息
-        const historyMessages = isHistoryEnabled()
-            ? convertHistoryToMessages(historyTurns, side, 'anthropic', getMaxHistoryTurns())
-            : [];
-
-        // 构建当前用户消息内容（支持多模态）
-        let userContent;
-        if (hasImages) {
-            // Anthropic格式：content是数组
-            userContent = [];
-            // 先添加文本
-            if (prompt) {
-                userContent.push({ type: 'text', text: prompt });
-            }
-            // 再添加图片
-            for (const img of images) {
-                // 从dataUrl中提取base64数据和媒体类型
-                const match = img.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-                if (match) {
-                    const mediaType = match[1];
-                    const base64Data = match[2];
-                    userContent.push({
-                        type: 'image',
-                        source: {
-                            type: 'base64',
-                            media_type: mediaType,
-                            data: base64Data
-                        }
-                    });
-                }
-            }
-        } else {
-            // 纯文本
-            userContent = prompt;
-        }
-
-        // 合并历史消息和当前消息
-        const allMessages = [...historyMessages, { role: 'user', content: userContent }];
-
-        body = {
-            model,
-            messages: allMessages,
-            stream: true,
-            max_tokens: 4096
-        };
-        if (combinedSystem) body.system = combinedSystem;
-        if (thinking) body.thinking = { type: 'enabled', budget_tokens: 2000 };
-    } else {
-        const messages = [];
-        const systemParts = [];
-        if (systemPrompt && systemPrompt.trim()) systemParts.push(systemPrompt.trim());
-        const combinedSystem = systemParts.join('\n\n');
-        if (combinedSystem) messages.push({ role: 'system', content: combinedSystem });
-
-        // 构建历史消息
-        const historyMessages = isHistoryEnabled()
-            ? convertHistoryToMessages(historyTurns, side, 'openai', getMaxHistoryTurns())
-            : [];
-        messages.push(...historyMessages);
-
-        // 构建当前用户消息内容（支持多模态）
-        let userContent;
-        if (hasImages) {
-            // OpenAI格式：content是数组
-            userContent = [];
-            // 先添加文本
-            if (prompt) {
-                userContent.push({ type: 'text', text: prompt });
-            }
-            // 再添加图片
-            for (const img of images) {
-                userContent.push({
-                    type: 'image_url',
-                    image_url: { url: img.dataUrl }
-                });
-            }
-        } else {
-            // 纯文本
-            userContent = prompt;
-        }
-
-        messages.push({ role: 'user', content: userContent });
-        body = { model, messages, stream: true };
-
-        const modelLower = (model || '').toLowerCase();
-        body.stream_options = body.stream_options || { include_usage: true };
-        if (thinking && modelLower.includes('o1')) body.reasoning_effort = 'high';
-        if (thinking && modelLower.includes('qwen')) body.enable_thinking = true;
-        if (thinking && modelLower.includes('deepseek')) body.thinking = { type: 'enabled' };
-    }
-
-    return { url, headers, body };
-}
-
-async function handleStreamResponse(side, response, config, handlers) {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    const providerMode = getProviderMode(config);
-
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-            if (!line.trim() || line.startsWith(':')) continue;
-            if (!line.startsWith('data: ')) continue;
-
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            let json;
-            try {
-                json = JSON.parse(data);
-            } catch (e) {
-                console.error(`[${side}] 解析JSON失败:`, e, data);
-                continue;
-            }
-
-            if (providerMode === 'anthropic') {
-                const result = parseAnthropicChunk(json);
-                if (result.thinking) handlers?.onThinkingDelta?.(result.thinking);
-                if (result.content) handlers?.onContentDelta?.(result.content);
-                if (Number.isFinite(result.tokens) && result.tokens >= 0) handlers?.onTokens?.(result.tokens);
-            } else {
-                const result = parseOpenAIChunk(json);
-                if (result.thinking) handlers?.onThinkingDelta?.(result.thinking);
-                if (result.content) handlers?.onContentDelta?.(result.content);
-                if (Number.isFinite(result.tokens) && result.tokens >= 0) handlers?.onTokens?.(result.tokens);
-            }
-        }
-    }
-}
-
-function parseAnthropicChunk(chunk) {
-    const result = { thinking: '', content: '', tokens: null };
-    if (chunk.type === 'content_block_delta') {
-        const delta = chunk.delta;
-        if (delta.type === 'thinking_delta') result.thinking = delta.thinking || '';
-        else if (delta.type === 'text_delta') result.content = delta.text || '';
-    } else if (chunk.type === 'message_delta') {
-        if (chunk.usage) result.tokens = chunk.usage.output_tokens || 0;
-    }
-    return result;
-}
-
-function parseOpenAIChunk(chunk) {
-    const result = { thinking: '', content: '', tokens: null };
-
-    if (chunk.choices && chunk.choices[0]) {
-        const delta = chunk.choices[0].delta;
-        if (delta && typeof delta === 'object') {
-            if (typeof delta.reasoning_content === 'string') result.thinking = delta.reasoning_content;
-            else if (typeof delta.thinking === 'string') result.thinking = delta.thinking;
-            else if (typeof delta.reasoning === 'string') result.thinking = delta.reasoning;
-        }
-        if (delta?.content) result.content = delta.content;
-    }
-
-    if (chunk.usage) {
-        result.tokens =
-            chunk.usage.completion_tokens ||
-            chunk.usage.output_tokens ||
-            chunk.usage.total_tokens ||
-            0;
-    }
-
-    return result;
 }
 
 // ========== 提示词管理功能 ==========

@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 import httpx
 import os
 from urllib.parse import urlparse
+from ai_service import AIService, ChatRequest
 
 app = FastAPI(title="CORS代理服务器")
 
@@ -172,6 +173,24 @@ async def list_models(payload: ModelListRequest):
         raise HTTPException(status_code=502, detail="获取到的模型列表为空或格式不支持")
 
     return {"models": model_ids}
+
+# AI聊天接口（流式响应）
+@app.post("/api/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """
+    AI聊天流式接口
+
+    接收前端的聊天请求，调用AI提供商API，返回流式响应
+    """
+    return StreamingResponse(
+        AIService.chat_stream(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # 禁用nginx缓冲
+        }
+    )
 
 # 代理路由（通配符，必须放在最后）
 @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
