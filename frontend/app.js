@@ -351,40 +351,23 @@ function addCopyButtonsToCodeBlocks(root) {
         const language = getLanguageFromCodeEl(codeEl);
         lang.textContent = language ? language : 'code';
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'code-copy-btn';
-        btn.textContent = '复制';
+        // 使用统一的createCopyButton函数创建复制按钮
+        const btn = createCopyButton(
+            () => codeEl.textContent || '',
+            {
+                label: '复制代码',
+                icon: true,
+                className: 'code-copy-btn'
+            }
+        );
 
-        btn.addEventListener('click', async () => {
-            const original = btn.textContent;
+        // 检查是否在 loading 状态的卡片中，如果是则立即禁用按钮
+        const card = root.closest('.assistant-card');
+        if (card && card.classList.contains('loading')) {
             btn.disabled = true;
-            const ok = await copyTextToClipboard(codeEl.textContent || '');
-            btn.textContent = ok ? '已复制' : '复制失败';
-
-            // 成功状态保持更久，然后平滑过渡
-            setTimeout(() => {
-                if (ok) {
-                    // 成功时添加淡出效果
-                    btn.style.transition = 'opacity 0.4s ease';
-                    btn.style.opacity = '0.4';
-                    setTimeout(() => {
-                        btn.textContent = original;
-                        btn.style.opacity = '1';
-                        btn.disabled = false;
-                        // 清理内联样式
-                        setTimeout(() => {
-                            btn.style.transition = '';
-                            btn.style.opacity = '';
-                        }, 400);
-                    }, 400);
-                } else {
-                    // 失败时直接恢复
-                    btn.disabled = false;
-                    btn.textContent = original;
-                }
-            }, 1800);
-        });
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
 
         toolbar.appendChild(lang);
         toolbar.appendChild(btn);
@@ -2069,6 +2052,7 @@ function createAssistantCard(side, turn) {
         thinkingTimeEl: thinkingTime,
         tokenEl,
         timeEl,
+        copyBtn,
         thinkingAutoCollapseTimer: null
     };
 }
@@ -2085,14 +2069,31 @@ function applyStatus(statusEl, status) {
     statusEl.className = `status ${next.cls}`;
     statusEl.textContent = next.text;
 
-    // 同步更新卡片的loading状态类
+    // 同步更新卡片的loading状态类和复制按钮状态
     const card = statusEl.closest('.assistant-card');
     if (card) {
-        if (status === 'loading') {
+        const isLoading = status === 'loading';
+        if (isLoading) {
             card.classList.add('loading');
         } else {
             card.classList.remove('loading');
         }
+        
+        // 禁用/启用卡片的复制按钮
+        const copyBtn = card.querySelector('.assistant-card-header-actions .card-action-btn[title="复制回答"]');
+        if (copyBtn) {
+            copyBtn.disabled = isLoading;
+            copyBtn.style.opacity = isLoading ? '0.5' : '';
+            copyBtn.style.cursor = isLoading ? 'not-allowed' : '';
+        }
+        
+        // 禁用/启用所有代码块的复制按钮
+        const codeBlockCopyBtns = card.querySelectorAll('.code-copy-btn');
+        codeBlockCopyBtns.forEach(btn => {
+            btn.disabled = isLoading;
+            btn.style.opacity = isLoading ? '0.5' : '';
+            btn.style.cursor = isLoading ? 'not-allowed' : '';
+        });
     }
 }
 

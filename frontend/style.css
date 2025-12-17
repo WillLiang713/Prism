@@ -1666,13 +1666,17 @@ body {
 }
 
 .thinking-content .code-block .code-copy-btn {
-    font-size: 12px;
-    padding: 4px 10px;
+    padding: 4px;
     border-radius: 6px;
     border: 1px solid #d0d0d0;
     background: #ffffff;
     color: #333;
     cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .thinking-content .code-block .code-copy-btn:hover {
@@ -1682,6 +1686,11 @@ body {
 .thinking-content .code-block .code-copy-btn:disabled {
     cursor: not-allowed;
     opacity: 0.7;
+}
+
+.thinking-content .code-block .code-copy-btn .icon {
+    width: 16px;
+    height: 16px;
 }
 
 .thinking-content .code-block pre {
@@ -1838,13 +1847,17 @@ body {
 }
 
 .response-content .code-block .code-copy-btn {
-    font-size: 12px;
-    padding: 4px 10px;
+    padding: 4px;
     border-radius: 6px;
     border: 1px solid #d0d0d0;
     background: #ffffff;
     color: #333;
     cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .response-content .code-block .code-copy-btn:hover {
@@ -1854,6 +1867,11 @@ body {
 .response-content .code-block .code-copy-btn:disabled {
     cursor: not-allowed;
     opacity: 0.7;
+}
+
+.response-content .code-block .code-copy-btn .icon {
+    width: 16px;
+    height: 16px;
 }
 
 .response-content .code-block pre {
