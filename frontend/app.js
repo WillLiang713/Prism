@@ -1446,28 +1446,35 @@ function createTopic() {
     };
 
     // 检查是否启用初始问候语
+    let greetingEnabled = elements.enableGreeting ? elements.enableGreeting.checked : true;
+    let greetingText = elements.greetingText ? elements.greetingText.value : '你好，有什么需要帮助的？';
+
     const saved = localStorage.getItem(STORAGE_KEYS.config);
     if (saved) {
         try {
             const config = JSON.parse(saved);
-            if (config.greeting && config.greeting.enabled !== false) {
-                const greetingText = config.greeting.text || '你好，有什么需要帮助的？';
-                // 创建一个特殊的问候消息turn
-                const greetingTurn = {
-                    id: createId(),
-                    createdAt: now,
-                    prompt: '',
-                    images: [],
-                    webSearch: null,
-                    isGreeting: true, // 标记为问候消息
-                    greetingText: greetingText,
-                    models: {}
-                };
-                topic.turns.push(greetingTurn);
+            if (config.greeting) {
+                greetingEnabled = config.greeting.enabled !== false;
+                greetingText = config.greeting.text || greetingText;
             }
         } catch (e) {
             console.error('加载问候语配置失败:', e);
         }
+    }
+
+    // 如果启用问候语，创建问候消息
+    if (greetingEnabled) {
+        const greetingTurn = {
+            id: createId(),
+            createdAt: now,
+            prompt: '',
+            images: [],
+            webSearch: null,
+            isGreeting: true, // 标记为问候消息
+            greetingText: greetingText,
+            models: {}
+        };
+        topic.turns.push(greetingTurn);
     }
 
     state.chat.topics.unshift(topic);
