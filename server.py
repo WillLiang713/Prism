@@ -12,8 +12,9 @@ Prism - CORS代理服务器 (Python版本)
 """
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import httpx
 import os
@@ -32,29 +33,28 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+# 挂载静态文件目录（必须在通配符路由之前定义）
+app.mount("/libs", StaticFiles(directory="frontend/libs"), name="libs")
+
 # 静态文件路由（必须在通配符路由之前定义）
 @app.get("/")
 async def serve_index():
     """提供主页"""
-    from fastapi.responses import FileResponse
     return FileResponse("frontend/index.html")
 
 @app.get("/index.html")
 async def serve_index_html():
     """提供主页"""
-    from fastapi.responses import FileResponse
     return FileResponse("frontend/index.html")
 
 @app.get("/style.css")
 async def serve_style():
     """提供样式文件"""
-    from fastapi.responses import FileResponse
     return FileResponse("frontend/style.css")
 
 @app.get("/app.js")
 async def serve_app():
     """提供JS文件"""
-    from fastapi.responses import FileResponse
     return FileResponse("frontend/app.js")
 
 # Tavily 联网搜索（推荐：服务端保存 API Key）
