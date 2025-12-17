@@ -116,7 +116,13 @@ const elements = {
     exportPromptsBtn: document.getElementById('exportPromptsBtn'),
     importPromptsInput: document.getElementById('importPromptsInput'),
     promptPreviewModal: document.getElementById('promptPreviewModal'),
-    closePromptPreviewBtn: document.getElementById('closePromptPreviewBtn')
+    closePromptPreviewBtn: document.getElementById('closePromptPreviewBtn'),
+    promptEditModal: document.getElementById('promptEditModal'),
+    closePromptEditBtn: document.getElementById('closePromptEditBtn'),
+    savePromptEditBtn: document.getElementById('savePromptEditBtn'),
+    promptEditName: document.getElementById('promptEditName'),
+    promptEditDescription: document.getElementById('promptEditDescription'),
+    promptEditContent: document.getElementById('promptEditContent')
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2627,7 +2633,7 @@ function renderPromptList() {
         editBtn.type = 'button';
         editBtn.className = 'prompt-item-btn';
         editBtn.textContent = '编辑';
-        editBtn.addEventListener('click', () => enterEditMode(prompt.id));
+        editBtn.addEventListener('click', () => openPromptEdit(prompt.id));
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
@@ -2664,82 +2670,12 @@ function renderPromptList() {
             meta.textContent += ` · 更新于 ${formatTime(prompt.updatedAt)}`;
         }
 
-        // 编辑表单（默认隐藏）
-        const editForm = document.createElement('div');
-        editForm.className = 'prompt-item-edit-form';
-
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.placeholder = '提示词名称';
-        nameInput.value = prompt.name;
-
-        const descriptionInput = document.createElement('input');
-        descriptionInput.type = 'text';
-        descriptionInput.placeholder = '提示词描述（可选）';
-        descriptionInput.value = prompt.description || '';
-
-        const contentTextarea = document.createElement('textarea');
-        contentTextarea.placeholder = '提示词内容';
-        contentTextarea.value = prompt.content;
-
-        const editActions = document.createElement('div');
-        editActions.className = 'prompt-item-edit-actions';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.type = 'button';
-        saveBtn.className = 'btn btn-primary btn-small';
-        saveBtn.textContent = '保存';
-        saveBtn.addEventListener('click', () => {
-            const newName = nameInput.value.trim();
-            const newDescription = descriptionInput.value.trim();
-            const newContent = contentTextarea.value.trim();
-
-            if (!newName) {
-                alert('请输入提示词名称');
-                return;
-            }
-
-            updatePrompt(prompt.id, { name: newName, description: newDescription, content: newContent });
-            exitEditMode(prompt.id);
-            renderPromptList();
-            renderPromptSelector();
-        });
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.type = 'button';
-        cancelBtn.className = 'btn btn-secondary btn-small';
-        cancelBtn.textContent = '取消';
-        cancelBtn.addEventListener('click', () => exitEditMode(prompt.id));
-
-        editActions.appendChild(saveBtn);
-        editActions.appendChild(cancelBtn);
-
-        editForm.appendChild(nameInput);
-        editForm.appendChild(descriptionInput);
-        editForm.appendChild(contentTextarea);
-        editForm.appendChild(editActions);
-
         item.appendChild(header);
         if (content) item.appendChild(content);
         item.appendChild(meta);
-        item.appendChild(editForm);
 
         elements.promptList.appendChild(item);
     }
-}
-
-// 进入编辑模式
-function enterEditMode(promptId) {
-    const item = elements.promptList?.querySelector(`[data-prompt-id="${promptId}"]`);
-    if (!item) return;
-    item.classList.add('editing');
-}
-
-// 退出编辑模式
-function exitEditMode(promptId) {
-    const item = elements.promptList?.querySelector(`[data-prompt-id="${promptId}"]`);
-    if (!item) return;
-    item.classList.remove('editing');
 }
 
 // 打开提示词管理弹窗
@@ -2903,6 +2839,17 @@ function bindPromptEvents() {
         if (e.target === elements.promptPreviewModal) closePromptPreview();
     });
 
+    // 关闭编辑界面
+    elements.closePromptEditBtn?.addEventListener('click', closePromptEdit);
+
+    // 点击遮罩关闭编辑
+    elements.promptEditModal?.addEventListener('click', (e) => {
+        if (e.target === elements.promptEditModal) closePromptEdit();
+    });
+
+    // 保存编辑
+    elements.savePromptEditBtn?.addEventListener('click', savePromptEdit);
+
     // 新建提示词
     elements.newPromptBtn?.addEventListener('click', () => {
         const name = prompt('请输入提示词名称', '新提示词');
@@ -3015,4 +2962,66 @@ function closePromptPreview() {
     elements.promptPreviewModal.classList.remove('open');
     elements.promptPreviewModal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+}
+
+// 当前编辑的提示词ID
+let editingPromptId = null;
+
+// 打开提示词编辑弹框
+function openPromptEdit(promptId) {
+    if (!elements.promptEditModal) return;
+    
+    const prompt = state.prompts.list.find(p => p.id === promptId);
+    if (!prompt) return;
+    
+    // 保存当前编辑的ID
+    editingPromptId = promptId;
+    
+    // 填充表单
+    if (elements.promptEditName) elements.promptEditName.value = prompt.name;
+    if (elements.promptEditDescription) elements.promptEditDescription.value = prompt.description || '';
+    if (elements.promptEditContent) elements.promptEditContent.value = prompt.content;
+    
+    // 显示模态框
+    elements.promptEditModal.classList.add('open');
+    elements.promptEditModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    
+    // 聚焦到名称输入框
+    setTimeout(() => {
+        if (elements.promptEditName) elements.promptEditName.focus();
+    }, 100);
+}
+
+// 关闭提示词编辑弹框
+function closePromptEdit() {
+    if (!elements.promptEditModal) return;
+    elements.promptEditModal.classList.remove('open');
+    elements.promptEditModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    editingPromptId = null;
+}
+
+// 保存编辑
+function savePromptEdit() {
+    if (!editingPromptId) return;
+    
+    const newName = elements.promptEditName?.value.trim();
+    const newDescription = elements.promptEditDescription?.value.trim();
+    const newContent = elements.promptEditContent?.value.trim();
+    
+    if (!newName) {
+        alert('请输入提示词名称');
+        return;
+    }
+    
+    updatePrompt(editingPromptId, { 
+        name: newName, 
+        description: newDescription || '', 
+        content: newContent 
+    });
+    
+    renderPromptList();
+    renderPromptSelector();
+    closePromptEdit();
 }

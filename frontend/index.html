@@ -343,6 +343,37 @@
         </div>
     </div>
 
+    <!-- 编辑提示词弹窗 -->
+    <div class="modal-overlay" id="promptEditModal" aria-hidden="true">
+        <div class="modal-content">
+            <div class="config-panel">
+                <div class="config-header">
+                    <h2>编辑提示词</h2>
+                    <div class="config-header-actions">
+                        <button class="btn btn-primary btn-small" id="savePromptEditBtn">保存</button>
+                        <button class="btn btn-secondary btn-small" id="closePromptEditBtn">取消</button>
+                    </div>
+                </div>
+                <div class="config-content">
+                    <div class="prompt-edit-form">
+                        <div class="form-group">
+                            <label>名称</label>
+                            <input type="text" id="promptEditName" placeholder="提示词名称">
+                        </div>
+                        <div class="form-group">
+                            <label>描述（可选）</label>
+                            <input type="text" id="promptEditDescription" placeholder="提示词描述">
+                        </div>
+                        <div class="form-group">
+                            <label>内容</label>
+                            <textarea id="promptEditContent" placeholder="提示词内容" rows="15"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
