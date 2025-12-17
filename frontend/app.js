@@ -355,13 +355,31 @@ function addCopyButtonsToCodeBlocks(root) {
         btn.addEventListener('click', async () => {
             const original = btn.textContent;
             btn.disabled = true;
-            btn.textContent = '复制中...';
             const ok = await copyTextToClipboard(codeEl.textContent || '');
             btn.textContent = ok ? '已复制' : '复制失败';
+
+            // 成功状态保持更久，然后平滑过渡
             setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = original;
-            }, 900);
+                if (ok) {
+                    // 成功时添加淡出效果
+                    btn.style.transition = 'opacity 0.4s ease';
+                    btn.style.opacity = '0.4';
+                    setTimeout(() => {
+                        btn.textContent = original;
+                        btn.style.opacity = '1';
+                        btn.disabled = false;
+                        // 清理内联样式
+                        setTimeout(() => {
+                            btn.style.transition = '';
+                            btn.style.opacity = '';
+                        }, 400);
+                    }, 400);
+                } else {
+                    // 失败时直接恢复
+                    btn.disabled = false;
+                    btn.textContent = original;
+                }
+            }, 1800);
         });
 
         toolbar.appendChild(lang);
