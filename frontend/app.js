@@ -45,6 +45,10 @@ const elements = {
     enableHistory: document.getElementById('enableHistory'),
     maxHistoryTurns: document.getElementById('maxHistoryTurns'),
 
+    // 初始问候语
+    enableGreeting: document.getElementById('enableGreeting'),
+    greetingText: document.getElementById('greetingText'),
+
     // 输入相关
     promptInput: document.getElementById('promptInput'),
     sendBtn: document.getElementById('sendBtn'),
@@ -1246,6 +1250,10 @@ function saveConfig() {
             enableHistory: !!elements.enableHistory?.checked,
             maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
         },
+        greeting: {
+            enabled: !!elements.enableGreeting?.checked,
+            text: elements.greetingText?.value || '你好，有什么需要帮助的？'
+        },
         A: {
             provider: elements.providerA.value,
             customFormat: elements.customFormatA?.value || 'openai',
@@ -1284,6 +1292,11 @@ function loadConfig() {
         if (historyConfig) {
             if (elements.enableHistory) elements.enableHistory.checked = historyConfig.enableHistory !== false;
             if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = historyConfig.maxHistoryTurns || 10;
+        }
+        // 加载初始问候语配置
+        if (config.greeting) {
+            if (elements.enableGreeting) elements.enableGreeting.checked = config.greeting.enabled !== false;
+            if (elements.greetingText) elements.greetingText.value = config.greeting.text || '你好，有什么需要帮助的？';
         }
         if (config.A) {
             elements.providerA.value = config.A.provider || 'openai';
@@ -1431,6 +1444,32 @@ function createTopic() {
         updatedAt: now,
         turns: []
     };
+
+    // 检查是否启用初始问候语
+    const saved = localStorage.getItem(STORAGE_KEYS.config);
+    if (saved) {
+        try {
+            const config = JSON.parse(saved);
+            if (config.greeting && config.greeting.enabled !== false) {
+                const greetingText = config.greeting.text || '你好，有什么需要帮助的？';
+                // 创建一个特殊的问候消息turn
+                const greetingTurn = {
+                    id: createId(),
+                    createdAt: now,
+                    prompt: '',
+                    images: [],
+                    webSearch: null,
+                    isGreeting: true, // 标记为问候消息
+                    greetingText: greetingText,
+                    models: {}
+                };
+                topic.turns.push(greetingTurn);
+            }
+        } catch (e) {
+            console.error('加载问候语配置失败:', e);
+        }
+    }
+
     state.chat.topics.unshift(topic);
     scheduleSaveChat();
     return topic;
@@ -1608,6 +1647,22 @@ function createTurnElement(turn) {
     const turnEl = document.createElement('div');
     turnEl.className = 'turn';
     turnEl.dataset.turnId = turn.id;
+
+    // 如果是问候消息，使用特殊的渲染方式
+    if (turn.isGreeting) {
+        turnEl.classList.add('greeting-turn');
+        const greetingWrap = document.createElement('div');
+        greetingWrap.className = 'greeting-wrap';
+
+        const greetingBubble = document.createElement('div');
+        greetingBubble.className = 'greeting-bubble';
+        greetingBubble.textContent = turn.greetingText || '你好，有什么需要帮助的？';
+
+        greetingWrap.appendChild(greetingBubble);
+        turnEl.appendChild(greetingWrap);
+
+        return { el: turnEl, cards: {}, webSearchEl: null };
+    }
 
     const userWrap = document.createElement('div');
     userWrap.className = 'user-bubble-wrap';
