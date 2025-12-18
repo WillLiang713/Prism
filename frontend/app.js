@@ -2599,12 +2599,6 @@ function renderPromptList() {
     elements.promptList.innerHTML = '';
 
     if (state.prompts.list.length === 0) {
-        const empty = document.createElement('div');
-        empty.style.textAlign = 'center';
-        empty.style.color = '#999';
-        empty.style.padding = '40px 20px';
-        empty.textContent = '暂无提示词，点击"新建"创建第一个提示词';
-        elements.promptList.appendChild(empty);
         return;
     }
 
