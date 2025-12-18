@@ -84,13 +84,33 @@ class ProviderConfig:
 
     @staticmethod
     def get_api_url(provider: str, api_url: str | None, provider_mode: str) -> str:
-        """获取API地址"""
+        """获取API地址，自动拼接v1路径"""
         url = (api_url or "").strip()
 
         if not url:
             if provider == "custom":
                 raise ValueError("选择'自定义'时必须填写 API 地址")
             return ProviderConfig.DEFAULT_URLS.get(provider_mode, ProviderConfig.DEFAULT_URLS["openai"])
+
+        # 移除末尾的斜杠
+        url = url.rstrip('/')
+        url_lower = url.lower()
+        
+        # 检查是否已经包含完整的API端点
+        if '/chat/completions' not in url_lower and '/messages' not in url_lower:
+            # 根据provider_mode自动拼接对应的端点
+            if provider_mode == "anthropic":
+                # Anthropic格式: /v1/messages
+                if not url_lower.endswith('/v1'):
+                    url = f"{url}/v1/messages"
+                else:
+                    url = f"{url}/messages"
+            else:
+                # OpenAI格式: /v1/chat/completions
+                if not url_lower.endswith('/v1'):
+                    url = f"{url}/v1/chat/completions"
+                else:
+                    url = f"{url}/chat/completions"
 
         return url
 
