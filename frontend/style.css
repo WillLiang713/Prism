@@ -838,6 +838,18 @@ body {
     min-width: 0;
 }
 
+.header-brand {
+    display: flex;
+    align-items: center;
+}
+
+.brand-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    letter-spacing: 0.5px;
+}
+
 .model-chip {
     display: inline-flex;
     align-items: center;
