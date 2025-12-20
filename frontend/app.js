@@ -1590,6 +1590,9 @@ function renderHistoryList() {
     if (!topic || !Array.isArray(topic.turns) || !topic.turns.length) return;
 
     for (const turn of topic.turns) {
+        // 跳过问候消息，不在历史列表中显示
+        if (turn.isGreeting) continue;
+
         const item = document.createElement('div');
         item.className = 'history-item';
         item.dataset.turnId = turn.id;
@@ -2197,9 +2200,13 @@ async function sendPrompt() {
     topic.turns.push(turn);
     topic.updatedAt = now;
 
-    if ((topic.title || '').startsWith('新话题') && topic.turns.length === 1) {
-        const t = prompt.slice(0, 18).trim();
-        if (t) topic.title = t;
+    // 自动生成标题：如果标题还是"新话题"，且这是第一条真实消息（排除问候消息）
+    if ((topic.title || '').startsWith('新话题')) {
+        const realTurns = topic.turns.filter(t => !t.isGreeting);
+        if (realTurns.length === 1) {
+            const t = prompt.slice(0, 18).trim();
+            if (t) topic.title = t;
+        }
     }
 
     scheduleSaveChat();
