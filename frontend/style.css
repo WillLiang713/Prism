@@ -418,13 +418,13 @@ body {
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.5s ease;
     pointer-events: none;
 }
 
 .composer-box:focus-within::before {
     opacity: 1;
-    animation: shimmer 6s linear infinite;
+    animation: shimmer 24s ease-in-out infinite;
 }
 
 .composer-box:focus-within {
