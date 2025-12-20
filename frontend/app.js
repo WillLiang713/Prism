@@ -2392,6 +2392,11 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         scheduleAutoCollapseThinking(ui);
                         scheduleSaveChat();
                         updateScrollToBottomButton();
+                        // 首次收到思考内容时，移除loading类以显示body和footer
+                        const card = ui.statusEl.closest('.assistant-card');
+                        if (card && card.classList.contains('loading')) {
+                            card.classList.remove('loading');
+                        }
                         // 如果用户在底部附近，自动滚动跟随
                         if (isNearBottom(elements.chatMessages)) {
                             scrollToBottom(elements.chatMessages, false);
@@ -2404,6 +2409,11 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         setHeaderTokens(side, tokens);
                         scheduleSaveChat();
                         updateScrollToBottomButton();
+                        // 首次收到内容时，移除loading类以显示body和footer
+                        const card = ui.statusEl.closest('.assistant-card');
+                        if (card && card.classList.contains('loading')) {
+                            card.classList.remove('loading');
+                        }
                         // 如果用户在底部附近，自动滚动跟随
                         if (isNearBottom(elements.chatMessages)) {
                             scrollToBottom(elements.chatMessages, false);

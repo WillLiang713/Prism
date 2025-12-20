@@ -969,6 +969,12 @@ body {
     animation: shimmer 3.5s linear infinite;
 }
 
+/* loading状态时隐藏body和footer */
+.assistant-card.loading .assistant-card-body,
+.assistant-card.loading .assistant-card-footer {
+    display: none;
+}
+
 /* 未配置状态样式 - 完全隐藏模型ID */
 .model-chip.unconfigured .chip-id {
     display: none;
@@ -1770,12 +1776,6 @@ body {
 
 .response-content {
     word-wrap: break-word;
-}
-
-.response-content:empty::before {
-    content: '等待输入...';
-    color: #999;
-    font-style: italic;
 }
 
 /* Markdown样式 */
