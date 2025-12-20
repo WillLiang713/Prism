@@ -25,7 +25,8 @@ const state = {
         list: [],
         activeId: null,
         saveTimer: null
-    }
+    },
+    autoScroll: true // 是否自动跟随滚动
 };
 
 const elements = {
@@ -688,12 +689,21 @@ function bindEvents() {
 
     // 滚动到底部按钮
     elements.scrollToBottomBtn?.addEventListener('click', () => {
+        state.autoScroll = true;
         scrollToBottom(elements.chatMessages, true);
     });
 
-    // 监听聊天消息区域的滚动事件，控制按钮显示
+    // 监听聊天消息区域的滚动事件，控制按钮显示和自动滚动状态
     elements.chatMessages?.addEventListener('scroll', () => {
         updateScrollToBottomButton();
+        
+        // 检测用户是否手动向上滚动（不在底部）
+        if (!isNearBottom(elements.chatMessages)) {
+            state.autoScroll = false;
+        } else {
+            // 如果用户滚回底部，重新启用自动滚动
+            state.autoScroll = true;
+        }
     });
 
     elements.newTopicBtn.addEventListener('click', () => {
@@ -2199,7 +2209,8 @@ async function sendPrompt() {
     renderTopicList();
     renderHistoryList();
 
-    // 发送后立即滚动到底部
+    // 发送后立即滚动到底部，并启用自动滚动
+    state.autoScroll = true;
     scrollToBottom(elements.chatMessages, false);
 
     elements.promptInput.value = '';
@@ -2397,8 +2408,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         if (card && card.classList.contains('loading')) {
                             card.classList.remove('loading');
                         }
-                        // 如果用户在底部附近，自动滚动跟随
-                        if (isNearBottom(elements.chatMessages)) {
+                        // 如果启用了自动滚动，则跟随内容滚动
+                        if (state.autoScroll) {
                             scrollToBottom(elements.chatMessages, false);
                         }
                     } else if (chunk.type === 'content' && chunk.data) {
@@ -2414,8 +2425,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         if (card && card.classList.contains('loading')) {
                             card.classList.remove('loading');
                         }
-                        // 如果用户在底部附近，自动滚动跟随
-                        if (isNearBottom(elements.chatMessages)) {
+                        // 如果启用了自动滚动，则跟随内容滚动
+                        if (state.autoScroll) {
                             scrollToBottom(elements.chatMessages, false);
                         }
                     } else if (chunk.type === 'tokens' && Number.isFinite(chunk.data)) {
