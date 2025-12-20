@@ -196,6 +196,35 @@ body {
     max-height: 260px;
     overflow: auto;
     padding: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.model-dropdown:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.model-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+
+.model-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.model-dropdown::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.model-dropdown:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.model-dropdown::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .model-dropdown-empty {
@@ -624,14 +653,41 @@ body {
     padding-right: 4px;
     flex: 1;
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
 }
 
-.topic-list {
-    scrollbar-width: none;
+.topic-list:hover,
+.history-list:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
-.topic-list::-webkit-scrollbar {
-    display: none;
+.topic-list::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.topic-list::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.topic-list::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.topic-list:hover::-webkit-scrollbar-thumb,
+.history-list:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.topic-list::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* 新建话题按钮 */
@@ -1051,6 +1107,35 @@ body {
     background: #fdfefe;
     border: 1px solid #e7ebf0;
     border-radius: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.chat-messages:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.chat-messages::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.chat-messages:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .turn {
@@ -1292,6 +1377,35 @@ body {
     color: #374151;
     max-height: 300px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.web-search-body:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.web-search-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.web-search-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.web-search-body::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.web-search-body:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.web-search-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* 折叠状态完全隐藏body */
@@ -1431,11 +1545,16 @@ body {
     scrollbar-color: transparent transparent;
     flex: 1;
     min-height: 0;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.assistant-card-body:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 /* Webkit浏览器（Chrome/Edge/Safari）滚动条样式 */
 .assistant-card-body::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .assistant-card-body::-webkit-scrollbar-track {
@@ -1444,8 +1563,16 @@ body {
 
 .assistant-card-body::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 3px;
-    transition: background 0.2s;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.assistant-card-body:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.assistant-card-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .assistant-card-body:hover::-webkit-scrollbar-thumb {
@@ -1526,6 +1653,35 @@ body {
 .modal-content .config-content {
     overflow: auto;
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.modal-content .config-content:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.modal-content .config-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content .config-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-content .config-content::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.modal-content .config-content:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.modal-content .config-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .config-header-actions {
@@ -2228,6 +2384,35 @@ body {
     max-height: none;
     flex: 1;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.fullscreen-card .assistant-card-body:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.fullscreen-card .assistant-card-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.fullscreen-card .assistant-card-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fullscreen-card .assistant-card-body::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.fullscreen-card .assistant-card-body:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.fullscreen-card .assistant-card-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* 响应式适配 */
@@ -2347,6 +2532,35 @@ body {
     max-height: 60vh;
     overflow-y: auto;
     padding: 10px 0;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
+}
+
+.prompt-list:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.prompt-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.prompt-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.prompt-list::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.prompt-list:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.prompt-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* 提示词列表项 */
