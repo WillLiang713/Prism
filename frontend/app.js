@@ -1907,8 +1907,10 @@ async function sendPrompt() {
     if (state.isRunning) return;
 
     const prompt = (elements.promptInput.value || '').trim();
-    if (!prompt) {
-        alert('请输入提示词');
+    const hasImages = state.images.selectedImages && state.images.selectedImages.length > 0;
+
+    if (!prompt && !hasImages) {
+        alert('请输入内容或上传图片');
         return;
     }
 
