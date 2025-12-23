@@ -51,6 +51,7 @@ class ChatRequest(BaseModel):
     enableHistory: bool = True
     maxHistoryTurns: int = Field(default=10, ge=1, le=50)
     enableTools: bool = False  # 是否启用工具调用
+    maxToolRounds: int = Field(default=5, ge=1, le=20)  # 最大工具调用轮数
 
     # 历史对话
     historyTurns: list[HistoryTurn] = []
@@ -455,6 +456,8 @@ class AIService:
                     # 处理流式响应
                     buffer = ""
                     tool_calls_buffer = {}  # 用于累积工具调用信息
+                    assistant_thinking = ""  # 累积思考内容
+                    assistant_content = ""  # 累积正常内容
                     
                     async for chunk in response.aiter_bytes():
                         buffer += chunk.decode("utf-8", errors="ignore")
@@ -485,10 +488,12 @@ class AIService:
 
                                 # 发送thinking增量
                                 if parsed["thinking"]:
+                                    assistant_thinking += parsed["thinking"]
                                     yield f"data: {json.dumps({'type': 'thinking', 'data': parsed['thinking']})}\n\n"
 
                                 # 发送content增量
                                 if parsed["content"]:
+                                    assistant_content += parsed["content"]
                                     yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
                                 
                                 # 处理工具调用
@@ -520,13 +525,29 @@ class AIService:
                                 # 忽略JSON解析错误
                                 continue
                     
-                    # 流结束后，如果有工具调用，执行并再次请求 AI
-                    if tool_calls_buffer and request.enableTools:
+                    # 流结束后，如果有工具调用，执行并多轮请求 AI
+                    current_round = 0
+                    messages_with_tools = body["messages"].copy()
+                    
+                    while tool_calls_buffer and request.enableTools and current_round < request.maxToolRounds:
+                        current_round += 1
+                        
                         # 构建工具调用消息
                         tool_call_message = {
                             "role": "assistant",
                             "tool_calls": []
                         }
+                        
+                        # 为 DeepSeek 等模型添加必需的字段
+                        if assistant_content:
+                            tool_call_message["content"] = assistant_content
+                        if assistant_thinking and provider_mode == "openai":
+                            # DeepSeek 需要 reasoning_content 字段
+                            model_lower = request.model.lower()
+                            if "deepseek" in model_lower:
+                                tool_call_message["reasoning_content"] = assistant_thinking
+                            elif "o1" in model_lower:
+                                tool_call_message["reasoning_content"] = assistant_thinking
                         
                         tool_results = []
                         for idx, tool_call in sorted(tool_calls_buffer.items()):
@@ -556,36 +577,39 @@ class AIService:
                                 "content": result
                             })
                         
-                        # 重新构建消息列表，包含工具调用和结果
-                        messages_with_tools = body["messages"].copy()
+                        # 追加工具调用和结果到消息列表
                         messages_with_tools.append(tool_call_message)
                         messages_with_tools.extend(tool_results)
                         
-                        # 再次请求 AI，让它基于工具结果生成回复
-                        body_second = body.copy()
-                        body_second["messages"] = messages_with_tools
-                        # 移除 tools 定义，避免重复调用
-                        body_second.pop("tools", None)
+                        # 清空并准备下一轮
+                        tool_calls_buffer = {}
+                        assistant_thinking = ""
+                        assistant_content = ""
                         
-                        # 发送第二次请求
+                        # 再次请求 AI
+                        body_next = body.copy()
+                        body_next["messages"] = messages_with_tools
+                        # 保留 tools 定义，允许 AI 继续调用工具
+                        
+                        # 发送下一轮请求
                         async with client.stream(
                             method="POST",
                             url=url,
                             headers=headers,
-                            json=body_second
-                        ) as response2:
-                            if response2.status_code >= 400:
-                                error_text = await response2.aread()
-                                yield f"data: {json.dumps({'type': 'error', 'data': f'二次调用失败 HTTP {response2.status_code}: {error_text.decode()}'})}\n\n"
+                            json=body_next
+                        ) as response_next:
+                            if response_next.status_code >= 400:
+                                error_text = await response_next.aread()
+                                yield f"data: {json.dumps({'type': 'error', 'data': f'工具调用失败 HTTP {response_next.status_code}: {error_text.decode()}'})}\n\n"
                                 return
                             
-                            # 处理第二次流式响应
-                            buffer2 = ""
-                            async for chunk in response2.aiter_bytes():
-                                buffer2 += chunk.decode("utf-8", errors="ignore")
+                            # 处理流式响应
+                            buffer_next = ""
+                            async for chunk in response_next.aiter_bytes():
+                                buffer_next += chunk.decode("utf-8", errors="ignore")
                                 
-                                lines = buffer2.split("\n")
-                                buffer2 = lines.pop() if lines else ""
+                                lines = buffer_next.split("\n")
+                                buffer_next = lines.pop() if lines else ""
                                 
                                 for line in lines:
                                     line = line.strip()
@@ -608,9 +632,35 @@ class AIService:
                                         else:
                                             parsed = StreamParser.parse_openai_chunk(chunk_json)
                                         
+                                        # 累积 thinking(不发送，用于构建下一轮消息)
+                                        if parsed.get("thinking"):
+                                            assistant_thinking += parsed["thinking"]
+                                        
                                         # 发送content增量
                                         if parsed["content"]:
+                                            assistant_content += parsed["content"]
                                             yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
+                                        
+                                        # 处理工具调用
+                                        if parsed.get("tool_calls") and request.enableTools:
+                                            for tool_call in parsed["tool_calls"]:
+                                                idx = tool_call.get("index", 0)
+                                                if idx not in tool_calls_buffer:
+                                                    tool_calls_buffer[idx] = {
+                                                        "id": "",
+                                                        "name": "",
+                                                        "arguments": ""
+                                                    }
+                                                
+                                                if "id" in tool_call:
+                                                    tool_calls_buffer[idx]["id"] = tool_call["id"]
+                                                
+                                                if "function" in tool_call:
+                                                    func = tool_call["function"]
+                                                    if "name" in func and func["name"] is not None:
+                                                        tool_calls_buffer[idx]["name"] += func["name"]
+                                                    if "arguments" in func and func["arguments"] is not None:
+                                                        tool_calls_buffer[idx]["arguments"] += func["arguments"]
                                         
                                         # 发送tokens统计
                                         if parsed["tokens"] is not None:

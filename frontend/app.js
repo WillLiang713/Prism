@@ -45,6 +45,7 @@ const elements = {
     // 对话历史
     enableHistory: document.getElementById('enableHistory'),
     maxHistoryTurns: document.getElementById('maxHistoryTurns'),
+    maxToolRounds: document.getElementById('maxToolRounds'),
 
     // 初始问候语
     enableGreeting: document.getElementById('enableGreeting'),
@@ -2134,7 +2135,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
             maxHistoryTurns: getMaxHistoryTurns(),
             historyTurns: historyTurns,
             side: side,
-            enableTools: elements.enableTools?.checked || false
+            enableTools: elements.enableTools?.checked || false,
+            maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5
         };
 
         // 调用后端接口
