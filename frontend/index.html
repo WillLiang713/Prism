@@ -259,6 +259,18 @@
                                 限制AI连续调用工具的最大轮数（1-20轮，默认5轮）
                             </small>
                         </div>
+                        <div class="form-group">
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>可用工具</span>
+                                <button type="button" class="btn btn-secondary" id="refreshToolsBtn" style="padding: 4px 12px; font-size: 12px;">刷新</button>
+                            </label>
+                            <div id="toolsList" style="margin-top: 8px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px;">
+                                <div style="color: #999; text-align: center; padding: 20px;">加载中...</div>
+                            </div>
+                            <small style="display: block; color: #666; margin-top: 4px;">
+                                选择启用的工具，未选中的工具将不会加载
+                            </small>
+                        </div>
                     </div>
                     <div class="global-config">
                         <h3>初始问候语</h3>

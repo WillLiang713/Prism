@@ -58,7 +58,15 @@ async def serve_style():
 async def serve_app():
     """提供JS文件"""
     return FileResponse("frontend/app.js")
-
+@app.get("/api/tools")
+async def get_tools():
+    """获取所有可用工具列表"""
+    try:
+        with open("tools.json", "r", encoding="utf-8") as f:
+            tools = json.load(f)
+        return {"tools": tools}
+    except Exception as e:
+        return {"tools": [], "error": str(e)}
 # 获取工具列表
 @app.get("/api/tools")
 async def get_tools():

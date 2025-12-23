@@ -58,6 +58,8 @@ const elements = {
     imageUploadBtn: document.getElementById('imageUploadBtn'),
     imagePreviewContainer: document.getElementById('imagePreviewContainer'),
     enableTools: document.getElementById('enableTools'),
+    toolsList: document.getElementById('toolsList'),
+    refreshToolsBtn: document.getElementById('refreshToolsBtn'),
 
     // 话题
     newTopicBtn: document.getElementById('newTopicBtn'),
@@ -147,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setSendButtonMode('send');
     autoGrowPromptInput();
     renderAll();
+    loadTools(); // 加载工具列表
 });
 
 function getProviderMode(config) {
@@ -653,6 +656,9 @@ async function tavilySearch(query, apiKey, maxResults = 5) {
 function bindEvents() {
     elements.saveConfig.addEventListener('click', saveConfig);
     elements.clearConfig.addEventListener('click', clearConfig);
+    
+    // 刷新工具列表按钮
+    elements.refreshToolsBtn?.addEventListener('click', loadTools);
 
     // 联网搜索开关的label元素，阻止焦点转移
     const webSearchLabel = elements.enableWebSearch?.parentElement;
@@ -2136,7 +2142,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
             historyTurns: historyTurns,
             side: side,
             enableTools: elements.enableTools?.checked || false,
-            maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5
+            maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
+            selectedTools: getSelectedTools()
         };
 
         // 调用后端接口
@@ -2819,4 +2826,92 @@ function savePromptEdit() {
     renderPromptList();
     renderPromptSelector();
     closePromptEdit();
+}
+// ========== 工具管理功能 ==========
+
+// 全局变量存储工具状态
+let availableTools = [];
+let selectedToolNames = [];
+
+// 加载工具列表
+async function loadTools() {
+    try {
+        const response = await fetch('/api/tools');
+        const data = await response.json();
+        availableTools = data.tools || [];
+        
+        // 从 localStorage 加载已选中的工具
+        const saved = localStorage.getItem('selectedTools');
+        if (saved) {
+            selectedToolNames = JSON.parse(saved);
+        } else {
+            // 默认全部选中
+            selectedToolNames = availableTools.map(t => t.function.name);
+        }
+        
+        renderToolsList();
+    } catch (error) {
+        console.error('加载工具列表失败:', error);
+        if (elements.toolsList) {
+            elements.toolsList.innerHTML = '<div style="color: #f44336; padding: 12px; text-align: center;">加载失败</div>';
+        }
+    }
+}
+
+// 渲染工具列表
+function renderToolsList() {
+    if (!elements.toolsList) return;
+    
+    if (availableTools.length === 0) {
+        elements.toolsList.innerHTML = '<div style="color: #999; padding: 12px; text-align: center;">暂无可用工具</div>';
+        return;
+    }
+    
+    const html = availableTools.map(tool => {
+        const name = tool.function.name;
+        const description = tool.function.description || '无描述';
+        const isChecked = selectedToolNames.includes(name);
+        
+        return `
+            <label style="display: flex; align-items: flex-start; padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;">
+                <input type="checkbox" 
+                       data-tool-name="${name}" 
+                       ${isChecked ? 'checked' : ''}
+                       style="margin-top: 2px; margin-right: 8px; flex-shrink: 0;">
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 500; color: #333;">${name}</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 2px;">${description}</div>
+                </div>
+            </label>
+        `;
+    }).join('');
+    
+    elements.toolsList.innerHTML = html;
+    
+    // 绑定复选框事件
+    const checkboxes = elements.toolsList.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', handleToolToggle);
+    });
+}
+
+// 处理工具开关切换
+function handleToolToggle(event) {
+    const toolName = event.target.getAttribute('data-tool-name');
+    
+    if (event.target.checked) {
+        if (!selectedToolNames.includes(toolName)) {
+            selectedToolNames.push(toolName);
+        }
+    } else {
+        selectedToolNames = selectedToolNames.filter(name => name !== toolName);
+    }
+    
+    // 保存到 localStorage
+    localStorage.setItem('selectedTools', JSON.stringify(selectedToolNames));
+}
+
+// 获取选中的工具名称列表
+function getSelectedTools() {
+    return selectedToolNames;
 }

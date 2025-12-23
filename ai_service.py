@@ -52,6 +52,7 @@ class ChatRequest(BaseModel):
     maxHistoryTurns: int = Field(default=10, ge=1, le=50)
     enableTools: bool = False  # 是否启用工具调用
     maxToolRounds: int = Field(default=5, ge=1, le=20)  # 最大工具调用轮数
+    selectedTools: list[str] = []  # 选中的工具名称列表
 
     # 历史对话
     historyTurns: list[HistoryTurn] = []
@@ -295,7 +296,18 @@ class MessageBuilder:
             try:
                 import json
                 with open("tools.json", "r", encoding="utf-8") as f:
-                    tools = json.load(f)
+                    all_tools = json.load(f)
+                    
+                    # 如果提供了 selectedTools 参数（即使是空列表），按选择加载
+                    if config.selectedTools is not None:
+                        tools = [
+                            tool for tool in all_tools
+                            if tool.get("function", {}).get("name") in config.selectedTools
+                        ]
+                    else:
+                        # 如果没有提供 selectedTools 参数，加载所有工具（向后兼容）
+                        tools = all_tools
+                    
                     if tools:
                         body["tools"] = tools
             except Exception:
