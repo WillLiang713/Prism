@@ -1908,10 +1908,6 @@ function createAssistantCard(side, turn) {
     const chipDot = document.createElement('span');
     chipDot.className = 'chip-dot';
 
-    const chipLabel = document.createElement('span');
-    chipLabel.className = 'chip-label';
-    chipLabel.textContent = side;
-
     const loadingSpinner = document.createElement('span');
     loadingSpinner.className = 'chip-loading-spinner';
 
@@ -1924,7 +1920,6 @@ function createAssistantCard(side, turn) {
     applyStatus(statusEl, statusSnapshot);
 
     chip.appendChild(chipDot);
-    chip.appendChild(chipLabel);
     chip.appendChild(loadingSpinner);
     chip.appendChild(modelName);
     chip.appendChild(statusEl);
