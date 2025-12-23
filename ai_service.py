@@ -507,9 +507,9 @@ class AIService:
                                         
                                         if "function" in tool_call:
                                             func = tool_call["function"]
-                                            if "name" in func:
+                                            if "name" in func and func["name"] is not None:
                                                 tool_calls_buffer[idx]["name"] += func["name"]
-                                            if "arguments" in func:
+                                            if "arguments" in func and func["arguments"] is not None:
                                                 tool_calls_buffer[idx]["arguments"] += func["arguments"]
 
                                 # 发送tokens统计

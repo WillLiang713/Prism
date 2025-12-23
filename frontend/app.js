@@ -368,9 +368,9 @@ function addCopyButtonsToCodeBlocks(root) {
             }
         );
 
-        // 检查是否在 loading 状态的卡片中，如果是则立即禁用按钮
-        const card = root.closest('.assistant-card');
-        if (card && card.classList.contains('loading')) {
+        // 检查是否在 loading 状态的消息中，如果是则立即禁用按钮
+        const message = root.closest('.assistant-message');
+        if (message && message.classList.contains('loading')) {
             btn.disabled = true;
             btn.style.opacity = '0.5';
             btn.style.cursor = 'not-allowed';
@@ -1763,7 +1763,7 @@ function getElementByPath(root, path) {
  * @param {string} side - 'a' 或 'b'
  * @param {Object} turn - 当前turn对象
  */
-function openFullscreenPreview(cardEl, side, turn) {
+function openFullscreenPreview(messageEl, side, turn) {
     // 防止重复打开
     if (document.querySelector('.fullscreen-modal')) {
         return;
@@ -1781,19 +1781,19 @@ function openFullscreenPreview(cardEl, side, turn) {
     const container = document.createElement('div');
     container.className = 'fullscreen-container';
 
-    // 克隆卡片而非移动原始DOM
-    const clonedCard = cardEl.cloneNode(true);
-    clonedCard.classList.add('fullscreen-card');
-    container.appendChild(clonedCard);
+    // 克隆消息而非移动原始DOM
+    const clonedMessage = messageEl.cloneNode(true);
+    clonedMessage.classList.add('fullscreen-message');
+    container.appendChild(clonedMessage);
 
-    // 建立原卡片与克隆卡片的同步机制
+    // 建立原消息与克隆消息的同步机制
     const syncObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-            // 获取变化元素在克隆卡片中的对应位置
-            const targetPath = getElementPath(mutation.target, cardEl);
+            // 获取变化元素在克隆消息中的对应位置
+            const targetPath = getElementPath(mutation.target, messageEl);
             if (!targetPath) return;
             
-            const clonedTarget = getElementByPath(clonedCard, targetPath);
+            const clonedTarget = getElementByPath(clonedMessage, targetPath);
             if (!clonedTarget) return;
 
             // 同步内容变化
@@ -1816,8 +1816,8 @@ function openFullscreenPreview(cardEl, side, turn) {
         });
     });
 
-    // 监听原卡片的所有变化
-    syncObserver.observe(cardEl, {
+    // 监听原消息的所有变化
+    syncObserver.observe(messageEl, {
         childList: true,
         subtree: true,
         characterData: true,
@@ -1826,13 +1826,13 @@ function openFullscreenPreview(cardEl, side, turn) {
         characterDataOldValue: false
     });
 
-    // 在克隆卡片的header中添加关闭按钮
-    const headerActions = clonedCard.querySelector('.assistant-card-header-actions');
-    if (headerActions) {
+    // 在克隆消息的footer actions中添加关闭按钮
+    const actions = clonedMessage.querySelector('.message-actions');
+    if (actions) {
         // 创建关闭按钮
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'card-action-btn fullscreen-close-btn';
+        closeBtn.className = 'action-btn fullscreen-close-btn';
         closeBtn.setAttribute('aria-label', '关闭全屏');
         closeBtn.title = '关闭全屏';
         closeBtn.innerHTML = `
@@ -1841,8 +1841,8 @@ function openFullscreenPreview(cardEl, side, turn) {
             </svg>
         `;
 
-        // 将关闭按钮添加到header-actions的最后
-        headerActions.appendChild(closeBtn);
+        // 将关闭按钮添加到actions的最后
+        actions.appendChild(closeBtn);
 
         // 保存关闭按钮的引用，用于后续绑定事件
         container._closeBtn = closeBtn;
@@ -1892,75 +1892,30 @@ function createAssistantCard(side, turn) {
     const timeSnapshot = turn?.models?.[side]?.timeCostSec;
     const statusSnapshot = turn?.models?.[side]?.status || 'ready';
 
-    const card = document.createElement('div');
-    card.className = `assistant-card assistant-${side.toLowerCase()}`;
-    // 初始状态为loading时添加loading类，触发扫光动画
+    const message = document.createElement('div');
+    message.className = `assistant-message assistant-${side.toLowerCase()}`;
     if (statusSnapshot === 'loading') {
-        card.classList.add('loading');
+        message.classList.add('loading');
     }
 
+    // 头部：模型名称 + 状态
     const header = document.createElement('div');
-    header.className = 'assistant-card-header';
-
-    const chip = document.createElement('div');
-    chip.className = `model-chip model-chip-${side.toLowerCase()}`;
-
-    const chipDot = document.createElement('span');
-    chipDot.className = 'chip-dot';
-
-    const loadingSpinner = document.createElement('span');
-    loadingSpinner.className = 'chip-loading-spinner';
+    header.className = 'assistant-message-header';
 
     const modelName = document.createElement('span');
-    modelName.className = 'chip-id';
+    modelName.className = 'assistant-model-name';
     modelName.textContent = modelSnapshot || (side === 'A' ? (elements.modelNameA.textContent || '未配置') : (elements.modelNameB.textContent || '未配置'));
 
     const statusEl = document.createElement('span');
     statusEl.className = 'status';
     applyStatus(statusEl, statusSnapshot);
 
-    chip.appendChild(chipDot);
-    chip.appendChild(loadingSpinner);
-    chip.appendChild(modelName);
-    chip.appendChild(statusEl);
-    header.appendChild(chip);
+    header.appendChild(modelName);
+    header.appendChild(statusEl);
 
-    // 创建按钮容器
-    const headerActions = document.createElement('div');
-    headerActions.className = 'assistant-card-header-actions';
-
-    // 复制按钮（复用现有createCopyButton函数）
-    const copyBtn = createCopyButton(
-        () => turn?.models?.[side]?.content || '',
-        {
-            label: '复制回答',
-            icon: true,
-            className: 'card-action-btn'
-        }
-    );
-
-    // 全屏预览按钮
-    const fullscreenBtn = document.createElement('button');
-    fullscreenBtn.type = 'button';
-    fullscreenBtn.className = 'card-action-btn fullscreen-btn';
-    fullscreenBtn.setAttribute('aria-label', '全屏预览');
-    fullscreenBtn.title = '全屏预览';
-    fullscreenBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-        </svg>
-    `;
-
-    fullscreenBtn.addEventListener('click', () => {
-        openFullscreenPreview(card, side, turn);
-    });
-
-    headerActions.appendChild(copyBtn);
-    headerActions.appendChild(fullscreenBtn);
-    header.appendChild(headerActions);
-
-    const body = document.createElement('div');
-    body.className = 'assistant-card-body';
+    // 内容区域
+    const content = document.createElement('div');
+    content.className = 'assistant-message-content';
 
     const thinkingSection = document.createElement('div');
     thinkingSection.className = 'thinking-section collapsed';
@@ -2000,26 +1955,67 @@ function createAssistantCard(side, turn) {
     renderMarkdownToElement(responseContent, contentSnapshot);
     responseSection.appendChild(responseContent);
 
-    body.appendChild(thinkingSection);
-    body.appendChild(responseSection);
+    content.appendChild(thinkingSection);
+    content.appendChild(responseSection);
 
+    // 底部：元数据 + 操作按钮
     const footer = document.createElement('div');
-    footer.className = 'assistant-card-footer';
-    const tokenEl = document.createElement('span');
-    tokenEl.className = 'token-count';
-    tokenEl.textContent = `${Number.isFinite(tokenSnapshot) ? tokenSnapshot : estimateTokensFromText(contentSnapshot)} tokens`;
-    const timeEl = document.createElement('span');
-    timeEl.className = 'time-cost';
-    timeEl.textContent = `${Number.isFinite(timeSnapshot) ? timeSnapshot.toFixed(1) : '0.0'}s`;
-    footer.appendChild(tokenEl);
-    footer.appendChild(timeEl);
+    footer.className = 'assistant-message-footer';
 
-    card.appendChild(header);
-    card.appendChild(body);
-    card.appendChild(footer);
+    const metaInfo = document.createElement('div');
+    metaInfo.className = 'message-meta';
+
+    const tokenEl = document.createElement('span');
+    tokenEl.className = 'meta-item token-count';
+    tokenEl.textContent = `${Number.isFinite(tokenSnapshot) ? tokenSnapshot : estimateTokensFromText(contentSnapshot)} tokens`;
+    
+    const timeEl = document.createElement('span');
+    timeEl.className = 'meta-item time-cost';
+    timeEl.textContent = `${Number.isFinite(timeSnapshot) ? timeSnapshot.toFixed(1) : '0.0'}s`;
+
+    metaInfo.appendChild(tokenEl);
+    metaInfo.appendChild(timeEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'message-actions';
+
+    // 复制按钮
+    const copyBtn = createCopyButton(
+        () => turn?.models?.[side]?.content || '',
+        {
+            label: '复制',
+            icon: true,
+            className: 'action-btn copy-btn'
+        }
+    );
+
+    // 全屏按钮
+    const fullscreenBtn = document.createElement('button');
+    fullscreenBtn.type = 'button';
+    fullscreenBtn.className = 'action-btn fullscreen-btn';
+    fullscreenBtn.setAttribute('aria-label', '全屏预览');
+    fullscreenBtn.title = '全屏预览';
+    fullscreenBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+    `;
+    fullscreenBtn.addEventListener('click', () => {
+        openFullscreenPreview(message, side, turn);
+    });
+
+    actions.appendChild(copyBtn);
+    actions.appendChild(fullscreenBtn);
+
+    footer.appendChild(metaInfo);
+    footer.appendChild(actions);
+
+    message.appendChild(header);
+    message.appendChild(content);
+    message.appendChild(footer);
 
     return {
-        el: card,
+        el: message,
         statusEl,
         modelNameEl: modelName,
         responseEl: responseContent,
@@ -2045,18 +2041,18 @@ function applyStatus(statusEl, status) {
     statusEl.className = `status ${next.cls}`;
     statusEl.textContent = next.text;
 
-    // 同步更新卡片的loading状态类和复制按钮状态
-    const card = statusEl.closest('.assistant-card');
-    if (card) {
+    // 同步更新消息的loading状态类和复制按钮状态
+    const message = statusEl.closest('.assistant-message');
+    if (message) {
         const isLoading = status === 'loading';
         if (isLoading) {
-            card.classList.add('loading');
+            message.classList.add('loading');
         } else {
-            card.classList.remove('loading');
+            message.classList.remove('loading');
         }
         
-        // 禁用/启用卡片的复制按钮
-        const copyBtn = card.querySelector('.assistant-card-header-actions .card-action-btn[title="复制回答"]');
+        // 禁用/启用消息的复制按钮
+        const copyBtn = message.querySelector('.message-actions .action-btn.copy-btn');
         if (copyBtn) {
             copyBtn.disabled = isLoading;
             copyBtn.style.opacity = isLoading ? '0.5' : '';
@@ -2064,7 +2060,7 @@ function applyStatus(statusEl, status) {
         }
         
         // 禁用/启用所有代码块的复制按钮
-        const codeBlockCopyBtns = card.querySelectorAll('.code-copy-btn');
+        const codeBlockCopyBtns = message.querySelectorAll('.code-copy-btn');
         codeBlockCopyBtns.forEach(btn => {
             btn.disabled = isLoading;
             btn.style.opacity = isLoading ? '0.5' : '';
@@ -2368,9 +2364,9 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         scheduleSaveChat();
                         updateScrollToBottomButton();
                         // 首次收到思考内容时，移除loading类以显示body和footer
-                        const card = ui.statusEl.closest('.assistant-card');
-                        if (card && card.classList.contains('loading')) {
-                            card.classList.remove('loading');
+                        const message = ui.statusEl.closest('.assistant-message');
+                        if (message && message.classList.contains('loading')) {
+                            message.classList.remove('loading');
                         }
                         // 如果启用了自动滚动，则跟随内容滚动
                         if (state.autoScroll) {
@@ -2385,9 +2381,9 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                         scheduleSaveChat();
                         updateScrollToBottomButton();
                         // 首次收到内容时，移除loading类以显示body和footer
-                        const card = ui.statusEl.closest('.assistant-card');
-                        if (card && card.classList.contains('loading')) {
-                            card.classList.remove('loading');
+                        const message = ui.statusEl.closest('.assistant-message');
+                        if (message && message.classList.contains('loading')) {
+                            message.classList.remove('loading');
                         }
                         // 如果启用了自动滚动，则跟随内容滚动
                         if (state.autoScroll) {

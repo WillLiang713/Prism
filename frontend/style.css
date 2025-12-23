@@ -11,7 +11,7 @@ html, body {
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-    background: #000000;
+    background: #f4f6f8;
     color: #2b2b2b;
     line-height: 1.6;
 }
@@ -428,46 +428,8 @@ body {
     overflow: visible;
 }
 
-.composer-box::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 14px;
-    padding: 2px;
-    background: linear-gradient(90deg,
-        #ff0000 0%,
-        #ff7f00 14.28%,
-        #ffff00 28.56%,
-        #00ff00 42.84%,
-        #00ffff 57.12%,
-        #0000ff 71.4%,
-        #8b00ff 85.68%,
-        #ff0000 100%);
-    background-size: 200% 100%;
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    pointer-events: none;
-}
-
-.composer-box:focus-within::before {
-    opacity: 1;
-    animation: shimmer 24s ease-in-out infinite;
-}
-
 .composer-box:focus-within {
     border-color: #888;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-    100% {
-        background-position: 200% 0;
-    }
 }
 
 .composer-bar {
@@ -985,7 +947,7 @@ body {
 }
 
 /* loading状态时模型ID扫光动画 */
-.assistant-card.loading .model-chip .chip-id {
+.assistant-message.loading .assistant-model-name {
     background: linear-gradient(
         90deg,
         rgba(170, 170, 170, 0.6) 0%,
@@ -999,9 +961,9 @@ body {
     animation: shimmer 3.5s linear infinite;
 }
 
-/* loading状态时隐藏body和footer */
-.assistant-card.loading .assistant-card-body,
-.assistant-card.loading .assistant-card-footer {
+/* loading状态时隐藏内容和底部 */
+.assistant-message.loading .assistant-message-content,
+.assistant-message.loading .assistant-message-footer {
     display: none;
 }
 
@@ -1443,68 +1405,84 @@ body {
     grid-template-columns: 1fr 1fr;
 }
 
-.assistant-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-    animation: fade-in 0.5s ease-out;
-    background: white;
+.assistant-message {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 0;
+    gap: 4px;
+    max-width: 100%;
+    animation: fade-in 0.5s ease-out;
+    padding: 0 4px;
 }
 
-.assistant-card-header {
-    padding: 10px 12px;
-    background: #fafafa;
-    border-bottom: 1px solid #e0e0e0;
+.assistant-message-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    padding-left: 2px;
 }
 
-.assistant-card-header > .status {
-    margin-left: auto;
+.assistant-model-name {
+    font-weight: 600;
+    color: #374151;
 }
 
-/* 卡片header右侧按钮容器 */
-.assistant-card-header-actions {
-    display: inline-flex;
-    gap: 6px;
+.assistant-message-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1f2937;
+}
+
+.assistant-message-footer {
+    display: flex;
     align-items: center;
-    margin-left: auto;
+    gap: 12px;
+    margin-top: 4px;
+    padding-left: 2px;
+    font-size: 11px;
+    color: #9ca3af;
+    height: 24px;
 }
 
-/* 卡片操作按钮基础样式 */
-.card-action-btn {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    display: inline-flex;
+.message-meta {
+    display: flex;
+    gap: 12px;
+}
+
+.message-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.assistant-message:hover .message-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
-    background: #ffffff;
-    color: #6b7280;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s;
 }
 
-.card-action-btn:hover {
-    background: #fafafa;
-    border-color: #b0b0b0;
-    color: #4a4a4a;
+.action-btn:hover {
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
-.card-action-btn:active {
-    transform: scale(0.95);
-}
-
-.card-action-btn .icon {
-    width: 16px;
-    height: 16px;
+.action-btn .icon {
+    width: 14px;
+    height: 14px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
@@ -1512,79 +1490,19 @@ body {
     stroke-linejoin: round;
 }
 
-.assistant-card-body {
-    padding: 12px 12px 14px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-    flex: 1;
-    min-height: 0;
-    transition: scrollbar-color 0.3s ease;
+/* 统一模型名称颜色 */
+.assistant-a .assistant-model-name,
+.assistant-b .assistant-model-name {
+    color: #4b5563;
 }
 
-.assistant-card-body:hover {
-    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+/* 状态样式微调 - 隐藏状态胶囊 */
+.assistant-message-header .status {
+    display: none;
 }
 
-/* Webkit浏览器（Chrome/Edge/Safari）滚动条样式 */
-.assistant-card-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.assistant-card-body::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.assistant-card-body::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 4px;
-    transition: background 0.3s ease;
-}
-
-.assistant-card-body:hover::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.assistant-card-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.assistant-card-body:hover::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.assistant-card-body:hover::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
-}
-
-.assistant-card-footer {
-    padding: 10px 12px;
-    background: #fafafa;
-    border-top: 1px solid #e0e0e0;
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #666;
-}
-
-.assistant-card.assistant-a {
-    border-color: rgba(74, 74, 74, 0.35);
-}
-
-.assistant-card.assistant-b {
-    border-color: rgba(21, 101, 192, 0.35);
-}
-
-.assistant-card.assistant-a .assistant-card-header {
-    background: rgba(74, 74, 74, 0.04);
-}
-
-.assistant-card.assistant-b .assistant-card-header {
-    background: rgba(21, 101, 192, 0.05);
-}
-
-.assistant-card.assistant-b .model-badge {
-    background: #1565c0;
+.assistant-message-header .status::before {
+    display: none;
 }
 
 /* 底部输入框（始终可见） */
@@ -1666,18 +1584,26 @@ body {
 
 /* 思考过程区域 */
 .thinking-section {
-    background: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 15px;
-    margin-bottom: 20px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-left: 3px solid #adb5bd;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+}
+
+.thinking-section:hover {
+    border-color: #dee2e6;
+    border-left-color: #6c757d;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
 }
 
 .thinking-header {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: #666;
-    margin-bottom: 10px;
+    color: #6c757d;
+    margin-bottom: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: flex;
@@ -1689,28 +1615,36 @@ body {
 
 .thinking-time {
     font-size: 12px;
-    color: #777;
-    text-transform: none;
-    letter-spacing: normal;
-    white-space: nowrap;
+    color: #868e96;
+    font-family: 'SF Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
+    background: rgba(0,0,0,0.04);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .thinking-header > span:first-child {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .thinking-header > span:first-child::before {
-    content: '▾';
-    color: #888;
-    font-size: 12px;
-    display: inline-block;
-    transition: transform 0.15s ease, color 0.15s ease;
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid #adb5bd;
+    border-bottom: 2px solid #adb5bd;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    margin-top: -2px;
 }
 
 .thinking-header:hover > span:first-child::before {
-    color: #555;
+    border-color: #495057;
+}
+
+.thinking-section.collapsed {
+    padding: 8px 16px;
 }
 
 .thinking-section.collapsed .thinking-header {
@@ -1718,7 +1652,7 @@ body {
 }
 
 .thinking-section.collapsed .thinking-header > span:first-child::before {
-    transform: rotate(-90deg);
+    transform: rotate(-45deg);
 }
 
 .thinking-section.collapsed .thinking-content {
@@ -1727,9 +1661,10 @@ body {
 
 .thinking-content {
     font-size: 14px;
-    color: #555;
+    color: #495057;
     line-height: 1.6;
     word-wrap: break-word;
+    padding-left: 4px;
 }
 
 /* 思考内容的Markdown样式 */
@@ -1743,15 +1678,15 @@ body {
     margin-bottom: 8px;
     font-weight: 600;
     line-height: 1.4;
-    color: #333;
+    color: #343a40;
 }
 
-.thinking-content h1 { font-size: 22px; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; }
-.thinking-content h2 { font-size: 18px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
-.thinking-content h3 { font-size: 16px; }
-.thinking-content h4 { font-size: 15px; }
-.thinking-content h5 { font-size: 14px; }
-.thinking-content h6 { font-size: 13px; color: #666; }
+.thinking-content h1 { font-size: 20px; border-bottom: 2px solid #e9ecef; padding-bottom: 6px; }
+.thinking-content h2 { font-size: 17px; border-bottom: 1px solid #e9ecef; padding-bottom: 4px; }
+.thinking-content h3 { font-size: 15px; }
+.thinking-content h4 { font-size: 14px; }
+.thinking-content h5 { font-size: 13px; }
+.thinking-content h6 { font-size: 12px; color: #868e96; }
 
 .thinking-content p {
     margin-bottom: 10px;
@@ -1768,17 +1703,17 @@ body {
 }
 
 .thinking-content code {
-    background: #f5f5f5;
+    background: #f1f3f5;
     padding: 2px 6px;
     border-radius: 3px;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: 'SF Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
     font-size: 13px;
-    color: #d63384;
+    color: #c92a2a;
 }
 
 .thinking-content pre {
-    background: #f8f8f8;
-    border: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
     border-radius: 4px;
     padding: 12px;
     overflow-x: auto;
@@ -2340,21 +2275,24 @@ body {
     z-index: 1;
 }
 
-/* 全屏卡片样式调整 */
-.fullscreen-card {
+/* 全屏消息样式调整 */
+.fullscreen-message {
     max-height: 90vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
 }
 
 /* 全屏模式下隐藏全屏预览按钮 */
-.fullscreen-card .fullscreen-btn {
+.fullscreen-message .fullscreen-btn {
     display: none;
 }
 
-.fullscreen-card .assistant-card-body {
+.fullscreen-message .assistant-message-content {
     max-height: none;
     flex: 1;
     overflow-y: auto;
@@ -2363,29 +2301,29 @@ body {
     transition: scrollbar-color 0.3s ease;
 }
 
-.fullscreen-card .assistant-card-body:hover {
+.fullscreen-message .assistant-message-content:hover {
     scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
-.fullscreen-card .assistant-card-body::-webkit-scrollbar {
+.fullscreen-message .assistant-message-content::-webkit-scrollbar {
     width: 8px;
 }
 
-.fullscreen-card .assistant-card-body::-webkit-scrollbar-track {
+.fullscreen-message .assistant-message-content::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.fullscreen-card .assistant-card-body::-webkit-scrollbar-thumb {
+.fullscreen-message .assistant-message-content::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 4px;
     transition: background 0.3s ease;
 }
 
-.fullscreen-card .assistant-card-body:hover::-webkit-scrollbar-thumb {
+.fullscreen-message .assistant-message-content:hover::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.2);
 }
 
-.fullscreen-card .assistant-card-body::-webkit-scrollbar-thumb:hover {
+.fullscreen-message .assistant-message-content::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.3);
 }
 
