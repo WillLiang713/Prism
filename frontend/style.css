@@ -1490,6 +1490,13 @@ body {
     stroke-linejoin: round;
 }
 
+.assistant-message-footer .action-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 4px;
+}
+
 /* 统一模型名称颜色 */
 .assistant-a .assistant-model-name,
 .assistant-b .assistant-model-name {
@@ -2241,113 +2248,6 @@ body {
     word-break: break-word;
 }
 
-/* ========== 全屏预览模态层 ========== */
-
-.fullscreen-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    animation: fadeIn 0.1s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.fullscreen-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
-}
-
-.fullscreen-container {
-    position: relative;
-    width: min(1200px, 95vw);
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    z-index: 1;
-}
-
-/* 全屏消息样式调整 */
-.fullscreen-message {
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-}
-
-/* 全屏模式下隐藏全屏预览按钮 */
-.fullscreen-message .fullscreen-btn {
-    display: none;
-}
-
-.fullscreen-message .assistant-message-content {
-    max-height: none;
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-    transition: scrollbar-color 0.3s ease;
-}
-
-.fullscreen-message .assistant-message-content:hover {
-    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-}
-
-.fullscreen-message .assistant-message-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.fullscreen-message .assistant-message-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.fullscreen-message .assistant-message-content::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 4px;
-    transition: background 0.3s ease;
-}
-
-.fullscreen-message .assistant-message-content:hover::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.fullscreen-message .assistant-message-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
-}
-
-/* 响应式适配 */
-@media (max-width: 768px) {
-    .card-action-btn {
-        width: 32px;
-        height: 32px;
-    }
-
-    .fullscreen-modal {
-        padding: 0;
-    }
-
-    .fullscreen-container {
-        width: 100%;
-        max-height: 100vh;
-    }
-
-    .fullscreen-card {
-        max-height: 100vh;
-        border-radius: 0;
-    }
-}
 
 /* ========== 提示词管理样式 ========== */
 
