@@ -520,9 +520,16 @@ class AIService:
                                 # 忽略JSON解析错误
                                 continue
                     
-                    # 流结束后，如果有工具调用，执行并返回结果
+                    # 流结束后，如果有工具调用，执行并再次请求 AI
                     if tool_calls_buffer and request.enableTools:
-                        for idx, tool_call in tool_calls_buffer.items():
+                        # 构建工具调用消息
+                        tool_call_message = {
+                            "role": "assistant",
+                            "tool_calls": []
+                        }
+                        
+                        tool_results = []
+                        for idx, tool_call in sorted(tool_calls_buffer.items()):
                             tool_name = tool_call["name"]
                             try:
                                 args = json.loads(tool_call["arguments"]) if tool_call["arguments"] else {}
@@ -532,8 +539,85 @@ class AIService:
                             # 执行工具
                             result = await AIService.execute_tool(tool_name, args)
                             
-                            # 简洁显示工具结果
-                            yield f"data: {json.dumps({'type': 'content', 'data': result})}\n\n"
+                            # 构建标准格式的 tool_call
+                            tool_call_message["tool_calls"].append({
+                                "id": tool_call["id"] or f"call_{idx}",
+                                "type": "function",
+                                "function": {
+                                    "name": tool_name,
+                                    "arguments": tool_call["arguments"]
+                                }
+                            })
+                            
+                            # 构建工具结果消息
+                            tool_results.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call["id"] or f"call_{idx}",
+                                "content": result
+                            })
+                        
+                        # 重新构建消息列表，包含工具调用和结果
+                        messages_with_tools = body["messages"].copy()
+                        messages_with_tools.append(tool_call_message)
+                        messages_with_tools.extend(tool_results)
+                        
+                        # 再次请求 AI，让它基于工具结果生成回复
+                        body_second = body.copy()
+                        body_second["messages"] = messages_with_tools
+                        # 移除 tools 定义，避免重复调用
+                        body_second.pop("tools", None)
+                        
+                        # 发送第二次请求
+                        async with client.stream(
+                            method="POST",
+                            url=url,
+                            headers=headers,
+                            json=body_second
+                        ) as response2:
+                            if response2.status_code >= 400:
+                                error_text = await response2.aread()
+                                yield f"data: {json.dumps({'type': 'error', 'data': f'二次调用失败 HTTP {response2.status_code}: {error_text.decode()}'})}\n\n"
+                                return
+                            
+                            # 处理第二次流式响应
+                            buffer2 = ""
+                            async for chunk in response2.aiter_bytes():
+                                buffer2 += chunk.decode("utf-8", errors="ignore")
+                                
+                                lines = buffer2.split("\n")
+                                buffer2 = lines.pop() if lines else ""
+                                
+                                for line in lines:
+                                    line = line.strip()
+                                    if not line or line.startswith(":"):
+                                        continue
+                                    
+                                    if not line.startswith("data: "):
+                                        continue
+                                    
+                                    data = line[6:]
+                                    if data == "[DONE]":
+                                        continue
+                                    
+                                    try:
+                                        chunk_json = json.loads(data)
+                                        
+                                        # 解析响应块
+                                        if provider_mode == "anthropic":
+                                            parsed = StreamParser.parse_anthropic_chunk(chunk_json)
+                                        else:
+                                            parsed = StreamParser.parse_openai_chunk(chunk_json)
+                                        
+                                        # 发送content增量
+                                        if parsed["content"]:
+                                            yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
+                                        
+                                        # 发送tokens统计
+                                        if parsed["tokens"] is not None:
+                                            yield f"data: {json.dumps({'type': 'tokens', 'data': parsed['tokens']})}\n\n"
+                                    
+                                    except json.JSONDecodeError:
+                                        continue
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"

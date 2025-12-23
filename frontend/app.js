@@ -58,10 +58,9 @@ const elements = {
     imagePreviewContainer: document.getElementById('imagePreviewContainer'),
     enableTools: document.getElementById('enableTools'),
 
-    // 话题/历史
+    // 话题
     newTopicBtn: document.getElementById('newTopicBtn'),
     topicList: document.getElementById('topicList'),
-    historyList: document.getElementById('historyList'),
     chatMessages: document.getElementById('chatMessages'),
     scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
 
@@ -1505,7 +1504,6 @@ function setActiveTopic(topicId) {
 
 function renderAll() {
     renderTopicList();
-    renderHistoryList();
     renderChatMessages();
 }
 
@@ -1581,43 +1579,6 @@ function renderTopicList() {
 
         elements.topicList.appendChild(item);
     }
-}
-
-function renderHistoryList() {
-    if (!elements.historyList) return;
-    elements.historyList.innerHTML = '';
-
-    const topic = getActiveTopic();
-    if (!topic || !Array.isArray(topic.turns) || !topic.turns.length) return;
-
-    for (const turn of topic.turns) {
-        // 跳过问候消息，不在历史列表中显示
-        if (turn.isGreeting) continue;
-
-        const item = document.createElement('div');
-        item.className = 'history-item';
-        item.dataset.turnId = turn.id;
-
-        const text = document.createElement('div');
-        text.className = 'history-text';
-        text.textContent = (turn.prompt || '').slice(0, 60) || '(空)';
-
-        const time = document.createElement('div');
-        time.className = 'history-time';
-        time.textContent = formatTime(turn.createdAt);
-
-        item.appendChild(text);
-        item.appendChild(time);
-
-        item.addEventListener('click', () => scrollToTurn(turn.id));
-        elements.historyList.appendChild(item);
-    }
-}
-
-function scrollToTurn(turnId) {
-    const el = elements.chatMessages?.querySelector(`.turn[data-turn-id="${turnId}"]`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function isNearBottom(container, thresholdPx = 150) {
@@ -2215,7 +2176,6 @@ async function sendPrompt() {
     const createdEls = createTurnElement(turn);
     elements.chatMessages.appendChild(createdEls.el);
     renderTopicList();
-    renderHistoryList();
 
     // 发送后立即滚动到底部，并启用自动滚动
     state.autoScroll = true;

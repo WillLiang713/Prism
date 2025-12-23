@@ -595,17 +595,20 @@ body {
 }
 
 .chat-side {
+    width: 320px;
     display: flex;
     flex-direction: column;
     min-height: 0;
     border-right: 1px solid #e0e0e0;
     background: #f4f6f8;
+    flex-shrink: 0;
 }
 
 .chat-thread {
     position: relative;
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
     min-width: 0;
     background: #f8fafc;
@@ -639,13 +642,7 @@ body {
     color: #333;
 }
 
-.sidebar-divider {
-    height: 1px;
-    background: #e0e0e0;
-}
-
-.topic-list,
-.history-list {
+.topic-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -658,35 +655,29 @@ body {
     transition: scrollbar-color 0.3s ease;
 }
 
-.topic-list:hover,
-.history-list:hover {
+.topic-list:hover {
     scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
-.topic-list::-webkit-scrollbar,
-.history-list::-webkit-scrollbar {
+.topic-list::-webkit-scrollbar {
     width: 8px;
 }
 
-.topic-list::-webkit-scrollbar-track,
-.history-list::-webkit-scrollbar-track {
+.topic-list::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.topic-list::-webkit-scrollbar-thumb,
-.history-list::-webkit-scrollbar-thumb {
+.topic-list::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 4px;
     transition: background 0.3s ease;
 }
 
-.topic-list:hover::-webkit-scrollbar-thumb,
-.history-list:hover::-webkit-scrollbar-thumb {
+.topic-list:hover::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.2);
 }
 
-.topic-list::-webkit-scrollbar-thumb:hover,
-.history-list::-webkit-scrollbar-thumb:hover {
+.topic-list::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.3);
 }
 
@@ -733,8 +724,7 @@ body {
     font-weight: 500;
 }
 
-.topic-item,
-.history-item {
+.topic-item {
     border: 1px solid #e0e0e0;
     border-radius: 6px;
     background: #fafafa;
@@ -743,8 +733,7 @@ body {
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.topic-item:hover,
-.history-item:hover {
+.topic-item:hover {
     background: #f3f3f3;
 }
 
@@ -812,22 +801,6 @@ body {
 .topic-delete-btn:focus-visible {
     outline: 2px solid rgba(185, 28, 28, 0.35);
     outline-offset: 2px;
-}
-
-.history-item {
-    background: #fff;
-}
-
-.history-text {
-    font-size: 13px;
-    color: #444;
-    word-break: break-word;
-}
-
-.history-time {
-    font-size: 12px;
-    color: #888;
-    margin-top: 4px;
 }
 
 .chat-panel {
