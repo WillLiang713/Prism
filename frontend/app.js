@@ -56,6 +56,7 @@ const elements = {
     imageInput: document.getElementById('imageInput'),
     imageUploadBtn: document.getElementById('imageUploadBtn'),
     imagePreviewContainer: document.getElementById('imagePreviewContainer'),
+    enableTools: document.getElementById('enableTools'),
 
     // 话题/历史
     newTopicBtn: document.getElementById('newTopicBtn'),
@@ -2363,7 +2364,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
             enableHistory: isHistoryEnabled(),
             maxHistoryTurns: getMaxHistoryTurns(),
             historyTurns: historyTurns,
-            side: side
+            side: side,
+            enableTools: elements.enableTools?.checked || false
         };
 
         // 调用后端接口

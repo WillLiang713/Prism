@@ -50,6 +50,7 @@ class ChatRequest(BaseModel):
     thinking: bool = False
     enableHistory: bool = True
     maxHistoryTurns: int = Field(default=10, ge=1, le=50)
+    enableTools: bool = False  # 是否启用工具调用
 
     # 历史对话
     historyTurns: list[HistoryTurn] = []
@@ -288,6 +289,17 @@ class MessageBuilder:
             "stream_options": {"include_usage": True}
         }
 
+        # 添加工具定义
+        if config.enableTools:
+            try:
+                import json
+                with open("tools.json", "r", encoding="utf-8") as f:
+                    tools = json.load(f)
+                    if tools:
+                        body["tools"] = tools
+            except Exception:
+                pass
+
         # 思考模式(针对特定模型)
         if config.thinking:
             model_lower = config.model.lower()
@@ -328,7 +340,7 @@ class StreamParser:
     @staticmethod
     def parse_openai_chunk(chunk: dict) -> dict:
         """解析OpenAI流式响应块"""
-        result = {"thinking": "", "content": "", "tokens": None}
+        result = {"thinking": "", "content": "", "tokens": None, "tool_calls": None}
 
         choices = chunk.get("choices", [])
         if choices and len(choices) > 0:
@@ -345,6 +357,10 @@ class StreamParser:
             # 正常内容
             if "content" in delta:
                 result["content"] = delta["content"]
+            
+            # 工具调用
+            if "tool_calls" in delta and delta["tool_calls"]:
+                result["tool_calls"] = delta["tool_calls"]
 
         # Token统计
         usage = chunk.get("usage", {})
@@ -363,6 +379,12 @@ class StreamParser:
 
 class AIService:
     """AI服务主类"""
+
+    @staticmethod
+    async def execute_tool(tool_name: str, arguments: dict) -> str:
+        """执行工具调用"""
+        from tools import execute_tool as sync_execute_tool
+        return sync_execute_tool(tool_name, arguments)
 
     @staticmethod
     async def chat_stream(request: ChatRequest) -> AsyncIterator[str]:
@@ -432,6 +454,8 @@ class AIService:
 
                     # 处理流式响应
                     buffer = ""
+                    tool_calls_buffer = {}  # 用于累积工具调用信息
+                    
                     async for chunk in response.aiter_bytes():
                         buffer += chunk.decode("utf-8", errors="ignore")
 
@@ -466,6 +490,27 @@ class AIService:
                                 # 发送content增量
                                 if parsed["content"]:
                                     yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
+                                
+                                # 处理工具调用
+                                if parsed.get("tool_calls") and request.enableTools:
+                                    for tool_call in parsed["tool_calls"]:
+                                        idx = tool_call.get("index", 0)
+                                        if idx not in tool_calls_buffer:
+                                            tool_calls_buffer[idx] = {
+                                                "id": "",
+                                                "name": "",
+                                                "arguments": ""
+                                            }
+                                        
+                                        if "id" in tool_call:
+                                            tool_calls_buffer[idx]["id"] = tool_call["id"]
+                                        
+                                        if "function" in tool_call:
+                                            func = tool_call["function"]
+                                            if "name" in func:
+                                                tool_calls_buffer[idx]["name"] += func["name"]
+                                            if "arguments" in func:
+                                                tool_calls_buffer[idx]["arguments"] += func["arguments"]
 
                                 # 发送tokens统计
                                 if parsed["tokens"] is not None:
@@ -474,6 +519,21 @@ class AIService:
                             except json.JSONDecodeError as e:
                                 # 忽略JSON解析错误
                                 continue
+                    
+                    # 流结束后，如果有工具调用，执行并返回结果
+                    if tool_calls_buffer and request.enableTools:
+                        for idx, tool_call in tool_calls_buffer.items():
+                            tool_name = tool_call["name"]
+                            try:
+                                args = json.loads(tool_call["arguments"]) if tool_call["arguments"] else {}
+                            except:
+                                args = {}
+                            
+                            # 执行工具
+                            result = await AIService.execute_tool(tool_name, args)
+                            
+                            # 简洁显示工具结果
+                            yield f"data: {json.dumps({'type': 'content', 'data': result})}\n\n"
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"

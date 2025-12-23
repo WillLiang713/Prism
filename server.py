@@ -18,6 +18,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import httpx
 import os
+import json
+from datetime import datetime
 from urllib.parse import urlparse
 from ai_service import AIService, ChatRequest
 
@@ -57,7 +59,33 @@ async def serve_app():
     """提供JS文件"""
     return FileResponse("frontend/app.js")
 
-# Tavily 联网搜索（推荐：服务端保存 API Key）
+# 获取工具列表
+@app.get("/api/tools")
+async def get_tools():
+    """从 tools.json 读取工具定义"""
+    try:
+        with open("tools.json", "r", encoding="utf-8") as f:
+            tools = json.load(f)
+        return {"tools": tools}
+    except FileNotFoundError:
+        return {"tools": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"读取工具列表失败: {str(e)}")
+
+# 执行工具函数
+@app.post("/api/tools/execute")
+async def execute_tool_endpoint(request: Request):
+    """执行工具调用"""
+    from tools import execute_tool
+    
+    body = await request.json()
+    tool_name = body.get("name")
+    arguments = body.get("arguments", {})
+    
+    result = execute_tool(tool_name, arguments)
+    return {"result": result}
+
+# Tavily 联网搜索（推荐:服务端保存 API Key）
 class TavilySearchRequest(BaseModel):
     api_key: str | None = None
     query: str = Field(min_length=1, max_length=2000)
@@ -83,13 +111,19 @@ async def tavily_search(payload: TavilySearchRequest):
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post("https://api.tavily.com/search", json=body)
     except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Tavily请求失败: {e}") from e
+        print(f"Tavily 请求错误: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=502, detail=f"Tavily请求失败: {type(e).__name__} - {str(e)}") from e
+    except Exception as e:
+        print(f"Tavily 未知错误: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=502, detail=f"Tavily请求异常: {type(e).__name__} - {str(e)}") from e
 
     if resp.status_code >= 400:
         try:
             detail = resp.json()
+            print(f"Tavily API 返回错误 {resp.status_code}: {detail}")
         except Exception:
             detail = resp.text
+            print(f"Tavily API 返回错误 {resp.status_code}: {detail}")
         raise HTTPException(status_code=resp.status_code, detail=detail)
 
     return resp.json()
