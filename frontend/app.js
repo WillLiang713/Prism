@@ -1809,6 +1809,12 @@ function createAssistantCard(side, turn) {
     thinkingHeader.addEventListener('click', () => {
         thinkingSection.dataset.userToggled = '1';
         thinkingSection.classList.toggle('collapsed');
+        // 保存折叠状态到数据中
+        const collapsed = thinkingSection.classList.contains('collapsed');
+        if (turn?.models?.[side]) {
+            turn.models[side].thinkingCollapsed = collapsed;
+            scheduleSaveChat();
+        }
     });
 
     const thinkingContent = document.createElement('div');
@@ -1822,7 +1828,13 @@ function createAssistantCard(side, turn) {
 
     if (thinkingSnapshot) {
         thinkingSection.style.display = 'block';
-        thinkingSection.classList.remove('collapsed');
+        // 如果有保存的折叠状态，使用该状态；否则默认折叠
+        const shouldCollapse = turn?.models?.[side]?.thinkingCollapsed !== false;
+        if (shouldCollapse) {
+            thinkingSection.classList.add('collapsed');
+        } else {
+            thinkingSection.classList.remove('collapsed');
+        }
     }
 
     const responseSection = document.createElement('div');
@@ -1886,7 +1898,9 @@ function createAssistantCard(side, turn) {
         tokenEl,
         timeEl,
         copyBtn,
-        thinkingAutoCollapseTimer: null
+        thinkingAutoCollapseTimer: null,
+        turn: turn,
+        side: side
     };
 }
 
@@ -2008,7 +2022,8 @@ async function sendPrompt() {
             content: '',
             tokens: null,
             timeCostSec: null,
-            status: 'loading'
+            status: 'loading',
+            thinkingCollapsed: true // 默认折叠
         };
     }
     if (hasB) {
@@ -2019,7 +2034,8 @@ async function sendPrompt() {
             content: '',
             tokens: null,
             timeCostSec: null,
-            status: 'loading'
+            status: 'loading',
+            thinkingCollapsed: true // 默认折叠
         };
     }
 
@@ -2147,6 +2163,11 @@ function scheduleAutoCollapseThinking(ui, delayMs = 900) {
         if (!ui?.thinkingSectionEl) return;
         if (ui.thinkingSectionEl.dataset.userToggled === '1') return;
         ui.thinkingSectionEl.classList.add('collapsed');
+        // 保存自动折叠的状态
+        if (ui.turn && ui.side && ui.turn.models[ui.side]) {
+            ui.turn.models[ui.side].thinkingCollapsed = true;
+            scheduleSaveChat();
+        }
     }, delayMs);
 }
 
@@ -2289,6 +2310,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
 
         if (turn.models[side].thinking && ui?.thinkingSectionEl?.dataset?.userToggled !== '1') {
             ui.thinkingSectionEl.classList.add('collapsed');
+            turn.models[side].thinkingCollapsed = true;
         }
 
         if (!Number.isFinite(turn.models[side].tokens)) {
