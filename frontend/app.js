@@ -684,6 +684,29 @@ function bindEvents() {
         }
     });
 
+    // 工具调用开关的label元素，阻止焦点转移
+    const toolsLabel = elements.enableTools?.parentElement;
+    if (toolsLabel) {
+        toolsLabel.addEventListener('mousedown', (e) => {
+            // 只阻止label本身的默认行为，不阻止checkbox的点击
+            if (e.target === toolsLabel || e.target.classList.contains('switch-track') || e.target.classList.contains('switch-text') || e.target.tagName === 'svg' || e.target.tagName === 'path') {
+                e.preventDefault();
+            }
+        });
+    }
+
+    elements.enableTools?.addEventListener('change', (e) => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS.config);
+            const config = raw ? JSON.parse(raw) : {};
+            config.tools = config.tools || {};
+            config.tools.enabled = elements.enableTools ? !!elements.enableTools.checked : true;
+            localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+        } catch (e) {
+            console.error('保存工具调用开关失败:', e);
+        }
+    });
+
     elements.openConfigBtn?.addEventListener('click', openConfigModal);
     elements.closeConfigBtn?.addEventListener('click', closeConfigModal);
     elements.configModal?.addEventListener('click', (e) => {
@@ -1276,6 +1299,9 @@ function saveConfig() {
             tavilyApiKey: elements.tavilyApiKey?.value || '',
             maxResults: parseInt(elements.tavilyMaxResults?.value) || 5
         },
+        tools: {
+            enabled: elements.enableTools ? !!elements.enableTools.checked : true
+        },
         history: {
             enableHistory: !!elements.enableHistory?.checked,
             maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
@@ -1317,6 +1343,12 @@ function loadConfig() {
             if (elements.tavilyApiKey) elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || '';
             if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
         }
+        // 加载工具调用配置
+        if (elements.enableTools) {
+            // 默认开启，除非明确设置为 false
+            const toolsEnabled = config.tools?.enabled !== false;
+            elements.enableTools.checked = toolsEnabled;
+        }
         // 加载对话历史配置（兼容旧的 timeContext 配置）
         const historyConfig = config.history || config.timeContext;
         if (historyConfig) {
@@ -1354,6 +1386,7 @@ function clearConfig() {
     localStorage.removeItem(STORAGE_KEYS.config);
 
     if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
+    if (elements.enableTools) elements.enableTools.checked = true;
     if (elements.tavilyApiKey) elements.tavilyApiKey.value = '';
     if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
     if (elements.enableHistory) elements.enableHistory.checked = true;
