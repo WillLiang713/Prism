@@ -1344,17 +1344,20 @@ function saveConfig() {
 
 function loadConfig() {
     const saved = localStorage.getItem(STORAGE_KEYS.config);
-    if (!saved) return;
+    const config = saved ? JSON.parse(saved) : {};
+    
     try {
-        const config = JSON.parse(saved);
+        // 加载联网搜索配置 - 总是设置状态，默认关闭
+        if (elements.enableWebSearch) {
+            const webSearchEnabled = config.webSearch?.enabled === true;
+            elements.enableWebSearch.checked = webSearchEnabled;
+        }
         if (config.webSearch) {
-            if (elements.enableWebSearch) elements.enableWebSearch.checked = !!config.webSearch.enabled;
             if (elements.tavilyApiKey) elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || '';
             if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
         }
-        // 加载工具调用配置
+        // 加载工具调用配置 - 总是设置状态，默认开启
         if (elements.enableTools) {
-            // 默认开启，除非明确设置为 false
             const toolsEnabled = config.tools?.enabled !== false;
             elements.enableTools.checked = toolsEnabled;
         }
