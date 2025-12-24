@@ -11,7 +11,8 @@ const state = {
     abortControllers: { A: null, B: null },
     modelFetch: {
         A: { timer: null, inFlight: false, lastKey: '', lastFetchedAt: 0, models: [], datalistFillToken: 0, dropdownLimit: 120 },
-        B: { timer: null, inFlight: false, lastKey: '', lastFetchedAt: 0, models: [], datalistFillToken: 0, dropdownLimit: 120 }
+        B: { timer: null, inFlight: false, lastKey: '', lastFetchedAt: 0, models: [], datalistFillToken: 0, dropdownLimit: 120 },
+        Title: { timer: null, inFlight: false, lastKey: '', lastFetchedAt: 0, models: [], datalistFillToken: 0, dropdownLimit: 120 }
     },
     chat: {
         topics: [],
@@ -51,7 +52,10 @@ const elements = {
 
     // 话题标题自动生成
     enableAutoTitle: document.getElementById('enableAutoTitle'),
+    titleGenerationBase: document.getElementById('titleGenerationBase'),
     titleGenerationModel: document.getElementById('titleGenerationModel'),
+    modelDropdownTitle: document.getElementById('modelDropdownTitle'),
+    modelDropdownBtnTitle: document.getElementById('modelDropdownBtnTitle'),
 
     // 初始问候语
     enableGreeting: document.getElementById('enableGreeting'),
@@ -156,6 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
     autoGrowPromptInput();
     renderAll();
     loadTools(); // 加载工具列表
+    
+    // 初始化时触发标题模型获取
+    scheduleFetchModels('Title', 500);
 });
 
 function getProviderMode(config) {
@@ -785,38 +792,75 @@ function bindEvents() {
         updateProviderUi('A');
         updateModelHint('A');
         scheduleFetchModels('A', 0);
+        // 如果标题使用的是A的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'A') {
+            scheduleFetchModels('Title', 0);
+        }
     });
     elements.providerB.addEventListener('change', () => {
         updateProviderUi('B');
         updateModelHint('B');
         scheduleFetchModels('B', 0);
+        // 如果标题使用的是B的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'B') {
+            scheduleFetchModels('Title', 0);
+        }
     });
     elements.customFormatA?.addEventListener('change', () => {
         updateApiUrlPlaceholder('A');
         updateModelHint('A');
         scheduleFetchModels('A', 200);
+        // 如果标题使用的是A的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'A') {
+            scheduleFetchModels('Title', 200);
+        }
     });
     elements.customFormatB?.addEventListener('change', () => {
         updateApiUrlPlaceholder('B');
         updateModelHint('B');
         scheduleFetchModels('B', 200);
+        // 如果标题使用的是B的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'B') {
+            scheduleFetchModels('Title', 200);
+        }
+    });
+
+    // 标题生成模型配置监听
+    elements.titleGenerationBase?.addEventListener('change', () => {
+        scheduleFetchModels('Title', 200);
     });
 
     elements.apiKeyA?.addEventListener('input', () => {
         updateModelHint('A');
         scheduleFetchModels('A', 400);
+        // 如果标题使用的是A的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'A') {
+            scheduleFetchModels('Title', 400);
+        }
     });
     elements.apiKeyB?.addEventListener('input', () => {
         updateModelHint('B');
         scheduleFetchModels('B', 400);
+        // 如果标题使用的是B的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'B') {
+            scheduleFetchModels('Title', 400);
+        }
     });
     elements.apiUrlA?.addEventListener('input', () => {
         updateModelHint('A');
         scheduleFetchModels('A', 500);
+        // 如果标题使用的是A的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'A') {
+            scheduleFetchModels('Title', 500);
+        }
     });
     elements.apiUrlB?.addEventListener('input', () => {
         updateModelHint('B');
         scheduleFetchModels('B', 500);
+        // 如果标题使用的是B的配置，也触发Title的模型获取
+        if (elements.titleGenerationBase?.value === 'B') {
+            scheduleFetchModels('Title', 500);
+        }
     });
 
     // 监听模型名称变化
@@ -828,11 +872,16 @@ function bindEvents() {
         updateModelNames();
         updateModelDropdownFilter('B');
     });
+    elements.titleGenerationModel?.addEventListener('input', () => {
+        updateModelDropdownFilter('Title');
+    });
 
     elements.modelDropdownBtnA?.addEventListener('click', () => toggleModelDropdown('A'));
     elements.modelDropdownBtnB?.addEventListener('click', () => toggleModelDropdown('B'));
+    elements.modelDropdownBtnTitle?.addEventListener('click', () => toggleModelDropdown('Title'));
     elements.modelA?.addEventListener('focus', () => updateModelDropdownFilter('A'));
     elements.modelB?.addEventListener('focus', () => updateModelDropdownFilter('B'));
+    elements.titleGenerationModel?.addEventListener('focus', () => updateModelDropdownFilter('Title'));
 
     document.addEventListener('mousedown', (e) => {
         const t = e.target;
@@ -840,6 +889,7 @@ function bindEvents() {
         if (t.closest?.('.model-picker')) return;
         closeModelDropdown('A');
         closeModelDropdown('B');
+        closeModelDropdown('Title');
     });
 
     // Enter 发送（Shift+Enter 换行）
@@ -977,8 +1027,11 @@ function updateProviderUi(side) {
 }
 
 function updateApiUrlPlaceholder(side) {
-    const provider = elements[`provider${side}`].value;
+    const providerEl = elements[`provider${side}`];
     const urlInput = elements[`apiUrl${side}`];
+    if (!providerEl || !urlInput) return;
+    
+    const provider = providerEl.value;
     const customFormat = elements[`customFormat${side}`]?.value || 'openai';
 
     const customPlaceholder = customFormat === 'anthropic'
@@ -1022,6 +1075,17 @@ function updateModelNames() {
 }
 
 function getConfigFromForm(side) {
+    // 如果是标题模型，从选择的base配置中获取
+    if (side === 'Title') {
+        const base = elements.titleGenerationBase?.value || 'A';
+        return {
+            provider: elements[`provider${base}`]?.value || 'openai',
+            customFormat: elements[`customFormat${base}`]?.value || 'openai',
+            apiKey: elements[`apiKey${base}`]?.value || '',
+            apiUrl: elements[`apiUrl${base}`]?.value || ''
+        };
+    }
+    
     return {
         provider: elements[`provider${side}`]?.value || 'openai',
         customFormat: elements[`customFormat${side}`]?.value || 'openai',
@@ -1056,24 +1120,24 @@ function updateModelHint(side) {
 }
 
 function getCachedModelIds(side) {
-    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    const slot = state.modelFetch[side];
     return Array.isArray(slot?.models) ? slot.models : [];
 }
 
 function getModelDropdownLimit(side) {
-    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    const slot = state.modelFetch[side];
     if (!slot) return 120;
     return Math.max(40, Math.min(2000, Number(slot.dropdownLimit) || 120));
 }
 
 function resetModelDropdownLimit(side) {
-    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    const slot = state.modelFetch[side];
     if (!slot) return;
     slot.dropdownLimit = 120;
 }
 
 function increaseModelDropdownLimit(side, delta = 200) {
-    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    const slot = state.modelFetch[side];
     if (!slot) return;
     slot.dropdownLimit = getModelDropdownLimit(side) + Math.max(40, Number(delta) || 200);
 }
@@ -1104,7 +1168,7 @@ function renderModelDropdown(side, filterText) {
     const dropdownEl = elements[`modelDropdown${side}`];
     if (!dropdownEl) return;
 
-    const slot = state.modelFetch[side === 'A' ? 'A' : 'B'];
+    const slot = state.modelFetch[side];
     const isLoading = !!slot?.inFlight;
     const all = getCachedModelIds(side);
     const q = (filterText || '').toString().trim().toLowerCase();
@@ -1131,9 +1195,9 @@ function renderModelDropdown(side, filterText) {
         btn.dataset.value = id;
         btn.addEventListener('mousedown', (e) => e.preventDefault());
         btn.addEventListener('click', () => {
-            const input = elements[`model${side}`];
+            const input = side === 'Title' ? elements.titleGenerationModel : elements[`model${side}`];
             if (input) input.value = id;
-            updateModelNames();
+            if (side !== 'Title') updateModelNames();
             closeModelDropdown(side);
         });
         dropdownEl.appendChild(btn);
@@ -1156,7 +1220,7 @@ function renderModelDropdown(side, filterText) {
 
 function openModelDropdown(side) {
     const dropdownEl = elements[`modelDropdown${side}`];
-    const inputEl = elements[`model${side}`];
+    const inputEl = side === 'Title' ? elements.titleGenerationModel : elements[`model${side}`];
     if (!dropdownEl || !inputEl) return;
 
     renderModelDropdown(side, inputEl.value);
@@ -1183,7 +1247,7 @@ function toggleModelDropdown(side) {
 
 function updateModelDropdownFilter(side) {
     const dropdownEl = elements[`modelDropdown${side}`];
-    const inputEl = elements[`model${side}`];
+    const inputEl = side === 'Title' ? elements.titleGenerationModel : elements[`model${side}`];
     if (!dropdownEl || !inputEl) return;
 
     if (!isModelDropdownOpen(side)) {
@@ -1249,27 +1313,25 @@ async function fetchModelsOnce(config) {
 }
 
 function scheduleFetchModels(side, delayMs = 400) {
-    const key = side === 'A' ? 'A' : 'B';
-    const slot = state.modelFetch[key];
+    const slot = state.modelFetch[side];
     if (!slot) return;
 
     if (slot.timer) clearTimeout(slot.timer);
     slot.timer = setTimeout(() => {
         slot.timer = null;
-        void fetchAndUpdateModels(key);
+        void fetchAndUpdateModels(side);
     }, Math.max(0, delayMs || 0));
 }
 
 async function fetchAndUpdateModels(side) {
-    const key = side === 'A' ? 'A' : 'B';
-    const slot = state.modelFetch[key];
+    const slot = state.modelFetch[side];
     if (!slot || slot.inFlight) return;
 
-    const config = getConfigFromForm(key);
+    const config = getConfigFromForm(side);
     if (config.provider !== 'custom' && !(config.apiKey || '').trim()) {
         slot.models = [];
-        closeModelDropdown(key);
-        updateModelHint(key);
+        closeModelDropdown(side);
+        if (side !== 'Title') updateModelHint(side);
         slot.lastKey = '';
         slot.lastFetchedAt = 0;
         return;
@@ -1286,18 +1348,23 @@ async function fetchAndUpdateModels(side) {
     try {
         const ids = await fetchModelsOnce(config);
         slot.models = ids;
-        setModelHint(key, `已自动获取 ${ids.length} 个模型 ID（可下拉选择或直接输入）。`);
+        if (side !== 'Title') {
+            setModelHint(side, `已自动获取 ${ids.length} 个模型 ID（可下拉选择或直接输入）。`);
+        }
         // 只在下拉框已经打开的情况下更新显示，不自动打开
-        if (isModelDropdownOpen(key)) {
-            renderModelDropdown(key, elements[`model${key}`]?.value || '');
+        if (isModelDropdownOpen(side)) {
+            const inputEl = side === 'Title' ? elements.titleGenerationModel : elements[`model${side}`];
+            renderModelDropdown(side, inputEl?.value || '');
         }
         slot.lastKey = fetchKey;
         slot.lastFetchedAt = now;
     } catch (e) {
-        console.warn(`模型${key}模型列表获取失败:`, e?.message || e);
+        console.warn(`模型${side}模型列表获取失败:`, e?.message || e);
         slot.models = [];
-        closeModelDropdown(key);
-        setModelHint(key, '提示：这里填写模型 ID；自动获取失败，可手动输入。');
+        closeModelDropdown(side);
+        if (side !== 'Title') {
+            setModelHint(side, '提示：这里填写模型 ID；自动获取失败，可手动输入。');
+        }
     } finally {
         slot.inFlight = false;
     }
@@ -1319,7 +1386,8 @@ function saveConfig() {
         },
         autoTitle: {
             enabled: !!elements.enableAutoTitle?.checked,
-            model: elements.titleGenerationModel?.value || 'A'
+            base: elements.titleGenerationBase?.value || 'A',
+            model: elements.titleGenerationModel?.value || ''
         },
         greeting: {
             enabled: !!elements.enableGreeting?.checked,
@@ -1376,7 +1444,8 @@ function loadConfig() {
         // 加载话题标题自动生成配置
         if (config.autoTitle) {
             if (elements.enableAutoTitle) elements.enableAutoTitle.checked = config.autoTitle.enabled !== false;
-            if (elements.titleGenerationModel) elements.titleGenerationModel.value = config.autoTitle.model || 'A';
+            if (elements.titleGenerationBase) elements.titleGenerationBase.value = config.autoTitle.base || 'A';
+            if (elements.titleGenerationModel) elements.titleGenerationModel.value = config.autoTitle.model || '';
         }
         // 加载初始问候语配置
         if (config.greeting) {
@@ -1440,14 +1509,29 @@ function getConfig(side) {
         }
     }
 
+    // 如果是标题生成，从基础配置获取
+    if (side === 'Title') {
+        const base = elements.titleGenerationBase?.value || 'A';
+        const customModel = elements.titleGenerationModel?.value || '';
+        return {
+            provider: elements[`provider${base}`]?.value || 'openai',
+            customFormat: elements[`customFormat${base}`]?.value || 'openai',
+            apiKey: elements[`apiKey${base}`]?.value || '',
+            model: customModel || elements[`model${base}`]?.value || '',
+            apiUrl: elements[`apiUrl${base}`]?.value || '',
+            systemPrompt: '', // 标题生成不需要系统提示词
+            thinking: false
+        };
+    }
+
     return {
-        provider: elements[`provider${side}`].value,
+        provider: elements[`provider${side}`]?.value || 'openai',
         customFormat: elements[`customFormat${side}`]?.value || 'openai',
-        apiKey: elements[`apiKey${side}`].value,
-        model: elements[`model${side}`].value,
-        apiUrl: elements[`apiUrl${side}`].value,
+        apiKey: elements[`apiKey${side}`]?.value || '',
+        model: elements[`model${side}`]?.value || '',
+        apiUrl: elements[`apiUrl${side}`]?.value || '',
         systemPrompt: systemPrompt,
-        thinking: elements[`thinking${side}`].checked
+        thinking: elements[`thinking${side}`]?.checked || false
     };
 }
 
@@ -3073,7 +3157,7 @@ function getSelectedTools() {
  * @param {string} modelSide - 使用哪个模型生成标题 ('A' 或 'B')
  * @returns {Promise<string>} 生成的标题
  */
-async function generateTopicTitle(topicId, modelSide = 'A') {
+async function generateTopicTitle(topicId, configOrSide = 'A') {
     const topic = state.chat.topics.find(t => t.id === topicId);
     if (!topic) {
         throw new Error('话题不存在');
@@ -3083,10 +3167,10 @@ async function generateTopicTitle(topicId, modelSide = 'A') {
     state.chat.generatingTitleForTopicId = topicId;
     renderTopicList();
 
-    // 检查模型配置
-    const config = getConfig(modelSide);
+    // 检查模型配置 - 支持传入配置对象或字符串
+    const config = typeof configOrSide === 'string' ? getConfig(configOrSide) : configOrSide;
     if (!config.apiKey || !config.model) {
-        throw new Error(`模型 ${modelSide} 未配置完整（需要 API Key 和模型名称）`);
+        throw new Error('标题生成配置不完整（需要 API Key 和模型名称）');
     }
 
     // 构建对话历史（最多取前6轮）
@@ -3156,14 +3240,16 @@ async function autoGenerateTitle() {
     // 检查是否启用自动生成标题
     const saved = localStorage.getItem(STORAGE_KEYS.config);
     let autoTitleEnabled = true;
-    let preferredModel = 'A';
+    let baseModel = 'A';
+    let customModel = '';
     
     if (saved) {
         try {
             const config = JSON.parse(saved);
             if (config.autoTitle) {
                 autoTitleEnabled = config.autoTitle.enabled !== false;
-                preferredModel = config.autoTitle.model || 'A';
+                baseModel = config.autoTitle.base || 'A';
+                customModel = config.autoTitle.model || '';
             }
         } catch (e) {
             console.error('加载自动标题配置失败:', e);
@@ -3178,29 +3264,18 @@ async function autoGenerateTitle() {
     const realTurns = topic.turns.filter(t => !t.isGreeting && t.prompt);
     if (realTurns.length < 1) return;
 
-    // 检查首选模型是否可用
-    const preferredConfig = getConfig(preferredModel);
-    const hasPreferred = !!(preferredConfig.apiKey && preferredConfig.model);
-    
-    // 如果首选模型不可用，尝试使用另一个模型
-    let modelSide = preferredModel;
-    if (!hasPreferred) {
-        const alternativeModel = preferredModel === 'A' ? 'B' : 'A';
-        const alternativeConfig = getConfig(alternativeModel);
-        const hasAlternative = !!(alternativeConfig.apiKey && alternativeConfig.model);
-        
-        if (hasAlternative) {
-            modelSide = alternativeModel;
-        } else {
-            return; // 没有可用的模型
-        }
+    // 直接从 Title 配置获取（会自动从选择的基础配置中继承）
+    const titleConfig = getConfig('Title');
+    if (!titleConfig.apiKey || !titleConfig.model) {
+        console.warn('标题生成配置不完整，无法生成标题');
+        return;
     }
 
     try {
         // 延迟生成标题，等待对话完成
         setTimeout(async () => {
             try {
-                const title = await generateTopicTitle(topic.id, modelSide);
+                const title = await generateTopicTitle(topic.id, titleConfig);
                 if (title && title !== '新对话') {
                     topic.title = title;
                     topic.updatedAt = Date.now();
