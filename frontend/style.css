@@ -1024,6 +1024,10 @@ body {
     display: none;
 }
 
+.model-chip.unconfigured .chip-dot {
+    display: none;
+}
+
 /* 未配置时整个chip保持可见但降低透明度 */
 .model-chip.unconfigured {
     opacity: 0.5;
