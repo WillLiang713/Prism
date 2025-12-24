@@ -216,6 +216,112 @@ async def list_models(payload: ModelListRequest):
 
     return {"models": model_ids}
 
+# 生成话题标题
+class GenerateTitleRequest(BaseModel):
+    # 提供商配置
+    provider: str = Field(default="openai")
+    customFormat: str = Field(default="openai")
+    apiKey: str
+    model: str
+    apiUrl: str | None = None
+
+    # 对话历史（最多取前几轮）
+    messages: list[dict[str, str]]  # [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+
+
+@app.post("/api/topics/generate-title")
+async def generate_topic_title(payload: GenerateTitleRequest):
+    """
+    根据对话历史生成话题标题
+    
+    使用指定的模型分析对话内容，生成简短的标题（5-15字）
+    """
+    try:
+        # 构建提示词：让AI根据对话历史生成简短标题
+        system_prompt = "你是一个专业的话题标题生成助手。请根据用户提供的对话历史，生成一个简洁、准确的话题标题（5-15个字）。只需要输出标题本身，不要有任何解释或额外内容。"
+        
+        # 构建对话内容摘要
+        conversation_summary = []
+        for msg in payload.messages[:6]:  # 只取前6条消息
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]  # 限制每条消息长度
+            if role and content:
+                conversation_summary.append(f"{role}: {content}")
+        
+        user_prompt = f"请为以下对话生成一个简洁的标题（5-15字）：\n\n" + "\n".join(conversation_summary)
+        
+        # 构建请求
+        provider_mode = "anthropic" if (payload.provider == "anthropic" or 
+                                       (payload.provider == "custom" and payload.customFormat == "anthropic")) else "openai"
+        
+        # 获取API URL
+        from ai_service import ProviderConfig
+        api_url = ProviderConfig.get_api_url(payload.provider, payload.apiUrl, provider_mode)
+        
+        # 构建请求体
+        if provider_mode == "anthropic":
+            request_body = {
+                "model": payload.model,
+                "max_tokens": 50,
+                "messages": [{"role": "user", "content": user_prompt}],
+                "system": system_prompt,
+                "temperature": 0.7
+            }
+            headers = {
+                "x-api-key": payload.apiKey,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
+        else:
+            request_body = {
+                "model": payload.model,
+                "max_tokens": 50,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.7
+            }
+            headers = {
+                "Authorization": f"Bearer {payload.apiKey}",
+                "Content-Type": "application/json"
+            }
+        
+        # 发送请求
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(api_url, json=request_body, headers=headers)
+        
+        if resp.status_code >= 400:
+            try:
+                error_data = resp.json()
+                error_message = error_data.get("error", {}).get("message", resp.text)
+            except:
+                error_message = resp.text
+            raise HTTPException(status_code=resp.status_code, detail=f"AI请求失败: {error_message}")
+        
+        data = resp.json()
+        
+        # 提取标题
+        if provider_mode == "anthropic":
+            title = data.get("content", [{}])[0].get("text", "").strip()
+        else:
+            title = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        
+        # 清理标题（移除引号、换行等）
+        title = title.strip('"\'「」『』""''').replace('\n', ' ').strip()
+        
+        # 如果标题为空或过长，返回默认标题
+        if not title or len(title) > 30:
+            title = "新对话"
+        
+        return {"title": title}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"生成标题错误: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=500, detail=f"生成标题失败: {str(e)}")
+
 # AI聊天接口（流式响应）
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):

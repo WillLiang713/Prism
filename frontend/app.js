@@ -17,7 +17,8 @@ const state = {
         topics: [],
         activeTopicId: null,
         saveTimer: null,
-        isCreatingTopic: false
+        isCreatingTopic: false,
+        generatingTitleForTopicId: null
     },
     images: {
         selectedImages: [] // 存储当前选择的图片 { id, dataUrl, name, size }
@@ -47,6 +48,10 @@ const elements = {
     enableHistory: document.getElementById('enableHistory'),
     maxHistoryTurns: document.getElementById('maxHistoryTurns'),
     maxToolRounds: document.getElementById('maxToolRounds'),
+
+    // 话题标题自动生成
+    enableAutoTitle: document.getElementById('enableAutoTitle'),
+    titleGenerationModel: document.getElementById('titleGenerationModel'),
 
     // 初始问候语
     enableGreeting: document.getElementById('enableGreeting'),
@@ -1306,6 +1311,10 @@ function saveConfig() {
             enableHistory: !!elements.enableHistory?.checked,
             maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10
         },
+        autoTitle: {
+            enabled: !!elements.enableAutoTitle?.checked,
+            model: elements.titleGenerationModel?.value || 'A'
+        },
         greeting: {
             enabled: !!elements.enableGreeting?.checked,
             text: elements.greetingText?.value || '你好，有什么需要帮助的？'
@@ -1354,6 +1363,11 @@ function loadConfig() {
         if (historyConfig) {
             if (elements.enableHistory) elements.enableHistory.checked = historyConfig.enableHistory !== false;
             if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = historyConfig.maxHistoryTurns || 10;
+        }
+        // 加载话题标题自动生成配置
+        if (config.autoTitle) {
+            if (elements.enableAutoTitle) elements.enableAutoTitle.checked = config.autoTitle.enabled !== false;
+            if (elements.titleGenerationModel) elements.titleGenerationModel.value = config.autoTitle.model || 'A';
         }
         // 加载初始问候语配置
         if (config.greeting) {
@@ -1602,7 +1616,8 @@ function renderTopicList() {
     const topics = [...state.chat.topics].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     for (const topic of topics) {
         const item = document.createElement('div');
-        item.className = `topic-item${topic.id === state.chat.activeTopicId ? ' active' : ''}`;
+        const isGeneratingTitle = state.chat.generatingTitleForTopicId === topic.id;
+        item.className = `topic-item${topic.id === state.chat.activeTopicId ? ' active' : ''}${isGeneratingTitle ? ' generating-title' : ''}`;
         item.dataset.topicId = topic.id;
 
         const title = document.createElement('div');
@@ -2088,15 +2103,6 @@ async function sendPrompt() {
     topic.turns.push(turn);
     topic.updatedAt = now;
 
-    // 自动生成标题：如果标题还是"新话题"，且这是第一条真实消息（排除问候消息）
-    if ((topic.title || '').startsWith('新话题')) {
-        const realTurns = topic.turns.filter(t => !t.isGreeting);
-        if (realTurns.length === 1) {
-            const t = prompt.slice(0, 18).trim();
-            if (t) topic.title = t;
-        }
-    }
-
     scheduleSaveChat();
 
     const createdEls = createTurnElement(turn);
@@ -2169,6 +2175,9 @@ async function sendPrompt() {
     state.isRunning = false;
     setSendButtonMode('send');
     scheduleSaveChat();
+
+    // 自动生成标题
+    autoGenerateTitle();
 }
 
 function stopGeneration() {
@@ -3046,3 +3055,157 @@ function handleToolToggle(event) {
 function getSelectedTools() {
     return selectedToolNames;
 }
+
+// ========== 话题标题自动生成功能 ==========
+
+/**
+ * 为话题生成标题
+ * @param {string} topicId - 话题ID
+ * @param {string} modelSide - 使用哪个模型生成标题 ('A' 或 'B')
+ * @returns {Promise<string>} 生成的标题
+ */
+async function generateTopicTitle(topicId, modelSide = 'A') {
+    const topic = state.chat.topics.find(t => t.id === topicId);
+    if (!topic) {
+        throw new Error('话题不存在');
+    }
+
+    // 标记正在生成标题
+    state.chat.generatingTitleForTopicId = topicId;
+    renderTopicList();
+
+    // 检查模型配置
+    const config = getConfig(modelSide);
+    if (!config.apiKey || !config.model) {
+        throw new Error(`模型 ${modelSide} 未配置完整（需要 API Key 和模型名称）`);
+    }
+
+    // 构建对话历史（最多取前6轮）
+    const messages = [];
+    const turns = topic.turns.filter(t => !t.isGreeting).slice(0, 3); // 取前3轮对话
+    
+    for (const turn of turns) {
+        if (turn.prompt) {
+            messages.push({
+                role: 'user',
+                content: turn.prompt.slice(0, 200) // 限制长度
+            });
+        }
+        
+        // 取第一个有效的助手回复
+        if (turn.models.A?.content) {
+            messages.push({
+                role: 'assistant',
+                content: turn.models.A.content.slice(0, 200)
+            });
+        } else if (turn.models.B?.content) {
+            messages.push({
+                role: 'assistant',
+                content: turn.models.B.content.slice(0, 200)
+            });
+        }
+    }
+
+    if (messages.length === 0) {
+        throw new Error('话题中没有有效的对话内容');
+    }
+
+    // 调用后端API生成标题
+    const response = await fetch('/api/topics/generate-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            provider: config.provider,
+            customFormat: config.customFormat || 'openai',
+            apiKey: config.apiKey,
+            model: config.model,
+            apiUrl: config.apiUrl || null,
+            messages: messages
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        state.chat.generatingTitleForTopicId = null;
+        renderTopicList();
+        throw new Error(errorData.detail || `生成失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    state.chat.generatingTitleForTopicId = null;
+    renderTopicList();
+    return data.title || '新对话';
+}
+
+/**
+ * 自动为当前话题生成标题（在发送消息后调用）
+ */
+async function autoGenerateTitle() {
+    const topic = getActiveTopic();
+    if (!topic) return;
+
+    // 检查是否启用自动生成标题
+    const saved = localStorage.getItem(STORAGE_KEYS.config);
+    let autoTitleEnabled = true;
+    let preferredModel = 'A';
+    
+    if (saved) {
+        try {
+            const config = JSON.parse(saved);
+            if (config.autoTitle) {
+                autoTitleEnabled = config.autoTitle.enabled !== false;
+                preferredModel = config.autoTitle.model || 'A';
+            }
+        } catch (e) {
+            console.error('加载自动标题配置失败:', e);
+        }
+    }
+
+    if (!autoTitleEnabled) return;
+
+    // 只在标题为"新话题"且有实际对话时才自动生成
+    if (!topic.title.startsWith('新话题')) return;
+
+    const realTurns = topic.turns.filter(t => !t.isGreeting && t.prompt);
+    if (realTurns.length < 1) return;
+
+    // 检查首选模型是否可用
+    const preferredConfig = getConfig(preferredModel);
+    const hasPreferred = !!(preferredConfig.apiKey && preferredConfig.model);
+    
+    // 如果首选模型不可用，尝试使用另一个模型
+    let modelSide = preferredModel;
+    if (!hasPreferred) {
+        const alternativeModel = preferredModel === 'A' ? 'B' : 'A';
+        const alternativeConfig = getConfig(alternativeModel);
+        const hasAlternative = !!(alternativeConfig.apiKey && alternativeConfig.model);
+        
+        if (hasAlternative) {
+            modelSide = alternativeModel;
+        } else {
+            return; // 没有可用的模型
+        }
+    }
+
+    try {
+        // 延迟生成标题，等待对话完成
+        setTimeout(async () => {
+            try {
+                const title = await generateTopicTitle(topic.id, modelSide);
+                if (title && title !== '新对话') {
+                    topic.title = title;
+                    topic.updatedAt = Date.now();
+                    scheduleSaveChat();
+                    renderTopicList();
+                }
+            } catch (error) {
+                console.warn('自动生成标题失败:', error.message);
+                // 静默失败，不影响用户体验
+            }
+        }, 500); // 等待0.5秒后生成标题
+    } catch (error) {
+        console.warn('自动生成标题失败:', error.message);
+    }
+}
+
+

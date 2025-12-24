@@ -962,6 +962,21 @@ body {
     animation: shimmer 3.5s linear infinite;
 }
 
+/* 生成标题时话题标题扫光动画 */
+.topic-item.generating-title .topic-title {
+    background: linear-gradient(
+        90deg,
+        rgba(170, 170, 170, 0.6) 0%,
+        rgba(51, 51, 51, 1) 50%,
+        rgba(170, 170, 170, 0.6) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3.5s linear infinite;
+}
+
 /* loading状态时隐藏内容和底部 */
 .assistant-message.loading .assistant-message-content,
 .assistant-message.loading .assistant-message-footer {
