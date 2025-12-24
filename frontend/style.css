@@ -14,14 +14,15 @@ body {
     background: #f4f6f8;
     color: #2b2b2b;
     line-height: 1.6;
+    overflow: hidden;
 }
 
 .container {
     width: 100%;
     max-width: 1400px;
-    margin: 0 auto;
-    padding: 20px;
-    height: 100vh;
+    margin: 4vh auto;
+    padding: 0 12px;
+    height: 92vh;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -551,19 +552,19 @@ body {
 /* chat-panel 内部布局（话题/历史 + 聊天） */
 .chat-body {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 260px 1fr;
     flex: 1;
     min-height: 0;
     min-width: 0;
 }
 
 .chat-side {
-    width: 320px;
+    width: 260px;
     display: flex;
     flex-direction: column;
     min-height: 0;
-    border-right: 1px solid #e0e0e0;
-    background: #f4f6f8;
+    border-right: 1px solid #e3ebf5;
+    background: #f2f8fd;
     flex-shrink: 0;
 }
 
@@ -578,7 +579,7 @@ body {
 }
 
 .sidebar-section {
-    padding: 15px 16px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -688,9 +689,9 @@ body {
 }
 
 .topic-item {
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e3ebf5;
     border-radius: 6px;
-    background: #fafafa;
+    background: #ffffff;
     padding: 10px 12px;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
@@ -1034,7 +1035,7 @@ body {
 
 .chat-messages {
     flex: 1;
-    padding: 18px;
+    padding: 12px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -1082,7 +1083,7 @@ body {
 
 .user-bubble-wrap {
     align-self: flex-end;
-    max-width: min(720px, 78%);
+    max-width: min(800px, 85%);
     position: relative;
     animation: fade-in 0.5s ease-out;
 }
@@ -1514,7 +1515,7 @@ body {
 
 /* 底部输入框（始终可见） */
 .chat-composer {
-    padding: 14px 16px 16px;
+    padding: 12px 16px;
     border-top: 1px solid #e0e0e0;
     background: white;
 }
@@ -2028,10 +2029,10 @@ body {
 /* 滚动到底部按钮 */
 .scroll-to-bottom-btn {
     position: absolute;
-    bottom: 24px;
-    right: 24px;
-    width: 40px;
-    height: 40px;
+    bottom: 20px;
+    right: 20px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #ffffff;
     border: 1px solid #d0d0d0;
