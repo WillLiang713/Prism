@@ -227,6 +227,12 @@ function renderMarkdownToElement(element, text) {
 function enhanceRenderedMarkdown(root) {
     if (!root) return;
     addCopyButtonsToCodeBlocks(root);
+    // 为所有链接添加 target="_blank" 和 rel="noopener noreferrer"
+    const links = root.querySelectorAll('a[href]');
+    links.forEach(link => {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+    });
 }
 
 function getLanguageFromCodeEl(codeEl) {
