@@ -1086,6 +1086,7 @@ body {
 
 .chat-messages {
     flex: 1;
+    margin: 20px 20px 0 20px;
     padding: 12px;
     overflow-y: auto;
     display: flex;
