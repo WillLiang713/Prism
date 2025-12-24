@@ -2897,7 +2897,7 @@ function openPromptPreview(prompt) {
         if (prompt.content) {
             renderMarkdownToElement(contentEl, prompt.content);
         } else {
-            contentEl.textContent = '(空)';
+            contentEl.textContent = '';
         }
     }
 
