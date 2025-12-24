@@ -16,7 +16,8 @@ const state = {
     chat: {
         topics: [],
         activeTopicId: null,
-        saveTimer: null
+        saveTimer: null,
+        isCreatingTopic: false
     },
     images: {
         selectedImages: [] // 存储当前选择的图片 { id, dataUrl, name, size }
@@ -714,12 +715,35 @@ function bindEvents() {
     });
 
     elements.newTopicBtn.addEventListener('click', () => {
+        if (state.chat.isCreatingTopic) return; // 防止重复创建
+        
         if (state.isRunning && !confirm('正在生成中，仍要新建话题并停止当前生成吗？')) return;
+        
+        // 检查当前话题是否为空（只有问候语或无消息）
+        const currentTopic = getActiveTopic();
+        if (currentTopic) {
+            const hasRealContent = currentTopic.turns.some(turn => 
+                !turn.isGreeting && turn.prompt?.trim()
+            );
+            
+            if (!hasRealContent && currentTopic.turns.length <= 1) {
+                // 当前话题为空，无需创建新话题
+                elements.promptInput.focus();
+                return;
+            }
+        }
+        
         if (state.isRunning) stopGeneration();
-        const topic = createTopic();
-        setActiveTopic(topic.id);
-        renderAll();
-        elements.promptInput.focus();
+        
+        state.chat.isCreatingTopic = true;
+        try {
+            const topic = createTopic();
+            setActiveTopic(topic.id);
+            renderAll();
+            elements.promptInput.focus();
+        } finally {
+            state.chat.isCreatingTopic = false;
+        }
     });
 
     // 监听提供商变化，更新API地址提示 + 自动获取模型列表
@@ -1441,7 +1465,21 @@ function saveChatState() {
     }
 }
 
-function createTopic() {
+function createTopic(forceCreate = false) {
+    // 检查是否已存在空的新话题（避免重复创建）
+    if (!forceCreate) {
+        const emptyNewTopic = state.chat.topics.find(t => 
+            t.title === '新话题' && 
+            t.turns.length <= 1 && // 只有问候语或无消息
+            t.turns.every(turn => turn.isGreeting || !turn.prompt?.trim())
+        );
+        
+        if (emptyNewTopic) {
+            console.log('复用现有空话题:', emptyNewTopic.id);
+            return emptyNewTopic;
+        }
+    }
+    
     const now = Date.now();
     const topic = {
         id: createId(),
@@ -1937,8 +1975,19 @@ async function sendPrompt() {
     const now = Date.now();
     let topic = getActiveTopic();
     if (!topic) {
-        topic = createTopic();
-        setActiveTopic(topic.id);
+        // 检查是否有空话题可以复用
+        const emptyTopic = state.chat.topics.find(t => 
+            t.turns.length === 0 || 
+            (t.turns.length === 1 && t.turns[0].isGreeting)
+        );
+        
+        if (emptyTopic) {
+            topic = emptyTopic;
+            setActiveTopic(topic.id);
+        } else {
+            topic = createTopic();
+            setActiveTopic(topic.id);
+        }
     }
 
     const turn = {
