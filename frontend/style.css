@@ -423,14 +423,49 @@ body {
 
 .composer-box {
     position: relative;
-    background: #f8f8f8;
+    background: transparent;
     border: 1px solid #e0e0e0;
     border-radius: 12px;
     overflow: visible;
+    z-index: 0;
+    transition: border-color 0.3s;
+}
+
+.composer-box::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: #f8f8f8;
+    z-index: -1;
+}
+
+.composer-box::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 14px;
+    background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    background-size: 400%;
+    z-index: -2;
+    opacity: 0;
+    transition: opacity 0.3s;
+    animation: glowing 20s linear infinite;
+    pointer-events: none;
 }
 
 .composer-box:focus-within {
-    border-color: #888;
+    border-color: transparent;
+}
+
+.composer-box:focus-within::before {
+    opacity: 1;
+}
+
+@keyframes glowing {
+    0% { background-position: 0 0; }
+    50% { background-position: 400% 0; }
+    100% { background-position: 0 0; }
 }
 
 .composer-bar {
@@ -466,11 +501,12 @@ body {
 
 .switch input {
     position: absolute;
-    left: -9999px;
     opacity: 0;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
 }
 
 .switch:focus-within {
@@ -1528,11 +1564,251 @@ body {
     display: none;
 }
 
-/* 底部输入框（始终可见） */
+/* 底部输入框 */
 .chat-composer {
-    padding: 12px 16px;
-    border-top: 1px solid #e0e0e0;
+    padding: 20px;
+    background: transparent;
+}
+
+.composer-wrapper {
+    max-width: 100%;
+    margin: 0;
+}
+
+.composer-box {
+    position: relative;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    z-index: 0;
+}
+
+.composer-box::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: #ffffff;
+    z-index: -1;
+}
+
+.composer-box::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 18px;
+    background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    background-size: 400%;
+    z-index: -2;
+    opacity: 0;
+    transition: opacity 0.3s;
+    animation: glowing 20s linear infinite;
+    pointer-events: none;
+    will-change: background-position, opacity;
+    transform: translateZ(0);
+}
+
+.composer-box:focus-within {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.composer-box:focus-within::before {
+    opacity: 1;
+}
+
+@keyframes glowing {
+    0% { background-position: 0 0; }
+    50% { background-position: 400% 0; }
+    100% { background-position: 0 0; }
+}
+
+#promptInput {
+    width: 100%;
+    min-height: 52px;
+    max-height: 200px;
+    padding: 14px 16px;
+    border: none;
+    border-radius: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    font-family: inherit;
+    resize: none;
+    background: transparent;
+    color: #1f2937;
+}
+
+#promptInput:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+#promptInput::placeholder {
+    color: #9ca3af;
+}
+
+.composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px 10px;
+    background: transparent;
+}
+
+.composer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toolbar-btn:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.toolbar-btn.icon-only span {
+    display: none;
+}
+
+.toolbar-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+    margin-left: 4px;
+    position: relative;
+}
+
+.toolbar-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+}
+
+.toolbar-switch:hover {
+    background: #f3f4f6;
+}
+
+.toolbar-switch .switch-track {
+    width: 28px;
+    height: 16px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    border: 1px solid #d1d5db;
+    position: relative;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+}
+
+.toolbar-switch .switch-track::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
     background: white;
+    transition: left 0.2s;
+    transform: translateY(-50%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.toolbar-switch input:checked + .switch-track {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.toolbar-switch input:checked + .switch-track::after {
+    left: 13px;
+}
+
+.toolbar-switch .switch-text {
+    font-weight: 500;
+}
+
+.send-button {
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    width: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    background: #3b82f6;
+    color: white;
+    border: none;
+}
+
+.send-button:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.send-button:active {
+    transform: translateY(0);
+}
+
+.send-button .send-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.send-button .action-label {
+    display: none;
+}
+
+.send-button[data-mode="stop"] {
+    background: #ef4444;
+    width: auto;
+    padding: 0 12px;
+}
+
+.send-button[data-mode="stop"]:hover {
+    background: #dc2626;
+}
+
+.send-button[data-mode="stop"] .send-icon {
+    display: none;
+}
+
+.send-button[data-mode="stop"] .label-stop {
+    display: inline;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 /* 配置弹窗 */
