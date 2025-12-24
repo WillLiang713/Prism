@@ -1862,8 +1862,19 @@ function createAssistantCard(side, turn) {
     timeEl.className = 'meta-item time-cost';
     timeEl.textContent = `${Number.isFinite(timeSnapshot) ? timeSnapshot.toFixed(1) : '0.0'}s`;
 
+    const speedEl = document.createElement('span');
+    speedEl.className = 'meta-item token-speed';
+    if (Number.isFinite(tokenSnapshot) && Number.isFinite(timeSnapshot) && timeSnapshot > 0) {
+        const speed = tokenSnapshot / timeSnapshot;
+        speedEl.textContent = `${speed.toFixed(1)} t/s`;
+    } else {
+        speedEl.textContent = '';
+        speedEl.style.display = 'none';
+    }
+
     metaInfo.appendChild(tokenEl);
     metaInfo.appendChild(timeEl);
+    metaInfo.appendChild(speedEl);
 
     const actions = document.createElement('div');
     actions.className = 'message-actions';
@@ -1897,6 +1908,7 @@ function createAssistantCard(side, turn) {
         thinkingTimeEl: thinkingTime,
         tokenEl,
         timeEl,
+        speedEl,
         copyBtn,
         thinkingAutoCollapseTimer: null,
         turn: turn,
@@ -2184,6 +2196,14 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
         setHeaderTime(side, elapsed);
         ui.timeEl.textContent = `${elapsed.toFixed(1)}s`;
         turn.models[side].timeCostSec = elapsed;
+
+        // 实时更新速度
+        const tokens = turn.models[side].tokens || estimateTokensFromText(turn.models[side].content);
+        if (tokens > 0 && elapsed > 0.1) {
+            const speed = tokens / elapsed;
+            ui.speedEl.textContent = `${speed.toFixed(1)} t/s`;
+            ui.speedEl.style.display = 'inline';
+        }
     };
 
     let timeTimer = setInterval(updateTime, 200);
@@ -2318,6 +2338,13 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
             turn.models[side].tokens = tokens;
             ui.tokenEl.textContent = `${tokens} tokens`;
             setHeaderTokens(side, tokens);
+            
+            // 确保最终速度显示正确
+            if (turn.models[side].timeCostSec > 0) {
+                const speed = tokens / turn.models[side].timeCostSec;
+                ui.speedEl.textContent = `${speed.toFixed(1)} t/s`;
+                ui.speedEl.style.display = 'inline';
+            }
         }
     } catch (error) {
         if (error?.name === 'AbortError') {
