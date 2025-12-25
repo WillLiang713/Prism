@@ -1906,6 +1906,7 @@ function createAssistantCard(side, turn) {
     const modelSnapshot = turn?.models?.[side]?.model || '';
     const contentSnapshot = turn?.models?.[side]?.content || '';
     const thinkingSnapshot = turn?.models?.[side]?.thinking || '';
+    const thinkingTimeSnapshot = turn?.models?.[side]?.thinkingTime || 0;
     const tokenSnapshot = turn?.models?.[side]?.tokens;
     const timeSnapshot = turn?.models?.[side]?.timeCostSec;
     const statusSnapshot = turn?.models?.[side]?.status || 'ready';
@@ -1945,6 +1946,9 @@ function createAssistantCard(side, turn) {
     thinkingLabel.textContent = '思考过程';
     const thinkingTime = document.createElement('span');
     thinkingTime.className = 'thinking-time';
+    if (thinkingTimeSnapshot > 0) {
+        thinkingTime.textContent = `${thinkingTimeSnapshot.toFixed(1)}s`;
+    }
     thinkingHeader.appendChild(thinkingLabel);
     thinkingHeader.appendChild(thinkingTime);
     thinkingHeader.addEventListener('click', () => {
@@ -2326,11 +2330,21 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     const abortController = new AbortController();
     state.abortControllers[side] = abortController;
 
+    let thinkingStartTime = null;
+    let thinkingEndTime = null;
+
     const updateTime = () => {
         const elapsed = (Date.now() - startTime) / 1000;
         setHeaderTime(side, elapsed);
         ui.timeEl.textContent = `${elapsed.toFixed(1)}s`;
         turn.models[side].timeCostSec = elapsed;
+
+        if (thinkingStartTime) {
+            const end = thinkingEndTime || Date.now();
+            const thinkingElapsed = (end - thinkingStartTime) / 1000;
+            ui.thinkingTimeEl.textContent = `${thinkingElapsed.toFixed(1)}s`;
+            turn.models[side].thinkingTime = thinkingElapsed;
+        }
 
         // 实时更新速度
         const tokens = turn.models[side].tokens || estimateTokensFromText(turn.models[side].content);
@@ -2406,6 +2420,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                     const chunk = JSON.parse(data);
 
                     if (chunk.type === 'thinking' && chunk.data) {
+                        if (!thinkingStartTime) thinkingStartTime = Date.now();
                         turn.models[side].thinking += chunk.data;
                         ui.thinkingSectionEl.style.display = 'block';
                         if (ui.thinkingSectionEl.dataset.userToggled !== '1') {
@@ -2425,6 +2440,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                             scrollToBottom(elements.chatMessages, false);
                         }
                     } else if (chunk.type === 'content' && chunk.data) {
+                        if (thinkingStartTime && !thinkingEndTime) thinkingEndTime = Date.now();
                         turn.models[side].content += chunk.data;
                         renderMarkdownToElement(ui.responseEl, turn.models[side].content);
                         const tokens = estimateTokensFromText(turn.models[side].content);

@@ -1931,9 +1931,7 @@ body {
     font-size: 12px;
     color: #868e96;
     font-family: 'SF Mono', 'Segoe UI Mono', 'Roboto Mono', monospace;
-    background: rgba(0,0,0,0.04);
-    padding: 2px 6px;
-    border-radius: 4px;
+    margin-left: 8px;
 }
 
 .thinking-time:empty {
