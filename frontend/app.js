@@ -244,7 +244,19 @@ function enhanceRenderedMarkdown(root) {
         const codeBlocks = root.querySelectorAll('pre code');
         codeBlocks.forEach(block => {
             try {
-                hljs.highlightElement(block);
+                // 获取语言类型
+                const lang = getLanguageFromCodeEl(block);
+                
+                // 跳过不支持的语言（如 mermaid、plantuml 等需要特殊渲染的）
+                const unsupportedLanguages = ['mermaid', 'plantuml', 'graphviz', 'dot'];
+                if (unsupportedLanguages.includes(lang.toLowerCase())) {
+                    return;
+                }
+                
+                // 只高亮支持的语言
+                if (!lang || hljs.getLanguage(lang)) {
+                    hljs.highlightElement(block);
+                }
             } catch (e) {
                 console.error('手动高亮代码块失败:', e);
             }
