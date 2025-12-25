@@ -1691,6 +1691,20 @@ body {
     color: #374151;
 }
 
+.toolbar-btn:not(.icon-only) {
+    width: auto;
+    padding: 0 8px;
+    gap: 6px;
+}
+
+.toolbar-btn:not(.icon-only) span {
+    font-size: 13px;
+    white-space: nowrap;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .toolbar-btn.icon-only span {
     display: none;
 }
