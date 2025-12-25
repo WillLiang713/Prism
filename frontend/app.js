@@ -376,10 +376,12 @@ function addCopyButtonsToCodeBlocks(root) {
         const toolbar = document.createElement('div');
         toolbar.className = 'code-toolbar';
 
+        const language = getLanguageFromCodeEl(codeEl);
+
         const lang = document.createElement('span');
         lang.className = 'code-lang';
-        const language = getLanguageFromCodeEl(codeEl);
-        lang.textContent = language ? language : 'code';
+        lang.textContent = language || 'text';
+        toolbar.appendChild(lang);
 
         // 使用统一的createCopyButton函数创建复制按钮
         const btn = createCopyButton(
@@ -399,7 +401,6 @@ function addCopyButtonsToCodeBlocks(root) {
             btn.style.cursor = 'not-allowed';
         }
 
-        toolbar.appendChild(lang);
         toolbar.appendChild(btn);
 
         const parent = preEl.parentNode;
