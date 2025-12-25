@@ -1777,19 +1777,20 @@ body {
 }
 
 .send-button {
-    min-width: 32px;
     height: 32px;
-    padding: 0;
-    width: 32px;
-    border-radius: 8px;
+    padding: 0 16px;
+    border-radius: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     flex-shrink: 0;
     transition: all 0.2s;
     background: #3b82f6;
     color: white;
     border: none;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .send-button:hover {
@@ -1801,33 +1802,28 @@ body {
     transform: translateY(0);
 }
 
-.send-button .send-icon {
-    width: 16px;
-    height: 16px;
+.send-button .label-send {
+    display: inline;
 }
 
-.send-button .action-label {
+.send-button .label-stop {
     display: none;
 }
 
 .send-button[data-mode="stop"] {
     background: #ef4444;
-    width: auto;
-    padding: 0 12px;
 }
 
 .send-button[data-mode="stop"]:hover {
     background: #dc2626;
 }
 
-.send-button[data-mode="stop"] .send-icon {
+.send-button[data-mode="stop"] .label-send {
     display: none;
 }
 
 .send-button[data-mode="stop"] .label-stop {
     display: inline;
-    font-size: 13px;
-    font-weight: 500;
 }
 
 /* 配置弹窗 */
