@@ -203,9 +203,14 @@ function initMarkdown() {
     if (typeof marked === 'undefined') return;
     marked.setOptions({
         highlight: function(code, lang) {
-            if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+            if (typeof hljs !== 'undefined') {
                 try {
-                    return hljs.highlight(code, { language: lang }).value;
+                    // 如果指定了语言且该语言已注册，则使用指定语言高亮
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    // 否则尝试自动检测语言
+                    return hljs.highlightAuto(code).value;
                 } catch (e) {
                     console.error('代码高亮失败:', e);
                 }
@@ -233,6 +238,19 @@ function renderMarkdownToElement(element, text) {
 
 function enhanceRenderedMarkdown(root) {
     if (!root) return;
+    
+    // 手动高亮所有代码块
+    if (typeof hljs !== 'undefined') {
+        const codeBlocks = root.querySelectorAll('pre code');
+        codeBlocks.forEach(block => {
+            try {
+                hljs.highlightElement(block);
+            } catch (e) {
+                console.error('手动高亮代码块失败:', e);
+            }
+        });
+    }
+    
     addCopyButtonsToCodeBlocks(root);
     // 为所有链接添加 target="_blank" 和 rel="noopener noreferrer"
     const links = root.querySelectorAll('a[href]');
@@ -244,7 +262,7 @@ function enhanceRenderedMarkdown(root) {
 
 function getLanguageFromCodeEl(codeEl) {
     const className = (codeEl?.className || '').toString();
-    const m = className.match(/(?:^|\\s)(?:language|lang)-([\\w-]+)(?:\\s|$)/i);
+    const m = className.match(/(?:^|\s)(?:language|lang)-([\w-]+)(?:\s|$)/i);
     return m?.[1] || '';
 }
 
