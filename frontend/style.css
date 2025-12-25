@@ -1448,7 +1448,7 @@ body {
 
 .turn-assistants {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
 }
 
@@ -1459,7 +1459,7 @@ body {
 
 /* 双模型时保持原有布局 */
 .turn-assistants.dual-model {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .assistant-message {
@@ -1467,6 +1467,7 @@ body {
     flex-direction: column;
     gap: 4px;
     max-width: 100%;
+    min-width: 0;
     animation: fade-in 0.5s ease-out;
     padding: 0 4px;
 }
