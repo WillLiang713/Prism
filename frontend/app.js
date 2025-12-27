@@ -195,9 +195,14 @@ function initMarkdown() {
     if (typeof marked === 'undefined') return;
     marked.setOptions({
         highlight: function(code, lang) {
-            if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+            if (typeof hljs !== 'undefined') {
                 try {
-                    return hljs.highlight(code, { language: lang }).value;
+                    // 如果指定了语言且该语言已注册，则使用指定语言高亮
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    // 否则尝试自动检测语言
+                    return hljs.highlightAuto(code).value;
                 } catch (e) {
                     console.error('代码高亮失败:', e);
                 }
@@ -225,6 +230,31 @@ function renderMarkdownToElement(element, text) {
 
 function enhanceRenderedMarkdown(root) {
     if (!root) return;
+    
+    // 手动高亮所有代码块
+    if (typeof hljs !== 'undefined') {
+        const codeBlocks = root.querySelectorAll('pre code');
+        codeBlocks.forEach(block => {
+            try {
+                // 获取语言类型
+                const lang = getLanguageFromCodeEl(block);
+                
+                // 跳过不支持的语言（如 mermaid、plantuml 等需要特殊渲染的）
+                const unsupportedLanguages = ['mermaid', 'plantuml', 'graphviz', 'dot'];
+                if (unsupportedLanguages.includes(lang.toLowerCase())) {
+                    return;
+                }
+                
+                // 只高亮支持的语言
+                if (!lang || hljs.getLanguage(lang)) {
+                    hljs.highlightElement(block);
+                }
+            } catch (e) {
+                console.error('手动高亮代码块失败:', e);
+            }
+        });
+    }
+    
     addCopyButtonsToCodeBlocks(root);
     // 为所有链接添加 target="_blank" 和 rel="noopener noreferrer"
     const links = root.querySelectorAll('a[href]');
@@ -236,7 +266,7 @@ function enhanceRenderedMarkdown(root) {
 
 function getLanguageFromCodeEl(codeEl) {
     const className = (codeEl?.className || '').toString();
-    const m = className.match(/(?:^|\\s)(?:language|lang)-([\\w-]+)(?:\\s|$)/i);
+    const m = className.match(/(?:^|\s)(?:language|lang)-([\w-]+)(?:\s|$)/i);
     return m?.[1] || '';
 }
 
@@ -368,10 +398,12 @@ function addCopyButtonsToCodeBlocks(root) {
         const toolbar = document.createElement('div');
         toolbar.className = 'code-toolbar';
 
+        const language = getLanguageFromCodeEl(codeEl);
+
         const lang = document.createElement('span');
         lang.className = 'code-lang';
-        const language = getLanguageFromCodeEl(codeEl);
-        lang.textContent = language ? language : 'code';
+        lang.textContent = language || 'text';
+        toolbar.appendChild(lang);
 
         // 使用统一的createCopyButton函数创建复制按钮
         const btn = createCopyButton(
@@ -391,7 +423,6 @@ function addCopyButtonsToCodeBlocks(root) {
             btn.style.cursor = 'not-allowed';
         }
 
-        toolbar.appendChild(lang);
         toolbar.appendChild(btn);
 
         const parent = preEl.parentNode;
@@ -1847,6 +1878,7 @@ function createAssistantCard(side, turn) {
     const modelSnapshot = turn?.models?.[side]?.model || '';
     const contentSnapshot = turn?.models?.[side]?.content || '';
     const thinkingSnapshot = turn?.models?.[side]?.thinking || '';
+    const thinkingTimeSnapshot = turn?.models?.[side]?.thinkingTime || 0;
     const tokenSnapshot = turn?.models?.[side]?.tokens;
     const timeSnapshot = turn?.models?.[side]?.timeCostSec;
     const statusSnapshot = turn?.models?.[side]?.status || 'ready';
@@ -1886,6 +1918,9 @@ function createAssistantCard(side, turn) {
     thinkingLabel.textContent = '思考过程';
     const thinkingTime = document.createElement('span');
     thinkingTime.className = 'thinking-time';
+    if (thinkingTimeSnapshot > 0) {
+        thinkingTime.textContent = `${thinkingTimeSnapshot.toFixed(1)}s`;
+    }
     thinkingHeader.appendChild(thinkingLabel);
     thinkingHeader.appendChild(thinkingTime);
     thinkingHeader.addEventListener('click', () => {
@@ -2267,11 +2302,21 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     const abortController = new AbortController();
     state.abortControllers[side] = abortController;
 
+    let thinkingStartTime = null;
+    let thinkingEndTime = null;
+
     const updateTime = () => {
         const elapsed = (Date.now() - startTime) / 1000;
         setHeaderTime(side, elapsed);
         ui.timeEl.textContent = `${elapsed.toFixed(1)}s`;
         turn.models[side].timeCostSec = elapsed;
+
+        if (thinkingStartTime) {
+            const end = thinkingEndTime || Date.now();
+            const thinkingElapsed = (end - thinkingStartTime) / 1000;
+            ui.thinkingTimeEl.textContent = `${thinkingElapsed.toFixed(1)}s`;
+            turn.models[side].thinkingTime = thinkingElapsed;
+        }
 
         // 实时更新速度
         const tokens = turn.models[side].tokens || estimateTokensFromText(turn.models[side].content);
@@ -2346,6 +2391,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                     const chunk = JSON.parse(data);
 
                     if (chunk.type === 'thinking' && chunk.data) {
+                        if (!thinkingStartTime) thinkingStartTime = Date.now();
                         turn.models[side].thinking += chunk.data;
                         ui.thinkingSectionEl.style.display = 'block';
                         if (ui.thinkingSectionEl.dataset.userToggled !== '1') {
@@ -2365,6 +2411,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
                             scrollToBottom(elements.chatMessages, false);
                         }
                     } else if (chunk.type === 'content' && chunk.data) {
+                        if (thinkingStartTime && !thinkingEndTime) thinkingEndTime = Date.now();
                         turn.models[side].content += chunk.data;
                         renderMarkdownToElement(ui.responseEl, turn.models[side].content);
                         const tokens = estimateTokensFromText(turn.models[side].content);
