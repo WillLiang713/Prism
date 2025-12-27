@@ -1407,9 +1407,9 @@ function loadConfig() {
             if (elements.tavilyApiKey) elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || '';
             if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
         }
-        // 加载工具调用配置 - 总是设置状态，默认开启
+        // 加载工具调用配置 - 总是设置状态，默认关闭
         if (elements.enableTools) {
-            const toolsEnabled = config.tools?.enabled !== false;
+            const toolsEnabled = config.tools?.enabled === true;
             elements.enableTools.checked = toolsEnabled;
         }
         // 加载对话历史配置（兼容旧的 timeContext 配置）
@@ -1453,7 +1453,7 @@ function clearConfig() {
     localStorage.removeItem(STORAGE_KEYS.config);
 
     if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
-    if (elements.enableTools) elements.enableTools.checked = true;
+    if (elements.enableTools) elements.enableTools.checked = false;
     if (elements.tavilyApiKey) elements.tavilyApiKey.value = '';
     if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
     if (elements.enableHistory) elements.enableHistory.checked = true;
