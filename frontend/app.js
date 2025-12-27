@@ -80,8 +80,6 @@ const elements = {
     // 模型A配置
     providerA: document.getElementById('providerA'),
     providerHintA: document.getElementById('providerHintA'),
-    customFormatGroupA: document.getElementById('customFormatGroupA'),
-    customFormatA: document.getElementById('customFormatA'),
     apiKeyA: document.getElementById('apiKeyA'),
     modelA: document.getElementById('modelA'),
     apiUrlA: document.getElementById('apiUrlA'),
@@ -94,8 +92,6 @@ const elements = {
     // 模型B配置
     providerB: document.getElementById('providerB'),
     providerHintB: document.getElementById('providerHintB'),
-    customFormatGroupB: document.getElementById('customFormatGroupB'),
-    customFormatB: document.getElementById('customFormatB'),
     apiKeyB: document.getElementById('apiKeyB'),
     modelB: document.getElementById('modelB'),
     apiUrlB: document.getElementById('apiUrlB'),
@@ -167,11 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function getProviderMode(config) {
     const provider = config?.provider || 'openai';
-    if (provider === 'anthropic') return 'anthropic';
-    if (provider === 'custom') {
-        return (config?.customFormat || 'openai') === 'anthropic' ? 'anthropic' : 'openai';
-    }
-    return 'openai';
+    return provider === 'anthropic' ? 'anthropic' : 'openai';
 }
 
 function createId() {
@@ -806,24 +798,6 @@ function bindEvents() {
             scheduleFetchModels('Title', 0);
         }
     });
-    elements.customFormatA?.addEventListener('change', () => {
-        updateApiUrlPlaceholder('A');
-        updateModelHint('A');
-        scheduleFetchModels('A', 200);
-        // 如果标题使用的是A的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'A') {
-            scheduleFetchModels('Title', 200);
-        }
-    });
-    elements.customFormatB?.addEventListener('change', () => {
-        updateApiUrlPlaceholder('B');
-        updateModelHint('B');
-        scheduleFetchModels('B', 200);
-        // 如果标题使用的是B的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'B') {
-            scheduleFetchModels('Title', 200);
-        }
-    });
 
     // 标题生成模型配置监听
     elements.titleGenerationBase?.addEventListener('change', () => {
@@ -1003,22 +977,12 @@ function updateScrollToBottomButton() {
 function updateProviderUi(side) {
     const provider = elements[`provider${side}`]?.value || 'openai';
     const hintEl = elements[`providerHint${side}`];
-    const urlInput = elements[`apiUrl${side}`];
-    const customGroup = elements[`customFormatGroup${side}`];
-
-    if (customGroup) customGroup.style.display = provider === 'custom' ? 'block' : 'none';
-    if (urlInput) {
-        if (provider === 'custom') urlInput.setAttribute('required', 'required');
-        else urlInput.removeAttribute('required');
-    }
 
     if (hintEl) {
         if (provider === 'openai') {
-            hintEl.textContent = 'OpenAI 官方接口（Chat Completions 格式）；API地址可留空，默认使用 https://api.openai.com/v1/chat/completions。';
+            hintEl.textContent = 'OpenAI 兼容接口（Chat Completions 格式）；API地址可留空，默认使用官方接口。支持 DeepSeek、Qwen 等兼容服务。';
         } else if (provider === 'anthropic') {
-            hintEl.textContent = 'Anthropic 官方接口（Messages 格式）；API地址可留空，默认使用 https://api.anthropic.com/v1/messages。';
-        } else {
-            hintEl.textContent = '自定义第三方/自建接口：必须填写 API地址，并选择接口格式（OpenAI 兼容或 Anthropic 兼容）。';
+            hintEl.textContent = 'Anthropic 兼容接口（Messages 格式）；API地址可留空，默认使用官方接口。支持兼容 Anthropic 格式的服务。';
         }
     }
 
@@ -1032,15 +996,9 @@ function updateApiUrlPlaceholder(side) {
     if (!providerEl || !urlInput) return;
     
     const provider = providerEl.value;
-    const customFormat = elements[`customFormat${side}`]?.value || 'openai';
-
-    const customPlaceholder = customFormat === 'anthropic'
-        ? 'https://api.example.com/v1/messages'
-        : 'https://api.example.com/v1/chat/completions';
     const placeholders = {
         openai: 'https://api.openai.com/v1/chat/completions',
-        anthropic: 'https://api.anthropic.com/v1/messages',
-        custom: customPlaceholder
+        anthropic: 'https://api.anthropic.com/v1/messages'
     };
     urlInput.placeholder = placeholders[provider] || '';
 }
@@ -1080,7 +1038,6 @@ function getConfigFromForm(side) {
         const base = elements.titleGenerationBase?.value || 'A';
         return {
             provider: elements[`provider${base}`]?.value || 'openai',
-            customFormat: elements[`customFormat${base}`]?.value || 'openai',
             apiKey: elements[`apiKey${base}`]?.value || '',
             apiUrl: elements[`apiUrl${base}`]?.value || ''
         };
@@ -1088,7 +1045,6 @@ function getConfigFromForm(side) {
     
     return {
         provider: elements[`provider${side}`]?.value || 'openai',
-        customFormat: elements[`customFormat${side}`]?.value || 'openai',
         apiKey: elements[`apiKey${side}`]?.value || '',
         apiUrl: elements[`apiUrl${side}`]?.value || ''
     };
@@ -1102,16 +1058,9 @@ function setModelHint(side, text) {
 
 function updateModelHint(side) {
     const config = getConfigFromForm(side);
-    const provider = (config.provider || 'openai').toString();
     const apiKey = (config.apiKey || '').trim();
-    const apiUrl = (config.apiUrl || '').trim();
 
-    if (provider === 'custom' && !apiUrl) {
-        setModelHint(side, '提示：这里填写模型 ID；自定义提供商需先填写 API 地址，之后会自动获取可用模型列表（也可手动输入）。');
-        return;
-    }
-
-    if (provider !== 'custom' && !apiKey) {
+    if (!apiKey) {
         setModelHint(side, '提示：这里填写模型 ID；填写 API Key 后会自动获取可用模型列表（也可手动输入）。');
         return;
     }
@@ -1286,7 +1235,6 @@ async function fetchModelsOnce(config) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             provider: config?.provider || 'openai',
-            customFormat: config?.customFormat || 'openai',
             apiKey: config?.apiKey || '',
             apiUrl: config?.apiUrl || ''
         })
@@ -1328,7 +1276,7 @@ async function fetchAndUpdateModels(side) {
     if (!slot || slot.inFlight) return;
 
     const config = getConfigFromForm(side);
-    if (config.provider !== 'custom' && !(config.apiKey || '').trim()) {
+    if (!(config.apiKey || '').trim()) {
         slot.models = [];
         closeModelDropdown(side);
         if (side !== 'Title') updateModelHint(side);
@@ -1395,7 +1343,6 @@ function saveConfig() {
         },
         A: {
             provider: elements.providerA.value,
-            customFormat: elements.customFormatA?.value || 'openai',
             apiKey: elements.apiKeyA.value,
             model: elements.modelA.value,
             apiUrl: elements.apiUrlA.value,
@@ -1403,7 +1350,6 @@ function saveConfig() {
         },
         B: {
             provider: elements.providerB.value,
-            customFormat: elements.customFormatB?.value || 'openai',
             apiKey: elements.apiKeyB.value,
             model: elements.modelB.value,
             apiUrl: elements.apiUrlB.value,
@@ -1454,7 +1400,6 @@ function loadConfig() {
         }
         if (config.A) {
             elements.providerA.value = config.A.provider || 'openai';
-            if (elements.customFormatA) elements.customFormatA.value = config.A.customFormat || 'openai';
             elements.apiKeyA.value = config.A.apiKey || '';
             elements.modelA.value = config.A.model || '';
             elements.apiUrlA.value = config.A.apiUrl || '';
@@ -1462,7 +1407,6 @@ function loadConfig() {
         }
         if (config.B) {
             elements.providerB.value = config.B.provider || 'openai';
-            if (elements.customFormatB) elements.customFormatB.value = config.B.customFormat || 'openai';
             elements.apiKeyB.value = config.B.apiKey || '';
             elements.modelB.value = config.B.model || '';
             elements.apiUrlB.value = config.B.apiUrl || '';
@@ -1486,7 +1430,6 @@ function clearConfig() {
 
     ['A', 'B'].forEach(side => {
         elements[`provider${side}`].value = 'openai';
-        if (elements[`customFormat${side}`]) elements[`customFormat${side}`].value = 'openai';
         elements[`apiKey${side}`].value = '';
         elements[`model${side}`].value = '';
         elements[`apiUrl${side}`].value = '';
@@ -1515,7 +1458,6 @@ function getConfig(side) {
         const customModel = elements.titleGenerationModel?.value || '';
         return {
             provider: elements[`provider${base}`]?.value || 'openai',
-            customFormat: elements[`customFormat${base}`]?.value || 'openai',
             apiKey: elements[`apiKey${base}`]?.value || '',
             model: customModel || elements[`model${base}`]?.value || '',
             apiUrl: elements[`apiUrl${base}`]?.value || '',
@@ -1526,7 +1468,6 @@ function getConfig(side) {
 
     return {
         provider: elements[`provider${side}`]?.value || 'openai',
-        customFormat: elements[`customFormat${side}`]?.value || 'openai',
         apiKey: elements[`apiKey${side}`]?.value || '',
         model: elements[`model${side}`]?.value || '',
         apiUrl: elements[`apiUrl${side}`]?.value || '',
@@ -2354,7 +2295,6 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
         // 构建请求体（发送到后端）
         const requestBody = {
             provider: config.provider,
-            customFormat: config.customFormat || 'openai',
             apiKey: config.apiKey,
             model: config.model,
             apiUrl: config.apiUrl || null,
@@ -3209,7 +3149,6 @@ async function generateTopicTitle(topicId, configOrSide = 'A') {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             provider: config.provider,
-            customFormat: config.customFormat || 'openai',
             apiKey: config.apiKey,
             model: config.model,
             apiUrl: config.apiUrl || null,

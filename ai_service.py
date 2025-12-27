@@ -36,7 +36,6 @@ class ChatRequest(BaseModel):
     """AI聊天请求"""
     # 提供商配置
     provider: str = Field(default="openai")
-    customFormat: str = Field(default="openai")
     apiKey: str
     model: str
     apiUrl: str | None = None
@@ -76,14 +75,10 @@ class ProviderConfig:
     }
 
     @staticmethod
-    def get_provider_mode(provider: str, custom_format: str) -> str:
+    def get_provider_mode(provider: str) -> str:
         """判断提供商模式"""
         provider = provider.strip().lower()
-        custom_format = custom_format.strip().lower()
-
-        if provider == "anthropic" or (provider == "custom" and custom_format == "anthropic"):
-            return "anthropic"
-        return "openai"
+        return "anthropic" if provider == "anthropic" else "openai"
 
     @staticmethod
     def get_api_url(provider: str, api_url: str | None, provider_mode: str) -> str:
@@ -412,10 +407,7 @@ class AIService:
         """
         try:
             # 确定提供商模式
-            provider_mode = ProviderConfig.get_provider_mode(
-                request.provider,
-                request.customFormat
-            )
+            provider_mode = ProviderConfig.get_provider_mode(request.provider)
 
             # 获取API地址
             url = ProviderConfig.get_api_url(

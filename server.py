@@ -139,7 +139,6 @@ async def tavily_search(payload: TavilySearchRequest):
 # 模型列表拉取（由后端请求第三方，前端只调用本地接口）
 class ModelListRequest(BaseModel):
     provider: str = Field(default="openai")
-    customFormat: str = Field(default="openai")
     apiKey: str | None = None
     apiUrl: str | None = None
 
@@ -147,8 +146,7 @@ class ModelListRequest(BaseModel):
 @app.post("/api/models/list")
 async def list_models(payload: ModelListRequest):
     provider = (payload.provider or "openai").strip().lower()
-    custom_format = (payload.customFormat or "openai").strip().lower()
-    provider_mode = "anthropic" if (provider == "anthropic" or (provider == "custom" and custom_format == "anthropic")) else "openai"
+    provider_mode = "anthropic" if provider == "anthropic" else "openai"
 
     raw_api_url = (payload.apiUrl or "").strip()
     if raw_api_url:
@@ -220,7 +218,6 @@ async def list_models(payload: ModelListRequest):
 class GenerateTitleRequest(BaseModel):
     # 提供商配置
     provider: str = Field(default="openai")
-    customFormat: str = Field(default="openai")
     apiKey: str
     model: str
     apiUrl: str | None = None
@@ -251,8 +248,7 @@ async def generate_topic_title(payload: GenerateTitleRequest):
         user_prompt = f"请为以下对话生成一个简洁的标题（5-15字）：\n\n" + "\n".join(conversation_summary)
         
         # 构建请求
-        provider_mode = "anthropic" if (payload.provider == "anthropic" or 
-                                       (payload.provider == "custom" and payload.customFormat == "anthropic")) else "openai"
+        provider_mode = "anthropic" if payload.provider == "anthropic" else "openai"
         
         # 获取API URL
         from ai_service import ProviderConfig

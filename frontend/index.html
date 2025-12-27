@@ -142,28 +142,19 @@
                             <div class="form-group">
                                 <label>API提供商</label>
                                 <select id="providerA">
-                                    <option value="openai">OpenAI</option>
-                                    <option value="anthropic">Anthropic</option>
-                                    <option value="custom">自定义</option>
-                                </select>
-                                <div class="form-hint" id="providerHintA"></div>
-                            </div>
-                            <div class="form-group" id="customFormatGroupA" style="display: none;">
-                                <label>自定义接口格式</label>
-                                <select id="customFormatA">
                                     <option value="openai">OpenAI 兼容</option>
                                     <option value="anthropic">Anthropic 兼容</option>
                                 </select>
-                                <div class="form-hint">提示：大多数第三方（如 DeepSeek/Qwen 等）属于 OpenAI 兼容；若你的接口文档是 `/v1/messages` + `x-api-key`，请选择 Anthropic 兼容。</div>
+                                <div class="form-hint" id="providerHintA"></div>
                             </div>
                             <div class="form-group">
                                 <label>API密钥</label>
                                 <input type="password" id="apiKeyA" placeholder="输入API密钥">
                             </div>
                             <div class="form-group">
-                                <label>API地址（留空用默认；自定义必填）</label>
+                                <label>API地址（留空用官方默认地址）</label>
                                 <input type="text" id="apiUrlA" placeholder="https://api.example.com">
-                                <div class="form-hint">提示：只需填写基础域名，系统会自动拼接 /v1/... 路径。</div>
+                                <div class="form-hint">提示：只需填写基础域名，系统会自动拼接 /v1/... 路径。支持兼容接口。</div>
                             </div>
                             <div class="form-group">
                                 <label>模型</label>
@@ -190,28 +181,19 @@
                             <div class="form-group">
                                 <label>API提供商</label>
                                 <select id="providerB">
-                                    <option value="openai">OpenAI</option>
-                                    <option value="anthropic">Anthropic</option>
-                                    <option value="custom">自定义</option>
-                                </select>
-                                <div class="form-hint" id="providerHintB"></div>
-                            </div>
-                            <div class="form-group" id="customFormatGroupB" style="display: none;">
-                                <label>自定义接口格式</label>
-                                <select id="customFormatB">
                                     <option value="openai">OpenAI 兼容</option>
                                     <option value="anthropic">Anthropic 兼容</option>
                                 </select>
-                                <div class="form-hint">提示：大多数第三方（如 DeepSeek/Qwen 等）属于 OpenAI 兼容；若你的接口文档是 `/v1/messages` + `x-api-key`，请选择 Anthropic 兼容。</div>
+                                <div class="form-hint" id="providerHintB"></div>
                             </div>
                             <div class="form-group">
                                 <label>API密钥</label>
                                 <input type="password" id="apiKeyB" placeholder="输入API密钥">
                             </div>
                             <div class="form-group">
-                                <label>API地址（留空用默认；自定义必填）</label>
+                                <label>API地址（留空用官方默认地址）</label>
                                 <input type="text" id="apiUrlB" placeholder="https://api.example.com">
-                                <div class="form-hint">提示：只需填写基础域名，系统会自动拼接 /v1/... 路径。</div>
+                                <div class="form-hint">提示：只需填写基础域名，系统会自动拼接 /v1/... 路径。支持兼容接口。</div>
                             </div>
                             <div class="form-group">
                                 <label>模型</label>
