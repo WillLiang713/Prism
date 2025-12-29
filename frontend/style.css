@@ -979,18 +979,9 @@ body {
     display: none;
 }
 
-/* 未配置状态样式 - 完全隐藏模型ID */
-.model-chip.unconfigured .chip-id {
-    display: none;
-}
-
-.model-chip.unconfigured .chip-dot {
-    display: none;
-}
-
-/* 未配置时整个chip保持可见但降低透明度 */
+/* 未配置状态样式 - 完全隐藏整个chip */
 .model-chip.unconfigured {
-    opacity: 0.5;
+    display: none;
 }
 
 .model-chip .status {
