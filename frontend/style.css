@@ -421,53 +421,6 @@ body {
     outline: none;
 }
 
-.composer-box {
-    position: relative;
-    background: transparent;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    overflow: visible;
-    z-index: 0;
-    transition: border-color 0.3s;
-}
-
-.composer-box::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 12px;
-    background: #f8f8f8;
-    z-index: -1;
-}
-
-.composer-box::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 14px;
-    background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
-    background-size: 400%;
-    z-index: -2;
-    opacity: 0;
-    transition: opacity 0.3s;
-    animation: glowing 20s linear infinite;
-    pointer-events: none;
-}
-
-.composer-box:focus-within {
-    border-color: transparent;
-}
-
-.composer-box:focus-within::before {
-    opacity: 1;
-}
-
-@keyframes glowing {
-    0% { background-position: 0 0; }
-    50% { background-position: 400% 0; }
-    100% { background-position: 0 0; }
-}
-
 .composer-bar {
     display: flex;
     gap: 10px;
@@ -1613,7 +1566,7 @@ body {
     z-index: -2;
     opacity: 0;
     transition: opacity 0.3s;
-    animation: glowing 20s linear infinite;
+    animation: glowing 40s linear infinite;
     pointer-events: none;
     will-change: background-position, opacity;
     transform: translateZ(0);
