@@ -149,7 +149,8 @@ body {
     align-items: stretch;
 }
 
-.model-picker-row input[type="text"] {
+.model-picker-row input[type="text"],
+.model-picker-row select {
     flex: 1;
 }
 
@@ -262,6 +263,21 @@ body {
 
 .form-group input[type="checkbox"] {
     margin-right: 8px;
+}
+
+.radio-group {
+    display: flex;
+    gap: 16px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 6px;
 }
 
 .config-actions {

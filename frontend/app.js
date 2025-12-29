@@ -52,7 +52,7 @@ const elements = {
 
     // 话题标题自动生成
     enableAutoTitle: document.getElementById('enableAutoTitle'),
-    titleGenerationBase: document.getElementById('titleGenerationBase'),
+    titleGenerationBaseRadios: document.querySelectorAll('input[name="titleGenerationBase"]'),
     titleGenerationModel: document.getElementById('titleGenerationModel'),
     modelDropdownTitle: document.getElementById('modelDropdownTitle'),
     modelDropdownBtnTitle: document.getElementById('modelDropdownBtnTitle'),
@@ -134,6 +134,11 @@ const elements = {
     promptEditDescription: document.getElementById('promptEditDescription'),
     promptEditContent: document.getElementById('promptEditContent')
 };
+
+// 获取标题生成配置选中的基础配置值
+function getTitleGenerationBase() {
+    return document.querySelector('input[name="titleGenerationBase"]:checked')?.value || 'A';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initMarkdown();
@@ -816,7 +821,7 @@ function bindEvents() {
         updateModelHint('A');
         scheduleFetchModels('A', 0);
         // 如果标题使用的是A的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'A') {
+        if (getTitleGenerationBase() === 'A') {
             scheduleFetchModels('Title', 0);
         }
     });
@@ -825,21 +830,23 @@ function bindEvents() {
         updateModelHint('B');
         scheduleFetchModels('B', 0);
         // 如果标题使用的是B的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'B') {
+        if (getTitleGenerationBase() === 'B') {
             scheduleFetchModels('Title', 0);
         }
     });
 
     // 标题生成模型配置监听
-    elements.titleGenerationBase?.addEventListener('change', () => {
-        scheduleFetchModels('Title', 200);
+    elements.titleGenerationBaseRadios?.forEach(radio => {
+        radio.addEventListener('change', () => {
+            scheduleFetchModels('Title', 200);
+        });
     });
 
     elements.apiKeyA?.addEventListener('input', () => {
         updateModelHint('A');
         scheduleFetchModels('A', 400);
         // 如果标题使用的是A的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'A') {
+        if (getTitleGenerationBase() === 'A') {
             scheduleFetchModels('Title', 400);
         }
     });
@@ -847,7 +854,7 @@ function bindEvents() {
         updateModelHint('B');
         scheduleFetchModels('B', 400);
         // 如果标题使用的是B的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'B') {
+        if (getTitleGenerationBase() === 'B') {
             scheduleFetchModels('Title', 400);
         }
     });
@@ -855,7 +862,7 @@ function bindEvents() {
         updateModelHint('A');
         scheduleFetchModels('A', 500);
         // 如果标题使用的是A的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'A') {
+        if (getTitleGenerationBase() === 'A') {
             scheduleFetchModels('Title', 500);
         }
     });
@@ -863,7 +870,7 @@ function bindEvents() {
         updateModelHint('B');
         scheduleFetchModels('B', 500);
         // 如果标题使用的是B的配置，也触发Title的模型获取
-        if (elements.titleGenerationBase?.value === 'B') {
+        if (getTitleGenerationBase() === 'B') {
             scheduleFetchModels('Title', 500);
         }
     });
@@ -1066,7 +1073,7 @@ function updateModelNames() {
 function getConfigFromForm(side) {
     // 如果是标题模型，从选择的base配置中获取
     if (side === 'Title') {
-        const base = elements.titleGenerationBase?.value || 'A';
+        const base = getTitleGenerationBase();
         return {
             provider: elements[`provider${base}`]?.value || 'openai',
             apiKey: elements[`apiKey${base}`]?.value || '',
@@ -1365,7 +1372,7 @@ function saveConfig() {
         },
         autoTitle: {
             enabled: !!elements.enableAutoTitle?.checked,
-            base: elements.titleGenerationBase?.value || 'A',
+            base: getTitleGenerationBase(),
             model: elements.titleGenerationModel?.value || ''
         },
         greeting: {
@@ -1421,7 +1428,9 @@ function loadConfig() {
         // 加载话题标题自动生成配置
         if (config.autoTitle) {
             if (elements.enableAutoTitle) elements.enableAutoTitle.checked = config.autoTitle.enabled !== false;
-            if (elements.titleGenerationBase) elements.titleGenerationBase.value = config.autoTitle.base || 'A';
+            const baseValue = config.autoTitle.base || 'A';
+            const radioToCheck = document.querySelector(`input[name="titleGenerationBase"][value="${baseValue}"]`);
+            if (radioToCheck) radioToCheck.checked = true;
             if (elements.titleGenerationModel) elements.titleGenerationModel.value = config.autoTitle.model || '';
         }
         // 加载初始问候语配置
@@ -1485,7 +1494,7 @@ function getConfig(side) {
 
     // 如果是标题生成，从基础配置获取
     if (side === 'Title') {
-        const base = elements.titleGenerationBase?.value || 'A';
+        const base = getTitleGenerationBase();
         const customModel = elements.titleGenerationModel?.value || '';
         return {
             provider: elements[`provider${base}`]?.value || 'openai',

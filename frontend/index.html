@@ -280,10 +280,16 @@
                         </div>
                         <div class="form-group">
                             <label>生成标题使用的配置</label>
-                            <select id="titleGenerationBase" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                                <option value="A">模型 A 的配置</option>
-                                <option value="B">模型 B 的配置</option>
-                            </select>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="titleGenerationBase" value="A" checked>
+                                    <span>模型 A 的配置</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="titleGenerationBase" value="B">
+                                    <span>模型 B 的配置</span>
+                                </label>
+                            </div>
                             <small style="display: block; color: #666; margin-top: 4px;">
                                 使用哪个模型的API配置（API Key、地址等）
                             </small>
