@@ -1413,6 +1413,7 @@ body {
 /* 双模型时保持原有布局 */
 .turn-assistants.dual-model {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
 }
 
 .assistant-message {
@@ -1423,6 +1424,40 @@ body {
     min-width: 0;
     animation: fade-in 0.5s ease-out;
     padding: 0 4px;
+}
+
+/* 双模型时固定高度，防止一个模型输出过长挤压另一个 */
+.turn-assistants.dual-model .assistant-message {
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 双模型时内容区域可滚动 */
+.turn-assistants.dual-model .assistant-message-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 优化滚动条样式 */
+.turn-assistants.dual-model .assistant-message-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.turn-assistants.dual-model .assistant-message-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.turn-assistants.dual-model .assistant-message-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.turn-assistants.dual-model .assistant-message-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 .assistant-message-header {
