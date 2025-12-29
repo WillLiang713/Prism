@@ -1784,11 +1784,10 @@ body {
 
 .send-button:hover {
     background: #2563eb;
-    transform: translateY(-1px);
 }
 
 .send-button:active {
-    transform: translateY(0);
+    background: #1d4ed8;
 }
 
 .send-button .label-send {
