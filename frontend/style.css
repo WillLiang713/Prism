@@ -278,8 +278,12 @@ body {
     border: none;
     border-radius: 4px;
     font-size: 14px;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .toolbar-pill {
@@ -722,7 +726,7 @@ body {
     border-radius: 6px;
     padding: 4px 8px;
     font-size: 12px;
-    line-height: 1.2;
+    line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
     opacity: 0;
@@ -730,6 +734,9 @@ body {
     pointer-events: none;
     transform: translateY(2px);
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .topic-item:hover .topic-delete-btn,
@@ -1121,6 +1128,10 @@ body {
     background: #ffffff;
     color: #333;
     cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .message-copy-btn:hover {
@@ -1146,6 +1157,7 @@ body {
     width: 26px;
     height: 26px;
     padding: 0;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
@@ -2722,6 +2734,10 @@ body {
     cursor: pointer;
     transition: all 0.15s ease;
     white-space: nowrap;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .prompt-item-btn:hover {
