@@ -1,430 +1,710 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prism</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
     <!-- Markdown解析库 -->
     <script src="libs/marked/marked.min.js"></script>
     <!-- 代码高亮库 -->
-    <link rel="stylesheet" href="libs/highlight.js/styles/github.min.css">
+    <link rel="stylesheet" href="libs/highlight.js/styles/github.min.css" />
     <script src="libs/highlight.js/highlight.min.js"></script>
     <script src="libs/highlight.js/languages/javascript.min.js"></script>
     <script src="libs/highlight.js/languages/python.min.js"></script>
     <script src="libs/highlight.js/languages/java.min.js"></script>
     <script src="libs/highlight.js/languages/cpp.min.js"></script>
     <script src="libs/highlight.js/languages/bash.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <!-- 聊天区域 -->
-        <div class="chat-layout">
-            <section class="chat-panel">
-                <div class="chat-header">
-                    <div class="header-model-chips" aria-label="模型状态">
-                        <div class="model-chip model-chip-a">
-                            <span class="chip-dot"></span>
-                            <span class="chip-id" id="modelNameA"></span>
-                        </div>
-                        <div class="model-chip model-chip-b">
-                            <span class="chip-dot"></span>
-                            <span class="chip-id" id="modelNameB"></span>
-                        </div>
-                    </div>
-                    <div class="chat-actions">
-                        <button class="btn btn-secondary btn-settings" id="openPromptManagerBtn">提示词</button>
-                        <button class="btn btn-secondary btn-settings" id="openConfigBtn">设置</button>
-                    </div>
+      <!-- 聊天区域 -->
+      <div class="chat-layout">
+        <section class="chat-panel">
+          <div class="chat-header">
+            <div class="header-model-chips" aria-label="模型状态">
+              <div class="model-chip model-chip-a">
+                <span class="chip-dot"></span>
+                <span class="chip-id" id="modelNameA"></span>
+              </div>
+              <div class="model-chip model-chip-b">
+                <span class="chip-dot"></span>
+                <span class="chip-id" id="modelNameB"></span>
+              </div>
+            </div>
+            <div class="chat-actions">
+              <button
+                class="btn btn-secondary btn-settings"
+                id="toggleWideModeBtn"
+                title="切换宽屏模式"
+              >
+                宽宽屏模式
+              </button>
+              <button
+                class="btn btn-secondary btn-settings"
+                id="openPromptManagerBtn"
+              >
+                提示词
+              </button>
+              <button class="btn btn-secondary btn-settings" id="openConfigBtn">
+                设置
+              </button>
+            </div>
+          </div>
+
+          <div class="chat-body">
+            <div class="chat-side" aria-label="话题">
+              <div class="sidebar-section">
+                <div class="topic-list" id="topicList">
+                  <button class="topic-new-btn" id="newTopicBtn">
+                    <span class="topic-new-icon">+</span>
+                    <span class="topic-new-text">新建</span>
+                  </button>
                 </div>
+              </div>
+            </div>
 
-                <div class="chat-body">
-                    <div class="chat-side" aria-label="话题">
-                        <div class="sidebar-section">
-                            <div class="topic-list" id="topicList">
-                                <button class="topic-new-btn" id="newTopicBtn">
-                                    <span class="topic-new-icon">+</span>
-                                    <span class="topic-new-text">新建</span>
-                                </button>
-                            </div>
-                        </div>
+            <button
+              class="sidebar-toggle-handle"
+              id="toggleSidebarBtn"
+              title="显示/隐藏侧栏"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+
+            <div class="chat-thread" aria-label="聊天">
+              <div class="chat-messages-wrapper">
+                <div class="chat-messages" id="chatMessages"></div>
+                <!-- 滚动到底部按钮 -->
+                <button
+                  class="scroll-to-bottom-btn"
+                  id="scrollToBottomBtn"
+                  style="display: none"
+                  title="滚动到底部"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- 输入区域（固定在聊天卡片底部） -->
+              <div class="chat-composer">
+                <!-- 图片预览区域 -->
+                <div
+                  class="image-preview-container"
+                  id="imagePreviewContainer"
+                  style="display: none"
+                ></div>
+
+                <div class="composer-wrapper">
+                  <div class="composer-box">
+                    <textarea id="promptInput" rows="1"></textarea>
+
+                    <div class="composer-footer">
+                      <div class="composer-toolbar">
+                        <input
+                          type="file"
+                          id="imageInput"
+                          accept="image/*"
+                          multiple
+                          style="display: none"
+                        />
+
+                        <button
+                          class="toolbar-btn icon-only"
+                          id="imageUploadBtn"
+                          title="上传图片"
+                          aria-label="上传图片"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="18"
+                            height="18"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <rect
+                              x="3"
+                              y="3"
+                              width="18"
+                              height="18"
+                              rx="2"
+                              ry="2"
+                            ></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                          </svg>
+                        </button>
+
+                        <button
+                          class="toolbar-btn"
+                          id="promptSelectorBtn"
+                          title="选择提示词"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            width="18"
+                            height="18"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="M12 20h9"></path>
+                            <path
+                              d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                            ></path>
+                          </svg>
+                          <span id="promptSelectorLabel">默认</span>
+                        </button>
+
+                        <label class="toolbar-switch" title="开启联网搜索">
+                          <input type="checkbox" id="enableWebSearch" />
+                          <span class="switch-track" aria-hidden="true"></span>
+                          <span class="switch-text">联网</span>
+                        </label>
+
+                        <label class="toolbar-switch" title="开启工具调用">
+                          <input type="checkbox" id="enableTools" />
+                          <span class="switch-track" aria-hidden="true"></span>
+                          <span class="switch-text">工具</span>
+                        </label>
+                      </div>
+
+                      <button
+                        class="btn btn-primary send-button"
+                        id="sendBtn"
+                        data-mode="send"
+                        title="发送"
+                        aria-label="发送"
+                      >
+                        <span class="action-label label-send">发送</span>
+                        <span class="action-label label-stop">停止</span>
+                      </button>
                     </div>
-
-                    <div class="chat-thread" aria-label="聊天">
-                        <div class="chat-messages-wrapper">
-                            <div class="chat-messages" id="chatMessages"></div>
-                            <!-- 滚动到底部按钮 -->
-                            <button class="scroll-to-bottom-btn" id="scrollToBottomBtn" style="display: none;" title="滚动到底部">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- 输入区域（固定在聊天卡片底部） -->
-                        <div class="chat-composer">
-                            <!-- 图片预览区域 -->
-                            <div class="image-preview-container" id="imagePreviewContainer" style="display: none;"></div>
-                            
-                            <div class="composer-wrapper">
-                                <div class="composer-box">
-                                    <textarea id="promptInput" rows="1"></textarea>
-                                    
-                                    <div class="composer-footer">
-                                        <div class="composer-toolbar">
-                                            <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
-                                            
-                                            <button class="toolbar-btn icon-only" id="imageUploadBtn" title="上传图片" aria-label="上传图片">
-                                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                                    <polyline points="21 15 16 10 5 21"></polyline>
-                                                </svg>
-                                            </button>
-                                            
-                                            <button class="toolbar-btn" id="promptSelectorBtn" title="选择提示词">
-                                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                    <path d="M12 20h9"></path>
-                                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                                                </svg>
-                                                <span id="promptSelectorLabel">默认</span>
-                                            </button>
-                                            
-                                            <label class="toolbar-switch" title="开启联网搜索">
-                                                <input type="checkbox" id="enableWebSearch">
-                                                <span class="switch-track" aria-hidden="true"></span>
-                                                <span class="switch-text">联网</span>
-                                            </label>
-
-                                            <label class="toolbar-switch" title="开启工具调用">
-                                                <input type="checkbox" id="enableTools">
-                                                <span class="switch-track" aria-hidden="true"></span>
-                                                <span class="switch-text">工具</span>
-                                            </label>
-                                        </div>
-
-                                        <button class="btn btn-primary send-button" id="sendBtn" data-mode="send" title="发送" aria-label="发送">
-                                            <span class="action-label label-send">发送</span>
-                                            <span class="action-label label-stop">停止</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                  </div>
                 </div>
-            </section>
-        </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
     <!-- 配置弹窗 -->
     <div class="modal-overlay" id="configModal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="config-panel" id="configPanel">
-                <div class="config-header">
-                    <h2>配置</h2>
-                    <div class="config-header-actions">
-                        <button class="btn btn-primary btn-small" id="saveConfig">保存</button>
-                        <button class="btn btn-secondary btn-small" id="clearConfig">清除</button>
-                        <button class="btn btn-secondary btn-small" id="closeConfigBtn">关闭</button>
-                    </div>
-                </div>
-                <div class="config-content" id="configContent">
-                    <div class="config-row">
-                        <!-- 左侧AI配置 -->
-                        <div class="config-section">
-                            <h3>模型 A</h3>
-                            <div class="form-group">
-                                <label>API提供商</label>
-                                <select id="providerA">
-                                    <option value="openai">OpenAI 兼容</option>
-                                    <option value="anthropic">Anthropic 兼容</option>
-                                </select>
-                                <div class="form-hint" id="providerHintA"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>API密钥</label>
-                                <input type="password" id="apiKeyA" placeholder="输入API密钥">
-                            </div>
-                            <div class="form-group">
-                                <label>API地址（留空用官方默认地址）</label>
-                                <input type="text" id="apiUrlA" placeholder="https://api.example.com">
-                                <div class="form-hint">提示：只需填写基础域名，系统会自动拼接 /v1/... 路径。支持兼容接口。</div>
-                            </div>
-                            <div class="form-group">
-                                <label>模型</label>
-                                <div class="model-picker" data-side="A">
-                                    <div class="model-picker-row">
-                                        <input type="text" id="modelA" placeholder="例如: gpt-5">
-                                        <button type="button" class="model-picker-btn" id="modelDropdownBtnA" aria-label="打开模型列表" aria-expanded="false"></button>
-                                    </div>
-                                    <div class="model-dropdown" id="modelDropdownA" hidden></div>
-                                </div>
-                                <div class="form-hint" id="modelHintA">提示：这里填写模型 ID；填好 API Key/地址后会自动获取可用模型列表（也可手动输入）。</div>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="thinkingA">
-                                    启用思考模式
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- 右侧AI配置 -->
-                        <div class="config-section">
-                            <h3>模型 B</h3>
-                            <div class="form-group">
-                                <label>API提供商</label>
-                                <select id="providerB">
-                                    <option value="openai">OpenAI 兼容</option>
-                                    <option value="anthropic">Anthropic 兼容</option>
-                                </select>
-                                <div class="form-hint" id="providerHintB"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>API密钥</label>
-                                <input type="password" id="apiKeyB" placeholder="输入API密钥">
-                            </div>
-                            <div class="form-group">
-                                <label>API地址（留空用官方默认地址）</label>
-                                <input type="text" id="apiUrlB" placeholder="https://api.example.com">
-                                <div class="form-hint">提示：只需填写基础域名，系统会自动拼接 /v1/... 路径。支持兼容接口。</div>
-                            </div>
-                            <div class="form-group">
-                                <label>模型</label>
-                                <div class="model-picker" data-side="B">
-                                    <div class="model-picker-row">
-                                        <input type="text" id="modelB" placeholder="例如: deepseek-chat">
-                                        <button type="button" class="model-picker-btn" id="modelDropdownBtnB" aria-label="打开模型列表" aria-expanded="false"></button>
-                                    </div>
-                                    <div class="model-dropdown" id="modelDropdownB" hidden></div>
-                                </div>
-                                <div class="form-hint" id="modelHintB">提示：这里填写模型 ID；填好 API Key/地址后会自动获取可用模型列表（也可手动输入）。</div>
-                            </div>
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="thinkingB">
-                                    启用思考模式
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="global-config">
-                        <h3>联网搜索（Tavily）</h3>
-                        <div class="form-group">
-                            <label>Tavily API Key</label>
-                            <input type="password" id="tavilyApiKey" placeholder="tvly-...">
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                搜索结果数量
-                                <input type="number" id="tavilyMaxResults" min="1" max="20" value="5" style="width: 80px;">
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                每次搜索返回的结果数量（1-20条，默认5条）
-                            </small>
-                        </div>
-                    </div>
-                    <div class="global-config">
-                        <h3>对话历史</h3>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="enableHistory" checked>
-                                启用对话历史
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                启用后，AI能看到之前的对话内容；禁用后，每次对话都是独立的
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                历史轮数限制
-                                <input type="number" id="maxHistoryTurns" min="1" max="50" value="10" style="width: 80px;">
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                限制发送给AI的历史对话轮数（1-50轮，默认10轮）
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label>
-                                工具调用轮数限制
-                                <input type="number" id="maxToolRounds" min="1" max="20" value="5" style="width: 80px;">
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                限制AI连续调用工具的最大轮数（1-20轮，默认5轮）
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label style="display: flex; justify-content: space-between; align-items: center;">
-                                <span>可用工具</span>
-                                <button type="button" class="btn btn-secondary" id="refreshToolsBtn" style="padding: 4px 12px; font-size: 12px;">刷新</button>
-                            </label>
-                            <div id="toolsList" style="margin-top: 8px; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px;">
-                                <div style="color: #999; text-align: center; padding: 20px;">加载中...</div>
-                            </div>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                选择启用的工具，未选中的工具将不会加载
-                            </small>
-                        </div>
-                    </div>
-                    <div class="global-config">
-                        <h3>话题标题自动生成</h3>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="enableAutoTitle" checked>
-                                启用自动生成标题
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                启用后，发送第一条消息时会自动使用AI生成话题标题
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label>生成标题使用的配置</label>
-                            <div class="radio-group">
-                                <label class="radio-option">
-                                    <input type="radio" name="titleGenerationBase" value="A" checked>
-                                    <span>模型 A 的配置</span>
-                                </label>
-                                <label class="radio-option">
-                                    <input type="radio" name="titleGenerationBase" value="B">
-                                    <span>模型 B 的配置</span>
-                                </label>
-                            </div>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                使用哪个模型的API配置（API Key、地址等）
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label>模型ID（可选，留空使用上面选择的模型ID）</label>
-                            <div class="model-picker" data-side="Title">
-                                <div class="model-picker-row">
-                                    <input type="text" id="titleGenerationModel" placeholder="例如: gpt-5, deepseek-chat">
-                                    <button type="button" class="model-picker-btn" id="modelDropdownBtnTitle" aria-label="打开模型列表" aria-expanded="false"></button>
-                                </div>
-                                <div class="model-dropdown" id="modelDropdownTitle" hidden></div>
-                            </div>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                可指定不同的模型ID用于生成标题（建议使用轻量快速的模型，不要用reasoner模型）；留空则使用上面选择的模型的ID。会根据选择的配置自动获取可用模型列表。
-                            </small>
-                        </div>
-                    </div>
-                    <div class="global-config">
-                        <h3>初始问候语</h3>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="enableGreeting" checked>
-                                启用初始问候语
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                启用后，新建话题时会自动显示一条问候消息
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label>问候语内容</label>
-                            <input type="text" id="greetingText" placeholder="你好，有什么需要帮助的？" value="你好，有什么需要帮助的？">
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                自定义新话题的第一句问候语
-                            </small>
-                        </div>
-                    </div>
-                </div>
+      <div class="modal-content">
+        <div class="config-panel" id="configPanel">
+          <div class="config-header">
+            <h2>配置</h2>
+            <div class="config-header-actions">
+              <button class="btn btn-primary btn-small" id="saveConfig">
+                保存
+              </button>
+              <button class="btn btn-secondary btn-small" id="clearConfig">
+                清除
+              </button>
+              <button class="btn btn-secondary btn-small" id="closeConfigBtn">
+                关闭
+              </button>
             </div>
+          </div>
+          <div class="config-content" id="configContent">
+            <div class="config-row">
+              <!-- 左侧AI配置 -->
+              <div class="config-section">
+                <h3>模型 A</h3>
+                <div class="form-group">
+                  <label>API提供商</label>
+                  <select id="providerA">
+                    <option value="openai">OpenAI 兼容</option>
+                    <option value="anthropic">Anthropic 兼容</option>
+                  </select>
+                  <div class="form-hint" id="providerHintA"></div>
+                </div>
+                <div class="form-group">
+                  <label>API密钥</label>
+                  <input
+                    type="password"
+                    id="apiKeyA"
+                    placeholder="输入API密钥"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>API地址（留空用官方默认地址）</label>
+                  <input
+                    type="text"
+                    id="apiUrlA"
+                    placeholder="https://api.example.com"
+                  />
+                  <div class="form-hint">
+                    提示：只需填写基础域名，系统会自动拼接 /v1/...
+                    路径。支持兼容接口。
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>模型</label>
+                  <div class="model-picker" data-side="A">
+                    <div class="model-picker-row">
+                      <input
+                        type="text"
+                        id="modelA"
+                        placeholder="例如: gpt-5"
+                      />
+                      <button
+                        type="button"
+                        class="model-picker-btn"
+                        id="modelDropdownBtnA"
+                        aria-label="打开模型列表"
+                        aria-expanded="false"
+                      ></button>
+                    </div>
+                    <div
+                      class="model-dropdown"
+                      id="modelDropdownA"
+                      hidden
+                    ></div>
+                  </div>
+                  <div class="form-hint" id="modelHintA">
+                    提示：这里填写模型 ID；填好 API
+                    Key/地址后会自动获取可用模型列表（也可手动输入）。
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="thinkingA" />
+                    启用思考模式
+                  </label>
+                </div>
+              </div>
+
+              <!-- 右侧AI配置 -->
+              <div class="config-section">
+                <h3>模型 B</h3>
+                <div class="form-group">
+                  <label>API提供商</label>
+                  <select id="providerB">
+                    <option value="openai">OpenAI 兼容</option>
+                    <option value="anthropic">Anthropic 兼容</option>
+                  </select>
+                  <div class="form-hint" id="providerHintB"></div>
+                </div>
+                <div class="form-group">
+                  <label>API密钥</label>
+                  <input
+                    type="password"
+                    id="apiKeyB"
+                    placeholder="输入API密钥"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>API地址（留空用官方默认地址）</label>
+                  <input
+                    type="text"
+                    id="apiUrlB"
+                    placeholder="https://api.example.com"
+                  />
+                  <div class="form-hint">
+                    提示：只需填写基础域名，系统会自动拼接 /v1/...
+                    路径。支持兼容接口。
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>模型</label>
+                  <div class="model-picker" data-side="B">
+                    <div class="model-picker-row">
+                      <input
+                        type="text"
+                        id="modelB"
+                        placeholder="例如: deepseek-chat"
+                      />
+                      <button
+                        type="button"
+                        class="model-picker-btn"
+                        id="modelDropdownBtnB"
+                        aria-label="打开模型列表"
+                        aria-expanded="false"
+                      ></button>
+                    </div>
+                    <div
+                      class="model-dropdown"
+                      id="modelDropdownB"
+                      hidden
+                    ></div>
+                  </div>
+                  <div class="form-hint" id="modelHintB">
+                    提示：这里填写模型 ID；填好 API
+                    Key/地址后会自动获取可用模型列表（也可手动输入）。
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="thinkingB" />
+                    启用思考模式
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="global-config">
+              <h3>联网搜索（Tavily）</h3>
+              <div class="form-group">
+                <label>Tavily API Key</label>
+                <input
+                  type="password"
+                  id="tavilyApiKey"
+                  placeholder="tvly-..."
+                />
+              </div>
+              <div class="form-group">
+                <label>
+                  搜索结果数量
+                  <input
+                    type="number"
+                    id="tavilyMaxResults"
+                    min="1"
+                    max="20"
+                    value="5"
+                    style="width: 80px"
+                  />
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  每次搜索返回的结果数量（1-20条，默认5条）
+                </small>
+              </div>
+            </div>
+            <div class="global-config">
+              <h3>对话历史</h3>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="enableHistory" checked />
+                  启用对话历史
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  启用后，AI能看到之前的对话内容；禁用后，每次对话都是独立的
+                </small>
+              </div>
+              <div class="form-group">
+                <label>
+                  历史轮数限制
+                  <input
+                    type="number"
+                    id="maxHistoryTurns"
+                    min="1"
+                    max="50"
+                    value="10"
+                    style="width: 80px"
+                  />
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  限制发送给AI的历史对话轮数（1-50轮，默认10轮）
+                </small>
+              </div>
+              <div class="form-group">
+                <label>
+                  工具调用轮数限制
+                  <input
+                    type="number"
+                    id="maxToolRounds"
+                    min="1"
+                    max="20"
+                    value="5"
+                    style="width: 80px"
+                  />
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  限制AI连续调用工具的最大轮数（1-20轮，默认5轮）
+                </small>
+              </div>
+              <div class="form-group">
+                <label
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  "
+                >
+                  <span>可用工具</span>
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    id="refreshToolsBtn"
+                    style="padding: 4px 12px; font-size: 12px"
+                  >
+                    刷新
+                  </button>
+                </label>
+                <div
+                  id="toolsList"
+                  style="
+                    margin-top: 8px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 8px;
+                  "
+                >
+                  <div style="color: #999; text-align: center; padding: 20px">
+                    加载中...
+                  </div>
+                </div>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  选择启用的工具，未选中的工具将不会加载
+                </small>
+              </div>
+            </div>
+            <div class="global-config">
+              <h3>话题标题自动生成</h3>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="enableAutoTitle" checked />
+                  启用自动生成标题
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  启用后，发送第一条消息时会自动使用AI生成话题标题
+                </small>
+              </div>
+              <div class="form-group">
+                <label>生成标题使用的配置</label>
+                <div class="radio-group">
+                  <label class="radio-option">
+                    <input
+                      type="radio"
+                      name="titleGenerationBase"
+                      value="A"
+                      checked
+                    />
+                    <span>模型 A 的配置</span>
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="titleGenerationBase" value="B" />
+                    <span>模型 B 的配置</span>
+                  </label>
+                </div>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  使用哪个模型的API配置（API Key、地址等）
+                </small>
+              </div>
+              <div class="form-group">
+                <label>模型ID（可选，留空使用上面选择的模型ID）</label>
+                <div class="model-picker" data-side="Title">
+                  <div class="model-picker-row">
+                    <input
+                      type="text"
+                      id="titleGenerationModel"
+                      placeholder="例如: gpt-5, deepseek-chat"
+                    />
+                    <button
+                      type="button"
+                      class="model-picker-btn"
+                      id="modelDropdownBtnTitle"
+                      aria-label="打开模型列表"
+                      aria-expanded="false"
+                    ></button>
+                  </div>
+                  <div
+                    class="model-dropdown"
+                    id="modelDropdownTitle"
+                    hidden
+                  ></div>
+                </div>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  可指定不同的模型ID用于生成标题（建议使用轻量快速的模型，不要用reasoner模型）；留空则使用上面选择的模型的ID。会根据选择的配置自动获取可用模型列表。
+                </small>
+              </div>
+            </div>
+            <div class="global-config">
+              <h3>初始问候语</h3>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="enableGreeting" checked />
+                  启用初始问候语
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px">
+                  启用后，新建话题时会自动显示一条问候消息
+                </small>
+              </div>
+              <div class="form-group">
+                <label>问候语内容</label>
+                <input
+                  type="text"
+                  id="greetingText"
+                  placeholder="你好，有什么需要帮助的？"
+                  value="你好，有什么需要帮助的？"
+                />
+                <small style="display: block; color: #666; margin-top: 4px">
+                  自定义新话题的第一句问候语
+                </small>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- 提示词选择弹窗 -->
     <div class="modal-overlay" id="promptSelectorModal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="config-panel">
-                <div class="config-header">
-                    <h2>选择提示词</h2>
-                    <div class="config-header-actions">
-                        <button class="btn btn-secondary btn-small" id="closePromptSelectorBtn">关闭</button>
-                    </div>
-                </div>
-                <div class="config-content">
-                    <div class="prompt-selector-list" id="promptSelectorList">
-                        <!-- 动态渲染提示词选择列表 -->
-                    </div>
-                </div>
+      <div class="modal-content">
+        <div class="config-panel">
+          <div class="config-header">
+            <h2>选择提示词</h2>
+            <div class="config-header-actions">
+              <button
+                class="btn btn-secondary btn-small"
+                id="closePromptSelectorBtn"
+              >
+                关闭
+              </button>
             </div>
+          </div>
+          <div class="config-content">
+            <div class="prompt-selector-list" id="promptSelectorList">
+              <!-- 动态渲染提示词选择列表 -->
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- 提示词管理弹窗 -->
     <div class="modal-overlay" id="promptModal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="config-panel">
-                <div class="config-header">
-                    <h2>提示词管理</h2>
-                    <div class="config-header-actions">
-                        <button class="btn btn-secondary btn-small" id="newPromptBtn">新建</button>
-                        <button class="btn btn-secondary btn-small" id="importPromptsBtn">导入</button>
-                        <button class="btn btn-secondary btn-small" id="exportPromptsBtn">导出</button>
-                        <button class="btn btn-secondary btn-small" id="closePromptModalBtn">关闭</button>
-                    </div>
-                </div>
-                <div class="config-content">
-                    <div class="prompt-list" id="promptList">
-                        <!-- 动态渲染提示词列表 -->
-                    </div>
-                </div>
+      <div class="modal-content">
+        <div class="config-panel">
+          <div class="config-header">
+            <h2>提示词管理</h2>
+            <div class="config-header-actions">
+              <button class="btn btn-secondary btn-small" id="newPromptBtn">
+                新建
+              </button>
+              <button class="btn btn-secondary btn-small" id="importPromptsBtn">
+                导入
+              </button>
+              <button class="btn btn-secondary btn-small" id="exportPromptsBtn">
+                导出
+              </button>
+              <button
+                class="btn btn-secondary btn-small"
+                id="closePromptModalBtn"
+              >
+                关闭
+              </button>
             </div>
+          </div>
+          <div class="config-content">
+            <div class="prompt-list" id="promptList">
+              <!-- 动态渲染提示词列表 -->
+            </div>
+          </div>
         </div>
-        <!-- 隐藏的文件输入 -->
-        <input type="file" id="importPromptsInput" accept=".json" style="display: none;">
+      </div>
+      <!-- 隐藏的文件输入 -->
+      <input
+        type="file"
+        id="importPromptsInput"
+        accept=".json"
+        style="display: none"
+      />
     </div>
 
     <!-- 提示词预览弹窗 -->
     <div class="modal-overlay" id="promptPreviewModal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="config-panel">
-                <div class="config-header">
-                    <h2 id="promptPreviewTitle">提示词预览</h2>
-                    <div class="config-header-actions">
-                        <button class="btn btn-secondary btn-small" id="closePromptPreviewBtn">关闭</button>
-                    </div>
-                </div>
-                <div class="config-content">
-                    <div class="prompt-preview-content" id="promptPreviewContent">
-                        <!-- 动态渲染markdown内容 -->
-                    </div>
-                </div>
+      <div class="modal-content">
+        <div class="config-panel">
+          <div class="config-header">
+            <h2 id="promptPreviewTitle">提示词预览</h2>
+            <div class="config-header-actions">
+              <button
+                class="btn btn-secondary btn-small"
+                id="closePromptPreviewBtn"
+              >
+                关闭
+              </button>
             </div>
+          </div>
+          <div class="config-content">
+            <div class="prompt-preview-content" id="promptPreviewContent">
+              <!-- 动态渲染markdown内容 -->
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- 编辑提示词弹窗 -->
     <div class="modal-overlay" id="promptEditModal" aria-hidden="true">
-        <div class="modal-content">
-            <div class="config-panel">
-                <div class="config-header">
-                    <h2>编辑提示词</h2>
-                    <div class="config-header-actions">
-                        <button class="btn btn-primary btn-small" id="savePromptEditBtn">保存</button>
-                        <button class="btn btn-secondary btn-small" id="closePromptEditBtn">取消</button>
-                    </div>
-                </div>
-                <div class="config-content">
-                    <div class="prompt-edit-form">
-                        <div class="form-group">
-                            <label>名称</label>
-                            <input type="text" id="promptEditName" placeholder="提示词名称">
-                        </div>
-                        <div class="form-group">
-                            <label>描述（可选）</label>
-                            <input type="text" id="promptEditDescription" placeholder="提示词描述">
-                        </div>
-                        <div class="form-group">
-                            <label>内容</label>
-                            <textarea id="promptEditContent" placeholder="提示词内容" rows="15"></textarea>
-                        </div>
-                    </div>
-                </div>
+      <div class="modal-content">
+        <div class="config-panel">
+          <div class="config-header">
+            <h2>编辑提示词</h2>
+            <div class="config-header-actions">
+              <button class="btn btn-primary btn-small" id="savePromptEditBtn">
+                保存
+              </button>
+              <button
+                class="btn btn-secondary btn-small"
+                id="closePromptEditBtn"
+              >
+                取消
+              </button>
             </div>
+          </div>
+          <div class="config-content">
+            <div class="prompt-edit-form">
+              <div class="form-group">
+                <label>名称</label>
+                <input
+                  type="text"
+                  id="promptEditName"
+                  placeholder="提示词名称"
+                />
+              </div>
+              <div class="form-group">
+                <label>描述（可选）</label>
+                <input
+                  type="text"
+                  id="promptEditDescription"
+                  placeholder="提示词描述"
+                />
+              </div>
+              <div class="form-group">
+                <label>内容</label>
+                <textarea
+                  id="promptEditContent"
+                  placeholder="提示词内容"
+                  rows="15"
+                ></textarea>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <script src="app.js"></script>
-</body>
+  </body>
 </html>
