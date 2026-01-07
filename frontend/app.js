@@ -55,6 +55,10 @@ const state = {
     activeId: null,
     saveTimer: null,
   },
+  autoChat: {
+    running: false,
+    stopRequested: false,
+  },
   autoScroll: true, // 是否自动跟随滚动
   isWideMode: false,
   isSidebarCollapsed: false,
@@ -100,6 +104,7 @@ const elements = {
   imageUploadBtn: document.getElementById("imageUploadBtn"),
   imagePreviewContainer: document.getElementById("imagePreviewContainer"),
   enableTools: document.getElementById("enableTools"),
+  enableAutoChat: document.getElementById("enableAutoChat"),
   toolsList: document.getElementById("toolsList"),
   refreshToolsBtn: document.getElementById("refreshToolsBtn"),
 
@@ -820,6 +825,22 @@ function bindEvents() {
     }
   });
 
+  elements.enableAutoChat?.addEventListener("change", () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.config);
+      const config = raw ? JSON.parse(raw) : {};
+      config.autoChat = config.autoChat || {};
+      config.autoChat.enabled = !!elements.enableAutoChat.checked;
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+    } catch (e) {
+      console.error("保存互聊开关失败:", e);
+    }
+
+    if (!elements.enableAutoChat.checked && state.autoChat.running) {
+      stopGeneration();
+    }
+  });
+
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
   elements.configModal?.addEventListener("click", (e) => {
@@ -1481,6 +1502,9 @@ function saveConfig() {
     tools: {
       enabled: elements.enableTools ? !!elements.enableTools.checked : true,
     },
+    autoChat: {
+      enabled: !!elements.enableAutoChat?.checked,
+    },
     history: {
       enableHistory: !!elements.enableHistory?.checked,
       maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10,
@@ -1536,6 +1560,10 @@ function loadConfig() {
       const toolsEnabled = config.tools?.enabled === true;
       elements.enableTools.checked = toolsEnabled;
     }
+    if (elements.enableAutoChat) {
+      const autoChatEnabled = config.autoChat?.enabled === true;
+      elements.enableAutoChat.checked = autoChatEnabled;
+    }
     // 加载对话历史配置（兼容旧的 timeContext 配置）
     const historyConfig = config.history || config.timeContext;
     if (historyConfig) {
@@ -1589,6 +1617,7 @@ function clearConfig() {
 
   if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
   if (elements.enableTools) elements.enableTools.checked = false;
+  if (elements.enableAutoChat) elements.enableAutoChat.checked = false;
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.enableHistory) elements.enableHistory.checked = true;
@@ -1698,6 +1727,10 @@ function getWebSearchConfig() {
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
     maxResults: maxResults >= 1 && maxResults <= 20 ? maxResults : 5,
   };
+}
+
+function isAutoChatEnabled() {
+  return !!elements.enableAutoChat?.checked;
 }
 
 function getMaxHistoryTurns() {
@@ -2330,6 +2363,251 @@ function setHeaderTime(side, sec) {
   el.textContent = `${Math.max(0, sec || 0).toFixed(1)}s`;
 }
 
+function getSideLabel(side) {
+  return side === "A" ? "模型A" : "模型B";
+}
+
+function buildAutoChatDisplayPrompt(fromSide, message) {
+  const label = getSideLabel(fromSide);
+  const text = (message || "").trim();
+  return text ? `${label}：${text}` : `${label}：`;
+}
+
+function buildAutoChatPrompt(seedPrompt, fromSide, message) {
+  const label = getSideLabel(fromSide);
+  const seed = (seedPrompt || "").trim();
+  const text = (message || "").trim();
+  const lines = [];
+
+  if (seed) lines.push(`用户最初问题：${seed}`);
+  if (text) lines.push(`${label}的上一句：${text}`);
+  lines.push("请你作为另一方继续对话，直接回应上一句。");
+
+  return lines.join("\n");
+}
+
+async function startAutoChat({
+  prompt,
+  hasImages,
+  configA,
+  configB,
+  hasA,
+  hasB,
+  webSearchConfig,
+}) {
+  if (!hasA || !hasB) {
+    alert("模型互聊需要同时配置模型A和模型B");
+    return;
+  }
+
+  if (hasImages) {
+    alert("模型互聊暂不支持图片，请移除图片或关闭互聊模式");
+    return;
+  }
+
+  let started = false;
+  try {
+    const now = Date.now();
+    let topic = getActiveTopic();
+    if (!topic) {
+      // 检查是否有空话题可以复用
+      const emptyTopic = state.chat.topics.find(
+        (t) =>
+          t.turns.length === 0 ||
+          (t.turns.length === 1 && t.turns[0].isGreeting)
+      );
+
+      if (emptyTopic) {
+        topic = emptyTopic;
+        setActiveTopic(topic.id);
+      } else {
+        topic = createTopic();
+        setActiveTopic(topic.id);
+      }
+    }
+
+    state.isRunning = true;
+    state.autoChat.running = true;
+    state.autoChat.stopRequested = false;
+    setSendButtonMode("stop");
+    started = true;
+
+    elements.promptInput.value = "";
+    autoGrowPromptInput();
+    clearImages();
+    elements.promptInput.focus();
+
+    const firstSide = "A";
+    let promptForModel = prompt;
+
+    const firstTurn = {
+      id: createId(),
+      createdAt: now,
+      prompt,
+      images: [],
+      webSearch: webSearchConfig.enabled
+        ? {
+            status: "loading",
+            query: prompt,
+            results: [],
+            answer: "",
+            error: "",
+          }
+        : null,
+      models: {},
+    };
+
+    firstTurn.models[firstSide] = {
+      provider: configA.provider,
+      model: configA.model,
+      thinking: "",
+      content: "",
+      tokens: null,
+      timeCostSec: null,
+      status: "loading",
+      thinkingCollapsed: true,
+    };
+
+    topic.turns = Array.isArray(topic.turns) ? topic.turns : [];
+    topic.turns.push(firstTurn);
+    topic.updatedAt = now;
+    scheduleSaveChat();
+
+    const createdEls = createTurnElement(firstTurn);
+    elements.chatMessages.appendChild(createdEls.el);
+    renderTopicList();
+    state.autoScroll = true;
+    scrollToBottom(elements.chatMessages, false);
+
+    if (firstTurn.webSearch) {
+      if (!webSearchConfig.tavilyApiKey) {
+        firstTurn.webSearch.status = "error";
+        firstTurn.webSearch.error = "已启用联网搜索，但未填写 Tavily API Key。";
+        renderWebSearchSection(createdEls.webSearchEl, firstTurn.webSearch);
+        scheduleSaveChat();
+      } else {
+        try {
+          const data = await tavilySearch(
+            prompt,
+            webSearchConfig.tavilyApiKey,
+            webSearchConfig.maxResults
+          );
+          firstTurn.webSearch.status = "ready";
+          firstTurn.webSearch.answer = data?.answer || "";
+          firstTurn.webSearch.results = Array.isArray(data?.results)
+            ? data.results
+            : [];
+          renderWebSearchSection(createdEls.webSearchEl, firstTurn.webSearch);
+          scheduleSaveChat();
+          if (
+            firstTurn.webSearch.results?.length ||
+            firstTurn.webSearch.answer
+          ) {
+            promptForModel = buildPromptWithWebSearch(
+              prompt,
+              firstTurn.webSearch
+            );
+          }
+        } catch (e) {
+          firstTurn.webSearch.status = "error";
+          firstTurn.webSearch.error = e?.message || "联网搜索失败";
+          renderWebSearchSection(createdEls.webSearchEl, firstTurn.webSearch);
+          scheduleSaveChat();
+        }
+      }
+    }
+
+    setHeaderStatus(firstSide, "loading");
+    setHeaderTokens(firstSide, 0);
+    setHeaderTime(firstSide, 0);
+
+    await callModel(
+      firstSide,
+      promptForModel,
+      configA,
+      firstTurn,
+      createdEls.cards[firstSide],
+      Date.now()
+    );
+
+    if (state.autoChat.stopRequested) return;
+    if (firstTurn.models[firstSide].status !== "complete") return;
+
+    let lastSpeaker = firstSide;
+    let lastMessage = (firstTurn.models[firstSide].content || "").trim();
+    if (!lastMessage) return;
+
+    while (!state.autoChat.stopRequested) {
+      const nextSide = lastSpeaker === "A" ? "B" : "A";
+      const nextConfig = nextSide === "A" ? configA : configB;
+      const displayPrompt = buildAutoChatDisplayPrompt(
+        lastSpeaker,
+        lastMessage
+      );
+      const autoPrompt = buildAutoChatPrompt(prompt, lastSpeaker, lastMessage);
+
+      const loopTurn = {
+        id: createId(),
+        createdAt: Date.now(),
+        prompt: displayPrompt,
+        images: [],
+        webSearch: null,
+        models: {},
+      };
+
+      loopTurn.models[nextSide] = {
+        provider: nextConfig.provider,
+        model: nextConfig.model,
+        thinking: "",
+        content: "",
+        tokens: null,
+        timeCostSec: null,
+        status: "loading",
+        thinkingCollapsed: true,
+      };
+
+      topic.turns.push(loopTurn);
+      topic.updatedAt = Date.now();
+      scheduleSaveChat();
+
+      const loopEls = createTurnElement(loopTurn);
+      elements.chatMessages.appendChild(loopEls.el);
+      renderTopicList();
+      state.autoScroll = true;
+      scrollToBottom(elements.chatMessages, false);
+
+      setHeaderStatus(nextSide, "loading");
+      setHeaderTokens(nextSide, 0);
+      setHeaderTime(nextSide, 0);
+
+      await callModel(
+        nextSide,
+        autoPrompt,
+        nextConfig,
+        loopTurn,
+        loopEls.cards[nextSide],
+        Date.now()
+      );
+
+      if (state.autoChat.stopRequested) break;
+      if (loopTurn.models[nextSide].status !== "complete") break;
+
+      lastSpeaker = nextSide;
+      lastMessage = (loopTurn.models[nextSide].content || "").trim();
+      if (!lastMessage) break;
+    }
+  } finally {
+    if (started) {
+      state.autoChat.running = false;
+      state.autoChat.stopRequested = false;
+      state.isRunning = false;
+      setSendButtonMode("send");
+      scheduleSaveChat();
+      autoGenerateTitle();
+    }
+  }
+}
+
 async function sendPrompt() {
   if (state.isRunning) return;
 
@@ -2352,6 +2630,19 @@ async function sendPrompt() {
 
   if (!hasA && !hasB) {
     alert("请至少配置一个模型");
+    return;
+  }
+
+  if (isAutoChatEnabled()) {
+    await startAutoChat({
+      prompt,
+      hasImages,
+      configA,
+      configB,
+      hasA,
+      hasB,
+      webSearchConfig,
+    });
     return;
   }
 
@@ -2516,6 +2807,11 @@ async function sendPrompt() {
 }
 
 function stopGeneration() {
+  if (state.autoChat.running) {
+    state.autoChat.stopRequested = true;
+    state.autoChat.running = false;
+  }
+
   ["A", "B"].forEach((side) => {
     const ctrl = state.abortControllers[side];
     if (ctrl) {
