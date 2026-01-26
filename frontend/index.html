@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Prism</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
     <!-- Markdown解析库 -->
     <script src="libs/marked/marked.min.js"></script>
@@ -22,6 +28,18 @@
       <div class="chat-layout">
         <section class="chat-panel">
           <div class="chat-header">
+            <div class="header-brand" aria-label="应用名称与会话信息">
+              <div class="brand-text">
+                <div class="brand-title">对话中心</div>
+                <div class="brand-meta">
+                  <span class="brand-session" id="headerSessionInfo"
+                    >会话：未命名 · 0 条</span
+                  >
+                  <span class="brand-divider">·</span>
+                  <span class="brand-time" id="headerTime">--:--</span>
+                </div>
+              </div>
+            </div>
             <div class="header-model-chips" aria-label="模型状态">
               <div class="model-chip model-chip-a">
                 <span class="chip-dot"></span>
@@ -666,7 +684,7 @@
       <div class="modal-content">
         <div class="config-panel">
           <div class="config-header">
-            <h2>编辑提示词</h2>
+            <h2 id="promptEditTitle">编辑提示词</h2>
             <div class="config-header-actions">
               <button class="btn btn-primary btn-small" id="savePromptEditBtn">
                 保存
@@ -705,6 +723,38 @@
                   rows="15"
                 ></textarea>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除提示词确认弹窗 -->
+    <div class="modal-overlay modal-compact" id="promptConfirmModal" aria-hidden="true">
+      <div class="modal-content modal-compact-content">
+        <div class="config-panel confirm-panel">
+          <div class="config-header">
+            <h2 id="promptConfirmTitle">删除提示词</h2>
+            <div class="config-header-actions">
+              <button
+                class="btn btn-secondary btn-small"
+                id="promptConfirmCancelBtn"
+              >
+                取消
+              </button>
+              <button
+                class="btn btn-primary btn-small btn-danger"
+                id="promptConfirmOkBtn"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+          <div class="config-content confirm-body">
+            <div class="confirm-icon" aria-hidden="true">!</div>
+            <div class="confirm-message">
+              <div class="confirm-text" id="promptConfirmMessage"></div>
+              <div class="confirm-hint">删除后不可恢复</div>
             </div>
           </div>
         </div>

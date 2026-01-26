@@ -147,6 +147,8 @@ const elements = {
   tokenCountB: document.getElementById("tokenCountB"),
   timeCostA: document.getElementById("timeCostA"),
   timeCostB: document.getElementById("timeCostB"),
+  headerTime: document.getElementById("headerTime"),
+  headerSessionInfo: document.getElementById("headerSessionInfo"),
 
   // 提示词相关
   promptSelectorBtn: document.getElementById("promptSelectorBtn"),
@@ -165,11 +167,17 @@ const elements = {
   promptPreviewModal: document.getElementById("promptPreviewModal"),
   closePromptPreviewBtn: document.getElementById("closePromptPreviewBtn"),
   promptEditModal: document.getElementById("promptEditModal"),
+  promptEditTitle: document.getElementById("promptEditTitle"),
   closePromptEditBtn: document.getElementById("closePromptEditBtn"),
   savePromptEditBtn: document.getElementById("savePromptEditBtn"),
   promptEditName: document.getElementById("promptEditName"),
   promptEditDescription: document.getElementById("promptEditDescription"),
   promptEditContent: document.getElementById("promptEditContent"),
+  promptConfirmModal: document.getElementById("promptConfirmModal"),
+  promptConfirmTitle: document.getElementById("promptConfirmTitle"),
+  promptConfirmMessage: document.getElementById("promptConfirmMessage"),
+  promptConfirmCancelBtn: document.getElementById("promptConfirmCancelBtn"),
+  promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
 };
 
 // 获取标题生成配置选中的基础配置值
@@ -201,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
   autoGrowPromptInput();
   initLayout(); // 初始化布局
   renderAll();
+  startHeaderClock();
   loadTools(); // 加载工具列表
 
   // 初始化时触发标题模型获取
@@ -229,6 +238,47 @@ function formatTime(ts) {
   } catch {
     return "";
   }
+}
+
+let headerClockTimer = null;
+
+function formatHeaderTime(date = new Date()) {
+  try {
+    const formatter = new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return formatter.format(date).replace(/\//g, "-");
+  } catch (e) {
+    const d = date;
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+      d.getDate()
+    )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+}
+
+function updateHeaderMeta() {
+  const topic = getActiveTopic();
+  const title = (topic?.title || "未命名话题").trim() || "未命名话题";
+  const count = Array.isArray(topic?.turns) ? topic.turns.length : 0;
+
+  if (elements.headerSessionInfo) {
+    elements.headerSessionInfo.textContent = `会话：${title} · ${count} 条`;
+  }
+  if (elements.headerTime) {
+    elements.headerTime.textContent = formatHeaderTime();
+  }
+}
+
+function startHeaderClock() {
+  updateHeaderMeta();
+  if (headerClockTimer) clearInterval(headerClockTimer);
+  headerClockTimer = setInterval(updateHeaderMeta, 60 * 1000);
 }
 
 function estimateTokensFromText(text) {
@@ -1993,6 +2043,8 @@ function renderTopicList() {
 
     elements.topicList.appendChild(item);
   }
+
+  updateHeaderMeta();
 }
 
 function isNearBottom(container, thresholdPx = 150) {
@@ -3243,11 +3295,7 @@ function renderPromptList() {
     deleteBtn.className = "prompt-item-btn delete";
     deleteBtn.textContent = "删除";
     deleteBtn.addEventListener("click", () => {
-      if (confirm(`确定要删除提示词「${prompt.name}」吗？`)) {
-        deletePrompt(prompt.id);
-        renderPromptList();
-        renderPromptSelector();
-      }
+      openPromptConfirm(prompt);
     });
 
     actions.appendChild(previewBtn);
@@ -3462,24 +3510,25 @@ function bindPromptEvents() {
     if (e.target === elements.promptEditModal) closePromptEdit();
   });
 
+  // 删除确认弹窗关闭
+  elements.promptConfirmCancelBtn?.addEventListener(
+    "click",
+    closePromptConfirm
+  );
+
+  // 点击遮罩关闭删除确认
+  elements.promptConfirmModal?.addEventListener("click", (e) => {
+    if (e.target === elements.promptConfirmModal) closePromptConfirm();
+  });
+
+  // 确认删除
+  elements.promptConfirmOkBtn?.addEventListener("click", confirmPromptDelete);
+
   // 保存编辑
   elements.savePromptEditBtn?.addEventListener("click", savePromptEdit);
 
   // 新建提示词
-  elements.newPromptBtn?.addEventListener("click", () => {
-    const name = prompt("请输入提示词名称", "新提示词");
-    if (name === null) return;
-
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      alert("提示词名称不能为空");
-      return;
-    }
-
-    createPrompt(trimmedName, "");
-    renderPromptList();
-    renderPromptSelector();
-  });
+  elements.newPromptBtn?.addEventListener("click", openPromptCreate);
 
   // 导出提示词
   elements.exportPromptsBtn?.addEventListener("click", exportPrompts);
@@ -3580,6 +3629,7 @@ function closePromptPreview() {
 
 // 当前编辑的提示词ID
 let editingPromptId = null;
+let pendingDeletePromptId = null;
 
 // 打开提示词编辑弹框
 function openPromptEdit(promptId) {
@@ -3590,6 +3640,9 @@ function openPromptEdit(promptId) {
 
   // 保存当前编辑的ID
   editingPromptId = promptId;
+
+  if (elements.promptEditTitle) elements.promptEditTitle.textContent = "编辑提示词";
+  if (elements.savePromptEditBtn) elements.savePromptEditBtn.textContent = "保存";
 
   // 填充表单
   if (elements.promptEditName) elements.promptEditName.value = prompt.name;
@@ -3609,6 +3662,27 @@ function openPromptEdit(promptId) {
   }, 100);
 }
 
+// 打开提示词新建弹框
+function openPromptCreate() {
+  if (!elements.promptEditModal) return;
+
+  editingPromptId = null;
+  if (elements.promptEditTitle) elements.promptEditTitle.textContent = "新建提示词";
+  if (elements.savePromptEditBtn) elements.savePromptEditBtn.textContent = "创建";
+
+  if (elements.promptEditName) elements.promptEditName.value = "";
+  if (elements.promptEditDescription) elements.promptEditDescription.value = "";
+  if (elements.promptEditContent) elements.promptEditContent.value = "";
+
+  elements.promptEditModal.classList.add("open");
+  elements.promptEditModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+
+  setTimeout(() => {
+    if (elements.promptEditName) elements.promptEditName.focus();
+  }, 100);
+}
+
 // 关闭提示词编辑弹框
 function closePromptEdit() {
   if (!elements.promptEditModal) return;
@@ -3620,8 +3694,6 @@ function closePromptEdit() {
 
 // 保存编辑
 function savePromptEdit() {
-  if (!editingPromptId) return;
-
   const newName = elements.promptEditName?.value.trim();
   const newDescription = elements.promptEditDescription?.value.trim();
   const newContent = elements.promptEditContent?.value.trim();
@@ -3631,15 +3703,49 @@ function savePromptEdit() {
     return;
   }
 
-  updatePrompt(editingPromptId, {
-    name: newName,
-    description: newDescription || "",
-    content: newContent,
-  });
+  if (editingPromptId) {
+    updatePrompt(editingPromptId, {
+      name: newName,
+      description: newDescription || "",
+      content: newContent,
+    });
+  } else {
+    createPrompt(newName, newContent || "", newDescription || "");
+  }
 
   renderPromptList();
   renderPromptSelector();
   closePromptEdit();
+}
+
+function openPromptConfirm(prompt) {
+  if (!elements.promptConfirmModal) return;
+  pendingDeletePromptId = prompt.id;
+  if (elements.promptConfirmTitle) {
+    elements.promptConfirmTitle.textContent = "删除提示词";
+  }
+  if (elements.promptConfirmMessage) {
+    elements.promptConfirmMessage.textContent = `确定删除「${prompt.name}」吗？`;
+  }
+  elements.promptConfirmModal.classList.add("open");
+  elements.promptConfirmModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closePromptConfirm() {
+  if (!elements.promptConfirmModal) return;
+  elements.promptConfirmModal.classList.remove("open");
+  elements.promptConfirmModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  pendingDeletePromptId = null;
+}
+
+function confirmPromptDelete() {
+  if (!pendingDeletePromptId) return;
+  deletePrompt(pendingDeletePromptId);
+  renderPromptList();
+  renderPromptSelector();
+  closePromptConfirm();
 }
 // ========== 工具管理功能 ==========
 
@@ -3668,7 +3774,7 @@ async function loadTools() {
     console.error("加载工具列表失败:", error);
     if (elements.toolsList) {
       elements.toolsList.innerHTML =
-        '<div style="color: #f44336; padding: 12px; text-align: center;">加载失败</div>';
+        '<div class="tools-empty error">加载失败</div>';
     }
   }
 }
@@ -3679,7 +3785,7 @@ function renderToolsList() {
 
   if (availableTools.length === 0) {
     elements.toolsList.innerHTML =
-      '<div style="color: #999; padding: 12px; text-align: center;">暂无可用工具</div>';
+      '<div class="tools-empty">暂无可用工具</div>';
     return;
   }
 
@@ -3690,14 +3796,14 @@ function renderToolsList() {
       const isChecked = selectedToolNames.includes(name);
 
       return `
-            <label style="display: flex; align-items: flex-start; padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;">
+            <label class="tool-item">
                 <input type="checkbox" 
+                       class="tool-checkbox"
                        data-tool-name="${name}" 
-                       ${isChecked ? "checked" : ""}
-                       style="margin-top: 2px; margin-right: 8px; flex-shrink: 0;">
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 500; color: #333;">${name}</div>
-                    <div style="font-size: 12px; color: #666; margin-top: 2px;">${description}</div>
+                       ${isChecked ? "checked" : ""}>
+                <div class="tool-content">
+                    <div class="tool-name">${name}</div>
+                    <div class="tool-desc">${description}</div>
                 </div>
             </label>
         `;
