@@ -59,6 +59,17 @@ async def serve_style():
 async def serve_app():
     """提供JS文件"""
     return FileResponse("frontend/app.js")
+
+@app.get("/favicon.svg")
+async def serve_favicon_svg():
+    """提供站点图标（SVG）"""
+    return FileResponse("frontend/favicon.svg")
+
+@app.get("/favicon.ico")
+async def serve_favicon_ico():
+    """兼容部分浏览器默认请求 /favicon.ico"""
+    return FileResponse("frontend/favicon.svg", media_type="image/svg+xml")
+
 @app.get("/api/tools")
 async def get_tools():
     """获取所有可用工具列表"""
@@ -499,4 +510,4 @@ if __name__ == "__main__":
     print("=" * 50)
     print("访问地址: http://localhost:3000")
     print("=" * 50)
-    uvicorn.run(app, host="0.0.0.0", port=3000)
+    uvicorn.run(app, host="localhost", port=3000)

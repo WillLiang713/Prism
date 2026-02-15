@@ -55,6 +55,7 @@ class ChatRequest(BaseModel):
     selectedTools: list[str] = []  # 选中的工具名称列表
     tavilyApiKey: str | None = None  # Tavily Key（可选，优先于环境变量）
     tavilyMaxResults: int = Field(default=5, ge=1, le=20)  # Tavily 默认结果数量
+    tavilySearchDepth: str = Field(default="basic")  # Tavily 默认搜索深度（basic|advanced）
 
     # 历史对话
     historyTurns: list[HistoryTurn] = []
@@ -559,6 +560,7 @@ class AIService:
                         tool_runtime_context = {
                             "tavily_api_key": (request.tavilyApiKey or "").strip(),
                             "tavily_max_results": request.tavilyMaxResults,
+                            "tavily_search_depth": request.tavilySearchDepth,
                         }
                         
                         # 构建工具调用消息
@@ -585,6 +587,16 @@ class AIService:
                                 args = json.loads(tool_call["arguments"]) if tool_call["arguments"] else {}
                             except:
                                 args = {}
+
+                            # 对 Tavily 搜索强制使用前端配置的默认深度，
+                            # 忽略模型在本轮 tool call 中显式给出的 search_depth。
+                            if tool_name == "tavily_search":
+                                resolved_depth = (
+                                    "advanced"
+                                    if str(request.tavilySearchDepth).lower() == "advanced"
+                                    else "basic"
+                                )
+                                args["search_depth"] = resolved_depth
 
                             # 通知前端：开始执行工具
                             yield f"data: {json.dumps({'type': 'tool', 'data': {'status': 'start', 'round': current_round, 'name': tool_name, 'arguments': args}})}\n\n"

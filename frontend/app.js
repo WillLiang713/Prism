@@ -68,6 +68,7 @@ const elements = {
   enableWebSearch: document.getElementById("enableWebSearch"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
   tavilyMaxResults: document.getElementById("tavilyMaxResults"),
+  tavilySearchDepth: document.getElementById("tavilySearchDepth"),
 
   // 对话历史
   enableHistory: document.getElementById("enableHistory"),
@@ -895,7 +896,18 @@ function buildPromptWithWebSearch(originalPrompt, webSearch) {
   return lines.join("\n\n");
 }
 
-async function tavilySearch(query, apiKey, maxResults = 5) {
+function normalizeTavilySearchDepth(value) {
+  return String(value || "").toLowerCase() === "advanced"
+    ? "advanced"
+    : "basic";
+}
+
+async function tavilySearch(
+  query,
+  apiKey,
+  maxResults = 5,
+  searchDepth = "basic"
+) {
   if (window.location.protocol === "file:") {
     throw new Error(
       "当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000"
@@ -908,7 +920,7 @@ async function tavilySearch(query, apiKey, maxResults = 5) {
     body: JSON.stringify({
       api_key: apiKey,
       query,
-      search_depth: "basic",
+      search_depth: normalizeTavilySearchDepth(searchDepth),
       max_results: Math.max(1, Math.min(20, maxResults || 5)),
       include_answer: true,
       include_raw_content: false,
@@ -1607,6 +1619,9 @@ async function saveConfig() {
       enabled: !!elements.enableWebSearch?.checked,
       tavilyApiKey: elements.tavilyApiKey?.value || "",
       maxResults: parseInt(elements.tavilyMaxResults?.value) || 5,
+      searchDepth: normalizeTavilySearchDepth(
+        elements.tavilySearchDepth?.value
+      ),
     },
     tools: {
       enabled: true,
@@ -1649,6 +1664,11 @@ function loadConfig() {
         elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || "";
       if (elements.tavilyMaxResults)
         elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
+      if (elements.tavilySearchDepth) {
+        elements.tavilySearchDepth.value = normalizeTavilySearchDepth(
+          config.webSearch.searchDepth
+        );
+      }
     }
     // 加载思考强度配置
     if (config.reasoningEffort && elements.reasoningEffortDropdown) {
@@ -1702,6 +1722,7 @@ async function clearConfig() {
   if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
+  if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
   if (elements.enableHistory) elements.enableHistory.checked = true;
   if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
 
@@ -1805,6 +1826,7 @@ function getWebSearchConfig() {
     enabled: !!elements.enableWebSearch?.checked,
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
     maxResults: maxResults >= 1 && maxResults <= 20 ? maxResults : 5,
+    searchDepth: normalizeTavilySearchDepth(elements.tavilySearchDepth?.value),
   };
 }
 
@@ -2666,6 +2688,7 @@ async function callModel(
       selectedTools: useWebSearchTool ? ["tavily_search"] : [],
       tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,
       tavilyMaxResults: webSearchConfig?.maxResults || 5,
+      tavilySearchDepth: webSearchConfig?.searchDepth || "basic",
     };
 
     // 调用后端接口

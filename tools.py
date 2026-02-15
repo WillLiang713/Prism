@@ -44,7 +44,7 @@ def _normalize_max_results(value: Any, default: int = 5) -> int:
 
 def tavily_search(
     query: str,
-    search_depth: str = "basic",
+    search_depth: str | None = None,
     max_results: int | None = None,
     include_answer: bool = True,
     include_domains: list[str] | None = None,
@@ -71,7 +71,10 @@ def tavily_search(
         max_results if max_results is not None else runtime.get("tavily_max_results"),
         default=5,
     )
-    resolved_depth = "advanced" if str(search_depth).lower() == "advanced" else "basic"
+    depth_candidate = search_depth
+    if depth_candidate is None or not str(depth_candidate).strip():
+        depth_candidate = runtime.get("tavily_search_depth")
+    resolved_depth = "advanced" if str(depth_candidate).lower() == "advanced" else "basic"
 
     payload: dict[str, Any] = {
         "api_key": api_key,
