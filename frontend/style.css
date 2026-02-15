@@ -1110,8 +1110,9 @@ body {
   opacity: 0.9;
 }
 
-/* loading状态时模型ID扫光动画 */
-.assistant-message.loading .assistant-model-name {
+/* loading/streaming 状态时模型ID扫光动画 */
+.assistant-message.loading .assistant-model-name,
+.assistant-message.streaming .assistant-model-name {
   background: linear-gradient(
     90deg,
     rgba(170, 170, 170, 0.6) 0%,
@@ -1186,6 +1187,10 @@ body {
 .status.loading {
   background: #fff3e0;
   color: #e65100;
+}
+
+.status.loading::before {
+  animation: breathe 1.2s ease-in-out infinite;
 }
 
 .status.error {
@@ -3625,6 +3630,22 @@ body {
 
 .topic-item.active::before {
   background: var(--accent);
+}
+
+/* 话题回复生成中的动效（并发时也可见） */
+.topic-item.running::before {
+  background: var(--accent);
+  opacity: 0.75;
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+.topic-item.running:not(.active) {
+  border-color: rgba(13, 148, 136, 0.3);
+  background: rgba(13, 148, 136, 0.08);
+}
+
+.topic-item.running .topic-meta {
+  color: var(--accent-strong);
 }
 
 .topic-title {
