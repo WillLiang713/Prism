@@ -1641,6 +1641,16 @@ function initChat() {
           ) {
             topic.title = "新话题";
           }
+          // 兼容旧数据：将 models.A 迁移为 models.main
+          if (Array.isArray(topic.turns)) {
+            for (const turn of topic.turns) {
+              if (turn.models?.A && !turn.models.main) {
+                turn.models.main = turn.models.main;
+                delete turn.models.main;
+              }
+              delete turn.models.B;
+            }
+          }
         }
       }
     } catch (e) {
@@ -1992,10 +2002,10 @@ function createTurnElement(turn) {
 
   // 只渲染 A 侧模型卡片（兼容旧数据）
   const cards = {};
-  if (turn.models.A) {
+  if (turn.models.main) {
     const aCard = createAssistantCard(turn);
     assistants.appendChild(aCard.el);
-    cards.A = aCard;
+    cards.main = aCard;
   }
 
   turnEl.appendChild(userWrap);
@@ -2006,14 +2016,14 @@ function createTurnElement(turn) {
 }
 
 function createAssistantCard(turn) {
-  const side = "A";
-  const modelSnapshot = turn?.models?.A?.model || "";
-  const contentSnapshot = turn?.models?.A?.content || "";
-  const thinkingSnapshot = turn?.models?.A?.thinking || "";
-  const thinkingTimeSnapshot = turn?.models?.A?.thinkingTime || 0;
-  const tokenSnapshot = turn?.models?.A?.tokens;
-  const timeSnapshot = turn?.models?.A?.timeCostSec;
-  const statusSnapshot = turn?.models?.A?.status || "ready";
+  const side = "main";
+  const modelSnapshot = turn?.models?.main?.model || "";
+  const contentSnapshot = turn?.models?.main?.content || "";
+  const thinkingSnapshot = turn?.models?.main?.thinking || "";
+  const thinkingTimeSnapshot = turn?.models?.main?.thinkingTime || 0;
+  const tokenSnapshot = turn?.models?.main?.tokens;
+  const timeSnapshot = turn?.models?.main?.timeCostSec;
+  const statusSnapshot = turn?.models?.main?.status || "ready";
 
   const message = document.createElement("div");
   message.className = "assistant-message";
@@ -2265,7 +2275,7 @@ async function sendPrompt() {
     models: {},
   };
 
-  turn.models.A = {
+  turn.models.main = {
     provider: config.provider,
     model: config.model,
     thinking: "",
@@ -2331,7 +2341,7 @@ async function sendPrompt() {
     }
   }
 
-  await callModel(promptForModel, config, turn, createdEls.cards.A, Date.now());
+  await callModel(promptForModel, config, turn, createdEls.cards.main, Date.now());
 
   state.isRunning = false;
   setSendButtonMode("send");
@@ -2397,19 +2407,19 @@ async function callModel(prompt, config, turn, ui, startTime) {
   const updateTime = () => {
     const elapsed = (Date.now() - startTime) / 1000;
     ui.timeEl.textContent = `${elapsed.toFixed(1)}s`;
-    turn.models.A.timeCostSec = elapsed;
+    turn.models.main.timeCostSec = elapsed;
 
     if (thinkingStartTime) {
       const end = thinkingEndTime || Date.now();
       const thinkingElapsed = (end - thinkingStartTime) / 1000;
       ui.thinkingTimeEl.textContent = `${thinkingElapsed.toFixed(1)}s`;
-      turn.models.A.thinkingTime = thinkingElapsed;
+      turn.models.main.thinkingTime = thinkingElapsed;
     }
 
     // 实时更新速度
     const tokens =
-      turn.models.A.tokens ||
-      estimateTokensFromText(turn.models.A.content);
+      turn.models.main.tokens ||
+      estimateTokensFromText(turn.models.main.content);
     if (tokens > 0 && elapsed > 0.1) {
       const speed = tokens / elapsed;
       ui.speedEl.textContent = `${speed.toFixed(1)} t/s`;
@@ -2484,14 +2494,14 @@ async function callModel(prompt, config, turn, ui, startTime) {
 
           if (chunk.type === "thinking" && chunk.data) {
             if (!thinkingStartTime) thinkingStartTime = Date.now();
-            turn.models.A.thinking += chunk.data;
+            turn.models.main.thinking += chunk.data;
             ui.thinkingSectionEl.style.display = "block";
             if (ui.thinkingSectionEl.dataset.userToggled !== "1") {
               ui.thinkingSectionEl.classList.remove("collapsed");
             }
             renderMarkdownToElement(
               ui.thinkingContentEl,
-              turn.models.A.thinking
+              turn.models.main.thinking
             );
             scheduleAutoCollapseThinking(ui);
             scheduleSaveChat();
@@ -2508,9 +2518,9 @@ async function callModel(prompt, config, turn, ui, startTime) {
           } else if (chunk.type === "content" && chunk.data) {
             if (thinkingStartTime && !thinkingEndTime)
               thinkingEndTime = Date.now();
-            turn.models.A.content += chunk.data;
-            renderMarkdownToElement(ui.responseEl, turn.models.A.content);
-            const tokens = estimateTokensFromText(turn.models.A.content);
+            turn.models.main.content += chunk.data;
+            renderMarkdownToElement(ui.responseEl, turn.models.main.content);
+            const tokens = estimateTokensFromText(turn.models.main.content);
             ui.tokenEl.textContent = `${tokens} tokens`;
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -2524,7 +2534,7 @@ async function callModel(prompt, config, turn, ui, startTime) {
               scrollToBottom(elements.chatMessages, false);
             }
           } else if (chunk.type === "tokens" && Number.isFinite(chunk.data)) {
-            turn.models.A.tokens = chunk.data;
+            turn.models.main.tokens = chunk.data;
             ui.tokenEl.textContent = `${chunk.data} tokens`;
             scheduleSaveChat();
           } else if (chunk.type === "error") {
@@ -2540,38 +2550,38 @@ async function callModel(prompt, config, turn, ui, startTime) {
     }
 
     updateTime();
-    turn.models.A.status = "complete";
+    turn.models.main.status = "complete";
     applyStatus(ui.statusEl, "complete");
 
     if (
-      turn.models.A.thinking &&
+      turn.models.main.thinking &&
       ui?.thinkingSectionEl?.dataset?.userToggled !== "1"
     ) {
       ui.thinkingSectionEl.classList.add("collapsed");
-      turn.models.A.thinkingCollapsed = true;
+      turn.models.main.thinkingCollapsed = true;
     }
 
-    if (!Number.isFinite(turn.models.A.tokens)) {
-      const tokens = estimateTokensFromText(turn.models.A.content);
-      turn.models.A.tokens = tokens;
+    if (!Number.isFinite(turn.models.main.tokens)) {
+      const tokens = estimateTokensFromText(turn.models.main.content);
+      turn.models.main.tokens = tokens;
       ui.tokenEl.textContent = `${tokens} tokens`;
 
       // 确保最终速度显示正确
-      if (turn.models.A.timeCostSec > 0) {
-        const speed = tokens / turn.models.A.timeCostSec;
+      if (turn.models.main.timeCostSec > 0) {
+        const speed = tokens / turn.models.main.timeCostSec;
         ui.speedEl.textContent = `${speed.toFixed(1)} t/s`;
         ui.speedEl.style.display = "inline";
       }
     }
   } catch (error) {
     if (error?.name === "AbortError") {
-      turn.models.A.status = "stopped";
+      turn.models.main.status = "stopped";
       applyStatus(ui.statusEl, "stopped");
     } else {
       console.error("模型错误:", error);
-      turn.models.A.status = "error";
-      turn.models.A.content = `错误: ${error.message}`;
-      renderMarkdownToElement(ui.responseEl, turn.models.A.content);
+      turn.models.main.status = "error";
+      turn.models.main.content = `错误: ${error.message}`;
+      renderMarkdownToElement(ui.responseEl, turn.models.main.content);
       applyStatus(ui.statusEl, "error");
     }
   } finally {
@@ -3316,7 +3326,7 @@ function getSelectedTools() {
  * @param {string} modelSide - 使用哪个模型生成标题 ('A' 或 'B')
  * @returns {Promise<string>} 生成的标题
  */
-async function generateTopicTitle(topicId, configOrSide = "A") {
+async function generateTopicTitle(topicId, config) {
   const topic = state.chat.topics.find((t) => t.id === topicId);
   if (!topic) {
     throw new Error("话题不存在");
@@ -3326,9 +3336,7 @@ async function generateTopicTitle(topicId, configOrSide = "A") {
   state.chat.generatingTitleForTopicId = topicId;
   renderTopicList();
 
-  // 检查模型配置 - 支持传入配置对象或字符串
-  const config =
-    typeof configOrSide === "string" ? getConfig(configOrSide) : configOrSide;
+  // 检查模型配置
   if (!config.apiKey || !config.model) {
     throw new Error("标题生成配置不完整（需要 API Key 和模型名称）");
   }
@@ -3346,10 +3354,10 @@ async function generateTopicTitle(topicId, configOrSide = "A") {
     }
 
     // 取助手回复
-    if (turn.models.A?.content) {
+    if (turn.models.main?.content) {
       messages.push({
         role: "assistant",
-        content: turn.models.A.content.slice(0, 200),
+        content: turn.models.main.content.slice(0, 200),
       });
     }
   }

@@ -423,7 +423,7 @@ class AIService:
             if request.enableHistory and request.historyTurns:
                 history_messages = MessageBuilder.convert_history_to_messages(
                     request.historyTurns,
-                    "A",
+                    "main",
                     provider_mode,
                     request.maxHistoryTurns
                 )
