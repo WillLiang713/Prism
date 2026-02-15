@@ -55,7 +55,6 @@ class ChatRequest(BaseModel):
 
     # 历史对话
     historyTurns: list[HistoryTurn] = []
-    side: Literal["A", "B"] = "A"
 
 
 class StreamChunk(BaseModel):
@@ -424,7 +423,7 @@ class AIService:
             if request.enableHistory and request.historyTurns:
                 history_messages = MessageBuilder.convert_history_to_messages(
                     request.historyTurns,
-                    request.side,
+                    "A",
                     provider_mode,
                     request.maxHistoryTurns
                 )

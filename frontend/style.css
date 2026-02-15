@@ -123,7 +123,7 @@ body {
 
 .config-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 30px;
   margin-bottom: 20px;
 }
@@ -1045,31 +1045,11 @@ body {
   margin-left: 16px;
 }
 
-/* A模型样式 - 深灰色主题 */
-.model-chip-a {
-  background: transparent;
-  border-color: transparent;
+.model-chip .chip-dot {
+  background: var(--accent);
 }
 
-.model-chip-a .chip-label {
-  color: #4a4a4a;
-}
-
-.model-chip-a .chip-id {
-  color: #555;
-}
-
-/* B模型样式 - 中性灰色主题 */
-.model-chip-b {
-  background: transparent;
-  border-color: transparent;
-}
-
-.model-chip-b .chip-label {
-  color: #4a4a4a;
-}
-
-.model-chip-b .chip-id {
+.model-chip .chip-id {
   color: #555;
 }
 
@@ -1098,13 +1078,6 @@ body {
   flex: 0 0 auto;
 }
 
-.model-chip-a .chip-dot {
-  background: #3b82f6;
-}
-
-.model-chip-b .chip-dot {
-  background: var(--accent-warm);
-}
 
 .chip-label {
   font-size: 13px;
@@ -1617,11 +1590,6 @@ body {
   grid-template-columns: 1fr;
 }
 
-/* 双模型时保持原有布局 */
-.turn-assistants.dual-model {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
-}
 
 .assistant-message {
   display: flex;
@@ -1631,43 +1599,6 @@ body {
   min-width: 0;
   animation: fade-in 0.5s ease-out;
   padding: 0 4px;
-}
-
-/* 双模型时固定高度，防止一个模型输出过长挤压另一个 */
-.turn-assistants.dual-model .assistant-message {
-  max-height: 600px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 双模型时内容区域可滚动 */
-.turn-assistants.dual-model .assistant-message-content {
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex: 1;
-  min-height: 0;
-}
-
-/* 优化滚动条样式 */
-.turn-assistants.dual-model .assistant-message-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.turn-assistants.dual-model
-  .assistant-message-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.turn-assistants.dual-model
-  .assistant-message-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.turn-assistants.dual-model
-  .assistant-message-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
 }
 
 .assistant-message-header {
@@ -1754,8 +1685,7 @@ body {
 }
 
 /* 统一模型名称颜色 */
-.assistant-a .assistant-model-name,
-.assistant-b .assistant-model-name {
+.assistant-message .assistant-model-name {
   color: #4b5563;
 }
 
@@ -3431,12 +3361,8 @@ body {
   color: var(--text-muted);
 }
 
-.model-chip-a .chip-dot {
+.model-chip .chip-dot {
   background: var(--accent);
-}
-
-.model-chip-b .chip-dot {
-  background: var(--accent-warm);
 }
 
 .chat-actions .btn.btn-secondary.btn-settings {
@@ -3624,12 +3550,8 @@ body {
   box-shadow: var(--shadow-xs);
 }
 
-.assistant-a .assistant-message-content {
+.assistant-message .assistant-message-content {
   border-left: 3px solid rgba(13, 148, 136, 0.5);
-}
-
-.assistant-b .assistant-message-content {
-  border-left: 3px solid rgba(249, 115, 22, 0.5);
 }
 
 .assistant-message-header {
@@ -3642,10 +3564,6 @@ body {
   color: var(--accent);
   font-weight: 600;
   letter-spacing: 0.2px;
-}
-
-.assistant-b .assistant-model-name {
-  color: var(--accent-warm-strong);
 }
 
 .assistant-message-footer {

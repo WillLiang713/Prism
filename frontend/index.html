@@ -41,13 +41,9 @@
               </div>
             </div>
             <div class="header-model-chips" aria-label="模型状态">
-              <div class="model-chip model-chip-a">
+              <div class="model-chip">
                 <span class="chip-dot"></span>
-                <span class="chip-id" id="modelNameA"></span>
-              </div>
-              <div class="model-chip model-chip-b">
-                <span class="chip-dot"></span>
-                <span class="chip-id" id="modelNameB"></span>
+                <span class="chip-id" id="modelName"></span>
               </div>
             </div>
             <div class="chat-actions">
@@ -212,12 +208,6 @@
                           <span class="switch-track" aria-hidden="true"></span>
                           <span class="switch-text">工具</span>
                         </label>
-
-                        <label class="toolbar-switch" title="开启模型互聊">
-                          <input type="checkbox" id="enableAutoChat" />
-                          <span class="switch-track" aria-hidden="true"></span>
-                          <span class="switch-text">互聊</span>
-                        </label>
                       </div>
 
                       <button
@@ -260,22 +250,22 @@
           </div>
           <div class="config-content" id="configContent">
             <div class="config-row">
-              <!-- 左侧AI配置 -->
+              <!-- AI模型配置 -->
               <div class="config-section">
-                <h3>模型 A</h3>
+                <h3>模型</h3>
                 <div class="form-group">
                   <label>API提供商</label>
-                  <select id="providerA">
+                  <select id="provider">
                     <option value="openai">OpenAI 兼容</option>
                     <option value="anthropic">Anthropic 兼容</option>
                   </select>
-                  <div class="form-hint" id="providerHintA"></div>
+                  <div class="form-hint" id="providerHint"></div>
                 </div>
                 <div class="form-group">
                   <label>API密钥</label>
                   <input
                     type="password"
-                    id="apiKeyA"
+                    id="apiKey"
                     placeholder="输入API密钥"
                   />
                 </div>
@@ -283,7 +273,7 @@
                   <label>API地址（留空用官方默认地址）</label>
                   <input
                     type="text"
-                    id="apiUrlA"
+                    id="apiUrl"
                     placeholder="https://api.example.com"
                   />
                   <div class="form-hint">
@@ -293,102 +283,35 @@
                 </div>
                 <div class="form-group">
                   <label>模型</label>
-                  <div class="model-picker" data-side="A">
+                  <div class="model-picker" data-side="main">
                     <div class="model-picker-row">
                       <input
                         type="text"
-                        id="modelA"
+                        id="model"
                         placeholder="例如: gpt-5"
                       />
                       <button
                         type="button"
                         class="model-picker-btn"
-                        id="modelDropdownBtnA"
+                        id="modelDropdownBtn"
                         aria-label="打开模型列表"
                         aria-expanded="false"
                       ></button>
                     </div>
                     <div
                       class="model-dropdown"
-                      id="modelDropdownA"
+                      id="modelDropdown"
                       hidden
                     ></div>
                   </div>
-                  <div class="form-hint" id="modelHintA">
+                  <div class="form-hint" id="modelHint">
                     提示：这里填写模型 ID；填好 API
                     Key/地址后会自动获取可用模型列表（也可手动输入）。
                   </div>
                 </div>
                 <div class="form-group">
                   <label>
-                    <input type="checkbox" id="thinkingA" />
-                    启用思考模式
-                  </label>
-                </div>
-              </div>
-
-              <!-- 右侧AI配置 -->
-              <div class="config-section">
-                <h3>模型 B</h3>
-                <div class="form-group">
-                  <label>API提供商</label>
-                  <select id="providerB">
-                    <option value="openai">OpenAI 兼容</option>
-                    <option value="anthropic">Anthropic 兼容</option>
-                  </select>
-                  <div class="form-hint" id="providerHintB"></div>
-                </div>
-                <div class="form-group">
-                  <label>API密钥</label>
-                  <input
-                    type="password"
-                    id="apiKeyB"
-                    placeholder="输入API密钥"
-                  />
-                </div>
-                <div class="form-group">
-                  <label>API地址（留空用官方默认地址）</label>
-                  <input
-                    type="text"
-                    id="apiUrlB"
-                    placeholder="https://api.example.com"
-                  />
-                  <div class="form-hint">
-                    提示：只需填写基础域名，系统会自动拼接 /v1/...
-                    路径。支持兼容接口。
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>模型</label>
-                  <div class="model-picker" data-side="B">
-                    <div class="model-picker-row">
-                      <input
-                        type="text"
-                        id="modelB"
-                        placeholder="例如: deepseek-chat"
-                      />
-                      <button
-                        type="button"
-                        class="model-picker-btn"
-                        id="modelDropdownBtnB"
-                        aria-label="打开模型列表"
-                        aria-expanded="false"
-                      ></button>
-                    </div>
-                    <div
-                      class="model-dropdown"
-                      id="modelDropdownB"
-                      hidden
-                    ></div>
-                  </div>
-                  <div class="form-hint" id="modelHintB">
-                    提示：这里填写模型 ID；填好 API
-                    Key/地址后会自动获取可用模型列表（也可手动输入）。
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" id="thinkingB" />
+                    <input type="checkbox" id="thinking" />
                     启用思考模式
                   </label>
                 </div>
@@ -511,27 +434,6 @@
                 </label>
                 <small style="display: block; color: #666; margin-top: 4px">
                   启用后，发送第一条消息时会自动使用AI生成话题标题
-                </small>
-              </div>
-              <div class="form-group">
-                <label>生成标题使用的配置</label>
-                <div class="radio-group">
-                  <label class="radio-option">
-                    <input
-                      type="radio"
-                      name="titleGenerationBase"
-                      value="A"
-                      checked
-                    />
-                    <span>模型 A 的配置</span>
-                  </label>
-                  <label class="radio-option">
-                    <input type="radio" name="titleGenerationBase" value="B" />
-                    <span>模型 B 的配置</span>
-                  </label>
-                </div>
-                <small style="display: block; color: #666; margin-top: 4px">
-                  使用哪个模型的API配置（API Key、地址等）
                 </small>
               </div>
               <div class="form-group">

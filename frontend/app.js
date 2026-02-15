@@ -10,18 +10,9 @@ const STORAGE_KEYS = {
 
 const state = {
   isRunning: false,
-  abortControllers: { A: null, B: null },
+  abortController: null,
   modelFetch: {
-    A: {
-      timer: null,
-      inFlight: false,
-      lastKey: "",
-      lastFetchedAt: 0,
-      models: [],
-      datalistFillToken: 0,
-      dropdownLimit: 120,
-    },
-    B: {
+    main: {
       timer: null,
       inFlight: false,
       lastKey: "",
@@ -55,10 +46,6 @@ const state = {
     activeId: null,
     saveTimer: null,
   },
-  autoChat: {
-    running: false,
-    stopRequested: false,
-  },
   autoScroll: true, // 是否自动跟随滚动
   isWideMode: false,
   isSidebarCollapsed: false,
@@ -86,9 +73,6 @@ const elements = {
 
   // 话题标题自动生成
   enableAutoTitle: document.getElementById("enableAutoTitle"),
-  titleGenerationBaseRadios: document.querySelectorAll(
-    'input[name="titleGenerationBase"]'
-  ),
   titleGenerationModel: document.getElementById("titleGenerationModel"),
   modelDropdownTitle: document.getElementById("modelDropdownTitle"),
   modelDropdownBtnTitle: document.getElementById("modelDropdownBtnTitle"),
@@ -104,7 +88,6 @@ const elements = {
   imageUploadBtn: document.getElementById("imageUploadBtn"),
   imagePreviewContainer: document.getElementById("imagePreviewContainer"),
   enableTools: document.getElementById("enableTools"),
-  enableAutoChat: document.getElementById("enableAutoChat"),
   toolsList: document.getElementById("toolsList"),
   refreshToolsBtn: document.getElementById("refreshToolsBtn"),
 
@@ -114,39 +97,19 @@ const elements = {
   chatMessages: document.getElementById("chatMessages"),
   scrollToBottomBtn: document.getElementById("scrollToBottomBtn"),
 
-  // 模型A配置
-  providerA: document.getElementById("providerA"),
-  providerHintA: document.getElementById("providerHintA"),
-  apiKeyA: document.getElementById("apiKeyA"),
-  modelA: document.getElementById("modelA"),
-  apiUrlA: document.getElementById("apiUrlA"),
-  thinkingA: document.getElementById("thinkingA"),
-  modelListA: document.getElementById("modelListA"),
-  modelHintA: document.getElementById("modelHintA"),
-  modelDropdownA: document.getElementById("modelDropdownA"),
-  modelDropdownBtnA: document.getElementById("modelDropdownBtnA"),
-
-  // 模型B配置
-  providerB: document.getElementById("providerB"),
-  providerHintB: document.getElementById("providerHintB"),
-  apiKeyB: document.getElementById("apiKeyB"),
-  modelB: document.getElementById("modelB"),
-  apiUrlB: document.getElementById("apiUrlB"),
-  thinkingB: document.getElementById("thinkingB"),
-  modelListB: document.getElementById("modelListB"),
-  modelHintB: document.getElementById("modelHintB"),
-  modelDropdownB: document.getElementById("modelDropdownB"),
-  modelDropdownBtnB: document.getElementById("modelDropdownBtnB"),
+  // 模型配置
+  provider: document.getElementById("provider"),
+  providerHint: document.getElementById("providerHint"),
+  apiKey: document.getElementById("apiKey"),
+  model: document.getElementById("model"),
+  apiUrl: document.getElementById("apiUrl"),
+  thinking: document.getElementById("thinking"),
+  modelHint: document.getElementById("modelHint"),
+  modelDropdown: document.getElementById("modelDropdown"),
+  modelDropdownBtn: document.getElementById("modelDropdownBtn"),
 
   // 头部状态
-  modelNameA: document.getElementById("modelNameA"),
-  modelNameB: document.getElementById("modelNameB"),
-  statusA: document.getElementById("statusA"),
-  statusB: document.getElementById("statusB"),
-  tokenCountA: document.getElementById("tokenCountA"),
-  tokenCountB: document.getElementById("tokenCountB"),
-  timeCostA: document.getElementById("timeCostA"),
-  timeCostB: document.getElementById("timeCostB"),
+  modelName: document.getElementById("modelName"),
   headerTime: document.getElementById("headerTime"),
   headerSessionInfo: document.getElementById("headerSessionInfo"),
 
@@ -180,31 +143,16 @@ const elements = {
   promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
 };
 
-// 获取标题生成配置选中的基础配置值
-function getTitleGenerationBase() {
-  return (
-    document.querySelector('input[name="titleGenerationBase"]:checked')
-      ?.value || "A"
-  );
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   initMarkdown();
   loadConfig();
-  updateProviderUi("A");
-  updateProviderUi("B");
+  updateProviderUi();
   initChat();
   bindEvents();
   initPrompts();
   bindPromptEvents();
   renderPromptSelector();
   updateModelNames();
-  setHeaderStatus("A", "ready");
-  setHeaderStatus("B", "ready");
-  setHeaderTokens("A", 0);
-  setHeaderTokens("B", 0);
-  setHeaderTime("A", 0);
-  setHeaderTime("B", 0);
   setSendButtonMode("send");
   autoGrowPromptInput();
   initLayout(); // 初始化布局
@@ -875,22 +823,6 @@ function bindEvents() {
     }
   });
 
-  elements.enableAutoChat?.addEventListener("change", () => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.config);
-      const config = raw ? JSON.parse(raw) : {};
-      config.autoChat = config.autoChat || {};
-      config.autoChat.enabled = !!elements.enableAutoChat.checked;
-      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-    } catch (e) {
-      console.error("保存互聊开关失败:", e);
-    }
-
-    if (!elements.enableAutoChat.checked && state.autoChat.running) {
-      stopGeneration();
-    }
-  });
-
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
   elements.configModal?.addEventListener("click", (e) => {
@@ -958,92 +890,41 @@ function bindEvents() {
   });
 
   // 监听提供商变化，更新API地址提示 + 自动获取模型列表
-  elements.providerA.addEventListener("change", () => {
-    updateProviderUi("A");
-    updateModelHint("A");
-    scheduleFetchModels("A", 0);
-    // 如果标题使用的是A的配置，也触发Title的模型获取
-    if (getTitleGenerationBase() === "A") {
-      scheduleFetchModels("Title", 0);
-    }
-  });
-  elements.providerB.addEventListener("change", () => {
-    updateProviderUi("B");
-    updateModelHint("B");
-    scheduleFetchModels("B", 0);
-    // 如果标题使用的是B的配置，也触发Title的模型获取
-    if (getTitleGenerationBase() === "B") {
-      scheduleFetchModels("Title", 0);
-    }
+  elements.provider.addEventListener("change", () => {
+    updateProviderUi();
+    updateModelHint();
+    scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
   });
 
-  // 标题生成模型配置监听
-  elements.titleGenerationBaseRadios?.forEach((radio) => {
-    radio.addEventListener("change", () => {
-      scheduleFetchModels("Title", 200);
-    });
+  elements.apiKey?.addEventListener("input", () => {
+    updateModelHint();
+    scheduleFetchModels("main", 400);
+    scheduleFetchModels("Title", 400);
   });
-
-  elements.apiKeyA?.addEventListener("input", () => {
-    updateModelHint("A");
-    scheduleFetchModels("A", 400);
-    // 如果标题使用的是A的配置，也触发Title的模型获取
-    if (getTitleGenerationBase() === "A") {
-      scheduleFetchModels("Title", 400);
-    }
-  });
-  elements.apiKeyB?.addEventListener("input", () => {
-    updateModelHint("B");
-    scheduleFetchModels("B", 400);
-    // 如果标题使用的是B的配置，也触发Title的模型获取
-    if (getTitleGenerationBase() === "B") {
-      scheduleFetchModels("Title", 400);
-    }
-  });
-  elements.apiUrlA?.addEventListener("input", () => {
-    updateModelHint("A");
-    scheduleFetchModels("A", 500);
-    // 如果标题使用的是A的配置，也触发Title的模型获取
-    if (getTitleGenerationBase() === "A") {
-      scheduleFetchModels("Title", 500);
-    }
-  });
-  elements.apiUrlB?.addEventListener("input", () => {
-    updateModelHint("B");
-    scheduleFetchModels("B", 500);
-    // 如果标题使用的是B的配置，也触发Title的模型获取
-    if (getTitleGenerationBase() === "B") {
-      scheduleFetchModels("Title", 500);
-    }
+  elements.apiUrl?.addEventListener("input", () => {
+    updateModelHint();
+    scheduleFetchModels("main", 500);
+    scheduleFetchModels("Title", 500);
   });
 
   // 监听模型名称变化
-  elements.modelA.addEventListener("input", () => {
+  elements.model.addEventListener("input", () => {
     updateModelNames();
-    updateModelDropdownFilter("A");
-  });
-  elements.modelB.addEventListener("input", () => {
-    updateModelNames();
-    updateModelDropdownFilter("B");
+    updateModelDropdownFilter("main");
   });
   elements.titleGenerationModel?.addEventListener("input", () => {
     updateModelDropdownFilter("Title");
   });
 
-  elements.modelDropdownBtnA?.addEventListener("click", () =>
-    toggleModelDropdown("A")
-  );
-  elements.modelDropdownBtnB?.addEventListener("click", () =>
-    toggleModelDropdown("B")
+  elements.modelDropdownBtn?.addEventListener("click", () =>
+    toggleModelDropdown("main")
   );
   elements.modelDropdownBtnTitle?.addEventListener("click", () =>
     toggleModelDropdown("Title")
   );
-  elements.modelA?.addEventListener("focus", () =>
-    updateModelDropdownFilter("A")
-  );
-  elements.modelB?.addEventListener("focus", () =>
-    updateModelDropdownFilter("B")
+  elements.model?.addEventListener("focus", () =>
+    updateModelDropdownFilter("main")
   );
   elements.titleGenerationModel?.addEventListener("focus", () =>
     updateModelDropdownFilter("Title")
@@ -1053,8 +934,7 @@ function bindEvents() {
     const t = e.target;
     if (!(t instanceof Node)) return;
     if (t.closest?.(".model-picker")) return;
-    closeModelDropdown("A");
-    closeModelDropdown("B");
+    closeModelDropdown("main");
     closeModelDropdown("Title");
   });
 
@@ -1114,10 +994,8 @@ function openConfigModal() {
   elements.configModal.classList.add("open");
   elements.configModal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
-  updateModelHint("A");
-  updateModelHint("B");
-  scheduleFetchModels("A", 0);
-  scheduleFetchModels("B", 0);
+  updateModelHint();
+  scheduleFetchModels("main", 0);
 }
 
 function closeConfigModal() {
@@ -1125,8 +1003,7 @@ function closeConfigModal() {
   elements.configModal.classList.remove("open");
   elements.configModal.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
-  closeModelDropdown("A");
-  closeModelDropdown("B");
+  closeModelDropdown("main");
 }
 
 function autoGrowPromptInput() {
@@ -1169,9 +1046,9 @@ function updateScrollToBottomButton() {
   elements.scrollToBottomBtn.style.display = nearBottom ? "none" : "flex";
 }
 
-function updateProviderUi(side) {
-  const provider = elements[`provider${side}`]?.value || "openai";
-  const hintEl = elements[`providerHint${side}`];
+function updateProviderUi() {
+  const provider = elements.provider?.value || "openai";
+  const hintEl = elements.providerHint;
 
   if (hintEl) {
     if (provider === "openai") {
@@ -1183,13 +1060,13 @@ function updateProviderUi(side) {
     }
   }
 
-  updateApiUrlPlaceholder(side);
-  updateModelHint(side);
+  updateApiUrlPlaceholder();
+  updateModelHint();
 }
 
-function updateApiUrlPlaceholder(side) {
-  const providerEl = elements[`provider${side}`];
-  const urlInput = elements[`apiUrl${side}`];
+function updateApiUrlPlaceholder() {
+  const providerEl = elements.provider;
+  const urlInput = elements.apiUrl;
   if (!providerEl || !urlInput) return;
 
   const provider = providerEl.value;
@@ -1201,72 +1078,61 @@ function updateApiUrlPlaceholder(side) {
 }
 
 function updateModelNames() {
-  const modelA = elements.modelA.value || "";
-  const modelB = elements.modelB.value || "";
+  const modelVal = elements.model.value || "";
 
   // 更新模型名称（未配置时不显示任何内容）
-  elements.modelNameA.textContent = modelA || "";
-  elements.modelNameB.textContent = modelB || "";
+  elements.modelName.textContent = modelVal || "";
 
   // 根据配置状态添加/移除样式类
-  const chipA = elements.modelNameA.closest(".model-chip");
-  const chipB = elements.modelNameB.closest(".model-chip");
+  const chip = elements.modelName.closest(".model-chip");
 
-  if (chipA) {
-    if (modelA) {
-      chipA.classList.remove("unconfigured");
+  if (chip) {
+    if (modelVal) {
+      chip.classList.remove("unconfigured");
     } else {
-      chipA.classList.add("unconfigured");
-    }
-  }
-
-  if (chipB) {
-    if (modelB) {
-      chipB.classList.remove("unconfigured");
-    } else {
-      chipB.classList.add("unconfigured");
+      chip.classList.add("unconfigured");
     }
   }
 }
 
 function getConfigFromForm(side) {
-  // 如果是标题模型，从选择的base配置中获取
+  // 如果是标题模型，从主配置中获取
   if (side === "Title") {
-    const base = getTitleGenerationBase();
     return {
-      provider: elements[`provider${base}`]?.value || "openai",
-      apiKey: elements[`apiKey${base}`]?.value || "",
-      apiUrl: elements[`apiUrl${base}`]?.value || "",
+      provider: elements.provider?.value || "openai",
+      apiKey: elements.apiKey?.value || "",
+      apiUrl: elements.apiUrl?.value || "",
     };
   }
 
   return {
-    provider: elements[`provider${side}`]?.value || "openai",
-    apiKey: elements[`apiKey${side}`]?.value || "",
-    apiUrl: elements[`apiUrl${side}`]?.value || "",
+    provider: elements.provider?.value || "openai",
+    apiKey: elements.apiKey?.value || "",
+    apiUrl: elements.apiUrl?.value || "",
   };
 }
 
 function setModelHint(side, text) {
-  const el = elements[`modelHint${side}`];
+  if (side === "Title") return;
+  const el = elements.modelHint;
   if (!el) return;
   el.textContent = text || "";
 }
 
 function updateModelHint(side) {
-  const config = getConfigFromForm(side);
+  const config = getConfigFromForm(side || "main");
   const apiKey = (config.apiKey || "").trim();
 
   if (!apiKey) {
     setModelHint(
-      side,
+      side || "main",
       "提示：这里填写模型 ID；填写 API Key 后会自动获取可用模型列表（也可手动输入）。"
     );
     return;
   }
 
   setModelHint(
-    side,
+    side || "main",
     "提示：这里填写模型 ID；将自动获取可用模型列表（可下拉选择或直接输入）。"
   );
 }
@@ -1296,19 +1162,19 @@ function increaseModelDropdownLimit(side, delta = 200) {
 }
 
 function isModelDropdownOpen(side) {
-  const el = elements[`modelDropdown${side}`];
+  const el = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   return !!el && !el.hidden;
 }
 
 function setModelDropdownButtonState(side, isOpen) {
-  const btn = elements[`modelDropdownBtn${side}`];
+  const btn = side === "Title" ? elements.modelDropdownBtnTitle : elements.modelDropdownBtn;
   if (!btn) return;
   btn.classList.toggle("open", !!isOpen);
   btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
 }
 
 function closeModelDropdown(side) {
-  const el = elements[`modelDropdown${side}`];
+  const el = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   if (!el) return;
   el.onscroll = null;
   el.hidden = true;
@@ -1318,7 +1184,7 @@ function closeModelDropdown(side) {
 }
 
 function renderModelDropdown(side, filterText) {
-  const dropdownEl = elements[`modelDropdown${side}`];
+  const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   if (!dropdownEl) return;
 
   const slot = state.modelFetch[side];
@@ -1353,7 +1219,7 @@ function renderModelDropdown(side, filterText) {
       const input =
         side === "Title"
           ? elements.titleGenerationModel
-          : elements[`model${side}`];
+          : elements.model;
       if (input) input.value = id;
       if (side !== "Title") updateModelNames();
       closeModelDropdown(side);
@@ -1377,9 +1243,9 @@ function renderModelDropdown(side, filterText) {
 }
 
 function openModelDropdown(side) {
-  const dropdownEl = elements[`modelDropdown${side}`];
+  const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   const inputEl =
-    side === "Title" ? elements.titleGenerationModel : elements[`model${side}`];
+    side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl || !inputEl) return;
 
   renderModelDropdown(side, inputEl.value);
@@ -1406,9 +1272,9 @@ function toggleModelDropdown(side) {
 }
 
 function updateModelDropdownFilter(side) {
-  const dropdownEl = elements[`modelDropdown${side}`];
+  const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   const inputEl =
-    side === "Title" ? elements.titleGenerationModel : elements[`model${side}`];
+    side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl || !inputEl) return;
 
   if (!isModelDropdownOpen(side)) {
@@ -1497,7 +1363,7 @@ async function fetchAndUpdateModels(side) {
   if (!(config.apiKey || "").trim()) {
     slot.models = [];
     closeModelDropdown(side);
-    if (side !== "Title") updateModelHint(side);
+    if (side !== "Title") updateModelHint();
     slot.lastKey = "";
     slot.lastFetchedAt = 0;
     return;
@@ -1525,13 +1391,13 @@ async function fetchAndUpdateModels(side) {
       const inputEl =
         side === "Title"
           ? elements.titleGenerationModel
-          : elements[`model${side}`];
+          : elements.model;
       renderModelDropdown(side, inputEl?.value || "");
     }
     slot.lastKey = fetchKey;
     slot.lastFetchedAt = now;
   } catch (e) {
-    console.warn(`模型${side}模型列表获取失败:`, e?.message || e);
+    console.warn(`模型列表获取失败:`, e?.message || e);
     slot.models = [];
     closeModelDropdown(side);
     if (side !== "Title") {
@@ -1552,35 +1418,24 @@ function saveConfig() {
     tools: {
       enabled: elements.enableTools ? !!elements.enableTools.checked : true,
     },
-    autoChat: {
-      enabled: !!elements.enableAutoChat?.checked,
-    },
     history: {
       enableHistory: !!elements.enableHistory?.checked,
       maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10,
     },
     autoTitle: {
       enabled: !!elements.enableAutoTitle?.checked,
-      base: getTitleGenerationBase(),
       model: elements.titleGenerationModel?.value || "",
     },
     greeting: {
       enabled: !!elements.enableGreeting?.checked,
       text: elements.greetingText?.value || "你好，有什么需要帮助的？",
     },
-    A: {
-      provider: elements.providerA.value,
-      apiKey: elements.apiKeyA.value,
-      model: elements.modelA.value,
-      apiUrl: elements.apiUrlA.value,
-      thinking: elements.thinkingA.checked,
-    },
-    B: {
-      provider: elements.providerB.value,
-      apiKey: elements.apiKeyB.value,
-      model: elements.modelB.value,
-      apiUrl: elements.apiUrlB.value,
-      thinking: elements.thinkingB.checked,
+    model: {
+      provider: elements.provider.value,
+      apiKey: elements.apiKey.value,
+      model: elements.model.value,
+      apiUrl: elements.apiUrl.value,
+      thinking: elements.thinking.checked,
     },
   };
 
@@ -1610,10 +1465,6 @@ function loadConfig() {
       const toolsEnabled = config.tools?.enabled === true;
       elements.enableTools.checked = toolsEnabled;
     }
-    if (elements.enableAutoChat) {
-      const autoChatEnabled = config.autoChat?.enabled === true;
-      elements.enableAutoChat.checked = autoChatEnabled;
-    }
     // 加载对话历史配置（兼容旧的 timeContext 配置）
     const historyConfig = config.history || config.timeContext;
     if (historyConfig) {
@@ -1626,11 +1477,6 @@ function loadConfig() {
     if (config.autoTitle) {
       if (elements.enableAutoTitle)
         elements.enableAutoTitle.checked = config.autoTitle.enabled !== false;
-      const baseValue = config.autoTitle.base || "A";
-      const radioToCheck = document.querySelector(
-        `input[name="titleGenerationBase"][value="${baseValue}"]`
-      );
-      if (radioToCheck) radioToCheck.checked = true;
       if (elements.titleGenerationModel)
         elements.titleGenerationModel.value = config.autoTitle.model || "";
     }
@@ -1642,19 +1488,14 @@ function loadConfig() {
         elements.greetingText.value =
           config.greeting.text || "你好，有什么需要帮助的？";
     }
-    if (config.A) {
-      elements.providerA.value = config.A.provider || "openai";
-      elements.apiKeyA.value = config.A.apiKey || "";
-      elements.modelA.value = config.A.model || "";
-      elements.apiUrlA.value = config.A.apiUrl || "";
-      elements.thinkingA.checked = !!config.A.thinking;
-    }
-    if (config.B) {
-      elements.providerB.value = config.B.provider || "openai";
-      elements.apiKeyB.value = config.B.apiKey || "";
-      elements.modelB.value = config.B.model || "";
-      elements.apiUrlB.value = config.B.apiUrl || "";
-      elements.thinkingB.checked = !!config.B.thinking;
+    // 加载模型配置（兼容旧格式 config.A）
+    const modelConfig = config.model || config.A;
+    if (modelConfig) {
+      elements.provider.value = modelConfig.provider || "openai";
+      elements.apiKey.value = modelConfig.apiKey || "";
+      elements.model.value = modelConfig.model || "";
+      elements.apiUrl.value = modelConfig.apiUrl || "";
+      elements.thinking.checked = !!modelConfig.thinking;
     }
   } catch (e) {
     console.error("加载配置失败:", e);
@@ -1667,23 +1508,19 @@ function clearConfig() {
 
   if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
   if (elements.enableTools) elements.enableTools.checked = false;
-  if (elements.enableAutoChat) elements.enableAutoChat.checked = false;
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.enableHistory) elements.enableHistory.checked = true;
   if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
 
-  ["A", "B"].forEach((side) => {
-    elements[`provider${side}`].value = "openai";
-    elements[`apiKey${side}`].value = "";
-    elements[`model${side}`].value = "";
-    elements[`apiUrl${side}`].value = "";
-    elements[`thinking${side}`].checked = false;
-  });
+  elements.provider.value = "openai";
+  elements.apiKey.value = "";
+  elements.model.value = "";
+  elements.apiUrl.value = "";
+  elements.thinking.checked = false;
 
   saveConfig();
-  updateProviderUi("A");
-  updateProviderUi("B");
+  updateProviderUi();
   updateModelNames();
   alert("配置已清除");
 }
@@ -1746,27 +1583,26 @@ function getConfig(side) {
     }
   }
 
-  // 如果是标题生成，从基础配置获取
+  // 标题生成配置：从主模型配置继承，可覆盖模型ID
   if (side === "Title") {
-    const base = getTitleGenerationBase();
     const customModel = elements.titleGenerationModel?.value || "";
     return {
-      provider: elements[`provider${base}`]?.value || "openai",
-      apiKey: elements[`apiKey${base}`]?.value || "",
-      model: customModel || elements[`model${base}`]?.value || "",
-      apiUrl: elements[`apiUrl${base}`]?.value || "",
+      provider: elements.provider?.value || "openai",
+      apiKey: elements.apiKey?.value || "",
+      model: customModel || elements.model?.value || "",
+      apiUrl: elements.apiUrl?.value || "",
       systemPrompt: "", // 标题生成不需要系统提示词
       thinking: false,
     };
   }
 
   return {
-    provider: elements[`provider${side}`]?.value || "openai",
-    apiKey: elements[`apiKey${side}`]?.value || "",
-    model: elements[`model${side}`]?.value || "",
-    apiUrl: elements[`apiUrl${side}`]?.value || "",
+    provider: elements.provider?.value || "openai",
+    apiKey: elements.apiKey?.value || "",
+    model: elements.model?.value || "",
+    apiUrl: elements.apiUrl?.value || "",
     systemPrompt: systemPrompt,
-    thinking: elements[`thinking${side}`]?.checked || false,
+    thinking: elements.thinking?.checked || false,
   };
 }
 
@@ -1779,9 +1615,6 @@ function getWebSearchConfig() {
   };
 }
 
-function isAutoChatEnabled() {
-  return !!elements.enableAutoChat?.checked;
-}
 
 function getMaxHistoryTurns() {
   const value = parseInt(elements.maxHistoryTurns?.value);
@@ -2155,27 +1988,14 @@ function createTurnElement(turn) {
   }
 
   const assistants = document.createElement("div");
-  assistants.className = "turn-assistants";
+  assistants.className = "turn-assistants single-model";
 
-  // 只渲染已配置的模型卡片
+  // 只渲染 A 侧模型卡片（兼容旧数据）
   const cards = {};
   if (turn.models.A) {
-    const aCard = createAssistantCard("A", turn);
+    const aCard = createAssistantCard(turn);
     assistants.appendChild(aCard.el);
     cards.A = aCard;
-  }
-  if (turn.models.B) {
-    const bCard = createAssistantCard("B", turn);
-    assistants.appendChild(bCard.el);
-    cards.B = bCard;
-  }
-
-  // 根据配置数量添加CSS类，用于自适应布局
-  const configCount = (turn.models.A ? 1 : 0) + (turn.models.B ? 1 : 0);
-  if (configCount === 1) {
-    assistants.classList.add("single-model");
-  } else if (configCount === 2) {
-    assistants.classList.add("dual-model");
   }
 
   turnEl.appendChild(userWrap);
@@ -2185,17 +2005,18 @@ function createTurnElement(turn) {
   return { el: turnEl, cards, webSearchEl };
 }
 
-function createAssistantCard(side, turn) {
-  const modelSnapshot = turn?.models?.[side]?.model || "";
-  const contentSnapshot = turn?.models?.[side]?.content || "";
-  const thinkingSnapshot = turn?.models?.[side]?.thinking || "";
-  const thinkingTimeSnapshot = turn?.models?.[side]?.thinkingTime || 0;
-  const tokenSnapshot = turn?.models?.[side]?.tokens;
-  const timeSnapshot = turn?.models?.[side]?.timeCostSec;
-  const statusSnapshot = turn?.models?.[side]?.status || "ready";
+function createAssistantCard(turn) {
+  const side = "A";
+  const modelSnapshot = turn?.models?.A?.model || "";
+  const contentSnapshot = turn?.models?.A?.content || "";
+  const thinkingSnapshot = turn?.models?.A?.thinking || "";
+  const thinkingTimeSnapshot = turn?.models?.A?.thinkingTime || 0;
+  const tokenSnapshot = turn?.models?.A?.tokens;
+  const timeSnapshot = turn?.models?.A?.timeCostSec;
+  const statusSnapshot = turn?.models?.A?.status || "ready";
 
   const message = document.createElement("div");
-  message.className = `assistant-message assistant-${side.toLowerCase()}`;
+  message.className = "assistant-message";
   if (statusSnapshot === "loading") {
     message.classList.add("loading");
   }
@@ -2207,10 +2028,7 @@ function createAssistantCard(side, turn) {
   const modelName = document.createElement("span");
   modelName.className = "assistant-model-name";
   modelName.textContent =
-    modelSnapshot ||
-    (side === "A"
-      ? elements.modelNameA.textContent || "未配置"
-      : elements.modelNameB.textContent || "未配置");
+    modelSnapshot || elements.modelName.textContent || "未配置";
 
   const statusEl = document.createElement("span");
   statusEl.className = "status";
@@ -2397,268 +2215,6 @@ function applyStatus(statusEl, status) {
   }
 }
 
-function setHeaderStatus(side, status) {
-  const statusEl = elements[`status${side}`];
-  if (!statusEl) return;
-  applyStatus(statusEl, status);
-}
-
-function setHeaderTokens(side, tokens) {
-  const el = elements[`tokenCount${side}`];
-  if (!el) return;
-  el.textContent = `${Math.max(0, Math.floor(tokens || 0))} tokens`;
-}
-
-function setHeaderTime(side, sec) {
-  const el = elements[`timeCost${side}`];
-  if (!el) return;
-  el.textContent = `${Math.max(0, sec || 0).toFixed(1)}s`;
-}
-
-function getSideLabel(side) {
-  return side === "A" ? "模型A" : "模型B";
-}
-
-function buildAutoChatDisplayPrompt(fromSide, message) {
-  const label = getSideLabel(fromSide);
-  const text = (message || "").trim();
-  return text ? `${label}：${text}` : `${label}：`;
-}
-
-function buildAutoChatPrompt(seedPrompt, fromSide, message) {
-  const label = getSideLabel(fromSide);
-  const seed = (seedPrompt || "").trim();
-  const text = (message || "").trim();
-  const lines = [];
-
-  if (seed) lines.push(`用户最初问题：${seed}`);
-  if (text) lines.push(`${label}的上一句：${text}`);
-  lines.push("请你作为另一方继续对话，直接回应上一句。");
-
-  return lines.join("\n");
-}
-
-async function startAutoChat({
-  prompt,
-  hasImages,
-  configA,
-  configB,
-  hasA,
-  hasB,
-  webSearchConfig,
-}) {
-  if (!hasA || !hasB) {
-    alert("模型互聊需要同时配置模型A和模型B");
-    return;
-  }
-
-  if (hasImages) {
-    alert("模型互聊暂不支持图片，请移除图片或关闭互聊模式");
-    return;
-  }
-
-  let started = false;
-  try {
-    const now = Date.now();
-    let topic = getActiveTopic();
-    if (!topic) {
-      // 检查是否有空话题可以复用
-      const emptyTopic = state.chat.topics.find(
-        (t) =>
-          t.turns.length === 0 ||
-          (t.turns.length === 1 && t.turns[0].isGreeting)
-      );
-
-      if (emptyTopic) {
-        topic = emptyTopic;
-        setActiveTopic(topic.id);
-      } else {
-        topic = createTopic();
-        setActiveTopic(topic.id);
-      }
-    }
-
-    state.isRunning = true;
-    state.autoChat.running = true;
-    state.autoChat.stopRequested = false;
-    setSendButtonMode("stop");
-    started = true;
-
-    elements.promptInput.value = "";
-    autoGrowPromptInput();
-    clearImages();
-    elements.promptInput.focus();
-
-    const firstSide = "A";
-    let promptForModel = prompt;
-
-    const firstTurn = {
-      id: createId(),
-      createdAt: now,
-      prompt,
-      images: [],
-      webSearch: webSearchConfig.enabled
-        ? {
-            status: "loading",
-            query: prompt,
-            results: [],
-            answer: "",
-            error: "",
-          }
-        : null,
-      models: {},
-    };
-
-    firstTurn.models[firstSide] = {
-      provider: configA.provider,
-      model: configA.model,
-      thinking: "",
-      content: "",
-      tokens: null,
-      timeCostSec: null,
-      status: "loading",
-      thinkingCollapsed: true,
-    };
-
-    topic.turns = Array.isArray(topic.turns) ? topic.turns : [];
-    topic.turns.push(firstTurn);
-    topic.updatedAt = now;
-    scheduleSaveChat();
-
-    const createdEls = createTurnElement(firstTurn);
-    elements.chatMessages.appendChild(createdEls.el);
-    renderTopicList();
-    state.autoScroll = true;
-    scrollToBottom(elements.chatMessages, false);
-
-    if (firstTurn.webSearch) {
-      if (!webSearchConfig.tavilyApiKey) {
-        firstTurn.webSearch.status = "error";
-        firstTurn.webSearch.error = "已启用联网搜索，但未填写 Tavily API Key。";
-        renderWebSearchSection(createdEls.webSearchEl, firstTurn.webSearch);
-        scheduleSaveChat();
-      } else {
-        try {
-          const data = await tavilySearch(
-            prompt,
-            webSearchConfig.tavilyApiKey,
-            webSearchConfig.maxResults
-          );
-          firstTurn.webSearch.status = "ready";
-          firstTurn.webSearch.answer = data?.answer || "";
-          firstTurn.webSearch.results = Array.isArray(data?.results)
-            ? data.results
-            : [];
-          renderWebSearchSection(createdEls.webSearchEl, firstTurn.webSearch);
-          scheduleSaveChat();
-          if (
-            firstTurn.webSearch.results?.length ||
-            firstTurn.webSearch.answer
-          ) {
-            promptForModel = buildPromptWithWebSearch(
-              prompt,
-              firstTurn.webSearch
-            );
-          }
-        } catch (e) {
-          firstTurn.webSearch.status = "error";
-          firstTurn.webSearch.error = e?.message || "联网搜索失败";
-          renderWebSearchSection(createdEls.webSearchEl, firstTurn.webSearch);
-          scheduleSaveChat();
-        }
-      }
-    }
-
-    setHeaderStatus(firstSide, "loading");
-    setHeaderTokens(firstSide, 0);
-    setHeaderTime(firstSide, 0);
-
-    await callModel(
-      firstSide,
-      promptForModel,
-      configA,
-      firstTurn,
-      createdEls.cards[firstSide],
-      Date.now()
-    );
-
-    if (state.autoChat.stopRequested) return;
-    if (firstTurn.models[firstSide].status !== "complete") return;
-
-    let lastSpeaker = firstSide;
-    let lastMessage = (firstTurn.models[firstSide].content || "").trim();
-    if (!lastMessage) return;
-
-    while (!state.autoChat.stopRequested) {
-      const nextSide = lastSpeaker === "A" ? "B" : "A";
-      const nextConfig = nextSide === "A" ? configA : configB;
-      const displayPrompt = buildAutoChatDisplayPrompt(
-        lastSpeaker,
-        lastMessage
-      );
-      const autoPrompt = buildAutoChatPrompt(prompt, lastSpeaker, lastMessage);
-
-      const loopTurn = {
-        id: createId(),
-        createdAt: Date.now(),
-        prompt: displayPrompt,
-        images: [],
-        webSearch: null,
-        models: {},
-      };
-
-      loopTurn.models[nextSide] = {
-        provider: nextConfig.provider,
-        model: nextConfig.model,
-        thinking: "",
-        content: "",
-        tokens: null,
-        timeCostSec: null,
-        status: "loading",
-        thinkingCollapsed: true,
-      };
-
-      topic.turns.push(loopTurn);
-      topic.updatedAt = Date.now();
-      scheduleSaveChat();
-
-      const loopEls = createTurnElement(loopTurn);
-      elements.chatMessages.appendChild(loopEls.el);
-      renderTopicList();
-      state.autoScroll = true;
-      scrollToBottom(elements.chatMessages, false);
-
-      setHeaderStatus(nextSide, "loading");
-      setHeaderTokens(nextSide, 0);
-      setHeaderTime(nextSide, 0);
-
-      await callModel(
-        nextSide,
-        autoPrompt,
-        nextConfig,
-        loopTurn,
-        loopEls.cards[nextSide],
-        Date.now()
-      );
-
-      if (state.autoChat.stopRequested) break;
-      if (loopTurn.models[nextSide].status !== "complete") break;
-
-      lastSpeaker = nextSide;
-      lastMessage = (loopTurn.models[nextSide].content || "").trim();
-      if (!lastMessage) break;
-    }
-  } finally {
-    if (started) {
-      state.autoChat.running = false;
-      state.autoChat.stopRequested = false;
-      state.isRunning = false;
-      setSendButtonMode("send");
-      scheduleSaveChat();
-      autoGenerateTitle();
-    }
-  }
-}
 
 async function sendPrompt() {
   if (state.isRunning) return;
@@ -2672,29 +2228,11 @@ async function sendPrompt() {
     return;
   }
 
-  const configA = getConfig("A");
-  const configB = getConfig("B");
+  const config = getConfig();
   const webSearchConfig = getWebSearchConfig();
 
-  // 检查至少配置一个模型
-  const hasA = !!(configA.apiKey && configA.model);
-  const hasB = !!(configB.apiKey && configB.model);
-
-  if (!hasA && !hasB) {
-    alert("请至少配置一个模型");
-    return;
-  }
-
-  if (isAutoChatEnabled()) {
-    await startAutoChat({
-      prompt,
-      hasImages,
-      configA,
-      configB,
-      hasA,
-      hasB,
-      webSearchConfig,
-    });
+  if (!config.apiKey || !config.model) {
+    alert("请先配置模型");
     return;
   }
 
@@ -2727,31 +2265,16 @@ async function sendPrompt() {
     models: {},
   };
 
-  // 只为已配置的模型初始化数据
-  if (hasA) {
-    turn.models.A = {
-      provider: configA.provider,
-      model: configA.model,
-      thinking: "",
-      content: "",
-      tokens: null,
-      timeCostSec: null,
-      status: "loading",
-      thinkingCollapsed: true, // 默认折叠
-    };
-  }
-  if (hasB) {
-    turn.models.B = {
-      provider: configB.provider,
-      model: configB.model,
-      thinking: "",
-      content: "",
-      tokens: null,
-      timeCostSec: null,
-      status: "loading",
-      thinkingCollapsed: true, // 默认折叠
-    };
-  }
+  turn.models.A = {
+    provider: config.provider,
+    model: config.model,
+    thinking: "",
+    content: "",
+    tokens: null,
+    timeCostSec: null,
+    status: "loading",
+    thinkingCollapsed: true,
+  };
 
   topic.turns = Array.isArray(topic.turns) ? topic.turns : [];
   topic.turns.push(turn);
@@ -2772,23 +2295,10 @@ async function sendPrompt() {
   clearImages(); // 清空已选择的图片
   elements.promptInput.focus();
 
-  // 只为已配置的模型设置状态
-  if (hasA) {
-    setHeaderStatus("A", "loading");
-    setHeaderTokens("A", 0);
-    setHeaderTime("A", 0);
-  }
-  if (hasB) {
-    setHeaderStatus("B", "loading");
-    setHeaderTokens("B", 0);
-    setHeaderTime("B", 0);
-  }
   setSendButtonMode("stop");
-
   state.isRunning = true;
-  // 发送/停止合并：生成中保持按钮可点击，用于停止
 
-  let promptForModels = prompt;
+  let promptForModel = prompt;
   if (turn.webSearch) {
     if (!webSearchConfig.tavilyApiKey) {
       turn.webSearch.status = "error";
@@ -2810,7 +2320,7 @@ async function sendPrompt() {
         renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
         scheduleSaveChat();
         if (turn.webSearch.results?.length || turn.webSearch.answer) {
-          promptForModels = buildPromptWithWebSearch(prompt, turn.webSearch);
+          promptForModel = buildPromptWithWebSearch(prompt, turn.webSearch);
         }
       } catch (e) {
         turn.webSearch.status = "error";
@@ -2821,34 +2331,7 @@ async function sendPrompt() {
     }
   }
 
-  // 动态构建调用列表
-  const calls = [];
-  if (hasA && createdEls.cards.A) {
-    calls.push(
-      callModel(
-        "A",
-        promptForModels,
-        configA,
-        turn,
-        createdEls.cards.A,
-        Date.now()
-      )
-    );
-  }
-  if (hasB && createdEls.cards.B) {
-    calls.push(
-      callModel(
-        "B",
-        promptForModels,
-        configB,
-        turn,
-        createdEls.cards.B,
-        Date.now()
-      )
-    );
-  }
-
-  await Promise.allSettled(calls);
+  await callModel(promptForModel, config, turn, createdEls.cards.A, Date.now());
 
   state.isRunning = false;
   setSendButtonMode("send");
@@ -2859,19 +2342,11 @@ async function sendPrompt() {
 }
 
 function stopGeneration() {
-  if (state.autoChat.running) {
-    state.autoChat.stopRequested = true;
-    state.autoChat.running = false;
+  const ctrl = state.abortController;
+  if (ctrl) {
+    ctrl.abort();
+    state.abortController = null;
   }
-
-  ["A", "B"].forEach((side) => {
-    const ctrl = state.abortControllers[side];
-    if (ctrl) {
-      ctrl.abort();
-      state.abortControllers[side] = null;
-      setHeaderStatus(side, "stopped"); // 只在有控制器时设置状态
-    }
-  });
 
   state.isRunning = false;
   setSendButtonMode("send");
@@ -2909,34 +2384,32 @@ function scheduleAutoCollapseThinking(ui, delayMs = 900) {
   }, delayMs);
 }
 
-async function callModel(side, prompt, config, turn, ui, startTime) {
-  setHeaderStatus(side, "loading");
+async function callModel(prompt, config, turn, ui, startTime) {
   applyStatus(ui.statusEl, "loading");
   ui.modelNameEl.textContent = config.model || "未配置";
 
   const abortController = new AbortController();
-  state.abortControllers[side] = abortController;
+  state.abortController = abortController;
 
   let thinkingStartTime = null;
   let thinkingEndTime = null;
 
   const updateTime = () => {
     const elapsed = (Date.now() - startTime) / 1000;
-    setHeaderTime(side, elapsed);
     ui.timeEl.textContent = `${elapsed.toFixed(1)}s`;
-    turn.models[side].timeCostSec = elapsed;
+    turn.models.A.timeCostSec = elapsed;
 
     if (thinkingStartTime) {
       const end = thinkingEndTime || Date.now();
       const thinkingElapsed = (end - thinkingStartTime) / 1000;
       ui.thinkingTimeEl.textContent = `${thinkingElapsed.toFixed(1)}s`;
-      turn.models[side].thinkingTime = thinkingElapsed;
+      turn.models.A.thinkingTime = thinkingElapsed;
     }
 
     // 实时更新速度
     const tokens =
-      turn.models[side].tokens ||
-      estimateTokensFromText(turn.models[side].content);
+      turn.models.A.tokens ||
+      estimateTokensFromText(turn.models.A.content);
     if (tokens > 0 && elapsed > 0.1) {
       const speed = tokens / elapsed;
       ui.speedEl.textContent = `${speed.toFixed(1)} t/s`;
@@ -2969,7 +2442,6 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
       enableHistory: isHistoryEnabled(),
       maxHistoryTurns: getMaxHistoryTurns(),
       historyTurns: historyTurns,
-      side: side,
       enableTools: elements.enableTools?.checked || false,
       maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
       selectedTools: getSelectedTools(),
@@ -3012,14 +2484,14 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
 
           if (chunk.type === "thinking" && chunk.data) {
             if (!thinkingStartTime) thinkingStartTime = Date.now();
-            turn.models[side].thinking += chunk.data;
+            turn.models.A.thinking += chunk.data;
             ui.thinkingSectionEl.style.display = "block";
             if (ui.thinkingSectionEl.dataset.userToggled !== "1") {
               ui.thinkingSectionEl.classList.remove("collapsed");
             }
             renderMarkdownToElement(
               ui.thinkingContentEl,
-              turn.models[side].thinking
+              turn.models.A.thinking
             );
             scheduleAutoCollapseThinking(ui);
             scheduleSaveChat();
@@ -3036,11 +2508,10 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
           } else if (chunk.type === "content" && chunk.data) {
             if (thinkingStartTime && !thinkingEndTime)
               thinkingEndTime = Date.now();
-            turn.models[side].content += chunk.data;
-            renderMarkdownToElement(ui.responseEl, turn.models[side].content);
-            const tokens = estimateTokensFromText(turn.models[side].content);
+            turn.models.A.content += chunk.data;
+            renderMarkdownToElement(ui.responseEl, turn.models.A.content);
+            const tokens = estimateTokensFromText(turn.models.A.content);
             ui.tokenEl.textContent = `${tokens} tokens`;
-            setHeaderTokens(side, tokens);
             scheduleSaveChat();
             updateScrollToBottomButton();
             // 首次收到内容时，移除loading类以显示body和footer
@@ -3053,9 +2524,8 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
               scrollToBottom(elements.chatMessages, false);
             }
           } else if (chunk.type === "tokens" && Number.isFinite(chunk.data)) {
-            turn.models[side].tokens = chunk.data;
+            turn.models.A.tokens = chunk.data;
             ui.tokenEl.textContent = `${chunk.data} tokens`;
-            setHeaderTokens(side, chunk.data);
             scheduleSaveChat();
           } else if (chunk.type === "error") {
             throw new Error(chunk.data);
@@ -3070,43 +2540,39 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
     }
 
     updateTime();
-    turn.models[side].status = "complete";
+    turn.models.A.status = "complete";
     applyStatus(ui.statusEl, "complete");
-    setHeaderStatus(side, "complete");
 
     if (
-      turn.models[side].thinking &&
+      turn.models.A.thinking &&
       ui?.thinkingSectionEl?.dataset?.userToggled !== "1"
     ) {
       ui.thinkingSectionEl.classList.add("collapsed");
-      turn.models[side].thinkingCollapsed = true;
+      turn.models.A.thinkingCollapsed = true;
     }
 
-    if (!Number.isFinite(turn.models[side].tokens)) {
-      const tokens = estimateTokensFromText(turn.models[side].content);
-      turn.models[side].tokens = tokens;
+    if (!Number.isFinite(turn.models.A.tokens)) {
+      const tokens = estimateTokensFromText(turn.models.A.content);
+      turn.models.A.tokens = tokens;
       ui.tokenEl.textContent = `${tokens} tokens`;
-      setHeaderTokens(side, tokens);
 
       // 确保最终速度显示正确
-      if (turn.models[side].timeCostSec > 0) {
-        const speed = tokens / turn.models[side].timeCostSec;
+      if (turn.models.A.timeCostSec > 0) {
+        const speed = tokens / turn.models.A.timeCostSec;
         ui.speedEl.textContent = `${speed.toFixed(1)} t/s`;
         ui.speedEl.style.display = "inline";
       }
     }
   } catch (error) {
     if (error?.name === "AbortError") {
-      turn.models[side].status = "stopped";
+      turn.models.A.status = "stopped";
       applyStatus(ui.statusEl, "stopped");
-      setHeaderStatus(side, "stopped");
     } else {
-      console.error(`模型${side}错误:`, error);
-      turn.models[side].status = "error";
-      turn.models[side].content = `错误: ${error.message}`;
-      renderMarkdownToElement(ui.responseEl, turn.models[side].content);
+      console.error("模型错误:", error);
+      turn.models.A.status = "error";
+      turn.models.A.content = `错误: ${error.message}`;
+      renderMarkdownToElement(ui.responseEl, turn.models.A.content);
       applyStatus(ui.statusEl, "error");
-      setHeaderStatus(side, "error");
     }
   } finally {
     if (timeTimer) clearInterval(timeTimer);
@@ -3115,7 +2581,7 @@ async function callModel(side, prompt, config, turn, ui, startTime) {
       clearTimeout(ui.thinkingAutoCollapseTimer);
       ui.thinkingAutoCollapseTimer = null;
     }
-    state.abortControllers[side] = null;
+    state.abortController = null;
   }
 }
 
@@ -3879,16 +3345,11 @@ async function generateTopicTitle(topicId, configOrSide = "A") {
       });
     }
 
-    // 取第一个有效的助手回复
+    // 取助手回复
     if (turn.models.A?.content) {
       messages.push({
         role: "assistant",
         content: turn.models.A.content.slice(0, 200),
-      });
-    } else if (turn.models.B?.content) {
-      messages.push({
-        role: "assistant",
-        content: turn.models.B.content.slice(0, 200),
       });
     }
   }
@@ -3933,16 +3394,12 @@ async function autoGenerateTitle() {
   // 检查是否启用自动生成标题
   const saved = localStorage.getItem(STORAGE_KEYS.config);
   let autoTitleEnabled = true;
-  let baseModel = "A";
-  let customModel = "";
 
   if (saved) {
     try {
       const config = JSON.parse(saved);
       if (config.autoTitle) {
         autoTitleEnabled = config.autoTitle.enabled !== false;
-        baseModel = config.autoTitle.base || "A";
-        customModel = config.autoTitle.model || "";
       }
     } catch (e) {
       console.error("加载自动标题配置失败:", e);
@@ -3957,7 +3414,7 @@ async function autoGenerateTitle() {
   const realTurns = topic.turns.filter((t) => !t.isGreeting && t.prompt);
   if (realTurns.length < 1) return;
 
-  // 直接从 Title 配置获取（会自动从选择的基础配置中继承）
+  // 直接从 Title 配置获取（从主模型配置继承）
   const titleConfig = getConfig("Title");
   if (!titleConfig.apiKey || !titleConfig.model) {
     console.warn("标题生成配置不完整，无法生成标题");
