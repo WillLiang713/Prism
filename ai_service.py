@@ -53,6 +53,8 @@ class ChatRequest(BaseModel):
     enableTools: bool = False  # 是否启用工具调用
     maxToolRounds: int = Field(default=5, ge=1, le=20)  # 最大工具调用轮数
     selectedTools: list[str] = []  # 选中的工具名称列表
+    tavilyApiKey: str | None = None  # Tavily Key（可选，优先于环境变量）
+    tavilyMaxResults: int = Field(default=5, ge=1, le=20)  # Tavily 默认结果数量
 
     # 历史对话
     historyTurns: list[HistoryTurn] = []
@@ -60,8 +62,8 @@ class ChatRequest(BaseModel):
 
 class StreamChunk(BaseModel):
     """流式响应块"""
-    type: Literal["thinking", "content", "tokens", "error"]
-    data: str | int
+    type: Literal["thinking", "content", "tokens", "error", "tool"]
+    data: Any
 
 
 # ==================== 提供商配置 ====================
@@ -396,10 +398,22 @@ class AIService:
     """AI服务主类"""
 
     @staticmethod
-    async def execute_tool(tool_name: str, arguments: dict) -> str:
+    async def execute_tool(
+        tool_name: str,
+        arguments: dict,
+        runtime_context: dict[str, Any] | None = None
+    ) -> str:
         """执行工具调用"""
-        from tools import execute_tool as sync_execute_tool
-        return sync_execute_tool(tool_name, arguments)
+        from tools import (
+            execute_tool as sync_execute_tool,
+            set_runtime_context,
+            reset_runtime_context,
+        )
+        token = set_runtime_context(runtime_context)
+        try:
+            return sync_execute_tool(tool_name, arguments)
+        finally:
+            reset_runtime_context(token)
 
     @staticmethod
     async def chat_stream(request: ChatRequest) -> AsyncIterator[str]:
@@ -542,6 +556,10 @@ class AIService:
                     
                     while tool_calls_buffer and request.enableTools and current_round < request.maxToolRounds:
                         current_round += 1
+                        tool_runtime_context = {
+                            "tavily_api_key": (request.tavilyApiKey or "").strip(),
+                            "tavily_max_results": request.tavilyMaxResults,
+                        }
                         
                         # 构建工具调用消息
                         tool_call_message = {
@@ -567,9 +585,46 @@ class AIService:
                                 args = json.loads(tool_call["arguments"]) if tool_call["arguments"] else {}
                             except:
                                 args = {}
+
+                            # 通知前端：开始执行工具
+                            yield f"data: {json.dumps({'type': 'tool', 'data': {'status': 'start', 'round': current_round, 'name': tool_name, 'arguments': args}})}\n\n"
                             
                             # 执行工具
-                            result = await AIService.execute_tool(tool_name, args)
+                            result = await AIService.execute_tool(
+                                tool_name,
+                                args,
+                                tool_runtime_context,
+                            )
+
+                            # 通知前端：工具执行结果摘要
+                            result_status = "success"
+                            result_summary = "调用完成"
+                            try:
+                                parsed_result = json.loads(result)
+                                if isinstance(parsed_result, dict):
+                                    if parsed_result.get("error"):
+                                        result_status = "error"
+                                        result_summary = str(parsed_result.get("error") or "工具返回错误")
+                                    elif isinstance(parsed_result.get("results"), list):
+                                        count = len(parsed_result.get("results", []))
+                                        answer = str(parsed_result.get("answer") or "").strip()
+                                        result_summary = f"返回 {count} 条结果"
+                                        if answer:
+                                            result_summary += f"，摘要：{answer}"
+                                    else:
+                                        result_summary = json.dumps(parsed_result, ensure_ascii=False)
+                                else:
+                                    result_summary = str(parsed_result)
+                            except Exception:
+                                plain = str(result or "").strip()
+                                if plain.startswith("错误"):
+                                    result_status = "error"
+                                result_summary = plain or "调用完成"
+
+                            if len(result_summary) > 180:
+                                result_summary = result_summary[:180] + "..."
+
+                            yield f"data: {json.dumps({'type': 'tool', 'data': {'status': result_status, 'round': current_round, 'name': tool_name, 'resultSummary': result_summary}})}\n\n"
                             
                             # 构建标准格式的 tool_call
                             tool_call_message["tool_calls"].append({

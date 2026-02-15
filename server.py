@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 import httpx
 import os
 import json
+import re
 from datetime import datetime
 from urllib.parse import urlparse
 from ai_service import AIService, ChatRequest
@@ -262,6 +263,69 @@ class GenerateTitleRequest(BaseModel):
     # 对话历史（最多取前几轮）
     messages: list[dict[str, str]]  # [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
 
+def _normalize_compare_text(text: str) -> str:
+    return re.sub(r"[\s\W_]+", "", str(text or ""), flags=re.UNICODE).lower()
+
+def _first_user_message(messages: list[dict[str, str]]) -> str:
+    for msg in messages:
+        if isinstance(msg, dict) and (msg.get("role") or "") == "user":
+            text = str(msg.get("content") or "").strip()
+            if text:
+                return text
+    return ""
+
+def _fallback_title_from_messages(messages: list[dict[str, str]]) -> str:
+    first = _first_user_message(messages)
+    if not first:
+        return "新对话"
+
+    title = re.sub(r"\s+", " ", first).strip()
+    title = title.splitlines()[0].strip()
+    if not title:
+        return "新对话"
+    return title[:24]
+
+def _is_too_close_to_user_input(title: str, messages: list[dict[str, str]]) -> bool:
+    first_user = _first_user_message(messages)
+    if not first_user:
+        return False
+    t = _normalize_compare_text(title)
+    u = _normalize_compare_text(first_user)
+    if not t or not u:
+        return False
+    return t in u or u in t
+
+def _normalize_generated_title(raw_title: str, messages: list[dict[str, str]]) -> tuple[str, str]:
+    """清洗模型标题输出，返回 (title, source)"""
+    title = str(raw_title or "").strip()
+    if not title:
+        return _fallback_title_from_messages(messages), "fallback"
+
+    # 仅使用首行，过滤解释文本
+    title = title.splitlines()[0].strip()
+    title = re.sub(r"^(标题|话题|主题)\s*[:：]\s*", "", title)
+    title = re.sub(r"^[\-\*\d\.\)\(、\s]+", "", title)
+    title = title.strip('"\'「」『』`')
+    title = re.sub(r"\s+", " ", title).strip()
+
+    if not title:
+        return _fallback_title_from_messages(messages), "fallback"
+
+    # 过滤解释式回答和无效标题
+    if re.search(r"(根据.*对话|建议标题|可以命名|这个对话|标题是)", title):
+        return _fallback_title_from_messages(messages), "fallback"
+    if title in {"新对话", "未命名", "对话"}:
+        return _fallback_title_from_messages(messages), "fallback"
+
+    if len(title) > 24:
+        short = re.split(r"[，,。；;！？!?\|]", title, maxsplit=1)[0].strip()
+        title = short if short else title[:24].strip()
+
+    if _is_too_close_to_user_input(title, messages):
+        return _fallback_title_from_messages(messages), "fallback"
+
+    return title, "model"
+
 
 @app.post("/api/topics/generate-title")
 async def generate_topic_title(payload: GenerateTitleRequest):
@@ -272,7 +336,11 @@ async def generate_topic_title(payload: GenerateTitleRequest):
     """
     try:
         # 构建提示词：让AI根据对话历史生成简短标题
-        system_prompt = "你是一个专业的话题标题生成助手。请根据用户提供的对话历史，生成一个简洁、准确的话题标题（5-15个字）。只需要输出标题本身，不要有任何解释或额外内容。"
+        system_prompt = (
+            "你是话题标题生成助手。请基于对话语义生成4-12字的中文名词短语标题。"
+            "禁止复述用户原句，禁止输出解释，禁止使用“这个对话”“标题是”等表述。"
+            "只输出标题文本。"
+        )
         
         # 构建对话内容摘要
         conversation_summary = []
@@ -282,7 +350,10 @@ async def generate_topic_title(payload: GenerateTitleRequest):
             if role and content:
                 conversation_summary.append(f"{role}: {content}")
         
-        user_prompt = f"请为以下对话生成一个简洁的标题（5-15字）：\n\n" + "\n".join(conversation_summary)
+        user_prompt = (
+            "请为以下对话生成一个简洁标题（4-12字，概括意图，不要复述原句）：\n\n"
+            + "\n".join(conversation_summary)
+        )
         
         # 构建请求
         provider_mode = "anthropic" if payload.provider == "anthropic" else "openai"
@@ -340,14 +411,10 @@ async def generate_topic_title(payload: GenerateTitleRequest):
         else:
             title = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
         
-        # 清理标题（移除引号、换行等）
-        title = title.strip('"\'「」『』""''').replace('\n', ' ').strip()
+        # 清洗并兜底标题
+        title, source = _normalize_generated_title(title, payload.messages)
         
-        # 如果标题为空或过长，返回默认标题
-        if not title or len(title) > 30:
-            title = "新对话"
-        
-        return {"title": title}
+        return {"title": title, "source": source}
         
     except HTTPException:
         raise

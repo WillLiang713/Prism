@@ -685,6 +685,50 @@ function renderWebSearchSection(container, webSearch) {
   container.classList.remove("expanded");
 }
 
+function formatToolEventText(event) {
+  if (!event || typeof event !== "object") return "";
+  const name = event.name || "未知工具";
+  const status = event.status || "info";
+
+  if (status === "start") {
+    const args = event.arguments && typeof event.arguments === "object"
+      ? JSON.stringify(event.arguments, null, 0)
+      : "";
+    return args ? `调用 ${name}，参数：${truncateText(args, 120)}` : `调用 ${name}`;
+  }
+
+  if (status === "error") {
+    return `${name} 失败：${event.resultSummary || event.error || "未知错误"}`;
+  }
+
+  if (status === "success") {
+    return `${name} 完成：${event.resultSummary || "调用完成"}`;
+  }
+
+  return `${name}：${event.resultSummary || ""}`;
+}
+
+function renderToolEvents(sectionEl, listEl, events) {
+  if (!sectionEl || !listEl) return;
+  const items = Array.isArray(events) ? events : [];
+
+  if (!items.length) {
+    sectionEl.style.display = "none";
+    listEl.innerHTML = "";
+    return;
+  }
+
+  sectionEl.style.display = "block";
+  listEl.innerHTML = "";
+
+  items.forEach((event) => {
+    const li = document.createElement("li");
+    li.className = `tool-call-item ${event.status || "info"}`;
+    li.textContent = formatToolEventText(event);
+    listEl.appendChild(li);
+  });
+}
+
 function buildPromptWithWebSearch(originalPrompt, webSearch) {
   const results = Array.isArray(webSearch?.results) ? webSearch.results : [];
   const lines = [];
@@ -1776,6 +1820,9 @@ function renderTopicList() {
   const topics = [...state.chat.topics].sort(
     (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
   );
+  const hideDeleteForOnlyNewTopic =
+    topics.length === 1 && (topics[0]?.title || "").trim().startsWith("新话题");
+
   for (const topic of topics) {
     const item = document.createElement("div");
     const isGeneratingTitle = state.chat.generatingTitleForTopicId === topic.id;
@@ -1794,39 +1841,41 @@ function renderTopicList() {
       topic.updatedAt || topic.createdAt
     )}`;
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "topic-delete-btn";
-    deleteBtn.textContent = "删除";
-    deleteBtn.title = "删除该话题";
-    deleteBtn.setAttribute(
-      "aria-label",
-      `删除话题：${topic.title || "未命名话题"}`
-    );
-    deleteBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (
-        state.isRunning &&
-        !confirm("正在生成中，仍要删除话题并停止当前生成吗？")
-      )
-        return;
-      if (
-        !confirm(
-          `确定要删除话题「${topic.title || "未命名话题"}」吗？此操作不可恢复。`
-        )
-      )
-        return;
-      if (state.isRunning) stopGeneration();
-      deleteTopic(topic.id);
-      renderAll();
-    });
-
     const footer = document.createElement("div");
     footer.className = "topic-footer";
     footer.appendChild(meta);
-    footer.appendChild(deleteBtn);
+
+    if (!hideDeleteForOnlyNewTopic) {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "topic-delete-btn";
+      deleteBtn.textContent = "删除";
+      deleteBtn.title = "删除该话题";
+      deleteBtn.setAttribute(
+        "aria-label",
+        `删除话题：${topic.title || "未命名话题"}`
+      );
+      deleteBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (
+          state.isRunning &&
+          !confirm("正在生成中，仍要删除话题并停止当前生成吗？")
+        )
+          return;
+        if (
+          !confirm(
+            `确定要删除话题「${topic.title || "未命名话题"}」吗？此操作不可恢复。`
+          )
+        )
+          return;
+        if (state.isRunning) stopGeneration();
+        deleteTopic(topic.id);
+        renderAll();
+      });
+      footer.appendChild(deleteBtn);
+    }
 
     item.appendChild(title);
     item.appendChild(footer);
@@ -1981,6 +2030,9 @@ function createAssistantCard(turn) {
   const modelSnapshot = turn?.models?.main?.model || "";
   const contentSnapshot = turn?.models?.main?.content || "";
   const thinkingSnapshot = turn?.models?.main?.thinking || "";
+  const toolEventsSnapshot = Array.isArray(turn?.models?.main?.toolEvents)
+    ? turn.models.main.toolEvents
+    : [];
   const thinkingTimeSnapshot = turn?.models?.main?.thinkingTime || 0;
   const tokenSnapshot = turn?.models?.main?.tokens;
   const timeSnapshot = turn?.models?.main?.timeCostSec;
@@ -2065,7 +2117,23 @@ function createAssistantCard(turn) {
   renderMarkdownToElement(responseContent, contentSnapshot);
   responseSection.appendChild(responseContent);
 
+  const toolCallsSection = document.createElement("div");
+  toolCallsSection.className = "tool-calls-section";
+  toolCallsSection.style.display = "none";
+
+  const toolCallsTitle = document.createElement("div");
+  toolCallsTitle.className = "tool-calls-title";
+  toolCallsTitle.textContent = "工具调用";
+
+  const toolCallsList = document.createElement("ul");
+  toolCallsList.className = "tool-calls-list";
+
+  toolCallsSection.appendChild(toolCallsTitle);
+  toolCallsSection.appendChild(toolCallsList);
+  renderToolEvents(toolCallsSection, toolCallsList, toolEventsSnapshot);
+
   content.appendChild(thinkingSection);
+  content.appendChild(toolCallsSection);
   content.appendChild(responseSection);
 
   // 底部：元数据 + 操作按钮
@@ -2131,6 +2199,8 @@ function createAssistantCard(turn) {
     statusEl,
     modelNameEl: modelName,
     responseEl: responseContent,
+    toolCallsSectionEl: toolCallsSection,
+    toolCallsListEl: toolCallsList,
     thinkingSectionEl: thinkingSection,
     thinkingContentEl: thinkingContent,
     thinkingTimeEl: thinkingTime,
@@ -2230,9 +2300,7 @@ async function sendPrompt() {
     createdAt: now,
     prompt,
     images: [...state.images.selectedImages], // 保存当前选择的图片
-    webSearch: webSearchConfig.enabled
-      ? { status: "loading", query: prompt, results: [], answer: "", error: "" }
-      : null,
+    webSearch: null,
     models: {},
   };
 
@@ -2240,6 +2308,7 @@ async function sendPrompt() {
     provider: config.provider,
     model: config.model,
     thinking: "",
+    toolEvents: [],
     content: "",
     tokens: null,
     timeCostSec: null,
@@ -2269,40 +2338,14 @@ async function sendPrompt() {
   setSendButtonMode("stop");
   state.isRunning = true;
 
-  let promptForModel = prompt;
-  if (turn.webSearch) {
-    if (!webSearchConfig.tavilyApiKey) {
-      turn.webSearch.status = "error";
-      turn.webSearch.error = "已启用联网搜索，但未填写 Tavily API Key。";
-      renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
-      scheduleSaveChat();
-    } else {
-      try {
-        const data = await tavilySearch(
-          prompt,
-          webSearchConfig.tavilyApiKey,
-          webSearchConfig.maxResults
-        );
-        turn.webSearch.status = "ready";
-        turn.webSearch.answer = data?.answer || "";
-        turn.webSearch.results = Array.isArray(data?.results)
-          ? data.results
-          : [];
-        renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
-        scheduleSaveChat();
-        if (turn.webSearch.results?.length || turn.webSearch.answer) {
-          promptForModel = buildPromptWithWebSearch(prompt, turn.webSearch);
-        }
-      } catch (e) {
-        turn.webSearch.status = "error";
-        turn.webSearch.error = e?.message || "联网搜索失败";
-        renderWebSearchSection(createdEls.webSearchEl, turn.webSearch);
-        scheduleSaveChat();
-      }
-    }
-  }
-
-  await callModel(promptForModel, config, turn, createdEls.cards.main, Date.now());
+  await callModel(
+    prompt,
+    config,
+    turn,
+    createdEls.cards.main,
+    Date.now(),
+    webSearchConfig
+  );
 
   state.isRunning = false;
   setSendButtonMode("send");
@@ -2355,7 +2398,7 @@ function scheduleAutoCollapseThinking(ui, delayMs = 900) {
   }, delayMs);
 }
 
-async function callModel(prompt, config, turn, ui, startTime) {
+async function callModel(prompt, config, turn, ui, startTime, webSearchConfig) {
   applyStatus(ui.statusEl, "loading");
   ui.modelNameEl.textContent = config.model || "未配置";
 
@@ -2401,6 +2444,7 @@ async function callModel(prompt, config, turn, ui, startTime) {
       currentTurnIndex > 0 ? topic.turns.slice(0, currentTurnIndex) : [];
 
     // 构建请求体（发送到后端）
+    const useWebSearchTool = !!webSearchConfig?.enabled;
     const requestBody = {
       provider: config.provider,
       apiKey: config.apiKey,
@@ -2413,8 +2457,11 @@ async function callModel(prompt, config, turn, ui, startTime) {
       enableHistory: isHistoryEnabled(),
       maxHistoryTurns: getMaxHistoryTurns(),
       historyTurns: historyTurns,
-      enableTools: true,
+      enableTools: useWebSearchTool,
       maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
+      selectedTools: useWebSearchTool ? ["tavily_search"] : [],
+      tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,
+      tavilyMaxResults: webSearchConfig?.maxResults || 5,
     };
 
     // 调用后端接口
@@ -2497,6 +2544,30 @@ async function callModel(prompt, config, turn, ui, startTime) {
             turn.models.main.tokens = chunk.data;
             ui.tokenEl.textContent = `${chunk.data} tokens`;
             scheduleSaveChat();
+          } else if (chunk.type === "tool" && chunk.data) {
+            const payload =
+              chunk.data && typeof chunk.data === "object" ? chunk.data : {};
+            if (!Array.isArray(turn.models.main.toolEvents)) {
+              turn.models.main.toolEvents = [];
+            }
+            turn.models.main.toolEvents.push(payload);
+            if (turn.models.main.toolEvents.length > 50) {
+              turn.models.main.toolEvents = turn.models.main.toolEvents.slice(-50);
+            }
+            renderToolEvents(
+              ui.toolCallsSectionEl,
+              ui.toolCallsListEl,
+              turn.models.main.toolEvents
+            );
+            scheduleSaveChat();
+            updateScrollToBottomButton();
+            const message = ui.statusEl.closest(".assistant-message");
+            if (message && message.classList.contains("loading")) {
+              message.classList.remove("loading");
+            }
+            if (state.autoScroll) {
+              scrollToBottom(elements.chatMessages, false);
+            }
           } else if (chunk.type === "error") {
             throw new Error(chunk.data);
           }
@@ -3188,21 +3259,52 @@ function confirmPromptDelete() {
 /**
  * 为话题生成标题
  * @param {string} topicId - 话题ID
- * @param {string} modelSide - 使用哪个模型生成标题 ('A' 或 'B')
+ * @param {object} config - 标题生成配置
  * @returns {Promise<string>} 生成的标题
  */
+function resolveAutoTitleModel(topic, config) {
+  const customModel = (config?.model || "").trim();
+  if (customModel) return customModel;
+
+  const mainInputModel = (elements.model?.value || "").trim();
+  if (mainInputModel) return mainInputModel;
+
+  const turns = Array.isArray(topic?.turns) ? topic.turns : [];
+  for (let i = turns.length - 1; i >= 0; i -= 1) {
+    const usedModel = (turns[i]?.models?.main?.model || "").trim();
+    if (usedModel) return usedModel;
+  }
+
+  return "";
+}
+
+function fallbackTopicTitleFromTurns(topic) {
+  const turns = Array.isArray(topic?.turns) ? topic.turns : [];
+  for (const turn of turns) {
+    const text = (turn?.prompt || "").trim();
+    if (!text) continue;
+    const firstLine = text.split(/\r?\n/, 1)[0].trim();
+    const normalized = firstLine.replace(/\s+/g, " ").trim();
+    if (!normalized) continue;
+    return normalized.slice(0, 24);
+  }
+  return "新对话";
+}
+
 async function generateTopicTitle(topicId, config) {
   const topic = state.chat.topics.find((t) => t.id === topicId);
   if (!topic) {
     throw new Error("话题不存在");
   }
 
-  // 标记正在生成标题
-  state.chat.generatingTitleForTopicId = topicId;
-  renderTopicList();
+  const normalizedConfig = {
+    ...config,
+    apiKey: (config?.apiKey || "").trim(),
+    model: resolveAutoTitleModel(topic, config),
+  };
 
   // 检查模型配置
-  if (!config.apiKey || !config.model) {
+  if (!normalizedConfig.apiKey || !normalizedConfig.model) {
     throw new Error("标题生成配置不完整（需要 API Key 和模型名称）");
   }
 
@@ -3231,30 +3333,35 @@ async function generateTopicTitle(topicId, config) {
     throw new Error("话题中没有有效的对话内容");
   }
 
-  // 调用后端API生成标题
-  const response = await fetch("/api/topics/generate-title", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      provider: config.provider,
-      apiKey: config.apiKey,
-      model: config.model,
-      apiUrl: config.apiUrl || null,
-      messages: messages,
-    }),
-  });
+  // 标记正在生成标题
+  state.chat.generatingTitleForTopicId = topicId;
+  renderTopicList();
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+  try {
+    // 调用后端API生成标题
+    const response = await fetch("/api/topics/generate-title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: normalizedConfig.provider,
+        apiKey: normalizedConfig.apiKey,
+        model: normalizedConfig.model,
+        apiUrl: normalizedConfig.apiUrl || null,
+        messages: messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `生成失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.title || "新对话";
+  } finally {
     state.chat.generatingTitleForTopicId = null;
     renderTopicList();
-    throw new Error(errorData.detail || `生成失败: ${response.status}`);
   }
-
-  const data = await response.json();
-  state.chat.generatingTitleForTopicId = null;
-  renderTopicList();
-  return data.title || "新对话";
 }
 
 /**
@@ -3289,7 +3396,13 @@ async function autoGenerateTitle() {
 
   // 直接从 Title 配置获取（从主模型配置继承）
   const titleConfig = getConfig("Title");
-  if (!titleConfig.apiKey || !titleConfig.model) {
+  const resolvedTitleConfig = {
+    ...titleConfig,
+    apiKey: (titleConfig.apiKey || "").trim(),
+    model: resolveAutoTitleModel(topic, titleConfig),
+  };
+
+  if (!resolvedTitleConfig.apiKey || !resolvedTitleConfig.model) {
     console.warn("标题生成配置不完整，无法生成标题");
     return;
   }
@@ -3298,15 +3411,20 @@ async function autoGenerateTitle() {
     // 延迟生成标题，等待对话完成
     setTimeout(async () => {
       try {
-        const title = await generateTopicTitle(topic.id, titleConfig);
-        if (title && title !== "新对话") {
-          topic.title = title;
+        const title = await generateTopicTitle(topic.id, resolvedTitleConfig);
+        const nextTitle = (title || "").trim() || fallbackTopicTitleFromTurns(topic);
+        topic.title = nextTitle;
+        topic.updatedAt = Date.now();
+        scheduleSaveChat();
+        renderTopicList();
+      } catch (error) {
+        console.warn("自动生成标题失败:", error.message);
+        if (topic.title.startsWith("新话题")) {
+          topic.title = fallbackTopicTitleFromTurns(topic);
           topic.updatedAt = Date.now();
           scheduleSaveChat();
           renderTopicList();
         }
-      } catch (error) {
-        console.warn("自动生成标题失败:", error.message);
         // 静默失败，不影响用户体验
       }
     }, 500); // 等待0.5秒后生成标题

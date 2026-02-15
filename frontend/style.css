@@ -2431,6 +2431,62 @@ body {
   height: auto;
 }
 
+.tool-calls-section {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: #f8f9fa;
+}
+
+.tool-calls-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+.tool-calls-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-call-item {
+  position: relative;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #495057;
+  padding-left: 12px;
+  word-break: break-word;
+}
+
+.tool-call-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #adb5bd;
+}
+
+.tool-call-item.start::before {
+  background: #f59f00;
+}
+
+.tool-call-item.success::before {
+  background: #2b8a3e;
+}
+
+.tool-call-item.error::before {
+  background: #e03131;
+}
+
 /* 响应内容区域 */
 .response-section {
   font-size: 14px;

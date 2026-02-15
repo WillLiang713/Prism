@@ -197,7 +197,7 @@
                           <span id="promptSelectorLabel">默认</span>
                         </button>
 
-                        <label class="toolbar-switch" title="开启联网搜索">
+                        <label class="toolbar-switch" title="允许模型按需联网">
                           <input type="checkbox" id="enableWebSearch" />
                           <span class="switch-track" aria-hidden="true"></span>
                           <span class="switch-text">联网</span>
@@ -326,14 +326,17 @@
               </div>
             </div>
             <div class="global-config">
-              <h3>联网搜索（Tavily）</h3>
+              <h3>联网工具（Tavily）</h3>
               <div class="form-group">
-                <label>Tavily API Key</label>
+                <label>Tavily API Key（可选）</label>
                 <input
                   type="password"
                   id="tavilyApiKey"
                   placeholder="tvly-..."
                 />
+                <small style="display: block; color: #666; margin-top: 4px">
+                  留空时将使用服务端环境变量 TAVILY_API_KEY
+                </small>
               </div>
               <div class="form-group">
                 <label>
@@ -348,7 +351,7 @@
                   />
                 </label>
                 <small style="display: block; color: #666; margin-top: 4px">
-                  每次搜索返回的结果数量（1-20条，默认5条）
+                  作为工具调用时的默认结果数量（1-20条，默认5条）
                 </small>
               </div>
             </div>
