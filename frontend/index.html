@@ -203,11 +203,22 @@
                           <span class="switch-text">联网</span>
                         </label>
 
-                        <label class="toolbar-switch" title="开启工具调用">
-                          <input type="checkbox" id="enableTools" />
-                          <span class="switch-track" aria-hidden="true"></span>
-                          <span class="switch-text">工具</span>
-                        </label>
+
+                        <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
+                          <span class="reasoning-effort-current">
+                            <span class="reasoning-effort-label">思考</span>
+                            <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
+                            <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 5 6 8 9 5"></polyline></svg>
+                          </span>
+                          <div class="reasoning-effort-dropdown" id="reasoningEffortDropdown">
+                            <button type="button" data-value="none" data-label="关">关</button>
+                            <button type="button" data-value="minimal" data-label="微">微</button>
+                            <button type="button" data-value="low" data-label="低">低</button>
+                            <button type="button" data-value="medium" data-label="中" class="active">中</button>
+                            <button type="button" data-value="high" data-label="高">高</button>
+                            <button type="button" data-value="xhigh" data-label="极高">极高</button>
+                          </div>
+                        </div>
                       </div>
 
                       <button
@@ -308,12 +319,6 @@
                     提示：这里填写模型 ID；填好 API
                     Key/地址后会自动获取可用模型列表（也可手动输入）。
                   </div>
-                </div>
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" id="thinking" />
-                    启用思考模式
-                  </label>
                 </div>
               </div>
             </div>
@@ -461,30 +466,6 @@
                 </div>
                 <small style="display: block; color: #666; margin-top: 4px">
                   可指定不同的模型ID用于生成标题（建议使用轻量快速的模型，不要用reasoner模型）；留空则使用上面选择的模型的ID。会根据选择的配置自动获取可用模型列表。
-                </small>
-              </div>
-            </div>
-            <div class="global-config">
-              <h3>初始问候语</h3>
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" id="enableGreeting" checked />
-                  启用初始问候语
-                </label>
-                <small style="display: block; color: #666; margin-top: 4px">
-                  启用后，新建话题时会自动显示一条问候消息
-                </small>
-              </div>
-              <div class="form-group">
-                <label>问候语内容</label>
-                <input
-                  type="text"
-                  id="greetingText"
-                  placeholder="你好，有什么需要帮助的？"
-                  value="你好，有什么需要帮助的？"
-                />
-                <small style="display: block; color: #666; margin-top: 4px">
-                  自定义新话题的第一句问候语
                 </small>
               </div>
             </div>

@@ -78,8 +78,6 @@ const elements = {
   modelDropdownBtnTitle: document.getElementById("modelDropdownBtnTitle"),
 
   // 初始问候语
-  enableGreeting: document.getElementById("enableGreeting"),
-  greetingText: document.getElementById("greetingText"),
 
   // 输入相关
   promptInput: document.getElementById("promptInput"),
@@ -87,7 +85,9 @@ const elements = {
   imageInput: document.getElementById("imageInput"),
   imageUploadBtn: document.getElementById("imageUploadBtn"),
   imagePreviewContainer: document.getElementById("imagePreviewContainer"),
-  enableTools: document.getElementById("enableTools"),
+  reasoningEffortSelector: document.getElementById("reasoningEffortSelector"),
+  reasoningEffortValue: document.getElementById("reasoningEffortValue"),
+  reasoningEffortDropdown: document.getElementById("reasoningEffortDropdown"),
   toolsList: document.getElementById("toolsList"),
   refreshToolsBtn: document.getElementById("refreshToolsBtn"),
 
@@ -103,7 +103,6 @@ const elements = {
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),
   apiUrl: document.getElementById("apiUrl"),
-  thinking: document.getElementById("thinking"),
   modelHint: document.getElementById("modelHint"),
   modelDropdown: document.getElementById("modelDropdown"),
   modelDropdownBtn: document.getElementById("modelDropdownBtn"),
@@ -792,34 +791,36 @@ function bindEvents() {
     }
   });
 
-  // 工具调用开关的label元素，阻止焦点转移
-  const toolsLabel = elements.enableTools?.parentElement;
-  if (toolsLabel) {
-    toolsLabel.addEventListener("mousedown", (e) => {
-      // 只阻止label本身的默认行为，不阻止checkbox的点击
-      if (
-        e.target === toolsLabel ||
-        e.target.classList.contains("switch-track") ||
-        e.target.classList.contains("switch-text") ||
-        e.target.tagName === "svg" ||
-        e.target.tagName === "path"
-      ) {
-        e.preventDefault();
-      }
-    });
-  }
 
-  elements.enableTools?.addEventListener("change", (e) => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.config);
-      const config = raw ? JSON.parse(raw) : {};
-      config.tools = config.tools || {};
-      config.tools.enabled = elements.enableTools
-        ? !!elements.enableTools.checked
-        : true;
-      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-    } catch (e) {
-      console.error("保存工具调用开关失败:", e);
+  // 思考强度下拉选择器
+  elements.reasoningEffortSelector?.addEventListener("click", (e) => {
+    // 点击选项
+    const btn = e.target.closest("button[data-value]");
+    if (btn) {
+      elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      elements.reasoningEffortValue.textContent = btn.dataset.label;
+      elements.reasoningEffortSelector.classList.remove("open");
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.config);
+        const config = raw ? JSON.parse(raw) : {};
+        config.reasoningEffort = btn.dataset.value;
+        localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+      } catch (e) {
+        console.error("保存思考强度失败:", e);
+      }
+      return;
+    }
+    // 点击触发器，切换展开
+    if (e.target.closest(".reasoning-effort-current")) {
+      elements.reasoningEffortSelector.classList.toggle("open");
+    }
+  });
+
+  // 点击外部关闭下拉
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".reasoning-effort-selector")) {
+      elements.reasoningEffortSelector?.classList.remove("open");
     }
   });
 
@@ -862,11 +863,11 @@ function bindEvents() {
     )
       return;
 
-    // 检查当前话题是否为空（只有问候语或无消息）
+  // 检查当前话题是否为空（无消息）
     const currentTopic = getActiveTopic();
     if (currentTopic) {
       const hasRealContent = currentTopic.turns.some(
-        (turn) => !turn.isGreeting && turn.prompt?.trim()
+        (turn) => turn.prompt?.trim()
       );
 
       if (!hasRealContent && currentTopic.turns.length <= 1) {
@@ -1416,7 +1417,7 @@ function saveConfig() {
       maxResults: parseInt(elements.tavilyMaxResults?.value) || 5,
     },
     tools: {
-      enabled: elements.enableTools ? !!elements.enableTools.checked : true,
+      enabled: true,
     },
     history: {
       enableHistory: !!elements.enableHistory?.checked,
@@ -1426,16 +1427,11 @@ function saveConfig() {
       enabled: !!elements.enableAutoTitle?.checked,
       model: elements.titleGenerationModel?.value || "",
     },
-    greeting: {
-      enabled: !!elements.enableGreeting?.checked,
-      text: elements.greetingText?.value || "你好，有什么需要帮助的？",
-    },
     model: {
       provider: elements.provider.value,
       apiKey: elements.apiKey.value,
       model: elements.model.value,
       apiUrl: elements.apiUrl.value,
-      thinking: elements.thinking.checked,
     },
   };
 
@@ -1460,10 +1456,15 @@ function loadConfig() {
       if (elements.tavilyMaxResults)
         elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
     }
-    // 加载工具调用配置 - 总是设置状态，默认关闭
-    if (elements.enableTools) {
-      const toolsEnabled = config.tools?.enabled === true;
-      elements.enableTools.checked = toolsEnabled;
+    // 加载思考强度配置
+    if (config.reasoningEffort && elements.reasoningEffortDropdown) {
+      elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => {
+        b.classList.toggle("active", b.dataset.value === config.reasoningEffort);
+      });
+      const activeBtn = elements.reasoningEffortDropdown.querySelector("button.active");
+      if (activeBtn && elements.reasoningEffortValue) {
+        elements.reasoningEffortValue.textContent = activeBtn.dataset.label;
+      }
     }
     // 加载对话历史配置（兼容旧的 timeContext 配置）
     const historyConfig = config.history || config.timeContext;
@@ -1480,14 +1481,6 @@ function loadConfig() {
       if (elements.titleGenerationModel)
         elements.titleGenerationModel.value = config.autoTitle.model || "";
     }
-    // 加载初始问候语配置
-    if (config.greeting) {
-      if (elements.enableGreeting)
-        elements.enableGreeting.checked = config.greeting.enabled !== false;
-      if (elements.greetingText)
-        elements.greetingText.value =
-          config.greeting.text || "你好，有什么需要帮助的？";
-    }
     // 加载模型配置（兼容旧格式 config.A）
     const modelConfig = config.model || config.A;
     if (modelConfig) {
@@ -1495,7 +1488,6 @@ function loadConfig() {
       elements.apiKey.value = modelConfig.apiKey || "";
       elements.model.value = modelConfig.model || "";
       elements.apiUrl.value = modelConfig.apiUrl || "";
-      elements.thinking.checked = !!modelConfig.thinking;
     }
   } catch (e) {
     console.error("加载配置失败:", e);
@@ -1507,7 +1499,6 @@ function clearConfig() {
   localStorage.removeItem(STORAGE_KEYS.config);
 
   if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
-  if (elements.enableTools) elements.enableTools.checked = false;
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.enableHistory) elements.enableHistory.checked = true;
@@ -1517,7 +1508,6 @@ function clearConfig() {
   elements.apiKey.value = "";
   elements.model.value = "";
   elements.apiUrl.value = "";
-  elements.thinking.checked = false;
 
   saveConfig();
   updateProviderUi();
@@ -1592,7 +1582,7 @@ function getConfig(side) {
       model: customModel || elements.model?.value || "",
       apiUrl: elements.apiUrl?.value || "",
       systemPrompt: "", // 标题生成不需要系统提示词
-      thinking: false,
+      reasoningEffort: "none",
     };
   }
 
@@ -1602,7 +1592,7 @@ function getConfig(side) {
     model: elements.model?.value || "",
     apiUrl: elements.apiUrl?.value || "",
     systemPrompt: systemPrompt,
-    thinking: elements.thinking?.checked || false,
+    reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "medium",
   };
 }
 
@@ -1703,8 +1693,7 @@ function createTopic(forceCreate = false) {
     const emptyNewTopic = state.chat.topics.find(
       (t) =>
         t.title === "新话题" &&
-        t.turns.length <= 1 && // 只有问候语或无消息
-        t.turns.every((turn) => turn.isGreeting || !turn.prompt?.trim())
+        t.turns.length === 0
     );
 
     if (emptyNewTopic) {
@@ -1721,42 +1710,6 @@ function createTopic(forceCreate = false) {
     updatedAt: now,
     turns: [],
   };
-
-  // 检查是否启用初始问候语
-  let greetingEnabled = elements.enableGreeting
-    ? elements.enableGreeting.checked
-    : true;
-  let greetingText = elements.greetingText
-    ? elements.greetingText.value
-    : "你好，有什么需要帮助的？";
-
-  const saved = localStorage.getItem(STORAGE_KEYS.config);
-  if (saved) {
-    try {
-      const config = JSON.parse(saved);
-      if (config.greeting) {
-        greetingEnabled = config.greeting.enabled !== false;
-        greetingText = config.greeting.text || greetingText;
-      }
-    } catch (e) {
-      console.error("加载问候语配置失败:", e);
-    }
-  }
-
-  // 如果启用问候语，创建问候消息
-  if (greetingEnabled) {
-    const greetingTurn = {
-      id: createId(),
-      createdAt: now,
-      prompt: "",
-      images: [],
-      webSearch: null,
-      isGreeting: true, // 标记为问候消息
-      greetingText: greetingText,
-      models: {},
-    };
-    topic.turns.push(greetingTurn);
-  }
 
   state.chat.topics.unshift(topic);
   scheduleSaveChat();
@@ -1928,23 +1881,6 @@ function createTurnElement(turn) {
   const turnEl = document.createElement("div");
   turnEl.className = "turn";
   turnEl.dataset.turnId = turn.id;
-
-  // 如果是问候消息，使用特殊的渲染方式
-  if (turn.isGreeting) {
-    turnEl.classList.add("greeting-turn");
-    const greetingWrap = document.createElement("div");
-    greetingWrap.className = "greeting-wrap";
-
-    const greetingBubble = document.createElement("div");
-    greetingBubble.className = "greeting-bubble";
-    greetingBubble.textContent =
-      turn.greetingText || "你好，有什么需要帮助的？";
-
-    greetingWrap.appendChild(greetingBubble);
-    turnEl.appendChild(greetingWrap);
-
-    return { el: turnEl, cards: {}, webSearchEl: null };
-  }
 
   const userWrap = document.createElement("div");
   userWrap.className = "user-bubble-wrap";
@@ -2252,7 +2188,7 @@ async function sendPrompt() {
     // 检查是否有空话题可以复用
     const emptyTopic = state.chat.topics.find(
       (t) =>
-        t.turns.length === 0 || (t.turns.length === 1 && t.turns[0].isGreeting)
+        t.turns.length === 0
     );
 
     if (emptyTopic) {
@@ -2448,11 +2384,11 @@ async function callModel(prompt, config, turn, ui, startTime) {
       prompt: prompt,
       images: images,
       systemPrompt: config.systemPrompt || null,
-      thinking: config.thinking || false,
+      reasoningEffort: config.reasoningEffort,
       enableHistory: isHistoryEnabled(),
       maxHistoryTurns: getMaxHistoryTurns(),
       historyTurns: historyTurns,
-      enableTools: elements.enableTools?.checked || false,
+      enableTools: true,
       maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
       selectedTools: getSelectedTools(),
     };
@@ -3343,7 +3279,7 @@ async function generateTopicTitle(topicId, config) {
 
   // 构建对话历史（最多取前6轮）
   const messages = [];
-  const turns = topic.turns.filter((t) => !t.isGreeting).slice(0, 3); // 取前3轮对话
+  const turns = topic.turns.slice(0, 3); // 取前3轮对话
 
   for (const turn of turns) {
     if (turn.prompt) {
@@ -3419,7 +3355,7 @@ async function autoGenerateTitle() {
   // 只在标题为"新话题"且有实际对话时才自动生成
   if (!topic.title.startsWith("新话题")) return;
 
-  const realTurns = topic.turns.filter((t) => !t.isGreeting && t.prompt);
+  const realTurns = topic.turns.filter((t) => t.prompt);
   if (realTurns.length < 1) return;
 
   // 直接从 Title 配置获取（从主模型配置继承）

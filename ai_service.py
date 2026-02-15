@@ -9,6 +9,7 @@ AI服务模块
 """
 
 from typing import Any, AsyncIterator, Literal
+from datetime import datetime
 from pydantic import BaseModel, Field
 import httpx
 import json
@@ -46,7 +47,7 @@ class ChatRequest(BaseModel):
     systemPrompt: str | None = None
 
     # 功能开关
-    thinking: bool = False
+    reasoningEffort: str = "none"
     enableHistory: bool = True
     maxHistoryTurns: int = Field(default=10, ge=1, le=50)
     enableTools: bool = False  # 是否启用工具调用
@@ -249,13 +250,18 @@ class MessageBuilder:
             "max_tokens": 4096
         }
 
-        # 系统提示词
-        if config.systemPrompt and config.systemPrompt.strip():
-            body["system"] = config.systemPrompt.strip()
+        # 系统提示词（注入当前时间）
+        time_info = f"当前时间：{datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}"
+        system_text = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
+        body["system"] = f"{time_info}\n\n{system_text}" if system_text else time_info
 
         # 思考模式
-        if config.thinking:
-            body["thinking"] = {"type": "enabled", "budget_tokens": 2000}
+        if config.reasoningEffort and config.reasoningEffort != "none":
+            budget_map = {"minimal": 512, "low": 1024, "medium": 2048, "high": 4096, "xhigh": 8192}
+            body["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": budget_map.get(config.reasoningEffort, 2048)
+            }
 
         return body
 
@@ -268,9 +274,11 @@ class MessageBuilder:
         """构建OpenAI格式请求体"""
         messages = []
 
-        # 系统提示词
-        if config.systemPrompt and config.systemPrompt.strip():
-            messages.append({"role": "system", "content": config.systemPrompt.strip()})
+        # 系统提示词（注入当前时间）
+        time_info = f"当前时间：{datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}"
+        system_text = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
+        system_content = f"{time_info}\n\n{system_text}" if system_text else time_info
+        messages.append({"role": "system", "content": system_content})
 
         # 历史消息
         messages.extend(history_messages)
@@ -307,15 +315,9 @@ class MessageBuilder:
             except Exception:
                 pass
 
-        # 思考模式(针对特定模型)
-        if config.thinking:
-            model_lower = config.model.lower()
-            if "o1" in model_lower:
-                body["reasoning_effort"] = "high"
-            elif "qwen" in model_lower:
-                body["enable_thinking"] = True
-            elif "deepseek" in model_lower:
-                body["thinking"] = {"type": "enabled"}
+        # 思考模式
+        if config.reasoningEffort and config.reasoningEffort != "none":
+            body["reasoning_effort"] = config.reasoningEffort
 
         return body
 
@@ -353,13 +355,9 @@ class StreamParser:
         if choices and len(choices) > 0:
             delta = choices[0].get("delta", {})
 
-            # 思考内容(不同模型字段不同)
+            # 思考内容
             if "reasoning_content" in delta:
                 result["thinking"] = delta["reasoning_content"]
-            elif "thinking" in delta:
-                result["thinking"] = delta["thinking"]
-            elif "reasoning" in delta:
-                result["reasoning"] = delta["reasoning"]
 
             # 正常内容
             if "content" in delta:
