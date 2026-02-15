@@ -46,6 +46,9 @@ const state = {
     activeId: null,
     saveTimer: null,
   },
+  dialog: {
+    resolver: null,
+  },
   autoScroll: true, // 是否自动跟随滚动
   isWideMode: false,
   isSidebarCollapsed: false,
@@ -136,6 +139,7 @@ const elements = {
   promptConfirmModal: document.getElementById("promptConfirmModal"),
   promptConfirmTitle: document.getElementById("promptConfirmTitle"),
   promptConfirmMessage: document.getElementById("promptConfirmMessage"),
+  promptConfirmHint: document.getElementById("promptConfirmHint"),
   promptConfirmCancelBtn: document.getElementById("promptConfirmCancelBtn"),
   promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
 };
@@ -258,6 +262,100 @@ function startHeaderClock() {
   updateHeaderMeta();
   if (headerClockTimer) clearInterval(headerClockTimer);
   headerClockTimer = setInterval(updateHeaderMeta, 60 * 1000);
+}
+
+function hasOpenModal() {
+  return !!document.querySelector(".modal-overlay.open");
+}
+
+function syncBodyScrollLock() {
+  document.body.style.overflow = hasOpenModal() ? "hidden" : "";
+}
+
+function isPromptConfirmDialogOpen() {
+  return !!elements.promptConfirmModal?.classList.contains("open");
+}
+
+function resolvePromptConfirmDialog(confirmed) {
+  if (!elements.promptConfirmModal || !state.dialog.resolver) return;
+
+  const resolver = state.dialog.resolver;
+  state.dialog.resolver = null;
+
+  elements.promptConfirmModal.classList.remove("open");
+  elements.promptConfirmModal.setAttribute("aria-hidden", "true");
+  syncBodyScrollLock();
+  resolver(!!confirmed);
+}
+
+function openPromptConfirmDialog(options = {}) {
+  if (!elements.promptConfirmModal) {
+    return Promise.resolve(false);
+  }
+
+  if (state.dialog.resolver) {
+    resolvePromptConfirmDialog(false);
+  }
+
+  const {
+    title = "提示",
+    message = "",
+    okText = "确定",
+    cancelText = "取消",
+    showCancel = true,
+    danger = false,
+    hint = "",
+  } = options;
+
+  if (elements.promptConfirmTitle) {
+    elements.promptConfirmTitle.textContent = title;
+  }
+  if (elements.promptConfirmMessage) {
+    elements.promptConfirmMessage.textContent = message;
+  }
+  if (elements.promptConfirmOkBtn) {
+    elements.promptConfirmOkBtn.textContent = okText;
+    elements.promptConfirmOkBtn.classList.toggle("btn-danger", !!danger);
+  }
+  if (elements.promptConfirmCancelBtn) {
+    elements.promptConfirmCancelBtn.textContent = cancelText;
+    elements.promptConfirmCancelBtn.hidden = !showCancel;
+  }
+  if (elements.promptConfirmHint) {
+    const nextHint = (hint || "").trim();
+    elements.promptConfirmHint.textContent = nextHint;
+    elements.promptConfirmHint.hidden = !nextHint;
+  }
+
+  elements.promptConfirmModal.classList.add("open");
+  elements.promptConfirmModal.setAttribute("aria-hidden", "false");
+  syncBodyScrollLock();
+
+  window.setTimeout(() => {
+    elements.promptConfirmOkBtn?.focus();
+  }, 0);
+
+  return new Promise((resolve) => {
+    state.dialog.resolver = resolve;
+  });
+}
+
+async function showConfirm(message, options = {}) {
+  const confirmed = await openPromptConfirmDialog({
+    ...options,
+    message,
+    showCancel: true,
+  });
+  return !!confirmed;
+}
+
+async function showAlert(message, options = {}) {
+  await openPromptConfirmDialog({
+    ...options,
+    message,
+    showCancel: false,
+    okText: options.okText || "知道了",
+  });
 }
 
 function estimateTokensFromText(text) {
@@ -562,7 +660,9 @@ async function addImages(files) {
       state.images.selectedImages.push(image);
     } catch (e) {
       console.error("添加图片失败:", e);
-      alert(`添加图片失败: ${e.message}`);
+      await showAlert(`添加图片失败：${e.message}`, {
+        title: "图片处理失败",
+      });
     }
   }
 
@@ -903,7 +1003,13 @@ function bindEvents() {
     if (e.target === elements.configModal) closeConfigModal();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeConfigModal();
+    if (e.key !== "Escape") return;
+    if (isPromptConfirmDialogOpen()) {
+      e.preventDefault();
+      resolvePromptConfirmDialog(false);
+      return;
+    }
+    closeConfigModal();
   });
 
   elements.sendBtn.addEventListener("click", onSendButtonClick);
@@ -1059,7 +1165,7 @@ function openConfigModal() {
   if (!elements.configModal) return;
   elements.configModal.classList.add("open");
   elements.configModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
   updateModelHint();
   scheduleFetchModels("main", 0);
 }
@@ -1068,7 +1174,7 @@ function closeConfigModal() {
   if (!elements.configModal) return;
   elements.configModal.classList.remove("open");
   elements.configModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  syncBodyScrollLock();
   closeModelDropdown("main");
 }
 
@@ -1495,7 +1601,7 @@ async function fetchAndUpdateModels(side) {
   }
 }
 
-function saveConfig() {
+async function saveConfig() {
   const config = {
     webSearch: {
       enabled: !!elements.enableWebSearch?.checked,
@@ -1522,7 +1628,9 @@ function saveConfig() {
   };
 
   localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-  alert("配置已保存");
+  await showAlert("配置已保存", {
+    title: "保存成功",
+  });
   closeConfigModal();
 }
 
@@ -1580,8 +1688,15 @@ function loadConfig() {
   }
 }
 
-function clearConfig() {
-  if (!confirm("确定要清除所有配置吗？")) return;
+async function clearConfig() {
+  const confirmed = await showConfirm("确定要清除所有配置吗？", {
+    title: "清除配置",
+    okText: "清除",
+    danger: true,
+    hint: "此操作会重置当前页面所有本地配置",
+  });
+  if (!confirmed) return;
+
   localStorage.removeItem(STORAGE_KEYS.config);
 
   if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
@@ -1595,10 +1710,12 @@ function clearConfig() {
   elements.model.value = "";
   elements.apiUrl.value = "";
 
-  saveConfig();
   updateProviderUi();
   updateModelNames();
-  alert("配置已清除");
+  await showAlert("配置已清除", {
+    title: "操作完成",
+  });
+  closeConfigModal();
 }
 
 // ========== 布局处理函数 ==========
@@ -1893,21 +2010,32 @@ function renderTopicList() {
         "aria-label",
         `删除话题：${topic.title || "未命名话题"}`
       );
-      deleteBtn.addEventListener("click", (e) => {
+      deleteBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (
-          isTopicRunning(topic.id) &&
-          !confirm("该话题正在生成中，删除前会先停止生成，是否继续？")
-        )
-          return;
-        if (
-          !confirm(
-            `确定要删除话题「${topic.title || "未命名话题"}」吗？此操作不可恢复。`
-          )
-        )
-          return;
+        if (isTopicRunning(topic.id)) {
+          const stopThenDelete = await showConfirm(
+            "该话题正在生成中，删除前会先停止生成，是否继续？",
+            {
+              title: "删除话题",
+              okText: "继续",
+            }
+          );
+          if (!stopThenDelete) return;
+        }
+
+        const confirmed = await showConfirm(
+          `确定要删除话题「${topic.title || "未命名话题"}」吗？`,
+          {
+            title: "删除话题",
+            okText: "删除",
+            danger: true,
+            hint: "删除后不可恢复",
+          }
+        );
+        if (!confirmed) return;
+
         deleteTopic(topic.id);
         renderAll();
       });
@@ -1920,16 +2048,6 @@ function renderTopicList() {
     item.addEventListener("click", () => {
       setActiveTopic(topic.id);
       renderAll();
-    });
-
-    item.addEventListener("dblclick", (e) => {
-      e.preventDefault();
-      const next = prompt("重命名话题", topic.title || "");
-      if (next === null) return;
-      topic.title = (next || "").trim() || topic.title || "未命名话题";
-      topic.updatedAt = Date.now();
-      scheduleSaveChat();
-      renderTopicList();
     });
 
     elements.topicList.appendChild(item);
@@ -2305,7 +2423,9 @@ async function sendPrompt() {
     state.images.selectedImages && state.images.selectedImages.length > 0;
 
   if (!prompt && !hasImages) {
-    alert("请输入内容或上传图片");
+    await showAlert("请输入内容或上传图片", {
+      title: "无法发送",
+    });
     return;
   }
 
@@ -2313,7 +2433,9 @@ async function sendPrompt() {
   const webSearchConfig = getWebSearchConfig();
 
   if (!config.apiKey || !config.model) {
-    alert("请先配置模型");
+    await showAlert("请先配置模型", {
+      title: "缺少配置",
+    });
     return;
   }
 
@@ -2409,15 +2531,26 @@ function stopGeneration(topicId = state.chat.activeTopicId) {
   return true;
 }
 
-function clearActiveTopicMessages() {
+async function clearActiveTopicMessages() {
   const topic = getActiveTopic();
   if (!topic) return;
-  if (
-    isTopicRunning(topic.id) &&
-    !confirm("当前话题正在生成中，仍要清空并停止生成吗？")
-  )
-    return;
-  if (!confirm("确定要清空当前话题的所有消息吗？")) return;
+  if (isTopicRunning(topic.id)) {
+    const stopThenClear = await showConfirm(
+      "当前话题正在生成中，仍要清空并停止生成吗？",
+      {
+        title: "清空会话",
+        okText: "继续",
+      }
+    );
+    if (!stopThenClear) return;
+  }
+  const confirmed = await showConfirm("确定要清空当前话题的所有消息吗？", {
+    title: "清空会话",
+    okText: "清空",
+    danger: true,
+    hint: "清空后不可恢复",
+  });
+  if (!confirmed) return;
   if (isTopicRunning(topic.id)) stopGeneration(topic.id);
 
   topic.turns = [];
@@ -2935,7 +3068,7 @@ function openPromptModal() {
   if (!elements.promptModal) return;
   elements.promptModal.classList.add("open");
   elements.promptModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
   renderPromptList();
 }
 
@@ -2944,7 +3077,7 @@ function closePromptModal() {
   if (!elements.promptModal) return;
   elements.promptModal.classList.remove("open");
   elements.promptModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  syncBodyScrollLock();
 }
 
 // 打开提示词选择弹窗
@@ -2952,7 +3085,7 @@ function openPromptSelectorModal() {
   if (!elements.promptSelectorModal) return;
   elements.promptSelectorModal.classList.add("open");
   elements.promptSelectorModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
   renderPromptSelectorList();
 }
 
@@ -2961,7 +3094,7 @@ function closePromptSelectorModal() {
   if (!elements.promptSelectorModal) return;
   elements.promptSelectorModal.classList.remove("open");
   elements.promptSelectorModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  syncBodyScrollLock();
 }
 
 // 渲染提示词选择列表
@@ -3114,16 +3247,20 @@ function bindPromptEvents() {
   // 删除确认弹窗关闭
   elements.promptConfirmCancelBtn?.addEventListener(
     "click",
-    closePromptConfirm
+    () => resolvePromptConfirmDialog(false)
   );
 
   // 点击遮罩关闭删除确认
   elements.promptConfirmModal?.addEventListener("click", (e) => {
-    if (e.target === elements.promptConfirmModal) closePromptConfirm();
+    if (e.target === elements.promptConfirmModal) {
+      resolvePromptConfirmDialog(false);
+    }
   });
 
-  // 确认删除
-  elements.promptConfirmOkBtn?.addEventListener("click", confirmPromptDelete);
+  // 确认
+  elements.promptConfirmOkBtn?.addEventListener("click", () =>
+    resolvePromptConfirmDialog(true)
+  );
 
   // 保存编辑
   elements.savePromptEditBtn?.addEventListener("click", savePromptEdit);
@@ -3144,14 +3281,16 @@ function bindPromptEvents() {
 
     const reader = new FileReader();
 
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         // 解析JSON
         const data = JSON.parse(event.target.result);
 
         // 验证格式
         if (!data.version || !Array.isArray(data.prompts)) {
-          alert("无效的提示词文件格式");
+          await showAlert("无效的提示词文件格式", {
+            title: "导入失败",
+          });
           return;
         }
 
@@ -3178,15 +3317,21 @@ function bindPromptEvents() {
         renderPromptList();
         renderPromptSelector();
 
-        alert(`成功导入 ${importCount} 个提示词`);
+        await showAlert(`成功导入 ${importCount} 个提示词`, {
+          title: "导入完成",
+        });
       } catch (err) {
         console.error("导入失败:", err);
-        alert("导入失败：文件格式错误或内容无效");
+        await showAlert("导入失败：文件格式错误或内容无效", {
+          title: "导入失败",
+        });
       }
     };
 
-    reader.onerror = () => {
-      alert("读取文件失败");
+    reader.onerror = async () => {
+      await showAlert("读取文件失败", {
+        title: "导入失败",
+      });
     };
 
     reader.readAsText(file);
@@ -3217,7 +3362,7 @@ function openPromptPreview(prompt) {
   // 显示模态框
   elements.promptPreviewModal.classList.add("open");
   elements.promptPreviewModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
 }
 
 // 关闭提示词预览
@@ -3225,12 +3370,11 @@ function closePromptPreview() {
   if (!elements.promptPreviewModal) return;
   elements.promptPreviewModal.classList.remove("open");
   elements.promptPreviewModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  syncBodyScrollLock();
 }
 
 // 当前编辑的提示词ID
 let editingPromptId = null;
-let pendingDeletePromptId = null;
 
 // 打开提示词编辑弹框
 function openPromptEdit(promptId) {
@@ -3255,7 +3399,7 @@ function openPromptEdit(promptId) {
   // 显示模态框
   elements.promptEditModal.classList.add("open");
   elements.promptEditModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
 
   // 聚焦到名称输入框
   setTimeout(() => {
@@ -3277,7 +3421,7 @@ function openPromptCreate() {
 
   elements.promptEditModal.classList.add("open");
   elements.promptEditModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
 
   setTimeout(() => {
     if (elements.promptEditName) elements.promptEditName.focus();
@@ -3289,18 +3433,20 @@ function closePromptEdit() {
   if (!elements.promptEditModal) return;
   elements.promptEditModal.classList.remove("open");
   elements.promptEditModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  syncBodyScrollLock();
   editingPromptId = null;
 }
 
 // 保存编辑
-function savePromptEdit() {
+async function savePromptEdit() {
   const newName = elements.promptEditName?.value.trim();
   const newDescription = elements.promptEditDescription?.value.trim();
   const newContent = elements.promptEditContent?.value.trim();
 
   if (!newName) {
-    alert("请输入提示词名称");
+    await showAlert("请输入提示词名称", {
+      title: "缺少名称",
+    });
     return;
   }
 
@@ -3319,34 +3465,17 @@ function savePromptEdit() {
   closePromptEdit();
 }
 
-function openPromptConfirm(prompt) {
-  if (!elements.promptConfirmModal) return;
-  pendingDeletePromptId = prompt.id;
-  if (elements.promptConfirmTitle) {
-    elements.promptConfirmTitle.textContent = "删除提示词";
-  }
-  if (elements.promptConfirmMessage) {
-    elements.promptConfirmMessage.textContent = `确定删除「${prompt.name}」吗？`;
-  }
-  elements.promptConfirmModal.classList.add("open");
-  elements.promptConfirmModal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-}
-
-function closePromptConfirm() {
-  if (!elements.promptConfirmModal) return;
-  elements.promptConfirmModal.classList.remove("open");
-  elements.promptConfirmModal.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
-  pendingDeletePromptId = null;
-}
-
-function confirmPromptDelete() {
-  if (!pendingDeletePromptId) return;
-  deletePrompt(pendingDeletePromptId);
+async function openPromptConfirm(prompt) {
+  const confirmed = await showConfirm(`确定删除「${prompt.name}」吗？`, {
+    title: "删除提示词",
+    okText: "删除",
+    danger: true,
+    hint: "删除后不可恢复",
+  });
+  if (!confirmed) return;
+  deletePrompt(prompt.id);
   renderPromptList();
   renderPromptSelector();
-  closePromptConfirm();
 }
 // ========== 话题标题自动生成功能 ==========
 
