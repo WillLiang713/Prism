@@ -75,6 +75,16 @@ class ProviderConfig:
     }
 
     @staticmethod
+    def normalize_api_url(api_url: str | None) -> str:
+        """兼容仅填写域名的地址，默认补全 https://"""
+        url = (api_url or "").strip()
+        if not url:
+            return ""
+        if "://" not in url:
+            url = f"https://{url}"
+        return url
+
+    @staticmethod
     def get_provider_mode(provider: str) -> str:
         """判断提供商模式"""
         provider = provider.strip().lower()
@@ -83,7 +93,7 @@ class ProviderConfig:
     @staticmethod
     def get_api_url(provider: str, api_url: str | None, provider_mode: str) -> str:
         """获取API地址，自动拼接v1路径"""
-        url = (api_url or "").strip()
+        url = ProviderConfig.normalize_api_url(api_url)
 
         if not url:
             if provider == "custom":
@@ -300,14 +310,14 @@ class MessageBuilder:
                 with open("tools.json", "r", encoding="utf-8") as f:
                     all_tools = json.load(f)
                     
-                    # 如果提供了 selectedTools 参数（即使是空列表），按选择加载
-                    if config.selectedTools is not None:
+                    # selectedTools 有值时按选择加载；为空时默认加载全部
+                    if config.selectedTools:
                         tools = [
                             tool for tool in all_tools
                             if tool.get("function", {}).get("name") in config.selectedTools
                         ]
                     else:
-                        # 如果没有提供 selectedTools 参数，加载所有工具（向后兼容）
+                        # 向后兼容：未传或为空时加载全部工具
                         tools = all_tools
                     
                     if tools:

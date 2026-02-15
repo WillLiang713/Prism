@@ -88,8 +88,6 @@ const elements = {
   reasoningEffortSelector: document.getElementById("reasoningEffortSelector"),
   reasoningEffortValue: document.getElementById("reasoningEffortValue"),
   reasoningEffortDropdown: document.getElementById("reasoningEffortDropdown"),
-  toolsList: document.getElementById("toolsList"),
-  refreshToolsBtn: document.getElementById("refreshToolsBtn"),
 
   // 话题
   newTopicBtn: document.getElementById("newTopicBtn"),
@@ -157,7 +155,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initLayout(); // 初始化布局
   renderAll();
   startHeaderClock();
-  loadTools(); // 加载工具列表
 
   // 初始化时触发标题模型获取
   scheduleFetchModels("Title", 500);
@@ -759,9 +756,6 @@ function bindEvents() {
   elements.saveConfig.addEventListener("click", saveConfig);
   elements.clearConfig.addEventListener("click", clearConfig);
 
-  // 刷新工具列表按钮
-  elements.refreshToolsBtn?.addEventListener("click", loadTools);
-
   // 联网搜索开关的label元素，阻止焦点转移
   const webSearchLabel = elements.enableWebSearch?.parentElement;
   if (webSearchLabel) {
@@ -1296,15 +1290,36 @@ function normalizeBaseUrlForModels(config) {
       ? "https://api.anthropic.com/v1"
       : "https://api.openai.com/v1";
   }
+  if (!url.includes("://")) {
+    url = `https://${url}`;
+  }
 
   try {
     const u = new URL(url);
-    const path = u.pathname || "";
-    const v1Index = path.indexOf("/v1");
+    const path = (u.pathname || "").replace(/\/+$/, "");
+    const pathLower = path.toLowerCase();
+    const v1Index = pathLower.indexOf("/v1");
+    let basePath = "";
+
     if (v1Index >= 0) {
-      return `${u.origin}${path.slice(0, v1Index + 3)}`;
+      basePath = path.slice(0, v1Index + 3);
+    } else if (pathLower.endsWith("/chat/completions")) {
+      basePath = path.slice(0, -"/chat/completions".length);
+    } else if (pathLower.endsWith("/messages")) {
+      basePath = path.slice(0, -"/messages".length);
+    } else if (pathLower.endsWith("/models")) {
+      basePath = path.slice(0, -"/models".length);
+    } else {
+      basePath = path;
     }
-    return u.origin;
+
+    if (!basePath) {
+      basePath = "/v1";
+    } else if (!basePath.toLowerCase().endsWith("/v1")) {
+      basePath = `${basePath}/v1`;
+    }
+
+    return `${u.origin}${basePath}`;
   } catch {
     return "";
   }
@@ -1635,9 +1650,9 @@ function initChat() {
           if (Array.isArray(topic.turns)) {
             for (const turn of topic.turns) {
               if (turn.models?.A && !turn.models.main) {
-                turn.models.main = turn.models.main;
-                delete turn.models.main;
+                turn.models.main = turn.models.A;
               }
+              delete turn.models.A;
               delete turn.models.B;
             }
           }
@@ -1882,49 +1897,59 @@ function createTurnElement(turn) {
   turnEl.className = "turn";
   turnEl.dataset.turnId = turn.id;
 
-  const userWrap = document.createElement("div");
-  userWrap.className = "user-bubble-wrap";
+  const hasUserImages = Array.isArray(turn.images) && turn.images.length > 0;
+  const hasUserText =
+    typeof turn.prompt === "string" && turn.prompt.trim().length > 0;
+  const hasUserContent = hasUserImages || hasUserText;
+  let userWrap = null;
 
-  const userBubble = document.createElement("div");
-  userBubble.className = "user-bubble";
+  if (hasUserContent) {
+    userWrap = document.createElement("div");
+    userWrap.className = "user-bubble-wrap";
 
-  // 如果有图片，先显示图片
-  if (turn.images && turn.images.length > 0) {
-    const imagesContainer = document.createElement("div");
-    imagesContainer.className = "user-images";
+    const userBubble = document.createElement("div");
+    userBubble.className = "user-bubble";
 
-    for (const image of turn.images) {
-      const imgWrapper = document.createElement("div");
-      imgWrapper.className = "user-image-item";
+    // 如果有图片，先显示图片
+    if (hasUserImages) {
+      const imagesContainer = document.createElement("div");
+      imagesContainer.className = "user-images";
 
-      const img = document.createElement("img");
-      img.src = image.dataUrl;
-      img.alt = image.name || "用户上传的图片";
-      img.loading = "lazy";
+      for (const image of turn.images) {
+        const imgWrapper = document.createElement("div");
+        imgWrapper.className = "user-image-item";
 
-      imgWrapper.appendChild(img);
-      imagesContainer.appendChild(imgWrapper);
+        const img = document.createElement("img");
+        img.src = image.dataUrl;
+        img.alt = image.name || "用户上传的图片";
+        img.loading = "lazy";
+
+        imgWrapper.appendChild(img);
+        imagesContainer.appendChild(imgWrapper);
+      }
+
+      userBubble.appendChild(imagesContainer);
     }
 
-    userBubble.appendChild(imagesContainer);
+    // 显示文本消息
+    if (hasUserText) {
+      const textContent = document.createElement("div");
+      textContent.className = "user-text";
+      textContent.textContent = turn.prompt;
+      userBubble.appendChild(textContent);
+    }
+
+    if (hasUserText) {
+      const userCopyBtn = createCopyButton(() => turn.prompt || "", {
+        label: "复制",
+        icon: true,
+      });
+      userCopyBtn.classList.add("user-copy-btn");
+      userWrap.appendChild(userCopyBtn);
+    }
+
+    userWrap.appendChild(userBubble);
   }
-
-  // 显示文本消息
-  if (turn.prompt) {
-    const textContent = document.createElement("div");
-    textContent.className = "user-text";
-    textContent.textContent = turn.prompt;
-    userBubble.appendChild(textContent);
-  }
-
-  const userCopyBtn = createCopyButton(() => turn.prompt || "", {
-    label: "复制",
-    icon: true,
-  });
-  userCopyBtn.classList.add("user-copy-btn");
-
-  userWrap.appendChild(userCopyBtn);
-  userWrap.appendChild(userBubble);
 
   let webSearchEl = null;
   if (turn.webSearch) {
@@ -1944,7 +1969,7 @@ function createTurnElement(turn) {
     cards.main = aCard;
   }
 
-  turnEl.appendChild(userWrap);
+  if (userWrap) turnEl.appendChild(userWrap);
   if (webSearchEl) turnEl.appendChild(webSearchEl);
   turnEl.appendChild(assistants);
 
@@ -2390,7 +2415,6 @@ async function callModel(prompt, config, turn, ui, startTime) {
       historyTurns: historyTurns,
       enableTools: true,
       maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
-      selectedTools: getSelectedTools(),
     };
 
     // 调用后端接口
@@ -3159,101 +3183,6 @@ function confirmPromptDelete() {
   renderPromptSelector();
   closePromptConfirm();
 }
-// ========== 工具管理功能 ==========
-
-// 全局变量存储工具状态
-let availableTools = [];
-let selectedToolNames = [];
-
-// 加载工具列表
-async function loadTools() {
-  try {
-    const response = await fetch("/api/tools");
-    const data = await response.json();
-    availableTools = data.tools || [];
-
-    // 从 localStorage 加载已选中的工具
-    const saved = localStorage.getItem("selectedTools");
-    if (saved) {
-      selectedToolNames = JSON.parse(saved);
-    } else {
-      // 默认全部选中
-      selectedToolNames = availableTools.map((t) => t.function.name);
-    }
-
-    renderToolsList();
-  } catch (error) {
-    console.error("加载工具列表失败:", error);
-    if (elements.toolsList) {
-      elements.toolsList.innerHTML =
-        '<div class="tools-empty error">加载失败</div>';
-    }
-  }
-}
-
-// 渲染工具列表
-function renderToolsList() {
-  if (!elements.toolsList) return;
-
-  if (availableTools.length === 0) {
-    elements.toolsList.innerHTML =
-      '<div class="tools-empty">暂无可用工具</div>';
-    return;
-  }
-
-  const html = availableTools
-    .map((tool) => {
-      const name = tool.function.name;
-      const description = tool.function.description || "无描述";
-      const isChecked = selectedToolNames.includes(name);
-
-      return `
-            <label class="tool-item">
-                <input type="checkbox" 
-                       class="tool-checkbox"
-                       data-tool-name="${name}" 
-                       ${isChecked ? "checked" : ""}>
-                <div class="tool-content">
-                    <div class="tool-name">${name}</div>
-                    <div class="tool-desc">${description}</div>
-                </div>
-            </label>
-        `;
-    })
-    .join("");
-
-  elements.toolsList.innerHTML = html;
-
-  // 绑定复选框事件
-  const checkboxes = elements.toolsList.querySelectorAll(
-    'input[type="checkbox"]'
-  );
-  checkboxes.forEach((cb) => {
-    cb.addEventListener("change", handleToolToggle);
-  });
-}
-
-// 处理工具开关切换
-function handleToolToggle(event) {
-  const toolName = event.target.getAttribute("data-tool-name");
-
-  if (event.target.checked) {
-    if (!selectedToolNames.includes(toolName)) {
-      selectedToolNames.push(toolName);
-    }
-  } else {
-    selectedToolNames = selectedToolNames.filter((name) => name !== toolName);
-  }
-
-  // 保存到 localStorage
-  localStorage.setItem("selectedTools", JSON.stringify(selectedToolNames));
-}
-
-// 获取选中的工具名称列表
-function getSelectedTools() {
-  return selectedToolNames;
-}
-
 // ========== 话题标题自动生成功能 ==========
 
 /**

@@ -143,21 +143,58 @@ class ModelListRequest(BaseModel):
     apiUrl: str | None = None
 
 
+def normalize_api_url(raw_url: str) -> str:
+    """兼容只填域名的输入，默认补全 https://"""
+    value = (raw_url or "").strip()
+    if not value:
+        return ""
+    if "://" not in value:
+        value = f"https://{value}"
+    return value
+
+
+def build_models_base_url(raw_url: str, provider_mode: str) -> str:
+    """根据配置构建模型列表接口基础地址（确保以 /v1 结尾）"""
+    normalized = normalize_api_url(raw_url)
+    if not normalized:
+        return (
+            "https://api.anthropic.com/v1"
+            if provider_mode == "anthropic"
+            else "https://api.openai.com/v1"
+        )
+
+    parsed = urlparse(normalized)
+    if not parsed.scheme or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="无法解析 API 地址（用于获取模型列表）")
+
+    path = (parsed.path or "").rstrip("/")
+    path_lower = path.lower()
+    v1_index = path_lower.find("/v1")
+    if v1_index >= 0:
+        base_path = path[: v1_index + 3]
+    elif path_lower.endswith("/chat/completions"):
+        base_path = path[: -len("/chat/completions")]
+    elif path_lower.endswith("/messages"):
+        base_path = path[: -len("/messages")]
+    elif path_lower.endswith("/models"):
+        base_path = path[: -len("/models")]
+    else:
+        base_path = path
+
+    if not base_path:
+        base_path = "/v1"
+    elif not base_path.lower().endswith("/v1"):
+        base_path = f"{base_path}/v1"
+
+    return f"{parsed.scheme}://{parsed.netloc}{base_path}"
+
+
 @app.post("/api/models/list")
 async def list_models(payload: ModelListRequest):
     provider = (payload.provider or "openai").strip().lower()
     provider_mode = "anthropic" if provider == "anthropic" else "openai"
 
-    raw_api_url = (payload.apiUrl or "").strip()
-    if raw_api_url:
-        parsed = urlparse(raw_api_url)
-        if not parsed.scheme or not parsed.netloc:
-            raise HTTPException(status_code=400, detail="无法解析 API 地址（用于获取模型列表）")
-        path = parsed.path or ""
-        v1_index = path.find("/v1")
-        base = f"{parsed.scheme}://{parsed.netloc}{path[:v1_index + 3]}" if v1_index >= 0 else f"{parsed.scheme}://{parsed.netloc}"
-    else:
-        base = "https://api.anthropic.com/v1" if provider_mode == "anthropic" else "https://api.openai.com/v1"
+    base = build_models_base_url(payload.apiUrl or "", provider_mode)
 
     url = f"{base}/models"
     api_key = (payload.apiKey or "").strip()
