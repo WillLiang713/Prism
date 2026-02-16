@@ -2388,7 +2388,6 @@ function createAssistantCard(turn) {
     timeEl,
     speedEl,
     copyBtn,
-    thinkingAutoCollapseTimer: null,
     turn: turn,
     side: side,
   };
@@ -2581,24 +2580,6 @@ async function clearActiveTopicMessages() {
   renderAll();
 }
 
-function scheduleAutoCollapseThinking(ui, delayMs = 900) {
-  if (!ui?.thinkingSectionEl) return;
-  if (ui.thinkingSectionEl.dataset.userToggled === "1") return;
-
-  if (ui.thinkingAutoCollapseTimer) clearTimeout(ui.thinkingAutoCollapseTimer);
-  ui.thinkingAutoCollapseTimer = setTimeout(() => {
-    ui.thinkingAutoCollapseTimer = null;
-    if (!ui?.thinkingSectionEl) return;
-    if (ui.thinkingSectionEl.dataset.userToggled === "1") return;
-    ui.thinkingSectionEl.classList.add("collapsed");
-    // 保存自动折叠的状态
-    if (ui.turn && ui.side && ui.turn.models[ui.side]) {
-      ui.turn.models[ui.side].thinkingCollapsed = true;
-      scheduleSaveChat();
-    }
-  }, delayMs);
-}
-
 async function callModel(
   prompt,
   config,
@@ -2739,7 +2720,6 @@ async function callModel(
                 uiRef.thinkingContentEl,
                 turn.models.main.thinking
               );
-              scheduleAutoCollapseThinking(uiRef);
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -2867,11 +2847,6 @@ async function callModel(
   } finally {
     if (timeTimer) clearInterval(timeTimer);
     timeTimer = null;
-    const uiRef = resolveUi();
-    if (uiRef?.thinkingAutoCollapseTimer) {
-      clearTimeout(uiRef.thinkingAutoCollapseTimer);
-      uiRef.thinkingAutoCollapseTimer = null;
-    }
     unmarkTopicRunning(topicId, abortController);
   }
 }
