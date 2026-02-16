@@ -506,7 +506,7 @@ async def proxy(full_path: str, request: Request):
 if __name__ == "__main__":
     import uvicorn
     print("=" * 50)
-    print("AI对比工具服务器已启动")
+    print("服务器已启动")
     print("=" * 50)
     print("访问地址: http://localhost:3000")
     print("=" * 50)
