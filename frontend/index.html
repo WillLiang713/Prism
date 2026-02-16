@@ -56,12 +56,6 @@
               >
                 宽宽屏模式
               </button>
-              <button
-                class="btn btn-secondary btn-settings"
-                id="openPromptManagerBtn"
-              >
-                提示词
-              </button>
               <button class="btn btn-secondary btn-settings" id="openConfigBtn">
                 设置
               </button>
@@ -174,29 +168,6 @@
                             <circle cx="8.5" cy="8.5" r="1.5"></circle>
                             <polyline points="21 15 16 10 5 21"></polyline>
                           </svg>
-                        </button>
-
-                        <button
-                          class="toolbar-btn"
-                          id="promptSelectorBtn"
-                          title="选择提示词"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            width="18"
-                            height="18"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          >
-                            <path d="M12 20h9"></path>
-                            <path
-                              d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                            ></path>
-                          </svg>
-                          <span id="promptSelectorLabel">默认</span>
                         </button>
 
                         <label class="toolbar-switch" title="允许模型按需联网">
@@ -462,150 +433,12 @@
       </div>
     </div>
 
-    <!-- 提示词选择弹窗 -->
-    <div class="modal-overlay" id="promptSelectorModal" aria-hidden="true">
-      <div class="modal-content">
-        <div class="config-panel">
-          <div class="config-header">
-            <h2>选择提示词</h2>
-            <div class="config-header-actions">
-              <button
-                class="btn btn-secondary btn-small"
-                id="closePromptSelectorBtn"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-          <div class="config-content">
-            <div class="prompt-selector-list" id="promptSelectorList">
-              <!-- 动态渲染提示词选择列表 -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 提示词管理弹窗 -->
-    <div class="modal-overlay" id="promptModal" aria-hidden="true">
-      <div class="modal-content">
-        <div class="config-panel">
-          <div class="config-header">
-            <h2>提示词管理</h2>
-            <div class="config-header-actions">
-              <button class="btn btn-secondary btn-small" id="newPromptBtn">
-                新建
-              </button>
-              <button class="btn btn-secondary btn-small" id="importPromptsBtn">
-                导入
-              </button>
-              <button class="btn btn-secondary btn-small" id="exportPromptsBtn">
-                导出
-              </button>
-              <button
-                class="btn btn-secondary btn-small"
-                id="closePromptModalBtn"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-          <div class="config-content">
-            <div class="prompt-list" id="promptList">
-              <!-- 动态渲染提示词列表 -->
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- 隐藏的文件输入 -->
-      <input
-        type="file"
-        id="importPromptsInput"
-        accept=".json"
-        style="display: none"
-      />
-    </div>
-
-    <!-- 提示词预览弹窗 -->
-    <div class="modal-overlay" id="promptPreviewModal" aria-hidden="true">
-      <div class="modal-content">
-        <div class="config-panel">
-          <div class="config-header">
-            <h2 id="promptPreviewTitle">提示词预览</h2>
-            <div class="config-header-actions">
-              <button
-                class="btn btn-secondary btn-small"
-                id="closePromptPreviewBtn"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-          <div class="config-content">
-            <div class="prompt-preview-content" id="promptPreviewContent">
-              <!-- 动态渲染markdown内容 -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 编辑提示词弹窗 -->
-    <div class="modal-overlay" id="promptEditModal" aria-hidden="true">
-      <div class="modal-content">
-        <div class="config-panel">
-          <div class="config-header">
-            <h2 id="promptEditTitle">编辑提示词</h2>
-            <div class="config-header-actions">
-              <button class="btn btn-primary btn-small" id="savePromptEditBtn">
-                保存
-              </button>
-              <button
-                class="btn btn-secondary btn-small"
-                id="closePromptEditBtn"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-          <div class="config-content">
-            <div class="prompt-edit-form">
-              <div class="form-group">
-                <label>名称</label>
-                <input
-                  type="text"
-                  id="promptEditName"
-                  placeholder="提示词名称"
-                />
-              </div>
-              <div class="form-group">
-                <label>描述（可选）</label>
-                <input
-                  type="text"
-                  id="promptEditDescription"
-                  placeholder="提示词描述"
-                />
-              </div>
-              <div class="form-group">
-                <label>内容</label>
-                <textarea
-                  id="promptEditContent"
-                  placeholder="提示词内容"
-                  rows="15"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 删除提示词确认弹窗 -->
+    <!-- 通用确认弹窗 -->
     <div class="modal-overlay modal-compact" id="promptConfirmModal" aria-hidden="true">
       <div class="modal-content modal-compact-content">
         <div class="config-panel confirm-panel">
           <div class="config-header">
-            <h2 id="promptConfirmTitle">删除提示词</h2>
+            <h2 id="promptConfirmTitle">提示</h2>
             <div class="config-header-actions">
               <button
                 class="btn btn-secondary btn-small"
@@ -617,7 +450,7 @@
                 class="btn btn-primary btn-small btn-danger"
                 id="promptConfirmOkBtn"
               >
-                删除
+                确定
               </button>
             </div>
           </div>
@@ -625,7 +458,7 @@
             <div class="confirm-icon" aria-hidden="true">!</div>
             <div class="confirm-message">
               <div class="confirm-text" id="promptConfirmMessage"></div>
-              <div class="confirm-hint" id="promptConfirmHint">删除后不可恢复</div>
+              <div class="confirm-hint" id="promptConfirmHint"></div>
             </div>
           </div>
         </div>

@@ -4345,6 +4345,192 @@ body {
   background: linear-gradient(135deg, #b55a2f, #9b3f25);
 }
 
+/* 输入工具栏按钮样式优化 */
+.composer-toolbar {
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 14px;
+  border: 1px solid rgba(214, 201, 184, 0.88);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(251, 248, 243, 0.96)
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 10px 20px rgba(17, 12, 6, 0.07);
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(214, 201, 184, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  color: #5f5348;
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.18s ease,
+    border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.toolbar-btn.icon-only {
+  width: 34px;
+  padding: 0;
+}
+
+.toolbar-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.1;
+}
+
+.toolbar-btn:not(.icon-only) {
+  gap: 6px;
+  font-weight: 600;
+  background: rgba(13, 148, 136, 0.08);
+  border-color: rgba(13, 148, 136, 0.24);
+  color: #0f766e;
+}
+
+.toolbar-btn:not(.icon-only) span {
+  font-size: 12.5px;
+  max-width: 112px;
+}
+
+.toolbar-btn:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  border-color: rgba(13, 148, 136, 0.34);
+  color: #0f766e;
+  box-shadow: 0 6px 12px rgba(17, 12, 6, 0.1);
+}
+
+.toolbar-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+  background: rgba(13, 148, 136, 0.1);
+}
+
+.toolbar-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+}
+
+.toolbar-switch {
+  height: 34px;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(214, 201, 184, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  color: #5f5348;
+}
+
+.toolbar-switch:hover {
+  background: #ffffff;
+  border-color: rgba(13, 148, 136, 0.3);
+  color: #0f766e;
+}
+
+.toolbar-switch:focus-within {
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+}
+
+.toolbar-switch .switch-track {
+  width: 28px;
+  height: 16px;
+  background: #ece5db;
+  border-color: rgba(186, 174, 161, 0.85);
+}
+
+.toolbar-switch .switch-track::after {
+  left: 2px;
+  width: 11px;
+  height: 11px;
+}
+
+.toolbar-switch input:checked + .switch-track::after {
+  left: 14px;
+}
+
+.toolbar-switch .switch-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6d6259;
+}
+
+.toolbar-switch input:checked ~ .switch-text {
+  color: var(--accent-strong);
+}
+
+.reasoning-effort-selector {
+  height: 34px;
+  font-size: 12px;
+}
+
+.reasoning-effort-current {
+  height: 34px;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(214, 201, 184, 0.9);
+  background: rgba(255, 255, 255, 0.88);
+  color: #5f5348;
+  transition: background 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.reasoning-effort-current:hover {
+  background: #ffffff;
+  border-color: rgba(13, 148, 136, 0.3);
+  color: #0f766e;
+}
+
+.reasoning-effort-selector.open .reasoning-effort-current {
+  border-color: rgba(13, 148, 136, 0.38);
+  box-shadow: 0 6px 14px rgba(13, 148, 136, 0.12);
+}
+
+.reasoning-effort-value {
+  color: var(--accent-strong);
+}
+
+.reasoning-effort-dropdown {
+  bottom: calc(100% + 8px);
+  min-width: 68px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 201, 184, 0.92);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 24px rgba(17, 12, 6, 0.16);
+}
+
+.reasoning-effort-dropdown button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #62574d;
+}
+
+.reasoning-effort-dropdown button:hover {
+  background: rgba(13, 148, 136, 0.1);
+  color: #0f766e;
+}
+
+.reasoning-effort-dropdown button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+}
+
+.reasoning-effort-dropdown button.active {
+  background: rgba(13, 148, 136, 0.14);
+  color: #0f766e;
+}
+
 /* 移动端布局修复：放在文件尾部，确保覆盖前序主题规则 */
 @media (max-width: 900px) {
   .container,
@@ -4456,6 +4642,17 @@ body {
     scrollbar-width: none;
   }
 
+  .toolbar-btn,
+  .toolbar-switch,
+  .reasoning-effort-current {
+    min-height: 36px;
+  }
+
+  .toolbar-btn.icon-only {
+    width: 36px;
+    min-width: 36px;
+  }
+
   .composer-toolbar::-webkit-scrollbar {
     display: none;
   }
@@ -4469,6 +4666,17 @@ body {
   .send-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .toolbar-btn,
+  .toolbar-switch,
+  .reasoning-effort-current {
+    min-height: 38px;
+  }
+
+  .toolbar-btn.icon-only {
+    width: 38px;
+    min-width: 38px;
   }
 }
 
