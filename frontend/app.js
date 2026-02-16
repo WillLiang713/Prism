@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   isSidebarCollapsed: "aiPkIsSidebarCollapsed",
 };
 
+const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
+
 const state = {
   modelFetch: {
     main: {
@@ -1066,6 +1068,7 @@ function bindEvents() {
     try {
       const topic = createTopic();
       setActiveTopic(topic.id);
+      collapseSidebarForMobile();
       renderAll();
       elements.promptInput.focus();
     } finally {
@@ -1269,12 +1272,21 @@ function updateModelNames() {
 
   // 根据配置状态添加/移除样式类
   const chip = elements.modelName.closest(".model-chip");
+  const chipGroup = elements.modelName.closest(".header-model-chips");
 
   if (chip) {
     if (modelVal) {
       chip.classList.remove("unconfigured");
     } else {
       chip.classList.add("unconfigured");
+    }
+  }
+
+  if (chipGroup) {
+    if (modelVal) {
+      chipGroup.classList.remove("unconfigured");
+    } else {
+      chipGroup.classList.add("unconfigured");
     }
   }
 }
@@ -1741,12 +1753,40 @@ async function clearConfig() {
 
 // ========== 布局处理函数 ==========
 
+function isMobileLayout() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY).matches
+  );
+}
+
 function initLayout() {
+  const storedSidebarCollapsed = localStorage.getItem(
+    STORAGE_KEYS.isSidebarCollapsed
+  );
   state.isWideMode = localStorage.getItem(STORAGE_KEYS.isWideMode) === "true";
   state.isSidebarCollapsed =
-    localStorage.getItem(STORAGE_KEYS.isSidebarCollapsed) === "true";
+    storedSidebarCollapsed === null
+      ? isMobileLayout()
+      : storedSidebarCollapsed === "true";
+
+  // 移动端默认折叠侧栏，避免首屏遮挡聊天区域
+  if (isMobileLayout()) {
+    state.isSidebarCollapsed = true;
+  }
 
   updateLayoutUi();
+
+  const chatLayout = document.querySelector(".chat-layout");
+  if (chatLayout) {
+    chatLayout.classList.remove("layout-ready");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        chatLayout.classList.add("layout-ready");
+      });
+    });
+  }
 }
 
 function updateLayoutUi() {
@@ -1782,6 +1822,12 @@ function toggleSidebar() {
     STORAGE_KEYS.isSidebarCollapsed,
     state.isSidebarCollapsed
   );
+  updateLayoutUi();
+}
+
+function collapseSidebarForMobile() {
+  if (!isMobileLayout() || state.isSidebarCollapsed) return;
+  state.isSidebarCollapsed = true;
   updateLayoutUi();
 }
 
@@ -2069,6 +2115,7 @@ function renderTopicList() {
 
     item.addEventListener("click", () => {
       setActiveTopic(topic.id);
+      collapseSidebarForMobile();
       renderAll();
     });
 
