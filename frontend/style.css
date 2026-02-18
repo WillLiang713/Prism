@@ -2038,13 +2038,19 @@ body {
   border-radius: 10px;
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  z-index: 100;
+  z-index: 2000;
   min-width: 56px;
 }
 
 .reasoning-effort-selector.open .reasoning-effort-dropdown {
   display: flex;
   flex-direction: column;
+}
+
+.chat-composer:has(.reasoning-effort-selector.open),
+.composer-wrapper:has(.reasoning-effort-selector.open),
+.composer-box:has(.reasoning-effort-selector.open) {
+  overflow: visible !important;
 }
 
 .reasoning-effort-dropdown button {
@@ -4539,6 +4545,7 @@ body {
   border: 1px solid rgba(214, 201, 184, 0.92);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 12px 24px rgba(17, 12, 6, 0.16);
+  z-index: 2000;
 }
 
 .reasoning-effort-dropdown button {

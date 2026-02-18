@@ -1927,7 +1927,6 @@ function createTopic(forceCreate = false) {
     );
 
     if (emptyNewTopic) {
-      console.log("复用现有空话题:", emptyNewTopic.id);
       return emptyNewTopic;
     }
   }
