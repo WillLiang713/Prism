@@ -120,15 +120,14 @@
 
               <!-- 输入区域（固定在聊天卡片底部） -->
               <div class="chat-composer">
-                <!-- 图片预览区域 -->
-                <div
-                  class="image-preview-container"
-                  id="imagePreviewContainer"
-                  style="display: none"
-                ></div>
-
                 <div class="composer-wrapper">
                   <div class="composer-box">
+                    <!-- 图片预览区域（输入框内部上方） -->
+                    <div
+                      class="image-preview-container"
+                      id="imagePreviewContainer"
+                      style="display: none"
+                    ></div>
                     <textarea id="promptInput" rows="1"></textarea>
 
                     <div class="composer-footer">
@@ -179,9 +178,6 @@
 
                         <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
                           <span class="reasoning-effort-current">
-                            <svg class="reasoning-effort-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                              <path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"></path>
-                            </svg>
                             <span class="reasoning-effort-label">思考</span>
                             <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
                             <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 5 6 8 9 5"></polyline></svg>

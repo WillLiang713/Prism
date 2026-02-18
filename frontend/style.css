@@ -2012,12 +2012,6 @@ body {
   user-select: none;
 }
 
-.reasoning-effort-icon {
-  flex-shrink: 0;
-  color: var(--accent-strong, #0d9488);
-  opacity: 0.9;
-}
-
 .reasoning-effort-current:hover {
   background: rgba(15, 23, 42, 0.06);
   color: #475569;
@@ -2875,20 +2869,47 @@ body {
 /* 图片预览容器（输入框上方） */
 .image-preview-container {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 12px 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.image-preview-container:hover {
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.image-preview-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.image-preview-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.image-preview-container::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.image-preview-container:hover::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
 }
 
 .image-preview-item {
   position: relative;
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #d0d5dd;
-  background: #f9fafb;
+  border: 1px solid rgba(214, 201, 184, 0.9);
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(17, 12, 6, 0.08);
 }
 
 .image-preview-item img {
@@ -2919,6 +2940,17 @@ body {
 
 .image-preview-remove:hover {
   background: rgba(0, 0, 0, 0.85);
+}
+
+@media (max-width: 520px) {
+  .image-preview-container {
+    padding: 8px 10px 4px;
+  }
+
+  .image-preview-item {
+    width: 64px;
+    height: 64px;
+  }
 }
 
 /* 用户消息中的图片 */
