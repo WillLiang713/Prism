@@ -5,6 +5,19 @@
   box-sizing: border-box;
 }
 
+/* 移动端去除点击元素时的默认蓝色高亮 */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 html,
 body {
   height: 100%;
@@ -651,8 +664,8 @@ body {
   left: 260px;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 32px;
-  height: 80px;
+  width: 20px;
+  height: 52px;
   background: #ffffff;
   border: 1px solid #e3ebf5;
   border-radius: 999px;
@@ -665,7 +678,7 @@ body {
   color: #94a3b8;
   transition: left 0.3s ease, background 0.2s, color 0.2s, box-shadow 0.2s,
     border-color 0.2s;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .sidebar-toggle-handle::after {
@@ -673,8 +686,8 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 48px;
-  height: 100%;
+  width: 44px;
+  height: 84px;
   transform: translate(-50%, -50%);
 }
 
@@ -699,9 +712,9 @@ body {
 }
 
 .sidebar-toggle-handle svg {
-  width: 13px;
-  height: 13px;
-  stroke-width: 2.4;
+  width: 10px;
+  height: 10px;
+  stroke-width: 2.1;
   transition: transform 0.3s ease;
 }
 
@@ -4668,10 +4681,15 @@ body {
     left: min(82vw, 300px);
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 32px;
-    height: 80px;
+    width: 24px;
+    height: 56px;
     border-radius: 999px;
     z-index: 110;
+  }
+
+  .sidebar-toggle-handle::after {
+    width: 44px;
+    height: 80px;
   }
 
   .sidebar-collapsed .sidebar-toggle-handle {
