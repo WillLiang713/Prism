@@ -4523,6 +4523,10 @@ body {
   box-shadow: 0 6px 14px rgba(13, 148, 136, 0.12);
 }
 
+.reasoning-effort-selector.open {
+  z-index: 40;
+}
+
 .reasoning-effort-value {
   color: var(--accent-strong);
 }
@@ -4675,9 +4679,8 @@ body {
     width: fit-content;
     max-width: calc(100% - 86px);
     min-width: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 
   .toolbar-btn,
