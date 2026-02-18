@@ -1839,21 +1839,23 @@ body {
 .composer-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 10px;
   padding: 8px 10px 10px;
   background: transparent;
 }
 
 .composer-toolbar {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 6px 14px rgba(15, 23, 42, 0.06);
+  gap: 7px;
+  padding: 0;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   flex-wrap: wrap;
 }
 
@@ -2079,6 +2081,7 @@ body {
 .send-button {
   height: 32px;
   padding: 0 16px;
+  margin-left: auto;
   border-radius: 20px;
   display: inline-flex;
   align-items: center;
@@ -3842,13 +3845,12 @@ body {
 }
 
 .composer-toolbar {
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 10px 20px rgba(17, 12, 6, 0.08);
+  gap: 7px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .toolbar-btn {
@@ -4348,16 +4350,11 @@ body {
 /* 输入工具栏按钮样式优化 */
 .composer-toolbar {
   gap: 7px;
-  padding: 7px 9px;
-  border-radius: 14px;
-  border: 1px solid rgba(214, 201, 184, 0.88);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98),
-    rgba(251, 248, 243, 0.96)
-  );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 10px 20px rgba(17, 12, 6, 0.07);
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .toolbar-btn {
@@ -4554,7 +4551,9 @@ body {
   }
 
   .header-brand {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+    width: auto;
     margin-right: 0;
     padding-right: 0;
   }
@@ -4568,11 +4567,15 @@ body {
   }
 
   .chat-actions {
-    order: 3;
-    width: 100%;
-    margin-left: 0;
+    order: initial;
+    width: auto;
+    margin-left: auto;
     justify-content: flex-end;
     gap: 6px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .chat-body,
@@ -4632,12 +4635,15 @@ body {
 
   .composer-footer {
     gap: 8px;
-    align-items: stretch;
+    align-items: center;
   }
 
   .composer-toolbar {
-    flex: 1;
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: calc(100% - 86px);
     min-width: 0;
+    flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -4663,7 +4669,13 @@ body {
     flex-direction: column;
   }
 
+  .composer-toolbar {
+    width: 100%;
+    max-width: none;
+  }
+
   .send-button {
+    margin-left: 0;
     width: 100%;
     justify-content: center;
   }
