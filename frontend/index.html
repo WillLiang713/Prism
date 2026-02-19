@@ -31,31 +31,18 @@
           <div class="chat-header">
             <div class="header-brand" aria-label="应用名称与会话信息">
               <div class="brand-text">
-                <div class="brand-title">对话中心</div>
                 <div class="brand-meta">
                   <span class="brand-session" id="headerSessionInfo"
                     >会话：未命名 · 0 条</span
                   >
                   <span class="brand-divider">·</span>
-                  <span class="brand-time" id="headerTime">--:--</span>
-                  <div class="header-model-chips" aria-label="模型状态">
-                    <span class="brand-divider">·</span>
-                    <div class="model-chip">
-                      <span class="chip-dot"></span>
-                      <span class="chip-id" id="modelName"></span>
-                    </div>
-                  </div>
+                  <span class="brand-model" id="headerModelInfo">
+                    <span class="brand-model-id" id="modelName"></span>
+                  </span>
                 </div>
               </div>
             </div>
             <div class="chat-actions">
-              <button
-                class="btn btn-secondary btn-settings"
-                id="toggleWideModeBtn"
-                title="切换宽屏模式"
-              >
-                宽宽屏模式
-              </button>
               <button class="btn btn-secondary btn-settings" id="openConfigBtn">
                 设置
               </button>

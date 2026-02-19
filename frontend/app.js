@@ -2,7 +2,6 @@ const STORAGE_KEYS = {
   config: "aiPkConfig",
   topics: "aiPkTopicsV1",
   activeTopicId: "aiPkActiveTopicId",
-  isWideMode: "aiPkIsWideMode",
   isSidebarCollapsed: "aiPkIsSidebarCollapsed",
 };
 
@@ -45,7 +44,6 @@ const state = {
     resolver: null,
   },
   autoScroll: true, // 是否自动跟随滚动
-  isWideMode: false,
   isSidebarCollapsed: false,
 };
 
@@ -57,7 +55,6 @@ const elements = {
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
-  toggleWideModeBtn: document.getElementById("toggleWideModeBtn"),
 
   // 联网搜索（Tavily）
   enableWebSearch: document.getElementById("enableWebSearch"),
@@ -106,7 +103,6 @@ const elements = {
 
   // 头部状态
   modelName: document.getElementById("modelName"),
-  headerTime: document.getElementById("headerTime"),
   headerSessionInfo: document.getElementById("headerSessionInfo"),
 
   // 通用确认弹窗
@@ -195,27 +191,6 @@ function formatTime(ts) {
   }
 }
 
-let headerClockTimer = null;
-
-function formatHeaderTime(date = new Date()) {
-  try {
-    const formatter = new Intl.DateTimeFormat("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(date).replace(/\//g, "-");
-  } catch (e) {
-    const d = date;
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-      d.getDate()
-    )} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-}
 
 function updateHeaderMeta() {
   const topic = getActiveTopic();
@@ -225,15 +200,10 @@ function updateHeaderMeta() {
   if (elements.headerSessionInfo) {
     elements.headerSessionInfo.textContent = `会话：${title} · ${count} 条`;
   }
-  if (elements.headerTime) {
-    elements.headerTime.textContent = formatHeaderTime();
-  }
 }
 
 function startHeaderClock() {
   updateHeaderMeta();
-  if (headerClockTimer) clearInterval(headerClockTimer);
-  headerClockTimer = setInterval(updateHeaderMeta, 60 * 1000);
 }
 
 function hasOpenModal() {
@@ -1142,7 +1112,6 @@ function bindEvents() {
   });
 
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
-  elements.toggleWideModeBtn?.addEventListener("click", toggleWideMode);
 }
 
 function openConfigModal() {
@@ -1239,24 +1208,10 @@ function updateModelNames() {
   // 更新模型名称（未配置时不显示任何内容）
   elements.modelName.textContent = modelVal || "";
 
-  // 根据配置状态添加/移除样式类
-  const chip = elements.modelName.closest(".model-chip");
-  const chipGroup = elements.modelName.closest(".header-model-chips");
-
-  if (chip) {
-    if (modelVal) {
-      chip.classList.remove("unconfigured");
-    } else {
-      chip.classList.add("unconfigured");
-    }
-  }
-
-  if (chipGroup) {
-    if (modelVal) {
-      chipGroup.classList.remove("unconfigured");
-    } else {
-      chipGroup.classList.add("unconfigured");
-    }
+  // 根据配置状态显示/隐藏模型行
+  const modelLine = elements.modelName.closest(".brand-model");
+  if (modelLine) {
+    modelLine.style.display = modelVal ? "" : "none";
   }
 }
 
@@ -1734,7 +1689,7 @@ function initLayout() {
   const storedSidebarCollapsed = localStorage.getItem(
     STORAGE_KEYS.isSidebarCollapsed
   );
-  state.isWideMode = localStorage.getItem(STORAGE_KEYS.isWideMode) === "true";
+  localStorage.removeItem("aiPkIsWideMode");
   state.isSidebarCollapsed =
     storedSidebarCollapsed === null
       ? isMobileLayout()
@@ -1759,30 +1714,13 @@ function initLayout() {
 }
 
 function updateLayoutUi() {
-  const container = document.querySelector(".container");
   const chatLayout = document.querySelector(".chat-layout");
-
-  if (state.isWideMode) {
-    container?.classList.add("wide-mode");
-    if (elements.toggleWideModeBtn)
-      elements.toggleWideModeBtn.textContent = "常规模式";
-  } else {
-    container?.classList.remove("wide-mode");
-    if (elements.toggleWideModeBtn)
-      elements.toggleWideModeBtn.textContent = "宽屏模式";
-  }
 
   if (state.isSidebarCollapsed) {
     chatLayout?.classList.add("sidebar-collapsed");
   } else {
     chatLayout?.classList.remove("sidebar-collapsed");
   }
-}
-
-function toggleWideMode() {
-  state.isWideMode = !state.isWideMode;
-  localStorage.setItem(STORAGE_KEYS.isWideMode, state.isWideMode);
-  updateLayoutUi();
 }
 
 function toggleSidebar() {
