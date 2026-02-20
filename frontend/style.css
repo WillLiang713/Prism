@@ -50,7 +50,7 @@ body {
   --radius-sm: 8px;
   --content-max-width: 960px;
   --turn-max-width: 820px;
-  --chat-font-size: 14px;
+  --chat-font-size: 12px;
 }
 
 body {
@@ -4565,6 +4565,8 @@ body {
 .response-content,
 .thinking-content {
   font-size: var(--chat-font-size);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .response-content code,

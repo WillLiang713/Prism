@@ -936,9 +936,9 @@ function bindEvents() {
     }
   });
 
-  elements.chatFontSize?.addEventListener("input", (e) => {
-    applyChatFontSize(e.target?.value);
-  });
+  const onFontSizeChange = (e) => applyChatFontSize(e.target?.value);
+  elements.chatFontSize?.addEventListener("input", onFontSizeChange);
+  elements.chatFontSize?.addEventListener("change", onFontSizeChange);
 
 
   // 思考强度下拉选择器
