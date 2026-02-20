@@ -875,7 +875,7 @@ body {
 }
 
 .topic-title {
-  font-size: 14px;
+  font-size: var(--chat-font-size);
   font-weight: 600;
   color: #333;
   margin-bottom: 4px;
@@ -4565,8 +4565,6 @@ body {
 .response-content,
 .thinking-content {
   font-size: var(--chat-font-size);
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
 }
 
 .response-content code,

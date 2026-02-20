@@ -6,9 +6,6 @@ const STORAGE_KEYS = {
 };
 
 const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
-const CHAT_FONT_SIZE_MIN = 10;
-const CHAT_FONT_SIZE_MAX = 18;
-const CHAT_FONT_SIZE_DEFAULT = 12;
 
 const state = {
   modelFetch: {
@@ -69,7 +66,6 @@ const elements = {
   enableHistory: document.getElementById("enableHistory"),
   maxHistoryTurns: document.getElementById("maxHistoryTurns"),
   maxToolRounds: document.getElementById("maxToolRounds"),
-  chatFontSize: document.getElementById("chatFontSize"),
 
   // 话题标题自动生成
   enableAutoTitle: document.getElementById("enableAutoTitle"),
@@ -847,21 +843,6 @@ function normalizeTavilySearchDepth(value) {
     : "basic";
 }
 
-function normalizeChatFontSize(value) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return CHAT_FONT_SIZE_DEFAULT;
-  return Math.min(CHAT_FONT_SIZE_MAX, Math.max(CHAT_FONT_SIZE_MIN, parsed));
-}
-
-function applyChatFontSize(value) {
-  const size = normalizeChatFontSize(value);
-  document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
-  if (elements.chatFontSize) {
-    elements.chatFontSize.value = String(size);
-  }
-  return size;
-}
-
 async function tavilySearch(
   query,
   apiKey,
@@ -935,10 +916,6 @@ function bindEvents() {
       console.error("保存联网搜索开关失败:", e);
     }
   });
-
-  const onFontSizeChange = (e) => applyChatFontSize(e.target?.value);
-  elements.chatFontSize?.addEventListener("input", onFontSizeChange);
-  elements.chatFontSize?.addEventListener("change", onFontSizeChange);
 
 
   // 思考强度下拉选择器
@@ -1589,9 +1566,6 @@ async function saveConfig() {
       enableHistory: !!elements.enableHistory?.checked,
       maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10,
     },
-    display: {
-      chatFontSize: normalizeChatFontSize(elements.chatFontSize?.value),
-    },
     autoTitle: {
       enabled: !!elements.enableAutoTitle?.checked,
       model: elements.titleGenerationModel?.value || "",
@@ -1650,10 +1624,6 @@ function loadConfig() {
       if (elements.maxHistoryTurns)
         elements.maxHistoryTurns.value = historyConfig.maxHistoryTurns || 10;
     }
-    const displayConfig = config.display || {};
-    applyChatFontSize(
-      displayConfig.chatFontSize ?? config.chatFontSize ?? CHAT_FONT_SIZE_DEFAULT
-    );
     // 加载话题标题自动生成配置
     if (config.autoTitle) {
       if (elements.enableAutoTitle)
@@ -1691,7 +1661,6 @@ async function clearConfig() {
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
   if (elements.enableHistory) elements.enableHistory.checked = true;
   if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
-  applyChatFontSize(CHAT_FONT_SIZE_DEFAULT);
 
   elements.provider.value = "openai";
   elements.apiKey.value = "";
