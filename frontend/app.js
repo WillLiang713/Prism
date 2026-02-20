@@ -70,7 +70,6 @@ const elements = {
   maxHistoryTurns: document.getElementById("maxHistoryTurns"),
   maxToolRounds: document.getElementById("maxToolRounds"),
   chatFontSize: document.getElementById("chatFontSize"),
-  chatFontSizeValue: document.getElementById("chatFontSizeValue"),
 
   // 话题标题自动生成
   enableAutoTitle: document.getElementById("enableAutoTitle"),
@@ -859,9 +858,6 @@ function applyChatFontSize(value) {
   document.documentElement.style.setProperty("--chat-font-size", `${size}px`);
   if (elements.chatFontSize) {
     elements.chatFontSize.value = String(size);
-  }
-  if (elements.chatFontSizeValue) {
-    elements.chatFontSizeValue.textContent = `${size}px`;
   }
   return size;
 }

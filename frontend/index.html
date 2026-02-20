@@ -375,22 +375,20 @@
             <div class="global-config">
               <h3>显示</h3>
               <div class="form-group">
-                <label for="chatFontSize">聊天消息字号</label>
-                <div class="chat-font-size-control">
+                <label>
+                  聊天消息字号
                   <input
-                    type="range"
+                    type="number"
                     id="chatFontSize"
                     min="10"
                     max="18"
                     step="1"
                     value="12"
+                    style="width: 80px"
                   />
-                  <span class="chat-font-size-value" id="chatFontSizeValue"
-                    >12px</span
-                  >
-                </div>
+                </label>
                 <small style="display: block; color: #666; margin-top: 4px">
-                  数字越大字体越大（仅影响聊天消息正文）
+                  仅影响聊天消息正文（10-18px，默认12px）
                 </small>
               </div>
             </div>
