@@ -217,6 +217,7 @@ body {
 
 .model-picker {
   position: relative;
+  max-width: 480px;
 }
 
 .model-picker-row {
@@ -2177,7 +2178,7 @@ body {
 }
 
 .modal-content {
-  width: min(1200px, 96vw);
+  width: min(720px, 96vw);
   max-height: 92vh;
   overflow: hidden;
 }
