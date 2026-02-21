@@ -215,6 +215,28 @@ body {
   line-height: 1.5;
 }
 
+.role-setting-preview {
+  width: 100%;
+  min-height: 88px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  background: #fafafa;
+  cursor: text;
+}
+
+.role-setting-preview:focus {
+  outline: none;
+  border-color: #888;
+}
+
+.role-setting-preview p:last-child {
+  margin-bottom: 0;
+}
+
 .model-picker {
   position: relative;
   max-width: 480px;

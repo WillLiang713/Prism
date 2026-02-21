@@ -279,6 +279,23 @@
                     Key/地址后会自动获取可用模型列表（也可手动输入）。
                   </div>
                 </div>
+                <div class="form-group">
+                  <label>角色设定</label>
+                  <textarea
+                    id="roleSetting"
+                    rows="3"
+                    placeholder="例如：当前时间 {{datetime}}，你是一个简洁、严谨的编程助手"
+                  ></textarea>
+                  <div
+                    id="roleSettingPreview"
+                    class="role-setting-preview response-content"
+                    tabindex="0"
+                    hidden
+                  ></div>
+                  <div class="form-hint">
+                    每次发送都会带上这段设定。支持变量：{{datetime}}、{{date}}、{{time}}、{{timestamp}}。输入完成后会自动预览，点击预览可继续编辑。
+                  </div>
+                </div>
               </div>
             </div>
             <div class="global-config">

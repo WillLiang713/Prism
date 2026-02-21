@@ -97,6 +97,8 @@ const elements = {
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),
   apiUrl: document.getElementById("apiUrl"),
+  roleSetting: document.getElementById("roleSetting"),
+  roleSettingPreview: document.getElementById("roleSettingPreview"),
   modelHint: document.getElementById("modelHint"),
   modelDropdown: document.getElementById("modelDropdown"),
   modelDropdownBtn: document.getElementById("modelDropdownBtn"),
@@ -1034,6 +1036,19 @@ function bindEvents() {
     scheduleFetchModels("Title", 500);
   });
 
+  elements.roleSetting?.addEventListener("blur", () => {
+    showRoleSettingPreview();
+  });
+  elements.roleSettingPreview?.addEventListener("click", () => {
+    showRoleSettingEditor(true);
+  });
+  elements.roleSettingPreview?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      showRoleSettingEditor(true);
+    }
+  });
+
   // 监听模型名称变化
   elements.model.addEventListener("input", () => {
     updateModelNames();
@@ -1120,6 +1135,7 @@ function openConfigModal() {
   elements.configModal.setAttribute("aria-hidden", "false");
   syncBodyScrollLock();
   updateModelHint();
+  syncRoleSettingPreview(true);
   scheduleFetchModels("main", 0);
 }
 
@@ -1129,6 +1145,39 @@ function closeConfigModal() {
   elements.configModal.setAttribute("aria-hidden", "true");
   syncBodyScrollLock();
   closeModelDropdown("main");
+}
+
+function showRoleSettingEditor(focus = false) {
+  if (!elements.roleSetting || !elements.roleSettingPreview) return;
+  elements.roleSetting.hidden = false;
+  elements.roleSettingPreview.hidden = true;
+  if (!focus) return;
+  requestAnimationFrame(() => {
+    elements.roleSetting?.focus();
+    const len = elements.roleSetting?.value?.length || 0;
+    elements.roleSetting?.setSelectionRange(len, len);
+  });
+}
+
+function showRoleSettingPreview() {
+  if (!elements.roleSetting || !elements.roleSettingPreview) return;
+  const text = (elements.roleSetting.value || "").trim();
+  if (!text) {
+    showRoleSettingEditor(false);
+    return;
+  }
+  renderMarkdownToElement(elements.roleSettingPreview, text);
+  elements.roleSetting.hidden = true;
+  elements.roleSettingPreview.hidden = false;
+}
+
+function syncRoleSettingPreview(preferPreview = true) {
+  const text = (elements.roleSetting?.value || "").trim();
+  if (preferPreview && text) {
+    showRoleSettingPreview();
+    return;
+  }
+  showRoleSettingEditor(false);
 }
 
 function autoGrowPromptInput() {
@@ -1575,6 +1624,7 @@ async function saveConfig() {
       apiKey: elements.apiKey.value,
       model: elements.model.value,
       apiUrl: elements.apiUrl.value,
+      systemPrompt: elements.roleSetting?.value || "",
     },
   };
 
@@ -1638,7 +1688,11 @@ function loadConfig() {
       elements.apiKey.value = modelConfig.apiKey || "";
       elements.model.value = modelConfig.model || "";
       elements.apiUrl.value = modelConfig.apiUrl || "";
+      if (elements.roleSetting)
+        elements.roleSetting.value =
+          modelConfig.systemPrompt || modelConfig.roleSetting || "";
     }
+    syncRoleSettingPreview(true);
   } catch (e) {
     console.error("加载配置失败:", e);
   }
@@ -1666,6 +1720,8 @@ async function clearConfig() {
   elements.apiKey.value = "";
   elements.model.value = "";
   elements.apiUrl.value = "";
+  if (elements.roleSetting) elements.roleSetting.value = "";
+  syncRoleSettingPreview(false);
 
   updateProviderUi();
   updateModelNames();
@@ -1757,8 +1813,8 @@ function getConfig(side) {
     apiKey: elements.apiKey?.value || "",
     model: elements.model?.value || "",
     apiUrl: elements.apiUrl?.value || "",
-    // 仅保留系统内置提示词，不再支持前端自定义提示词管理
-    systemPrompt: "",
+    // 角色设定：发送给后端作为系统提示词
+    systemPrompt: elements.roleSetting?.value || "",
     reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "medium",
   };
 }

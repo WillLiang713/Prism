@@ -145,6 +145,20 @@ class MessageBuilder:
     """消息构建器"""
 
     @staticmethod
+    def _render_system_prompt_template(template: str, now: datetime) -> str:
+        """渲染系统提示词中的模板变量。未知变量保持原样。"""
+        text = str(template or "")
+        replacements = {
+            "{{datetime}}": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "{{date}}": now.strftime("%Y-%m-%d"),
+            "{{time}}": now.strftime("%H:%M:%S"),
+            "{{timestamp}}": str(int(now.timestamp())),
+        }
+        for key, value in replacements.items():
+            text = text.replace(key, value)
+        return text
+
+    @staticmethod
     def convert_history_to_messages(
         history_turns: list[HistoryTurn],
         side: str,
@@ -263,10 +277,12 @@ class MessageBuilder:
             "max_tokens": 4096
         }
 
-        # 系统提示词（注入当前时间）
-        time_info = f"当前时间：{datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}"
-        system_text = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
-        body["system"] = f"{time_info}\n\n{system_text}" if system_text else time_info
+        # 系统提示词（仅在用户填写时注入，支持模板变量替换）
+        now = datetime.now()
+        system_text_raw = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
+        system_text = MessageBuilder._render_system_prompt_template(system_text_raw, now) if system_text_raw else ""
+        if system_text:
+            body["system"] = system_text
 
         # 思考模式
         if config.reasoningEffort and config.reasoningEffort != "none":
@@ -287,11 +303,12 @@ class MessageBuilder:
         """构建OpenAI格式请求体"""
         messages = []
 
-        # 系统提示词（注入当前时间）
-        time_info = f"当前时间：{datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}"
-        system_text = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
-        system_content = f"{time_info}\n\n{system_text}" if system_text else time_info
-        messages.append({"role": "system", "content": system_content})
+        # 系统提示词（仅在用户填写时注入，支持模板变量替换）
+        now = datetime.now()
+        system_text_raw = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
+        system_text = MessageBuilder._render_system_prompt_template(system_text_raw, now) if system_text_raw else ""
+        if system_text:
+            messages.append({"role": "system", "content": system_text})
 
         # 历史消息
         messages.extend(history_messages)
