@@ -148,6 +148,51 @@ async def tavily_search(payload: TavilySearchRequest):
 
     return resp.json()
 
+
+# Exa 联网搜索（推荐:服务端保存 API Key）
+class ExaSearchRequest(BaseModel):
+    api_key: str | None = None
+    query: str = Field(min_length=1, max_length=2000)
+    max_results: int = Field(default=5, ge=1, le=20)
+
+
+@app.post("/api/exa/search")
+async def exa_search(payload: ExaSearchRequest):
+    api_key = (payload.api_key or os.getenv("EXA_API_KEY", "")).strip()
+    if not api_key:
+        raise HTTPException(status_code=500, detail="缺少 Exa API Key（请设置环境变量 EXA_API_KEY 或在请求体中传 api_key）")
+
+    body = {
+        "query": payload.query,
+        "numResults": payload.max_results,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "Authorization": f"Bearer {api_key}",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post("https://api.exa.ai/search", json=body, headers=headers)
+    except httpx.HTTPError as e:
+        print(f"Exa 请求错误: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=502, detail=f"Exa请求失败: {type(e).__name__} - {str(e)}") from e
+    except Exception as e:
+        print(f"Exa 未知错误: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=502, detail=f"Exa请求异常: {type(e).__name__} - {str(e)}") from e
+
+    if resp.status_code >= 400:
+        try:
+            detail = resp.json()
+            print(f"Exa API 返回错误 {resp.status_code}: {detail}")
+        except Exception:
+            detail = resp.text
+            print(f"Exa API 返回错误 {resp.status_code}: {detail}")
+        raise HTTPException(status_code=resp.status_code, detail=detail)
+
+    return resp.json()
+
 # 模型列表拉取（由后端请求第三方，前端只调用本地接口）
 class ModelListRequest(BaseModel):
     provider: str = Field(default="openai")

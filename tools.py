@@ -42,6 +42,28 @@ def _normalize_max_results(value: Any, default: int = 5) -> int:
     return max(1, min(20, number))
 
 
+def _get_api_key(
+    runtime: dict[str, Any],
+    runtime_key: str,
+    env_key: str,
+) -> str:
+    return (runtime.get(runtime_key) or os.getenv(env_key, "")).strip()
+
+
+def _normalize_result_item(item: dict[str, Any]) -> dict[str, str]:
+    return {
+        "title": str(item.get("title", "") or ""),
+        "url": str(item.get("url", "") or ""),
+        "content": str(
+            item.get("content")
+            or item.get("text")
+            or item.get("snippet")
+            or item.get("summary")
+            or ""
+        ),
+    }
+
+
 def tavily_search(
     query: str,
     search_depth: str | None = None,
@@ -56,10 +78,7 @@ def tavily_search(
         return json.dumps({"error": "query 不能为空"}, ensure_ascii=False)
 
     runtime = _get_runtime_context()
-    api_key = (
-        runtime.get("tavily_api_key")
-        or os.getenv("TAVILY_API_KEY", "")
-    ).strip()
+    api_key = _get_api_key(runtime, "tavily_api_key", "TAVILY_API_KEY")
 
     if not api_key:
         return json.dumps(
@@ -68,7 +87,14 @@ def tavily_search(
         )
 
     resolved_max_results = _normalize_max_results(
-        max_results if max_results is not None else runtime.get("tavily_max_results"),
+        (
+            max_results
+            if max_results is not None
+            else (
+                runtime.get("web_search_max_results")
+                or runtime.get("tavily_max_results")
+            )
+        ),
         default=5,
     )
     depth_candidate = search_depth
@@ -127,13 +153,95 @@ def tavily_search(
         for item in results:
             if not isinstance(item, dict):
                 continue
-            normalized_results.append(
-                {
-                    "title": str(item.get("title", "") or ""),
-                    "url": str(item.get("url", "") or ""),
-                    "content": str(item.get("content", "") or ""),
-                }
+            normalized_results.append(_normalize_result_item(item))
+
+    return json.dumps(
+        {
+            "query": query_text,
+            "answer": str(data.get("answer", "") or ""),
+            "results": normalized_results,
+        },
+        ensure_ascii=False,
+    )
+
+
+def exa_search(
+    query: str,
+    max_results: int | None = None,
+) -> str:
+    """调用 Exa 搜索并返回 JSON 字符串。"""
+    query_text = (query or "").strip()
+    if not query_text:
+        return json.dumps({"error": "query 不能为空"}, ensure_ascii=False)
+
+    runtime = _get_runtime_context()
+    api_key = _get_api_key(runtime, "exa_api_key", "EXA_API_KEY")
+    if not api_key:
+        return json.dumps(
+            {"error": "缺少 Exa API Key（请在设置中填写，或配置环境变量 EXA_API_KEY）"},
+            ensure_ascii=False,
+        )
+
+    resolved_max_results = _normalize_max_results(
+        (
+            max_results
+            if max_results is not None
+            else (
+                runtime.get("web_search_max_results")
+                or runtime.get("exa_max_results")
             )
+        ),
+        default=5,
+    )
+
+    payload: dict[str, Any] = {
+        "query": query_text,
+        "numResults": resolved_max_results,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "Authorization": f"Bearer {api_key}",
+    }
+
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            response = client.post("https://api.exa.ai/search", json=payload, headers=headers)
+    except Exception as e:
+        return json.dumps(
+            {"error": f"Exa 请求失败: {type(e).__name__} - {str(e)}"},
+            ensure_ascii=False,
+        )
+
+    if response.status_code >= 400:
+        try:
+            detail: Any = response.json()
+        except Exception:
+            detail = response.text
+        return json.dumps(
+            {
+                "error": "Exa API 返回错误",
+                "status_code": response.status_code,
+                "detail": detail,
+            },
+            ensure_ascii=False,
+        )
+
+    try:
+        data = response.json()
+    except Exception:
+        return json.dumps(
+            {"error": "Exa 返回了非 JSON 响应"},
+            ensure_ascii=False,
+        )
+
+    results = data.get("results", [])
+    normalized_results: list[dict[str, str]] = []
+    if isinstance(results, list):
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            normalized_results.append(_normalize_result_item(item))
 
     return json.dumps(
         {
@@ -147,6 +255,7 @@ def tavily_search(
 
 TOOLS = {
     "tavily_search": tavily_search,
+    "exa_search": exa_search,
 }
 
 
