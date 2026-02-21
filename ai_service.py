@@ -53,7 +53,10 @@ class ChatRequest(BaseModel):
     enableTools: bool = False  # 是否启用工具调用
     maxToolRounds: int = Field(default=5, ge=1, le=20)  # 最大工具调用轮数
     selectedTools: list[str] = []  # 选中的工具名称列表
+    webSearchProvider: str = Field(default="tavily")  # 联网服务提供方（tavily|exa）
+    webSearchMaxResults: int | None = Field(default=None, ge=1, le=20)  # 联网默认结果数量
     tavilyApiKey: str | None = None  # Tavily Key（可选，优先于环境变量）
+    exaApiKey: str | None = None  # Exa Key（可选，优先于环境变量）
     tavilyMaxResults: int = Field(default=5, ge=1, le=20)  # Tavily 默认结果数量
     tavilySearchDepth: str = Field(default="basic")  # Tavily 默认搜索深度（basic|advanced）
 
@@ -557,8 +560,12 @@ class AIService:
                     
                     while tool_calls_buffer and request.enableTools and current_round < request.maxToolRounds:
                         current_round += 1
+                        resolved_max_results = request.webSearchMaxResults or request.tavilyMaxResults or 5
                         tool_runtime_context = {
+                            "web_search_provider": str(request.webSearchProvider or "tavily").lower(),
+                            "web_search_max_results": resolved_max_results,
                             "tavily_api_key": (request.tavilyApiKey or "").strip(),
+                            "exa_api_key": (request.exaApiKey or "").strip(),
                             "tavily_max_results": request.tavilyMaxResults,
                             "tavily_search_depth": request.tavilySearchDepth,
                         }
@@ -597,6 +604,9 @@ class AIService:
                                     else "basic"
                                 )
                                 args["search_depth"] = resolved_depth
+                                args["max_results"] = resolved_max_results
+                            elif tool_name == "exa_search":
+                                args["max_results"] = resolved_max_results
 
                             # 通知前端：开始执行工具
                             yield f"data: {json.dumps({'type': 'tool', 'data': {'status': 'start', 'round': current_round, 'name': tool_name, 'arguments': args}})}\n\n"

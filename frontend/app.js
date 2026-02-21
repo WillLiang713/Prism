@@ -56,11 +56,16 @@ const elements = {
   closeConfigBtn: document.getElementById("closeConfigBtn"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
 
-  // 联网搜索（Tavily）
+  // 联网搜索
   enableWebSearch: document.getElementById("enableWebSearch"),
+  webSearchProvider: document.getElementById("webSearchProvider"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
+  exaApiKey: document.getElementById("exaApiKey"),
   tavilyMaxResults: document.getElementById("tavilyMaxResults"),
   tavilySearchDepth: document.getElementById("tavilySearchDepth"),
+  tavilyApiKeyGroup: document.getElementById("tavilyApiKeyGroup"),
+  exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
+  tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
 
   // 对话历史
   enableHistory: document.getElementById("enableHistory"),
@@ -843,6 +848,25 @@ function normalizeTavilySearchDepth(value) {
     : "basic";
 }
 
+function normalizeWebSearchProvider(value) {
+  return String(value || "").toLowerCase() === "exa" ? "exa" : "tavily";
+}
+
+function updateWebSearchProviderUi() {
+  const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
+  const isExa = provider === "exa";
+
+  if (elements.tavilyApiKeyGroup) {
+    elements.tavilyApiKeyGroup.style.display = isExa ? "none" : "";
+  }
+  if (elements.tavilySearchDepthGroup) {
+    elements.tavilySearchDepthGroup.style.display = isExa ? "none" : "";
+  }
+  if (elements.exaApiKeyGroup) {
+    elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
+  }
+}
+
 async function tavilySearch(
   query,
   apiKey,
@@ -915,6 +939,10 @@ function bindEvents() {
     } catch (e) {
       console.error("保存联网搜索开关失败:", e);
     }
+  });
+
+  elements.webSearchProvider?.addEventListener("change", () => {
+    updateWebSearchProviderUi();
   });
 
 
@@ -1553,7 +1581,9 @@ async function saveConfig() {
   const config = {
     webSearch: {
       enabled: !!elements.enableWebSearch?.checked,
+      provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
       tavilyApiKey: elements.tavilyApiKey?.value || "",
+      exaApiKey: elements.exaApiKey?.value || "",
       maxResults: parseInt(elements.tavilyMaxResults?.value) || 5,
       searchDepth: normalizeTavilySearchDepth(
         elements.tavilySearchDepth?.value
@@ -1596,8 +1626,15 @@ function loadConfig() {
       elements.enableWebSearch.checked = webSearchEnabled;
     }
     if (config.webSearch) {
+      if (elements.webSearchProvider) {
+        elements.webSearchProvider.value = normalizeWebSearchProvider(
+          config.webSearch.provider
+        );
+      }
       if (elements.tavilyApiKey)
         elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || "";
+      if (elements.exaApiKey)
+        elements.exaApiKey.value = config.webSearch.exaApiKey || "";
       if (elements.tavilyMaxResults)
         elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
       if (elements.tavilySearchDepth) {
@@ -1605,6 +1642,8 @@ function loadConfig() {
           config.webSearch.searchDepth
         );
       }
+    } else if (elements.webSearchProvider) {
+      elements.webSearchProvider.value = "tavily";
     }
     // 加载思考强度配置
     if (config.reasoningEffort && elements.reasoningEffortDropdown) {
@@ -1642,6 +1681,8 @@ function loadConfig() {
   } catch (e) {
     console.error("加载配置失败:", e);
   }
+
+  updateWebSearchProviderUi();
 }
 
 async function clearConfig() {
@@ -1656,7 +1697,9 @@ async function clearConfig() {
   localStorage.removeItem(STORAGE_KEYS.config);
 
   if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
+  if (elements.webSearchProvider) elements.webSearchProvider.value = "tavily";
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
+  if (elements.exaApiKey) elements.exaApiKey.value = "";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
   if (elements.enableHistory) elements.enableHistory.checked = true;
@@ -1668,6 +1711,7 @@ async function clearConfig() {
   elements.apiUrl.value = "";
 
   updateProviderUi();
+  updateWebSearchProviderUi();
   updateModelNames();
   await showAlert("配置已清除", {
     title: "操作完成",
@@ -1767,7 +1811,9 @@ function getWebSearchConfig() {
   const maxResults = parseInt(elements.tavilyMaxResults?.value);
   return {
     enabled: !!elements.enableWebSearch?.checked,
+    provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
+    exaApiKey: (elements.exaApiKey?.value || "").trim(),
     maxResults: maxResults >= 1 && maxResults <= 20 ? maxResults : 5,
     searchDepth: normalizeTavilySearchDepth(elements.tavilySearchDepth?.value),
   };
@@ -2595,6 +2641,11 @@ async function callModel(
 
     // 构建请求体（发送到后端）
     const useWebSearchTool = !!webSearchConfig?.enabled;
+    const webSearchProvider = normalizeWebSearchProvider(
+      webSearchConfig?.provider
+    );
+    const selectedWebSearchTool =
+      webSearchProvider === "exa" ? "exa_search" : "tavily_search";
     const requestBody = {
       provider: config.provider,
       apiKey: config.apiKey,
@@ -2609,8 +2660,11 @@ async function callModel(
       historyTurns: historyTurns,
       enableTools: useWebSearchTool,
       maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
-      selectedTools: useWebSearchTool ? ["tavily_search"] : [],
+      selectedTools: useWebSearchTool ? [selectedWebSearchTool] : [],
+      webSearchProvider: webSearchProvider,
+      webSearchMaxResults: webSearchConfig?.maxResults || 5,
       tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,
+      exaApiKey: (webSearchConfig?.exaApiKey || "").trim() || null,
       tavilyMaxResults: webSearchConfig?.maxResults || 5,
       tavilySearchDepth: webSearchConfig?.searchDepth || "basic",
     };
