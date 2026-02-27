@@ -2528,6 +2528,65 @@ body {
 .tool-call-item.success::before { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
 .tool-call-item.error::before { background: var(--danger); }
 
+/* ---------- Sources section ---------- */
+.sources-section {
+  margin: 14px 0 4px;
+}
+
+.sources-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.sources-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  max-width: 220px;
+}
+
+.source-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-accent);
+  color: var(--text);
+}
+
+.source-chip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.source-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- Response content (Markdown) ---------- */
 .response-section {
   font-size: var(--chat-font-size);

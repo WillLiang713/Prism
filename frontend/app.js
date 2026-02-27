@@ -818,6 +818,51 @@ function renderToolEvents(sectionEl, listEl, events) {
   });
 }
 
+function renderSources(sectionEl, sources) {
+  if (!sectionEl) return;
+  const items = Array.isArray(sources) ? sources : [];
+  if (!items.length) {
+    sectionEl.style.display = "none";
+    sectionEl.innerHTML = "";
+    return;
+  }
+
+  sectionEl.style.display = "block";
+  sectionEl.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.className = "sources-title";
+  title.textContent = "来源";
+  sectionEl.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "sources-list";
+
+  items.forEach((s, i) => {
+    const chip = document.createElement("a");
+    chip.className = "source-chip";
+    chip.href = s.url || "#";
+    chip.target = "_blank";
+    chip.rel = "noopener noreferrer";
+
+    const num = document.createElement("span");
+    num.className = "source-chip-num";
+    num.textContent = String(i + 1);
+
+    const label = document.createElement("span");
+    label.className = "source-chip-label";
+    let fallback = s.url;
+    try { fallback = new URL(s.url).hostname; } catch (_) {}
+    label.textContent = s.title || fallback;
+
+    chip.appendChild(num);
+    chip.appendChild(label);
+    list.appendChild(chip);
+  });
+
+  sectionEl.appendChild(list);
+}
+
 function buildPromptWithWebSearch(originalPrompt, webSearch) {
   const results = Array.isArray(webSearch?.results) ? webSearch.results : [];
   const lines = [];
@@ -2347,9 +2392,19 @@ function createAssistantCard(turn) {
   toolCallsSection.appendChild(toolCallsList);
   renderToolEvents(toolCallsSection, toolCallsList, toolEventsSnapshot);
 
+  // 来源链接区域
+  const sourcesSnapshot = Array.isArray(turn?.models?.main?.sources)
+    ? turn.models.main.sources
+    : [];
+  const sourcesSection = document.createElement("div");
+  sourcesSection.className = "sources-section";
+  sourcesSection.style.display = "none";
+  renderSources(sourcesSection, sourcesSnapshot);
+
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
   content.appendChild(responseSection);
+  content.appendChild(sourcesSection);
 
   // 底部：元数据 + 操作按钮
   const footer = document.createElement("div");
@@ -2431,6 +2486,7 @@ function createAssistantCard(turn) {
     timeEl,
     speedEl,
     copyBtn,
+    sourcesSectionEl: sourcesSection,
     turn: turn,
     side: side,
   };
@@ -2839,6 +2895,23 @@ async function callModel(
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
+            if (state.autoScroll && topicId === state.chat.activeTopicId) {
+              scrollToBottom(elements.chatMessages, false);
+            }
+          } else if (chunk.type === "sources" && Array.isArray(chunk.data)) {
+            if (!Array.isArray(turn.models.main.sources)) {
+              turn.models.main.sources = [];
+            }
+            for (const s of chunk.data) {
+              if (s?.url && !turn.models.main.sources.some(x => x.url === s.url)) {
+                turn.models.main.sources.push(s);
+              }
+            }
+            const uiRef2 = resolveUi();
+            if (uiRef2?.sourcesSectionEl) {
+              renderSources(uiRef2.sourcesSectionEl, turn.models.main.sources);
+            }
+            scheduleSaveChat();
             if (state.autoScroll && topicId === state.chat.activeTopicId) {
               scrollToBottom(elements.chatMessages, false);
             }

@@ -664,6 +664,25 @@ class AIService:
                                 result_summary = result_summary[:180] + "..."
 
                             yield f"data: {json.dumps({'type': 'tool', 'data': {'status': result_status, 'round': current_round, 'name': tool_name, 'resultSummary': result_summary}})}\n\n"
+
+                            # 如果是搜索工具且成功，提取来源链接单独发送
+                            if (
+                                result_status == "success"
+                                and tool_name in ("tavily_search", "exa_search")
+                            ):
+                                try:
+                                    sr = json.loads(result)
+                                    source_items = sr.get("results") if isinstance(sr, dict) else None
+                                    if isinstance(source_items, list) and source_items:
+                                        sources = [
+                                            {"title": (s.get("title") or "").strip(), "url": (s.get("url") or "").strip()}
+                                            for s in source_items
+                                            if (s.get("url") or "").strip()
+                                        ]
+                                        if sources:
+                                            yield f"data: {json.dumps({'type': 'sources', 'data': sources}, ensure_ascii=False)}\n\n"
+                                except Exception:
+                                    pass
                             
                             # 构建标准格式的 tool_call
                             tool_call_message["tool_calls"].append({
