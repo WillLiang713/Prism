@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
@@ -306,7 +306,7 @@
                   <option value="tavily">Tavily</option>
                   <option value="exa">Exa</option>
                 </select>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   选择模型工具调用时使用的联网搜索服务
                 </small>
               </div>
@@ -317,7 +317,7 @@
                   id="tavilyApiKey"
                   placeholder="tvly-..."
                 />
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   留空时将使用服务端环境变量 TAVILY_API_KEY
                 </small>
               </div>
@@ -328,7 +328,7 @@
                   id="exaApiKey"
                   placeholder="exa-..."
                 />
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   留空时将使用服务端环境变量 EXA_API_KEY
                 </small>
               </div>
@@ -344,7 +344,7 @@
                     style="width: 80px"
                   />
                 </label>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   作为工具调用时的默认结果数量（1-20条，默认5条）
                 </small>
               </div>
@@ -361,7 +361,7 @@
                   <option value="basic"></option>
                   <option value="advanced"></option>
                 </datalist>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   作为工具调用时的默认深度
                 </small>
               </div>
@@ -373,7 +373,7 @@
                   <input type="checkbox" id="enableHistory" checked />
                   启用对话历史
                 </label>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   启用后，AI能看到之前的对话内容；禁用后，每次对话都是独立的
                 </small>
               </div>
@@ -389,7 +389,7 @@
                     style="width: 80px"
                   />
                 </label>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   限制发送给AI的历史对话轮数（1-50轮，默认10轮）
                 </small>
               </div>
@@ -405,7 +405,7 @@
                     style="width: 80px"
                   />
                 </label>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   限制AI连续调用工具的最大轮数（1-20轮，默认5轮）
                 </small>
               </div>
@@ -417,7 +417,7 @@
                   <input type="checkbox" id="enableAutoTitle" checked />
                   启用自动生成标题
                 </label>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   启用后，发送第一条消息时会自动使用AI生成话题标题
                 </small>
               </div>
@@ -444,7 +444,7 @@
                     hidden
                   ></div>
                 </div>
-                <small style="display: block; color: #666; margin-top: 4px">
+                <small style="display: block; color: #555; margin-top: 4px">
                   可指定不同的模型ID用于生成标题（建议使用轻量快速的模型，不要用reasoner模型）；留空则使用上面选择的模型的ID。会根据选择的配置自动获取可用模型列表。
                 </small>
               </div>
