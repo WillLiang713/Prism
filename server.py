@@ -11,6 +11,9 @@ Prism - CORS代理服务器 (Python版本)
 - 自动转发到真实API地址，并添加CORS头
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
