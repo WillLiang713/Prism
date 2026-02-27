@@ -52,31 +52,51 @@
           <div class="chat-body">
             <div class="chat-side" aria-label="话题">
               <div class="sidebar-section">
-                <div class="topic-list" id="topicList">
+                <div class="sidebar-top-bar">
                   <button class="topic-new-btn" id="newTopicBtn">
                     <span class="topic-new-icon">+</span>
                     <span class="topic-new-text">新建</span>
                   </button>
+                  <button
+                    class="sidebar-toggle-handle"
+                    id="toggleSidebarBtn"
+                    title="收起侧栏"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+                <div class="topic-list" id="topicList">
                 </div>
               </div>
             </div>
 
             <button
-              class="sidebar-toggle-handle"
-              id="toggleSidebarBtn"
-              title="显示/隐藏侧栏"
+              class="sidebar-expand-btn"
+              id="expandSidebarBtn"
+              title="展开侧栏"
             >
               <svg
                 viewBox="0 0 24 24"
-                width="16"
-                height="16"
+                width="14"
+                height="14"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <polyline points="15 18 9 12 15 6"></polyline>
+                <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </button>
 

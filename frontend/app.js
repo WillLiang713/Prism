@@ -55,6 +55,7 @@ const elements = {
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
+  expandSidebarBtn: document.getElementById("expandSidebarBtn"),
 
   // 联网搜索
   enableWebSearch: document.getElementById("enableWebSearch"),
@@ -1155,6 +1156,7 @@ function bindEvents() {
   });
 
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
+  elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
 }
 
 function openConfigModal() {
@@ -2019,16 +2021,8 @@ function renderAll() {
 function renderTopicList() {
   if (!elements.topicList) return;
 
-  // 保存新建按钮
-  const newTopicBtn = elements.topicList.querySelector(".topic-new-btn");
-
   // 清空列表
   elements.topicList.innerHTML = "";
-
-  // 重新添加新建按钮
-  if (newTopicBtn) {
-    elements.topicList.appendChild(newTopicBtn);
-  }
 
   const topics = [...state.chat.topics].sort(
     (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
