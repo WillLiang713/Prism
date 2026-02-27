@@ -478,29 +478,24 @@
     <div class="modal-overlay modal-compact" id="promptConfirmModal" aria-hidden="true">
       <div class="modal-content modal-compact-content">
         <div class="config-panel confirm-panel">
-          <div class="config-header">
-            <h2 id="promptConfirmTitle">提示</h2>
-            <div class="config-header-actions">
-              <button
-                class="btn btn-secondary btn-small"
-                id="promptConfirmCancelBtn"
-              >
-                取消
-              </button>
-              <button
-                class="btn btn-primary btn-small btn-danger"
-                id="promptConfirmOkBtn"
-              >
-                确定
-              </button>
-            </div>
+          <div class="confirm-body">
+            <div class="confirm-title" id="promptConfirmTitle">提示</div>
+            <div class="confirm-text" id="promptConfirmMessage"></div>
+            <div class="confirm-hint" id="promptConfirmHint"></div>
           </div>
-          <div class="config-content confirm-body">
-            <div class="confirm-icon" aria-hidden="true">!</div>
-            <div class="confirm-message">
-              <div class="confirm-text" id="promptConfirmMessage"></div>
-              <div class="confirm-hint" id="promptConfirmHint"></div>
-            </div>
+          <div class="confirm-footer">
+            <button
+              class="btn btn-secondary btn-small"
+              id="promptConfirmCancelBtn"
+            >
+              取消
+            </button>
+            <button
+              class="btn btn-primary btn-small btn-danger"
+              id="promptConfirmOkBtn"
+            >
+              确定
+            </button>
           </div>
         </div>
       </div>

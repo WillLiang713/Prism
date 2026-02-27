@@ -2091,7 +2091,7 @@ function renderTopicList() {
             title: "删除话题",
             okText: "删除",
             danger: true,
-            hint: "删除后不可恢复",
+            hint: "",
           }
         );
         if (!confirmed) return;
@@ -2608,7 +2608,7 @@ async function clearActiveTopicMessages() {
     title: "清空会话",
     okText: "清空",
     danger: true,
-    hint: "清空后不可恢复",
+    hint: "",
   });
   if (!confirmed) return;
   if (isTopicRunning(topic.id)) stopGeneration(topic.id);
