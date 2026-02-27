@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -42,26 +42,56 @@ app.add_middleware(
 # 挂载静态文件目录（必须在通配符路由之前定义）
 app.mount("/libs", StaticFiles(directory="frontend/libs"), name="libs")
 
+BUILD_ID = (os.getenv("PRISM_BUILD_ID") or datetime.now().strftime("%Y%m%d%H%M%S")).strip()
+INDEX_HTML_PATH = "frontend/index.html"
+
+def _render_index_html() -> str:
+    with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
+        html = f.read()
+    html = re.sub(r'href="style\.css(?:\?[^"]*)?"', f'href="style.css?v={BUILD_ID}"', html, count=1)
+    html = re.sub(r'src="app\.js(?:\?[^"]*)?"', f'src="app.js?v={BUILD_ID}"', html, count=1)
+    return html
+
 # 静态文件路由（必须在通配符路由之前定义）
 @app.get("/")
 async def serve_index():
     """提供主页"""
-    return FileResponse("frontend/index.html")
+    return HTMLResponse(
+        _render_index_html(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 @app.get("/index.html")
 async def serve_index_html():
     """提供主页"""
-    return FileResponse("frontend/index.html")
+    return HTMLResponse(
+        _render_index_html(),
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 @app.get("/style.css")
 async def serve_style():
     """提供样式文件"""
-    return FileResponse("frontend/style.css")
+    return FileResponse(
+        "frontend/style.css",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 @app.get("/app.js")
 async def serve_app():
     """提供JS文件"""
-    return FileResponse("frontend/app.js")
+    return FileResponse(
+        "frontend/app.js",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 @app.get("/favicon.svg")
 async def serve_favicon_svg():

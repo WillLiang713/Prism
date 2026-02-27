@@ -152,23 +152,27 @@ body {
 
 /* ---------- Chat Header ---------- */
 .chat-header {
+  position: relative;
+  min-height: 56px;
   padding: 12px 18px;
   background: var(--bg-chat);
   border-bottom: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  column-gap: 12px;
   backdrop-filter: blur(12px);
 }
 
 .header-brand {
+  grid-column: 2;
+  justify-self: center;
   display: flex;
   align-items: center;
-  flex: 1;
+  justify-content: center;
   min-width: 0;
-  padding: 0 0 0 4px;
+  width: min(100%, 680px);
+  padding: 0;
 }
 
 .brand-title {
@@ -182,11 +186,12 @@ body {
 .brand-meta {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 11px;
   color: var(--text-muted);
   letter-spacing: 0.2px;
-  line-height: 1.15;
+  line-height: 1;
   min-width: 0;
   overflow: hidden;
 }
@@ -206,16 +211,21 @@ body {
 .brand-model {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .brand-model-id {
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -236,6 +246,8 @@ body {
 }
 
 .chat-actions {
+  grid-column: 3;
+  justify-self: end;
   display: inline-flex;
   gap: 0;
   align-items: center;
@@ -244,6 +256,7 @@ body {
   background: rgba(255, 255, 255, 0.03);
   border: none;
   box-shadow: none;
+  z-index: 1;
 }
 
 .chat-actions .btn.btn-secondary.btn-settings {
@@ -253,6 +266,12 @@ body {
   opacity: 0.85;
   font-weight: 600;
   letter-spacing: 0.2px;
+  line-height: 1;
+  min-height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
   transition: color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
 }
@@ -405,10 +424,9 @@ body {
   color: var(--text-muted);
   transition: background 0.2s, color 0.2s, border-color 0.2s;
   flex-shrink: 0;
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  z-index: 100;
+  grid-column: 1;
+  justify-self: start;
+  z-index: 2;
 }
 
 .sidebar-expand-btn:hover {
@@ -437,7 +455,6 @@ body {
 }
 
 .sidebar-collapsed .chat-header {
-  padding-left: 54px;
   transition: padding-left 0.3s ease;
 }
 
@@ -850,7 +867,7 @@ body {
 }
 
 .assistant-model-name {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   letter-spacing: 0.2px;
 }
@@ -1546,15 +1563,25 @@ body {
 }
 
 .send-button:hover {
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
-  transform: translateY(-1px);
-  background: #ffffff;
+  box-shadow: none;
+  transform: translateY(0);
+  background: #e0e0e0;
 }
 
 .send-button:active {
   transform: translateY(0);
   box-shadow: none;
-  background: #cccccc;
+  background: #d6d6d6;
+}
+
+/* 兜底覆盖通用 .btn-primary:hover，避免移动端偶发白闪 */
+.send-button.btn-primary:hover,
+.send-button.btn-primary:focus,
+.send-button.btn-primary:focus-visible,
+.send-button.btn-primary:active {
+  background: #e0e0e0;
+  box-shadow: none;
+  transform: translateY(0);
 }
 
 .send-button .label-send { display: inline; }
@@ -1566,7 +1593,28 @@ body {
 }
 
 .send-button[data-mode="stop"]:hover {
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
+  background: #e0e0e0;
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .send-button:hover,
+  .send-button:active,
+  .send-button:focus,
+  .send-button:focus-visible,
+  .send-button[data-mode="stop"]:hover,
+  .send-button[data-mode="stop"]:active,
+  .send-button[data-mode="stop"]:focus,
+  .send-button[data-mode="stop"]:focus-visible,
+  .send-button.btn-primary:hover,
+  .send-button.btn-primary:active,
+  .send-button.btn-primary:focus,
+  .send-button.btn-primary:focus-visible {
+    background: #e0e0e0;
+    box-shadow: none;
+    transform: translateY(0);
+  }
 }
 
 .send-button[data-mode="stop"] .label-send { display: none; }
@@ -3538,11 +3586,11 @@ body {
 
   .chat-header {
     padding: 12px;
-    gap: 8px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    column-gap: 8px;
   }
 
   .header-brand {
-    flex: 1;
     min-width: 0;
   }
 

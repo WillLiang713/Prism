@@ -2255,7 +2255,12 @@ function renderChatMessages() {
   state.chat.turnUiById.clear();
 
   const topic = getActiveTopic();
-  if (!topic || !Array.isArray(topic.turns) || !topic.turns.length) return;
+  if (!topic || !Array.isArray(topic.turns) || !topic.turns.length) {
+    if (elements.scrollToBottomBtn) {
+      elements.scrollToBottomBtn.style.display = "none";
+    }
+    return;
+  }
 
   for (const turn of topic.turns) {
     const { el, cards } = createTurnElement(turn);
