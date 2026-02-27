@@ -2701,19 +2701,6 @@ body {
   margin-top: 1px;
 }
 
-.source-chip-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
 
 /* ---------- Response content (Markdown) ---------- */
 .response-section {

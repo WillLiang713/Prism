@@ -876,7 +876,7 @@ function renderSources(sectionEl, sources) {
   const list = document.createElement("div");
   list.className = "sources-list";
 
-  items.forEach((s, i) => {
+  items.forEach((s) => {
     const chip = document.createElement("a");
     chip.className = "source-chip";
     chip.href = s.url || "#";
@@ -912,14 +912,8 @@ function renderSources(sectionEl, sources) {
     body.appendChild(label);
     body.appendChild(urlLine);
 
-    // Number badge
-    const num = document.createElement("span");
-    num.className = "source-chip-num";
-    num.textContent = String(i + 1);
-
     chip.appendChild(favicon);
     chip.appendChild(body);
-    chip.appendChild(num);
     list.appendChild(chip);
   });
 
