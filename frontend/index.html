@@ -28,59 +28,38 @@
       <!-- 聊天区域 -->
       <div class="chat-layout">
         <section class="chat-panel">
-          <div class="chat-header">
-            <div class="header-brand" aria-label="应用名称与会话信息">
-              <div class="brand-text">
-                <div class="brand-meta">
-                  <span class="brand-session" id="headerSessionInfo"
-                    >会话：未命名 · 0 条</span
+          <div class="chat-side" aria-label="话题">
+            <div class="sidebar-section">
+              <div class="sidebar-top-bar">
+                <button class="topic-new-btn" id="newTopicBtn">
+                  <span class="topic-new-icon">+</span>
+                  <span class="topic-new-text">新建</span>
+                </button>
+                <button
+                  class="sidebar-toggle-handle"
+                  id="toggleSidebarBtn"
+                  title="收起侧栏"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="14"
+                    height="14"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
-                  <span class="brand-divider">·</span>
-                  <span class="brand-model" id="headerModelInfo">
-                    <span class="brand-model-id" id="modelName"></span>
-                  </span>
-                </div>
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
               </div>
-            </div>
-            <div class="chat-actions">
-              <button class="btn btn-secondary btn-settings" id="openConfigBtn">
-                设置
-              </button>
+              <div class="topic-list" id="topicList">
+              </div>
             </div>
           </div>
 
-          <div class="chat-body">
-            <div class="chat-side" aria-label="话题">
-              <div class="sidebar-section">
-                <div class="sidebar-top-bar">
-                  <button class="topic-new-btn" id="newTopicBtn">
-                    <span class="topic-new-icon">+</span>
-                    <span class="topic-new-text">新建</span>
-                  </button>
-                  <button
-                    class="sidebar-toggle-handle"
-                    id="toggleSidebarBtn"
-                    title="收起侧栏"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="14"
-                      height="14"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                  </button>
-                </div>
-                <div class="topic-list" id="topicList">
-                </div>
-              </div>
-            </div>
-
+          <div class="chat-main">
             <button
               class="sidebar-expand-btn"
               id="expandSidebarBtn"
@@ -99,6 +78,26 @@
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </button>
+            <div class="chat-header">
+              <div class="header-brand" aria-label="应用名称与会话信息">
+                <div class="brand-meta">
+                  <span class="brand-session" id="headerSessionInfo"
+                    >会话：未命名 · 0 条</span
+                  >
+                  <span class="brand-divider">·</span>
+                  <span class="brand-model" id="headerModelInfo">
+                    <span class="brand-model-id" id="modelName"></span>
+                  </span>
+                </div>
+              </div>
+              <div class="chat-actions">
+                <button class="btn btn-secondary btn-settings" id="openConfigBtn">
+                  设置
+                </button>
+              </div>
+            </div>
+
+            <div class="chat-body">
 
             <div class="chat-thread" aria-label="聊天">
               <div class="chat-messages-wrapper">
@@ -215,6 +214,7 @@
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </section>
       </div>

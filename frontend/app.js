@@ -790,6 +790,10 @@ function formatToolEventText(event) {
     return `${name} 完成：${event.resultSummary || "调用完成"}`;
   }
 
+  if (status === "limit") {
+    return event.resultSummary || "已达到工具调用上限，正在整理最终答案";
+  }
+
   return `${name}：${event.resultSummary || ""}`;
 }
 
