@@ -2283,20 +2283,31 @@ body {
 
 .model-picker-row {
   display: flex;
-  gap: 8px;
+  gap: 0;
   align-items: stretch;
 }
 
 .model-picker-row input[type="text"],
 .model-picker-row select {
   flex: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: 0;
+}
+
+.model-picker-row:focus-within input[type="text"],
+.model-picker-row:focus-within select {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .model-picker-btn {
-  width: 34px;
-  min-width: 34px;
+  -webkit-tap-highlight-color: transparent;
+  width: 38px;
+  min-width: 38px;
   border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-muted);
   cursor: pointer;
@@ -2306,23 +2317,44 @@ body {
   justify-content: center;
   line-height: 1;
   padding: 0;
+  margin-left: 0;
 }
 
 .model-picker-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--border-accent);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.model-picker-row:focus-within .model-picker-btn {
+  border-color: var(--accent);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .model-picker-row:hover input[type="text"],
+  .model-picker-row:hover select,
+  .model-picker-row:hover .model-picker-btn,
+  .model-picker-btn:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-strong);
+    color: var(--text-muted);
+  }
 }
 
 .model-picker-btn::before {
-  content: "▾";
-  font-size: 18px;
-  font-weight: 700;
-  transform: translateY(-1px);
+  content: "";
+  width: 12px;
+  height: 12px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%237b8ba5' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  transform: rotate(0deg);
+  transition: transform 0.18s ease;
 }
 
 .model-picker-btn.open::before {
-  content: "▴";
+  transform: rotate(180deg);
 }
 
 .model-dropdown {
