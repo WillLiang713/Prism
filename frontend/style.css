@@ -534,26 +534,7 @@ body {
 }
 
 .topic-item::before {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 999px;
-  background: transparent;
-  transition: background 0.2s ease;
-}
-
-.topic-item.active::before {
-  background: var(--text);
-  box-shadow: none;
-}
-
-.topic-item.running::before {
-  background: var(--text-muted);
-  opacity: 0.75;
-  animation: breathe 1.4s ease-in-out infinite;
+  display: none;
 }
 
 .topic-item.running:not(.active) {
