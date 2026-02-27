@@ -51,7 +51,7 @@ class ChatRequest(BaseModel):
     enableHistory: bool = True
     maxHistoryTurns: int = Field(default=10, ge=1, le=50)
     enableTools: bool = False  # 是否启用工具调用
-    maxToolRounds: int = Field(default=5, ge=1, le=20)  # 最大工具调用轮数
+    maxToolRounds: int = Field(default=50, ge=1, le=200)  # 最大工具调用轮数（实际不再限制）
     selectedTools: list[str] = []  # 选中的工具名称列表
     webSearchProvider: str = Field(default="tavily")  # 联网服务提供方（tavily|exa）
     webSearchMaxResults: int | None = Field(default=None, ge=1, le=20)  # 联网默认结果数量
@@ -575,7 +575,7 @@ class AIService:
                     current_round = 0
                     messages_with_tools = body["messages"].copy()
                     
-                    while tool_calls_buffer and request.enableTools and current_round < request.maxToolRounds:
+                    while tool_calls_buffer and request.enableTools:
                         current_round += 1
                         resolved_max_results = request.webSearchMaxResults or request.tavilyMaxResults or 5
                         tool_runtime_context = {
@@ -793,77 +793,6 @@ class AIService:
                                     except json.JSONDecodeError:
                                         continue
 
-                    # 达到工具调用上限后，强制进入“仅文本回答”收尾，避免静默结束。
-                    reached_tool_limit = (
-                        request.enableTools
-                        and bool(tool_calls_buffer)
-                        and current_round >= request.maxToolRounds
-                    )
-                    if reached_tool_limit:
-                        yield f"data: {json.dumps({'type': 'tool', 'data': {'status': 'limit', 'round': current_round, 'name': 'tool_limit_guard', 'resultSummary': '已达到工具调用上限，开始基于已有结果生成最终回答'}})}\n\n"
-
-                        final_messages = messages_with_tools.copy()
-                        if assistant_content:
-                            final_messages.append({
-                                "role": "assistant",
-                                "content": assistant_content
-                            })
-
-                        # 追加一次明确指令，要求模型不要继续搜，直接给最终答案。
-                        final_messages.append({
-                            "role": "user",
-                            "content": "你已达到工具调用上限。请不要再调用任何工具，基于已有信息直接给出最终回答；若信息不足请明确说明不确定性。"
-                        })
-
-                        body_final = body.copy()
-                        body_final["messages"] = final_messages
-                        body_final.pop("tools", None)
-
-                        async with client.stream(
-                            method="POST",
-                            url=url,
-                            headers=headers,
-                            json=body_final
-                        ) as response_final:
-                            if response_final.status_code >= 400:
-                                error_text = await response_final.aread()
-                                yield f"data: {json.dumps({'type': 'error', 'data': f'上限收尾失败 HTTP {response_final.status_code}: {error_text.decode()}'})}\n\n"
-                                return
-
-                            buffer_final = ""
-                            async for chunk in response_final.aiter_bytes():
-                                buffer_final += chunk.decode("utf-8", errors="ignore")
-
-                                lines = buffer_final.split("\n")
-                                buffer_final = lines.pop() if lines else ""
-
-                                for line in lines:
-                                    line = line.strip()
-                                    if not line or line.startswith(":"):
-                                        continue
-
-                                    if not line.startswith("data: "):
-                                        continue
-
-                                    data = line[6:]
-                                    if data == "[DONE]":
-                                        continue
-
-                                    try:
-                                        chunk_json = json.loads(data)
-                                        if provider_mode == "anthropic":
-                                            parsed = StreamParser.parse_anthropic_chunk(chunk_json)
-                                        else:
-                                            parsed = StreamParser.parse_openai_chunk(chunk_json)
-
-                                        if parsed["content"]:
-                                            yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
-
-                                        if parsed["tokens"] is not None:
-                                            yield f"data: {json.dumps({'type': 'tokens', 'data': parsed['tokens']})}\n\n"
-
-                                    except json.JSONDecodeError:
-                                        continue
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"

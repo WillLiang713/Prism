@@ -71,7 +71,6 @@ const elements = {
   // 对话历史
   enableHistory: document.getElementById("enableHistory"),
   maxHistoryTurns: document.getElementById("maxHistoryTurns"),
-  maxToolRounds: document.getElementById("maxToolRounds"),
 
   // 话题标题自动生成
   enableAutoTitle: document.getElementById("enableAutoTitle"),
@@ -790,9 +789,6 @@ function formatToolEventText(event) {
     return `${name} 完成：${event.resultSummary || "调用完成"}`;
   }
 
-  if (status === "limit") {
-    return event.resultSummary || "已达到工具调用上限，正在整理最终答案";
-  }
 
   return `${name}：${event.resultSummary || ""}`;
 }
@@ -2769,7 +2765,6 @@ async function callModel(
       maxHistoryTurns: getMaxHistoryTurns(),
       historyTurns: historyTurns,
       enableTools: true,
-      maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
       selectedTools: useWebSearchTool
         ? [selectedWebSearchTool, "get_current_time"]
         : ["get_current_time"],
