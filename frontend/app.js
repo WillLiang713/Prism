@@ -867,7 +867,7 @@ function buildPromptWithWebSearch(originalPrompt, webSearch) {
   const results = Array.isArray(webSearch?.results) ? webSearch.results : [];
   const lines = [];
   lines.push(
-    "你将获得一些联网搜索结果。请优先基于这些结果作答，并在回答末尾给出参考链接列表。"
+    "你将获得一些联网搜索结果。请优先基于这些结果作答。来源链接会自动展示在回复下方，回复中无需重复列出参考链接。"
   );
 
   if (webSearch?.answer)

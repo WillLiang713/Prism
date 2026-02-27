@@ -3,7 +3,7 @@
     "type": "function",
     "function": {
       "name": "tavily_search",
-      "description": "联网搜索最新信息并返回摘要与来源链接。仅在回答需要外部实时信息时调用。",
+      "description": "联网搜索最新信息。仅在回答需要外部实时信息时调用。来源链接会自动展示，回复中无需重复列出。",
       "parameters": {
         "type": "object",
         "properties": {
@@ -52,7 +52,7 @@
     "type": "function",
     "function": {
       "name": "exa_search",
-      "description": "使用 Exa 联网搜索最新信息并返回来源链接。仅在回答需要外部实时信息时调用。",
+      "description": "使用 Exa 联网搜索最新信息。仅在回答需要外部实时信息时调用。来源链接会自动展示，回复中无需重复列出。",
       "parameters": {
         "type": "object",
         "properties": {
