@@ -1476,8 +1476,9 @@ body {
   display: none;
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
+  left: auto;
+  transform: none;
   background: var(--surface-solid);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -1629,8 +1630,9 @@ body {
 .scroll-to-bottom-btn {
   position: absolute;
   bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
+  left: auto;
+  transform: none;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -1654,12 +1656,12 @@ body {
 .scroll-to-bottom-btn:hover {
   color: var(--text);
   border-color: var(--border-accent);
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
 }
 
 .scroll-to-bottom-btn:active {
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 /* ---------- Image Preview ---------- */
