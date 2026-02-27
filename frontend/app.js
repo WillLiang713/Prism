@@ -806,6 +806,48 @@ function renderToolEvents(sectionEl, listEl, events) {
   sectionEl.style.display = "block";
   listEl.innerHTML = "";
 
+  // Determine overall status
+  const hasError = items.some((e) => e.status === "error");
+  const allDone = items.every((e) => e.status === "success" || e.status === "error");
+  sectionEl.classList.remove("tc-running", "tc-success", "tc-error");
+  if (hasError) sectionEl.classList.add("tc-error");
+  else if (allDone) sectionEl.classList.add("tc-success");
+  else sectionEl.classList.add("tc-running");
+
+  // Build header if not already present
+  if (!sectionEl.querySelector(".tool-calls-header")) {
+    const header = document.createElement("div");
+    header.className = "tool-calls-header";
+
+    header.innerHTML = `
+      <span class="tool-calls-header-text"></span>
+      <svg class="tool-calls-header-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>`;
+
+    // Wrap list in detail container
+    const detail = document.createElement("div");
+    detail.className = "tool-calls-detail";
+
+    // Move listEl into detail
+    sectionEl.innerHTML = "";
+    detail.appendChild(listEl);
+    sectionEl.appendChild(header);
+    sectionEl.appendChild(detail);
+
+    header.addEventListener("click", () => {
+      sectionEl.classList.toggle("tc-expanded");
+    });
+  }
+
+  // Update header text
+  const headerText = sectionEl.querySelector(".tool-calls-header-text");
+  if (headerText) {
+    const count = items.length;
+    headerText.textContent = `工具调用 · ${count} 步`;
+  }
+
+  // Render items
   items.forEach((event) => {
     const li = document.createElement("li");
     li.className = `tool-call-item ${event.status || "info"}`;
@@ -841,18 +883,43 @@ function renderSources(sectionEl, sources) {
     chip.target = "_blank";
     chip.rel = "noopener noreferrer";
 
+    // Favicon
+    let hostname = "";
+    try { hostname = new URL(s.url).hostname; } catch (_) {}
+    const favicon = document.createElement("img");
+    favicon.className = "source-chip-favicon";
+    favicon.src = hostname
+      ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+      : "";
+    favicon.alt = "";
+    favicon.loading = "lazy";
+    favicon.onerror = function () {
+      this.style.display = "none";
+    };
+
+    // Body (title + url)
+    const body = document.createElement("div");
+    body.className = "source-chip-body";
+
+    const label = document.createElement("span");
+    label.className = "source-chip-label";
+    label.textContent = s.title || hostname || s.url;
+
+    const urlLine = document.createElement("span");
+    urlLine.className = "source-chip-url";
+    urlLine.textContent = hostname;
+
+    body.appendChild(label);
+    body.appendChild(urlLine);
+
+    // Number badge
     const num = document.createElement("span");
     num.className = "source-chip-num";
     num.textContent = String(i + 1);
 
-    const label = document.createElement("span");
-    label.className = "source-chip-label";
-    let fallback = s.url;
-    try { fallback = new URL(s.url).hostname; } catch (_) {}
-    label.textContent = s.title || fallback;
-
+    chip.appendChild(favicon);
+    chip.appendChild(body);
     chip.appendChild(num);
-    chip.appendChild(label);
     list.appendChild(chip);
   });
 
@@ -2377,14 +2444,9 @@ function createAssistantCard(turn) {
   toolCallsSection.className = "tool-calls-section";
   toolCallsSection.style.display = "none";
 
-  const toolCallsTitle = document.createElement("div");
-  toolCallsTitle.className = "tool-calls-title";
-  toolCallsTitle.textContent = "工具调用";
-
   const toolCallsList = document.createElement("ul");
   toolCallsList.className = "tool-calls-list";
 
-  toolCallsSection.appendChild(toolCallsTitle);
   toolCallsSection.appendChild(toolCallsList);
   renderToolEvents(toolCallsSection, toolCallsList, toolEventsSnapshot);
 
@@ -2902,14 +2964,8 @@ async function callModel(
                 turn.models.main.sources.push(s);
               }
             }
-            const uiRef2 = resolveUi();
-            if (uiRef2?.sourcesSectionEl) {
-              renderSources(uiRef2.sourcesSectionEl, turn.models.main.sources);
-            }
+            // 不在流式过程中渲染来源，等响应完成后再显示
             scheduleSaveChat();
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
           } else if (chunk.type === "error") {
             throw new Error(chunk.data);
           }
@@ -2927,6 +2983,11 @@ async function callModel(
     const uiRef = resolveUi();
     if (uiRef?.statusEl) {
       applyStatus(uiRef.statusEl, "complete");
+    }
+
+    // 响应完成后再渲染来源链接，避免来源先于内容显示
+    if (uiRef?.sourcesSectionEl && Array.isArray(turn.models.main.sources) && turn.models.main.sources.length) {
+      renderSources(uiRef.sourcesSectionEl, turn.models.main.sources);
     }
 
     if (
