@@ -445,7 +445,7 @@ body {
 .topic-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
   overflow-y: auto;
   padding-right: 4px;
   flex: 1;
