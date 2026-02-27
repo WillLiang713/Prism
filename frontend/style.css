@@ -1332,16 +1332,13 @@ body {
 }
 
 .toolbar-btn:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   border-color: var(--border-accent);
   color: var(--text);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .toolbar-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .toolbar-btn:focus-visible {
@@ -1975,9 +1972,8 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 15px 20px;
-  background: rgba(10, 10, 10, 0.95);
+  background: var(--surface-solid);
   border-bottom: none;
-  backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
   z-index: 2;
