@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 from contextvars import ContextVar, Token
+from datetime import datetime, timezone as dt_timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 import json
 import os
 
@@ -253,9 +255,37 @@ def exa_search(
     )
 
 
+def get_current_time(timezone: str | None = None) -> str:
+    """获取指定时区的当前时间，默认为北京时间 (Asia/Shanghai)。"""
+    tz_name = (timezone or "").strip() or "Asia/Shanghai"
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        return json.dumps(
+            {"error": f"无效的时区: '{tz_name}'，请使用 IANA 时区名称，如 Asia/Shanghai、America/New_York、Europe/London 等"},
+            ensure_ascii=False,
+        )
+
+    now = datetime.now(tz)
+    weekday_names = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+
+    return json.dumps(
+        {
+            "timezone": tz_name,
+            "datetime": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "date": now.strftime("%Y-%m-%d"),
+            "time": now.strftime("%H:%M:%S"),
+            "weekday": weekday_names[now.weekday()],
+            "utc_offset": now.strftime("%z"),
+        },
+        ensure_ascii=False,
+    )
+
+
 TOOLS = {
     "tavily_search": tavily_search,
     "exa_search": exa_search,
+    "get_current_time": get_current_time,
 }
 
 

@@ -2714,9 +2714,11 @@ async function callModel(
       enableHistory: isHistoryEnabled(),
       maxHistoryTurns: getMaxHistoryTurns(),
       historyTurns: historyTurns,
-      enableTools: useWebSearchTool,
+      enableTools: true,
       maxToolRounds: parseInt(elements.maxToolRounds?.value) || 5,
-      selectedTools: useWebSearchTool ? [selectedWebSearchTool] : [],
+      selectedTools: useWebSearchTool
+        ? [selectedWebSearchTool, "get_current_time"]
+        : ["get_current_time"],
       webSearchProvider: webSearchProvider,
       webSearchMaxResults: webSearchConfig?.maxResults || 5,
       tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,

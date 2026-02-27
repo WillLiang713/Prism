@@ -70,5 +70,22 @@
         ]
       }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_current_time",
+      "description": "获取当前日期和时间。当用户询问现在几点、今天日期、星期几等时间相关问题时调用。默认返回北京时间，支持自定义时区。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "description": "IANA 时区名称，如 Asia/Shanghai（北京时间）、America/New_York（纽约）、Europe/London（伦敦）、Asia/Tokyo（东京）等。默认为 Asia/Shanghai。"
+          }
+        },
+        "required": []
+      }
+    }
   }
 ]
