@@ -1510,6 +1510,11 @@ body {
   overflow: visible !important;
 }
 
+.chat-thread:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .reasoning-effort-dropdown button {
   all: unset;
   padding: 6px 14px;
