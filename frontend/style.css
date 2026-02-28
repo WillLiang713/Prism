@@ -2591,6 +2591,7 @@ body {
 .model-picker-row input[type="text"],
 .model-picker-row select {
   flex: 1;
+  min-width: 0;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   border-right: 0;
@@ -2608,6 +2609,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   width: 38px;
   min-width: 38px;
+  flex: 0 0 38px;
   border: 1px solid var(--border-strong);
   border-left: 0;
   border-radius: 0 10px 10px 0;
@@ -4020,8 +4022,9 @@ body {
 }
 
 @media (max-width: 900px) {
+  /* 配置弹窗在移动端也保持“居中弹窗”形态（不全屏） */
   #configModal {
-    padding: 0;
+    padding: 12px;
   }
 
   #configModal .modal-content {
@@ -4031,8 +4034,8 @@ body {
   }
 
   #configModal .config-panel {
-    max-height: 100dvh;
-    border-radius: 0;
+    max-height: 92dvh;
+    border-radius: var(--radius-lg);
   }
 
   #configModal .config-header {
@@ -4063,7 +4066,7 @@ body {
   #configModal .config-tabs {
     padding: 10px 12px 10px;
     gap: 6px;
-    overflow-x: auto;
+    overflow: visible;
     scrollbar-width: none;
   }
 
@@ -4073,6 +4076,7 @@ body {
 
   #configModal .config-tab {
     flex: 0 0 auto;
+    white-space: nowrap;
   }
 
   #configModal .config-content {
