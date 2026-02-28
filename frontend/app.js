@@ -47,6 +47,9 @@ const state = {
   isSidebarCollapsed: false,
 };
 
+const floatingDropdownOrigins = new WeakMap();
+const floatingDropdownAnchors = new WeakMap();
+
 const elements = {
   // 配置相关
   saveConfig: document.getElementById("saveConfig"),
@@ -54,6 +57,8 @@ const elements = {
   configModal: document.getElementById("configModal"),
   configTabs: document.getElementById("configTabs"),
   configContent: document.getElementById("configContent"),
+  modelStatusPill: document.getElementById("modelStatusPill"),
+  webStatusPill: document.getElementById("webStatusPill"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
@@ -144,6 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateModelNames();
   setSendButtonMode("send");
   autoGrowPromptInput();
+  updateConfigStatusStrip();
   initLayout(); // 初始化布局
   renderAll();
   startHeaderClock();
@@ -198,6 +204,92 @@ function getSelectOptionLabel(selectEl, value) {
   return (found?.textContent || value || "").trim();
 }
 
+function rememberDropdownOrigin(dropdownEl) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  if (floatingDropdownOrigins.has(dropdownEl)) return;
+  floatingDropdownOrigins.set(dropdownEl, {
+    parent: dropdownEl.parentElement,
+    next: dropdownEl.nextSibling,
+  });
+}
+
+function restoreDropdownOrigin(dropdownEl) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  const origin = floatingDropdownOrigins.get(dropdownEl);
+  if (!origin?.parent) return;
+  if (dropdownEl.parentElement === origin.parent) return;
+  if (origin.next && origin.next.parentNode === origin.parent) {
+    origin.parent.insertBefore(dropdownEl, origin.next);
+  } else {
+    origin.parent.appendChild(dropdownEl);
+  }
+}
+
+function positionFloatingDropdown(dropdownEl) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  const anchorEl = floatingDropdownAnchors.get(dropdownEl);
+  if (!(anchorEl instanceof HTMLElement)) return;
+
+  const rect = anchorEl.getBoundingClientRect();
+  const viewportPadding = 12;
+  const gap = 6;
+  const width = Math.min(
+    Math.max(220, Math.round(rect.width)),
+    Math.max(220, window.innerWidth - viewportPadding * 2)
+  );
+  const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+  const maxHeight = Math.max(140, Math.min(320, Math.round(spaceBelow)));
+  const left = Math.min(
+    Math.max(viewportPadding, Math.round(rect.left)),
+    Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
+  );
+  const top = Math.round(rect.bottom + gap);
+
+  dropdownEl.style.left = `${left}px`;
+  dropdownEl.style.top = `${top}px`;
+  dropdownEl.style.width = `${width}px`;
+  dropdownEl.style.maxHeight = `${maxHeight}px`;
+}
+
+function openFloatingDropdown(dropdownEl, anchorEl) {
+  if (!(dropdownEl instanceof HTMLElement) || !(anchorEl instanceof HTMLElement))
+    return;
+  rememberDropdownOrigin(dropdownEl);
+  const host = elements.configModal || document.body;
+  if (dropdownEl.parentElement !== host) {
+    host.appendChild(dropdownEl);
+  }
+  dropdownEl.classList.add("is-floating-dropdown");
+  floatingDropdownAnchors.set(dropdownEl, anchorEl);
+  positionFloatingDropdown(dropdownEl);
+  dropdownEl.hidden = false;
+  dropdownEl.setAttribute("aria-hidden", "false");
+}
+
+function closeFloatingDropdown(dropdownEl) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  dropdownEl.classList.remove("is-floating-dropdown");
+  dropdownEl.style.left = "";
+  dropdownEl.style.top = "";
+  dropdownEl.style.width = "";
+  dropdownEl.style.maxHeight = "";
+  floatingDropdownAnchors.delete(dropdownEl);
+  restoreDropdownOrigin(dropdownEl);
+}
+
+function repositionOpenFloatingDropdowns() {
+  const dropdowns = [
+    elements.modelDropdown,
+    ...getConfigSelectPickerDefs().map((item) => item.dropdown),
+  ];
+  for (const dropdownEl of dropdowns) {
+    if (!(dropdownEl instanceof HTMLElement)) continue;
+    if (dropdownEl.hidden) continue;
+    if (!dropdownEl.classList.contains("is-floating-dropdown")) continue;
+    positionFloatingDropdown(dropdownEl);
+  }
+}
+
 function syncConfigSelectPicker(key) {
   const picker = getConfigSelectPickerDef(key);
   if (!picker?.select || !picker?.input) return;
@@ -230,6 +322,7 @@ function closeConfigSelectPicker(key) {
   picker.dropdown.hidden = true;
   picker.dropdown.setAttribute("aria-hidden", "true");
   picker.dropdown.innerHTML = "";
+  closeFloatingDropdown(picker.dropdown);
   setConfigSelectPickerButtonState(key, false);
 }
 
@@ -286,10 +379,8 @@ function openConfigSelectPicker(key) {
   if (!picker?.dropdown || !picker?.input) return;
   closeModelDropdown("main");
   closeAllConfigSelectPickers(key);
-  ensureModelDropdownVisibleSpace(picker.input);
   renderConfigSelectPicker(key);
-  picker.dropdown.hidden = false;
-  picker.dropdown.setAttribute("aria-hidden", "false");
+  openFloatingDropdown(picker.dropdown, picker.input);
   setConfigSelectPickerButtonState(key, true);
 }
 
@@ -1155,6 +1246,37 @@ function normalizeWebSearchProvider(value) {
   return String(value || "").toLowerCase() === "exa" ? "exa" : "tavily";
 }
 
+function setStatusPillState(el, isReady, text) {
+  if (!el) return;
+  el.textContent = text || "";
+  el.classList.toggle("is-ready", !!isReady);
+  el.classList.toggle("is-pending", !isReady);
+}
+
+function updateConfigStatusStrip() {
+  const hasApiKey = !!(elements.apiKey?.value || "").trim();
+  const hasApiUrl = !!(elements.apiUrl?.value || "").trim();
+  const modelName = (elements.model?.value || "").trim();
+  const provider = elements.provider?.value === "anthropic" ? "Anthropic" : "OpenAI";
+  const modelReady = hasApiKey && hasApiUrl && !!modelName;
+  const modelText = modelReady
+    ? `模型：${provider} · ${modelName}`
+    : "模型：待完成（需 Key + 地址 + 模型）";
+  setStatusPillState(elements.modelStatusPill, modelReady, modelText);
+
+  const webProvider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
+  const maxResults = Math.max(
+    1,
+    Math.min(20, parseInt(elements.tavilyMaxResults?.value) || 5)
+  );
+  const depth = normalizeTavilySearchDepth(elements.tavilySearchDepth?.value);
+  const webText =
+    webProvider === "exa"
+      ? `联网：Exa · ${maxResults} 条`
+      : `联网：Tavily · ${depth} · ${maxResults} 条`;
+  setStatusPillState(elements.webStatusPill, true, webText);
+}
+
 function updateWebSearchProviderUi() {
   const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
   const isExa = provider === "exa";
@@ -1168,6 +1290,7 @@ function updateWebSearchProviderUi() {
   if (elements.exaApiKeyGroup) {
     elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
   }
+  updateConfigStatusStrip();
 }
 
 async function tavilySearch(
@@ -1246,7 +1369,12 @@ function bindEvents() {
 
   elements.webSearchProvider?.addEventListener("change", () => {
     updateWebSearchProviderUi();
+    updateConfigStatusStrip();
   });
+  elements.tavilyApiKey?.addEventListener("input", updateConfigStatusStrip);
+  elements.exaApiKey?.addEventListener("input", updateConfigStatusStrip);
+  elements.tavilyMaxResults?.addEventListener("input", updateConfigStatusStrip);
+  elements.tavilySearchDepth?.addEventListener("change", updateConfigStatusStrip);
 
 
   // 思考强度下拉选择器
@@ -1292,6 +1420,14 @@ function bindEvents() {
     if (e.target === elements.configModal) closeConfigModal();
   });
   document.addEventListener("keydown", (e) => {
+    const key = String(e.key || "").toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && key === "s") {
+      if (elements.configModal?.classList.contains("open")) {
+        e.preventDefault();
+        void saveConfig();
+      }
+      return;
+    }
     if (e.key !== "Escape") return;
     if (isPromptConfirmDialogOpen()) {
       e.preventDefault();
@@ -1355,15 +1491,18 @@ function bindEvents() {
   elements.provider.addEventListener("change", () => {
     updateProviderUi();
     updateModelHint();
+    updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
   });
 
   elements.apiKey?.addEventListener("input", () => {
     updateModelHint();
+    updateConfigStatusStrip();
     scheduleFetchModels("main", 400);
   });
   elements.apiUrl?.addEventListener("input", () => {
     updateModelHint();
+    updateConfigStatusStrip();
     scheduleFetchModels("main", 500);
   });
 
@@ -1383,6 +1522,7 @@ function bindEvents() {
   // 监听模型名称变化
   elements.model.addEventListener("input", () => {
     updateModelNames();
+    updateConfigStatusStrip();
     updateModelDropdownFilter("main");
   });
 
@@ -1396,10 +1536,12 @@ function bindEvents() {
   document.addEventListener("mousedown", (e) => {
     const t = e.target;
     if (!(t instanceof Node)) return;
-    if (t.closest?.(".model-picker")) return;
+    if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
     closeModelDropdown("main");
     closeAllConfigSelectPickers();
   });
+  elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
+  window.addEventListener("resize", repositionOpenFloatingDropdowns);
 
   // Enter 发送（Shift+Enter 换行）
   elements.promptInput.addEventListener("keydown", (e) => {
@@ -1473,6 +1615,8 @@ function setActiveConfigTab(tabName = "model") {
     panel.classList.toggle("is-active", active);
     panel.hidden = !active;
   });
+  closeModelDropdown("main");
+  closeAllConfigSelectPickers();
 
   if (elements.configContent) {
     elements.configContent.scrollTop = 0;
@@ -1488,6 +1632,7 @@ function openConfigModal() {
   syncBodyScrollLock();
   updateModelHint();
   syncRoleSettingPreview(true);
+  updateConfigStatusStrip();
   scheduleFetchModels("main", 0);
 }
 
@@ -1580,10 +1725,10 @@ function updateProviderUi() {
   if (hintEl) {
     if (provider === "openai") {
       hintEl.textContent =
-        "OpenAI 兼容接口，地址可留空。";
+        "OpenAI 兼容接口，请填写 API 地址。";
     } else if (provider === "anthropic") {
       hintEl.textContent =
-        "Anthropic 兼容接口，地址可留空。";
+        "Anthropic 兼容接口，请填写 API 地址。";
     }
   }
 
@@ -1644,11 +1789,20 @@ function setModelHint(side, text) {
 function updateModelHint(side) {
   const config = getConfigFromForm(side || "main");
   const apiKey = (config.apiKey || "").trim();
+  const apiUrl = (config.apiUrl || "").trim();
 
   if (!apiKey) {
     setModelHint(
       side || "main",
-      "填模型ID；配置Key后可自动拉取列表。"
+      "先填写 API Key、API 地址，再拉取模型列表。"
+    );
+    return;
+  }
+
+  if (!apiUrl) {
+    setModelHint(
+      side || "main",
+      "先填写 API 地址，再拉取模型列表。"
     );
     return;
   }
@@ -1702,6 +1856,7 @@ function closeModelDropdown(side) {
   el.hidden = true;
   el.setAttribute("aria-hidden", "true");
   el.innerHTML = "";
+  closeFloatingDropdown(el);
   setModelDropdownButtonState(side, false);
 }
 
@@ -1764,34 +1919,14 @@ function renderModelDropdown(side, filterText) {
   }
 }
 
-function ensureModelDropdownVisibleSpace(inputEl) {
-  const contentEl = elements.configContent;
-  const pickerEl = inputEl?.closest?.(".model-picker");
-  if (!contentEl || !pickerEl) return;
-
-  const contentRect = contentEl.getBoundingClientRect();
-  const pickerRect = pickerEl.getBoundingClientRect();
-  const gap = 10;
-  const need = 250;
-  const spaceBelow = contentRect.bottom - pickerRect.bottom - gap;
-  if (spaceBelow >= need) return;
-
-  const delta = need - spaceBelow;
-  const maxTop = Math.max(0, contentEl.scrollHeight - contentEl.clientHeight);
-  if (maxTop <= 0) return;
-  contentEl.scrollTop = Math.min(maxTop, contentEl.scrollTop + delta);
-}
-
 function openModelDropdown(side) {
   const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   const inputEl =
     side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl || !inputEl) return;
 
-  ensureModelDropdownVisibleSpace(inputEl);
   renderModelDropdown(side, inputEl.value);
-  dropdownEl.hidden = false;
-  dropdownEl.setAttribute("aria-hidden", "false");
+  openFloatingDropdown(dropdownEl, inputEl);
   setModelDropdownButtonState(side, true);
 
   dropdownEl.onscroll = () => {
@@ -1925,7 +2060,9 @@ async function fetchAndUpdateModels(side) {
   if (!slot || slot.inFlight) return;
 
   const config = getConfigFromForm(side);
-  if (!(config.apiKey || "").trim()) {
+  const apiKey = (config.apiKey || "").trim();
+  const apiUrl = (config.apiUrl || "").trim();
+  if (!apiKey || !apiUrl) {
     slot.models = [];
     closeModelDropdown(side);
     if (side !== "Title") updateModelHint();
@@ -1974,6 +2111,19 @@ async function fetchAndUpdateModels(side) {
 }
 
 async function saveConfig() {
+  const provider = elements.provider?.value || "openai";
+  const apiKey = (elements.apiKey?.value || "").trim();
+  const apiUrl = (elements.apiUrl?.value || "").trim();
+  const model = (elements.model?.value || "").trim();
+
+  if (!apiKey || !apiUrl || !model) {
+    setActiveConfigTab("model");
+    await showAlert("请先完成模型必填项：API Key、API 地址、模型。", {
+      title: "缺少必填项",
+    });
+    return;
+  }
+
   const config = {
     webSearch: {
       enabled: !!elements.enableWebSearch?.checked,
@@ -1993,15 +2143,16 @@ async function saveConfig() {
       model: "",
     },
     model: {
-      provider: elements.provider.value,
-      apiKey: elements.apiKey.value,
-      model: elements.model.value,
-      apiUrl: elements.apiUrl.value,
+      provider,
+      apiKey,
+      model,
+      apiUrl,
       systemPrompt: elements.roleSetting?.value || "",
     },
   };
 
   localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+  updateConfigStatusStrip();
   await showAlert("配置已保存", {
     title: "保存成功",
   });
@@ -2066,6 +2217,7 @@ function loadConfig() {
 
   syncAllConfigSelectPickers();
   updateWebSearchProviderUi();
+  updateConfigStatusStrip();
 }
 
 async function clearConfig() {
@@ -2097,6 +2249,7 @@ async function clearConfig() {
   updateProviderUi();
   updateWebSearchProviderUi();
   updateModelNames();
+  updateConfigStatusStrip();
   await showAlert("配置已清除", {
     title: "操作完成",
   });

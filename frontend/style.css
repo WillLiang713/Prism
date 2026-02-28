@@ -1983,7 +1983,8 @@ body {
 }
 
 .modal-content .config-content {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
@@ -1995,6 +1996,35 @@ body {
 .modal-content .config-content::-webkit-scrollbar-track { background: transparent; }
 .modal-content .config-content::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 .modal-content .config-content:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); }
+
+#configModal .modal-content {
+  height: min(700px, 90vh);
+}
+
+#configModal .config-panel {
+  height: 100%;
+  max-height: 100%;
+}
+
+#configModal .config-content {
+  flex: 1 1 auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#configModal .config-content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+#configModal .config-content::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+#configModal .config-content:hover::-webkit-scrollbar-thumb {
+  background: transparent;
+}
 
 /* Config panel */
 .config-panel {
@@ -2017,40 +2047,94 @@ body {
 
 .config-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 16px 20px 12px;
   background: var(--surface-solid);
-  border-bottom: none;
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 2;
 }
 
 .config-header h2 {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
   font-family: var(--font-display);
-  letter-spacing: 0.4px;
+  letter-spacing: 0.2px;
 }
 
-.config-header-actions {
-  display: inline-flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.config-header-actions .btn {
-  border-radius: 999px;
-  padding: 6px 14px;
+.config-header-title p {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 .config-tabs {
   display: flex;
   gap: 8px;
-  padding: 0 20px 10px;
+  padding: 10px 20px 10px;
   background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
+}
+
+.config-status-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 20px 12px;
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.status-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+
+.status-pill.is-ready {
+  color: var(--text);
+  border-color: rgba(14, 128, 106, 0.45);
+  background: rgba(14, 128, 106, 0.15);
+}
+
+.status-pill.is-ready::before {
+  background: #4ed9c1;
+}
+
+.status-pill.is-pending {
+  border-color: rgba(249, 158, 81, 0.42);
+  background: rgba(249, 158, 81, 0.14);
+}
+
+.status-pill.is-pending::before {
+  background: #f99e51;
+}
+
+.status-pill-tip {
+  margin-left: auto;
+  border-style: dashed;
+}
+
+.status-pill-tip::before {
+  background: transparent;
 }
 
 .config-tab {
@@ -2085,7 +2169,7 @@ body {
 }
 
 .config-content {
-  padding: 16px 20px 20px;
+  padding: 14px 20px 12px;
   transition: max-height 0.3s ease;
   background: transparent;
 }
@@ -2106,34 +2190,44 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   align-items: start;
 }
 
 .config-section,
 .global-config {
-  background: rgba(255, 255, 255, 0.02);
-  border: none;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 18px 18px 14px;
+  padding: 16px 16px 14px;
   box-shadow: none;
 }
 
-/* 联网面板：增大卡片并预留下拉展开空间，避免底部遮挡 */
+/* 联网面板：下拉已浮层化，无需额外底部保留空间 */
 #configPanelWeb .global-config {
-  min-height: clamp(380px, 56vh, 600px);
-  padding-bottom: clamp(64px, 10vh, 120px);
+  min-height: 0;
+  padding-bottom: 12px;
 }
 
 .config-section-model .model-config-layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 12px;
 }
 
 .config-section-model .model-config-main,
 .config-section-model .model-config-side {
   min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.required-credentials-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .config-section-model .model-config-side .form-group {
@@ -2146,7 +2240,16 @@ body {
 
 .config-section-model .model-config-side textarea,
 .config-section-model .model-config-side .role-setting-preview {
-  min-height: 200px;
+  min-height: 180px;
+}
+
+.config-subtitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .topic-config-layout {
@@ -2188,6 +2291,35 @@ body {
   border-radius: 50%;
   background: var(--text-muted);
   box-shadow: none;
+}
+
+.web-config-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.web-config-main,
+.web-config-side {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.web-config-tips {
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.web-config-tips p + p {
+  margin-top: 4px;
 }
 
 .toggle-btn {
@@ -2406,6 +2538,10 @@ body {
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
+.input-compact {
+  max-width: 140px;
+}
+
 /* Global config small text */
 .global-config small {
   display: block;
@@ -2440,6 +2576,10 @@ body {
   position: relative;
   max-width: 480px;
   gap: 8px;
+}
+
+#configModal .model-picker {
+  max-width: 100%;
 }
 
 .model-picker-row {
@@ -2538,18 +2678,23 @@ body {
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   max-height: 260px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s ease;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.model-dropdown:hover { scrollbar-color: rgba(255, 255, 255, 0.12) transparent; }
-.model-dropdown::-webkit-scrollbar { width: 6px; }
-.model-dropdown::-webkit-scrollbar-track { background: transparent; }
-.model-dropdown::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
-.model-dropdown:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
+.model-dropdown::-webkit-scrollbar { width: 0; height: 0; }
+
+.model-dropdown.is-floating-dropdown {
+  position: fixed;
+  left: 0;
+  right: auto;
+  top: 0;
+  z-index: 1105;
+  max-width: calc(100vw - 24px);
+}
 
 .model-dropdown-empty {
   padding: 10px;
@@ -2598,6 +2743,29 @@ body {
   justify-content: flex-end;
   padding-top: 15px;
   border-top: none;
+}
+
+.config-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-solid);
+}
+
+.config-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.config-footer-actions .btn {
+  border-radius: 999px;
+  padding: 6px 14px;
 }
 
 /* ---------- Thinking section ---------- */
@@ -3821,12 +3989,23 @@ body {
 
 @media (min-width: 901px) {
   #configModal .modal-content {
-    width: min(860px, 96vw);
+    width: min(980px, 96vw);
   }
 
   .config-section-model .model-config-layout {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-    gap: 18px;
+    gap: 14px;
+  }
+
+  .required-credentials-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  .web-config-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.68fr);
+    gap: 14px;
   }
 
   .config-section-model .model-config-main .form-group:last-child {
@@ -3847,6 +4026,7 @@ body {
 
   #configModal .modal-content {
     width: 100vw;
+    height: 100dvh;
     max-height: 100dvh;
   }
 
@@ -3856,24 +4036,32 @@ body {
   }
 
   #configModal .config-header {
-    padding: 12px 12px 10px;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 10px;
+    padding: 12px;
   }
 
-  #configModal .config-header-actions {
-    width: 100%;
-    justify-content: flex-end;
+  #configModal .config-status-strip {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  #configModal .status-pill-tip {
+    margin-left: 0;
+  }
+
+  #configModal .config-footer {
+    padding: 10px 12px;
+  }
+
+  #configModal .config-footer-actions {
     gap: 8px;
   }
 
-  #configModal .config-header-actions .btn {
+  #configModal .config-footer-actions .btn {
     padding: 6px 10px;
   }
 
   #configModal .config-tabs {
-    padding: 0 12px 10px;
+    padding: 10px 12px 10px;
     gap: 6px;
     overflow-x: auto;
     scrollbar-width: none;
@@ -3888,7 +4076,14 @@ body {
   }
 
   #configModal .config-content {
-    padding: 14px 12px 16px;
+    padding: 14px 12px 12px;
+  }
+
+  #configModal .web-config-main,
+  #configModal .web-config-side,
+  #configModal .config-section-model .model-config-main,
+  #configModal .config-section-model .model-config-side {
+    padding: 10px;
   }
 
   .container {
