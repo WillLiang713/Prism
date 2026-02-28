@@ -1477,7 +1477,7 @@ body {
   display: none;
   position: absolute;
   bottom: calc(100% + 8px);
-  right: 20px;
+  right: 0;
   left: auto;
   transform: none;
   background: var(--surface-solid);
@@ -4213,7 +4213,7 @@ body {
     max-width: calc(100% - 86px);
     min-width: 0;
     flex-wrap: nowrap;
-    overflow-x: auto;
+    overflow: visible;
   }
 
   .send-button {
