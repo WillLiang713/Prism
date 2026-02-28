@@ -222,123 +222,211 @@
               </button>
             </div>
           </div>
+          <div class="config-tabs" id="configTabs" role="tablist" aria-label="配置分组">
+            <button
+              type="button"
+              class="config-tab is-active"
+              id="configTabModel"
+              data-tab="model"
+              role="tab"
+              aria-selected="true"
+              aria-controls="configPanelModel"
+            >
+              模型
+            </button>
+            <button
+              type="button"
+              class="config-tab"
+              id="configTabWeb"
+              data-tab="web"
+              role="tab"
+              aria-selected="false"
+              aria-controls="configPanelWeb"
+            >
+              联网
+            </button>
+          </div>
           <div class="config-content" id="configContent">
+            <section
+              class="config-tab-panel is-active"
+              id="configPanelModel"
+              data-panel="model"
+              role="tabpanel"
+              aria-labelledby="configTabModel"
+            >
             <div class="config-row">
               <!-- AI模型配置 -->
-              <div class="config-section">
+              <div class="config-section config-section-model">
                 <h3>模型</h3>
-                <div class="form-group">
-                  <label>API提供商</label>
-                  <select id="provider">
-                    <option value="openai">OpenAI 兼容</option>
-                    <option value="anthropic">Anthropic 兼容</option>
-                  </select>
-                  <div class="form-hint" id="providerHint"></div>
-                </div>
-                <div class="form-group">
-                  <label>API密钥</label>
-                  <input
-                    type="password"
-                    id="apiKey"
-                    placeholder="输入API密钥"
-                  />
-                </div>
-                <div class="form-group">
-                  <label>API地址（留空用官方默认地址）</label>
-                  <input
-                    type="text"
-                    id="apiUrl"
-                    placeholder="https://api.example.com"
-                  />
-                  <div class="form-hint">
-                    提示：只需填写基础域名，系统会自动拼接 /v1/...
-                    路径。支持兼容接口。
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>模型</label>
-                  <div class="model-picker" data-side="main">
-                    <div class="model-picker-row">
+                <div class="model-config-layout">
+                  <div class="model-config-main">
+                    <div class="form-group">
+                      <label>API提供商</label>
+                      <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
+                        <option value="openai">OpenAI 兼容</option>
+                        <option value="anthropic">Anthropic 兼容</option>
+                      </select>
+                      <div class="model-picker config-static-picker" data-picker="provider">
+                        <div class="model-picker-row">
+                          <input
+                            type="text"
+                            id="providerPickerInput"
+                            placeholder="选择提供商"
+                            readonly
+                          />
+                          <button
+                            type="button"
+                            class="model-picker-btn"
+                            id="providerPickerBtn"
+                            aria-label="打开提供商列表"
+                            aria-expanded="false"
+                          ></button>
+                        </div>
+                        <div
+                          class="model-dropdown"
+                          id="providerPickerDropdown"
+                          hidden
+                        ></div>
+                      </div>
+                      <div class="form-hint" id="providerHint"></div>
+                    </div>
+                    <div class="form-group">
+                      <label>API密钥</label>
+                      <input
+                        type="password"
+                        id="apiKey"
+                        placeholder="输入API密钥"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>API地址（可选）</label>
                       <input
                         type="text"
-                        id="model"
-                        placeholder="例如: gpt-5"
+                        id="apiUrl"
+                        placeholder="https://api.example.com"
                       />
-                      <button
-                        type="button"
-                        class="model-picker-btn"
-                        id="modelDropdownBtn"
-                        aria-label="打开模型列表"
-                        aria-expanded="false"
-                      ></button>
+                      <div class="form-hint">
+                        仅填域名，自动补全接口路径。
+                      </div>
                     </div>
-                    <div
-                      class="model-dropdown"
-                      id="modelDropdown"
-                      hidden
-                    ></div>
                   </div>
-                  <div class="form-hint" id="modelHint">
-                    提示：这里填写模型 ID；填好 API
-                    Key/地址后会自动获取可用模型列表（也可手动输入）。
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>角色设定</label>
-                  <textarea
-                    id="roleSetting"
-                    rows="3"
-                    placeholder="例如：当前时间 {{datetime}}，你是一个简洁、严谨的编程助手"
-                  ></textarea>
-                  <div
-                    id="roleSettingPreview"
-                    class="role-setting-preview response-content"
-                    tabindex="0"
-                    hidden
-                  ></div>
-                  <div class="form-hint">
-                    每次发送都会带上这段设定。支持变量：{{datetime}}、{{date}}、{{time}}、{{timestamp}}。输入完成后会自动预览，点击预览可继续编辑。
+                  <div class="model-config-side">
+                    <div class="form-group">
+                      <label>模型</label>
+                      <div class="model-picker" data-side="main">
+                        <div class="model-picker-row">
+                          <input
+                            type="text"
+                            id="model"
+                            placeholder="例如: gpt-5"
+                          />
+                          <button
+                            type="button"
+                            class="model-picker-btn"
+                            id="modelDropdownBtn"
+                            aria-label="打开模型列表"
+                            aria-expanded="false"
+                          ></button>
+                        </div>
+                        <div
+                          class="model-dropdown"
+                          id="modelDropdown"
+                          hidden
+                        ></div>
+                      </div>
+                      <div class="form-hint" id="modelHint">
+                        填模型ID；支持自动获取和手动输入。
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>角色设定</label>
+                      <textarea
+                        id="roleSetting"
+                        rows="3"
+                        placeholder="例如：你是简洁、严谨的编程助手"
+                      ></textarea>
+                      <div
+                        id="roleSettingPreview"
+                        class="role-setting-preview response-content"
+                        tabindex="0"
+                        hidden
+                      ></div>
+                      <div class="form-hint">
+                        每次发送都会附带。支持 {{datetime}}/{{date}}/{{time}}/{{timestamp}}。
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+            </section>
+            <section
+              class="config-tab-panel"
+              id="configPanelWeb"
+              data-panel="web"
+              role="tabpanel"
+              aria-labelledby="configTabWeb"
+              hidden
+            >
             <div class="global-config">
-              <h3>联网工具</h3>
+              <h3>联网</h3>
               <div class="form-group" id="webSearchProviderGroup">
-                <label>联网服务提供方</label>
-                <select id="webSearchProvider">
+                <label>联网服务</label>
+                <select id="webSearchProvider" class="config-native-select" aria-hidden="true" tabindex="-1">
                   <option value="tavily">Tavily</option>
                   <option value="exa">Exa</option>
                 </select>
+                <div class="model-picker config-static-picker" data-picker="webSearchProvider">
+                  <div class="model-picker-row">
+                    <input
+                      type="text"
+                      id="webSearchProviderPickerInput"
+                      placeholder="选择联网服务"
+                      readonly
+                    />
+                    <button
+                      type="button"
+                      class="model-picker-btn"
+                      id="webSearchProviderPickerBtn"
+                      aria-label="打开联网服务列表"
+                      aria-expanded="false"
+                    ></button>
+                  </div>
+                  <div
+                    class="model-dropdown"
+                    id="webSearchProviderPickerDropdown"
+                    hidden
+                  ></div>
+                </div>
                 <small style="display: block; color: #555; margin-top: 4px">
-                  选择模型工具调用时使用的联网搜索服务
+                  工具调用时使用的搜索服务
                 </small>
               </div>
               <div class="form-group" id="tavilyApiKeyGroup">
-                <label>Tavily API Key（可选）</label>
+                <label>Tavily Key（可选）</label>
                 <input
                   type="password"
                   id="tavilyApiKey"
                   placeholder="tvly-..."
                 />
                 <small style="display: block; color: #555; margin-top: 4px">
-                  留空时将使用服务端环境变量 TAVILY_API_KEY
+                  留空用服务端 TAVILY_API_KEY
                 </small>
               </div>
               <div class="form-group" id="exaApiKeyGroup">
-                <label>Exa API Key（可选）</label>
+                <label>Exa Key（可选）</label>
                 <input
                   type="password"
                   id="exaApiKey"
                   placeholder="exa-..."
                 />
                 <small style="display: block; color: #555; margin-top: 4px">
-                  留空时将使用服务端环境变量 EXA_API_KEY
+                  留空用服务端 EXA_API_KEY
                 </small>
               </div>
               <div class="form-group" id="webSearchMaxResultsGroup">
                 <label>
-                  搜索结果数量
+                  结果数量
                   <input
                     type="number"
                     id="tavilyMaxResults"
@@ -349,94 +437,43 @@
                   />
                 </label>
                 <small style="display: block; color: #555; margin-top: 4px">
-                  作为工具调用时的默认结果数量（1-20条，默认5条）
+                  默认 1-20，建议 5
                 </small>
               </div>
               <div class="form-group" id="tavilySearchDepthGroup">
                 <label>搜索深度</label>
-                <input
-                  type="text"
-                  id="tavilySearchDepth"
-                  list="tavilySearchDepthOptions"
-                  value="basic"
-                  placeholder="basic 或 advanced"
-                />
-                <datalist id="tavilySearchDepthOptions">
-                  <option value="basic"></option>
-                  <option value="advanced"></option>
-                </datalist>
-                <small style="display: block; color: #555; margin-top: 4px">
-                  作为工具调用时的默认深度
-                </small>
-              </div>
-            </div>
-            <div class="global-config">
-              <h3>对话历史</h3>
-              <div class="form-group">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="enableHistory" checked />
-                  启用对话历史
-                </label>
-                <small style="display: block; color: #555; margin-top: 4px">
-                  启用后，AI能看到之前的对话内容；禁用后，每次对话都是独立的
-                </small>
-              </div>
-              <div class="form-group">
-                <label>
-                  历史轮数限制
-                  <input
-                    type="number"
-                    id="maxHistoryTurns"
-                    min="1"
-                    max="50"
-                    value="10"
-                    style="width: 80px"
-                  />
-                </label>
-                <small style="display: block; color: #555; margin-top: 4px">
-                  限制发送给AI的历史对话轮数（1-50轮，默认10轮）
-                </small>
-              </div>
-            </div>
-            <div class="global-config">
-              <h3>话题标题自动生成</h3>
-              <div class="form-group">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="enableAutoTitle" checked />
-                  启用自动生成标题
-                </label>
-                <small style="display: block; color: #555; margin-top: 4px">
-                  启用后，发送第一条消息时会自动使用AI生成话题标题
-                </small>
-              </div>
-              <div class="form-group">
-                <label>模型ID（可选，留空使用上面选择的模型ID）</label>
-                <div class="model-picker" data-side="Title">
+                <select id="tavilySearchDepth" class="config-native-select" aria-hidden="true" tabindex="-1">
+                  <option value="basic">basic</option>
+                  <option value="advanced">advanced</option>
+                </select>
+                <div class="model-picker config-static-picker" data-picker="tavilySearchDepth">
                   <div class="model-picker-row">
                     <input
                       type="text"
-                      id="titleGenerationModel"
-                      placeholder="例如: gpt-5, deepseek-chat"
+                      id="tavilySearchDepthPickerInput"
+                      placeholder="选择搜索深度"
+                      readonly
                     />
                     <button
                       type="button"
                       class="model-picker-btn"
-                      id="modelDropdownBtnTitle"
-                      aria-label="打开模型列表"
+                      id="tavilySearchDepthPickerBtn"
+                      aria-label="打开搜索深度列表"
                       aria-expanded="false"
                     ></button>
                   </div>
                   <div
                     class="model-dropdown"
-                    id="modelDropdownTitle"
+                    id="tavilySearchDepthPickerDropdown"
                     hidden
                   ></div>
                 </div>
                 <small style="display: block; color: #555; margin-top: 4px">
-                  可指定不同的模型ID用于生成标题（建议使用轻量快速的模型，不要用reasoner模型）；留空则使用上面选择的模型的ID。会根据选择的配置自动获取可用模型列表。
+                  默认 basic
                 </small>
               </div>
             </div>
+            </section>
           </div>
         </div>
       </div>

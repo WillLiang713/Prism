@@ -52,6 +52,8 @@ const elements = {
   saveConfig: document.getElementById("saveConfig"),
   clearConfig: document.getElementById("clearConfig"),
   configModal: document.getElementById("configModal"),
+  configTabs: document.getElementById("configTabs"),
+  configContent: document.getElementById("configContent"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
@@ -64,19 +66,18 @@ const elements = {
   exaApiKey: document.getElementById("exaApiKey"),
   tavilyMaxResults: document.getElementById("tavilyMaxResults"),
   tavilySearchDepth: document.getElementById("tavilySearchDepth"),
+  tavilySearchDepthPickerInput: document.getElementById(
+    "tavilySearchDepthPickerInput"
+  ),
+  tavilySearchDepthPickerBtn: document.getElementById(
+    "tavilySearchDepthPickerBtn"
+  ),
+  tavilySearchDepthPickerDropdown: document.getElementById(
+    "tavilySearchDepthPickerDropdown"
+  ),
   tavilyApiKeyGroup: document.getElementById("tavilyApiKeyGroup"),
   exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
   tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
-
-  // 对话历史
-  enableHistory: document.getElementById("enableHistory"),
-  maxHistoryTurns: document.getElementById("maxHistoryTurns"),
-
-  // 话题标题自动生成
-  enableAutoTitle: document.getElementById("enableAutoTitle"),
-  titleGenerationModel: document.getElementById("titleGenerationModel"),
-  modelDropdownTitle: document.getElementById("modelDropdownTitle"),
-  modelDropdownBtnTitle: document.getElementById("modelDropdownBtnTitle"),
 
   // 初始问候语
 
@@ -98,6 +99,9 @@ const elements = {
 
   // 模型配置
   provider: document.getElementById("provider"),
+  providerPickerInput: document.getElementById("providerPickerInput"),
+  providerPickerBtn: document.getElementById("providerPickerBtn"),
+  providerPickerDropdown: document.getElementById("providerPickerDropdown"),
   providerHint: document.getElementById("providerHint"),
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),
@@ -107,6 +111,13 @@ const elements = {
   modelHint: document.getElementById("modelHint"),
   modelDropdown: document.getElementById("modelDropdown"),
   modelDropdownBtn: document.getElementById("modelDropdownBtn"),
+  webSearchProviderPickerInput: document.getElementById(
+    "webSearchProviderPickerInput"
+  ),
+  webSearchProviderPickerBtn: document.getElementById("webSearchProviderPickerBtn"),
+  webSearchProviderPickerDropdown: document.getElementById(
+    "webSearchProviderPickerDropdown"
+  ),
 
   // 头部状态
   modelName: document.getElementById("modelName"),
@@ -123,7 +134,9 @@ const elements = {
 
 document.addEventListener("DOMContentLoaded", () => {
   initMarkdown();
+  initConfigSelectPickers();
   loadConfig();
+  syncAllConfigSelectPickers();
   updateProviderUi();
   initChat();
   bindEvents();
@@ -135,8 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAll();
   startHeaderClock();
 
-  // 初始化时触发标题模型获取
-  scheduleFetchModels("Title", 500);
 });
 
 function getProviderMode(config) {
@@ -148,6 +159,189 @@ function createId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
     return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getConfigSelectPickerDefs() {
+  return [
+    {
+      key: "provider",
+      select: elements.provider,
+      input: elements.providerPickerInput,
+      btn: elements.providerPickerBtn,
+      dropdown: elements.providerPickerDropdown,
+    },
+    {
+      key: "webSearchProvider",
+      select: elements.webSearchProvider,
+      input: elements.webSearchProviderPickerInput,
+      btn: elements.webSearchProviderPickerBtn,
+      dropdown: elements.webSearchProviderPickerDropdown,
+    },
+    {
+      key: "tavilySearchDepth",
+      select: elements.tavilySearchDepth,
+      input: elements.tavilySearchDepthPickerInput,
+      btn: elements.tavilySearchDepthPickerBtn,
+      dropdown: elements.tavilySearchDepthPickerDropdown,
+    },
+  ];
+}
+
+function getConfigSelectPickerDef(key) {
+  return getConfigSelectPickerDefs().find((item) => item.key === key) || null;
+}
+
+function getSelectOptionLabel(selectEl, value) {
+  if (!selectEl) return "";
+  const options = Array.from(selectEl.options || []);
+  const found = options.find((opt) => opt.value === value);
+  return (found?.textContent || value || "").trim();
+}
+
+function syncConfigSelectPicker(key) {
+  const picker = getConfigSelectPickerDef(key);
+  if (!picker?.select || !picker?.input) return;
+  picker.input.value = getSelectOptionLabel(picker.select, picker.select.value);
+}
+
+function syncAllConfigSelectPickers() {
+  const defs = getConfigSelectPickerDefs();
+  for (const picker of defs) {
+    syncConfigSelectPicker(picker.key);
+  }
+}
+
+function setConfigSelectPickerButtonState(key, isOpen) {
+  const picker = getConfigSelectPickerDef(key);
+  const btn = picker?.btn;
+  if (!btn) return;
+  btn.classList.toggle("open", !!isOpen);
+  btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
+function isConfigSelectPickerOpen(key) {
+  const picker = getConfigSelectPickerDef(key);
+  return !!picker?.dropdown && !picker.dropdown.hidden;
+}
+
+function closeConfigSelectPicker(key) {
+  const picker = getConfigSelectPickerDef(key);
+  if (!picker?.dropdown) return;
+  picker.dropdown.hidden = true;
+  picker.dropdown.setAttribute("aria-hidden", "true");
+  picker.dropdown.innerHTML = "";
+  setConfigSelectPickerButtonState(key, false);
+}
+
+function closeAllConfigSelectPickers(exceptKey = "") {
+  for (const picker of getConfigSelectPickerDefs()) {
+    if (picker.key === exceptKey) continue;
+    closeConfigSelectPicker(picker.key);
+  }
+}
+
+function applyConfigSelectPickerValue(key, value) {
+  const picker = getConfigSelectPickerDef(key);
+  if (!picker?.select) return;
+  const nextValue = String(value || "");
+  if (picker.select.value !== nextValue) {
+    picker.select.value = nextValue;
+    picker.select.dispatchEvent(new Event("change", { bubbles: true }));
+  } else {
+    syncConfigSelectPicker(key);
+  }
+  closeConfigSelectPicker(key);
+}
+
+function renderConfigSelectPicker(key) {
+  const picker = getConfigSelectPickerDef(key);
+  if (!picker?.dropdown || !picker?.select) return;
+  const options = Array.from(picker.select.options || []);
+
+  picker.dropdown.innerHTML = "";
+  if (!options.length) {
+    const empty = document.createElement("div");
+    empty.className = "model-dropdown-empty";
+    empty.textContent = "暂无可选项";
+    picker.dropdown.appendChild(empty);
+    return;
+  }
+
+  for (const opt of options) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "model-dropdown-item";
+    btn.dataset.value = opt.value;
+    btn.textContent = (opt.textContent || opt.value || "").trim();
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener("click", () =>
+      applyConfigSelectPickerValue(key, opt.value)
+    );
+    picker.dropdown.appendChild(btn);
+  }
+}
+
+function openConfigSelectPicker(key) {
+  const picker = getConfigSelectPickerDef(key);
+  if (!picker?.dropdown || !picker?.input) return;
+  closeModelDropdown("main");
+  closeAllConfigSelectPickers(key);
+  ensureModelDropdownVisibleSpace(picker.input);
+  renderConfigSelectPicker(key);
+  picker.dropdown.hidden = false;
+  picker.dropdown.setAttribute("aria-hidden", "false");
+  setConfigSelectPickerButtonState(key, true);
+}
+
+function toggleConfigSelectPicker(key) {
+  if (isConfigSelectPickerOpen(key)) {
+    closeConfigSelectPicker(key);
+    return;
+  }
+  openConfigSelectPicker(key);
+}
+
+function bindConfigSelectPicker(key) {
+  const picker = getConfigSelectPickerDef(key);
+  if (!picker?.select || !picker?.input || !picker?.btn || !picker?.dropdown) {
+    return;
+  }
+
+  if (!picker.btn.dataset.bound) {
+    picker.btn.addEventListener("click", () => toggleConfigSelectPicker(key));
+    picker.btn.dataset.bound = "1";
+  }
+
+  if (!picker.input.dataset.bound) {
+    picker.input.addEventListener("click", () => toggleConfigSelectPicker(key));
+    picker.input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleConfigSelectPicker(key);
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeConfigSelectPicker(key);
+      }
+    });
+    picker.input.dataset.bound = "1";
+  }
+
+  if (!picker.select.dataset.pickerBound) {
+    picker.select.addEventListener("change", () => {
+      syncConfigSelectPicker(key);
+      closeConfigSelectPicker(key);
+    });
+    picker.select.dataset.pickerBound = "1";
+  }
+
+  syncConfigSelectPicker(key);
+}
+
+function initConfigSelectPickers() {
+  for (const picker of getConfigSelectPickerDefs()) {
+    bindConfigSelectPicker(picker.key);
+  }
 }
 
 function isTopicRunning(topicId) {
@@ -1089,6 +1283,11 @@ function bindEvents() {
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
+  elements.configTabs?.addEventListener("click", (e) => {
+    const tabBtn = e.target?.closest?.(".config-tab[data-tab]");
+    if (!tabBtn) return;
+    setActiveConfigTab(tabBtn.dataset.tab);
+  });
   elements.configModal?.addEventListener("click", (e) => {
     if (e.target === elements.configModal) closeConfigModal();
   });
@@ -1157,18 +1356,15 @@ function bindEvents() {
     updateProviderUi();
     updateModelHint();
     scheduleFetchModels("main", 0);
-    scheduleFetchModels("Title", 0);
   });
 
   elements.apiKey?.addEventListener("input", () => {
     updateModelHint();
     scheduleFetchModels("main", 400);
-    scheduleFetchModels("Title", 400);
   });
   elements.apiUrl?.addEventListener("input", () => {
     updateModelHint();
     scheduleFetchModels("main", 500);
-    scheduleFetchModels("Title", 500);
   });
 
   elements.roleSetting?.addEventListener("blur", () => {
@@ -1189,21 +1385,12 @@ function bindEvents() {
     updateModelNames();
     updateModelDropdownFilter("main");
   });
-  elements.titleGenerationModel?.addEventListener("input", () => {
-    updateModelDropdownFilter("Title");
-  });
 
   elements.modelDropdownBtn?.addEventListener("click", () =>
     toggleModelDropdown("main")
   );
-  elements.modelDropdownBtnTitle?.addEventListener("click", () =>
-    toggleModelDropdown("Title")
-  );
   elements.model?.addEventListener("focus", () =>
     updateModelDropdownFilter("main")
-  );
-  elements.titleGenerationModel?.addEventListener("focus", () =>
-    updateModelDropdownFilter("Title")
   );
 
   document.addEventListener("mousedown", (e) => {
@@ -1211,7 +1398,7 @@ function bindEvents() {
     if (!(t instanceof Node)) return;
     if (t.closest?.(".model-picker")) return;
     closeModelDropdown("main");
-    closeModelDropdown("Title");
+    closeAllConfigSelectPickers();
   });
 
   // Enter 发送（Shift+Enter 换行）
@@ -1265,8 +1452,37 @@ function bindEvents() {
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
 }
 
+function setActiveConfigTab(tabName = "model") {
+  const tabs = document.querySelectorAll(".config-tab[data-tab]");
+  const panels = document.querySelectorAll(".config-tab-panel[data-panel]");
+  if (!tabs.length || !panels.length) return;
+
+  const target = String(tabName || "model");
+  let found = false;
+
+  tabs.forEach((tab) => {
+    const active = tab.dataset.tab === target;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+    if (active) found = true;
+  });
+
+  const finalTab = found ? target : "model";
+  panels.forEach((panel) => {
+    const active = panel.dataset.panel === finalTab;
+    panel.classList.toggle("is-active", active);
+    panel.hidden = !active;
+  });
+
+  if (elements.configContent) {
+    elements.configContent.scrollTop = 0;
+  }
+}
+
 function openConfigModal() {
   if (!elements.configModal) return;
+  setActiveConfigTab("model");
+  syncAllConfigSelectPickers();
   elements.configModal.classList.add("open");
   elements.configModal.setAttribute("aria-hidden", "false");
   syncBodyScrollLock();
@@ -1281,6 +1497,7 @@ function closeConfigModal() {
   elements.configModal.setAttribute("aria-hidden", "true");
   syncBodyScrollLock();
   closeModelDropdown("main");
+  closeAllConfigSelectPickers();
 }
 
 function showRoleSettingEditor(focus = false) {
@@ -1363,10 +1580,10 @@ function updateProviderUi() {
   if (hintEl) {
     if (provider === "openai") {
       hintEl.textContent =
-        "OpenAI 兼容接口（Chat Completions 格式）；API地址可留空，默认使用官方接口。支持 DeepSeek、Qwen 等兼容服务。";
+        "OpenAI 兼容接口，地址可留空。";
     } else if (provider === "anthropic") {
       hintEl.textContent =
-        "Anthropic 兼容接口（Messages 格式）；API地址可留空，默认使用官方接口。支持兼容 Anthropic 格式的服务。";
+        "Anthropic 兼容接口，地址可留空。";
     }
   }
 
@@ -1431,14 +1648,14 @@ function updateModelHint(side) {
   if (!apiKey) {
     setModelHint(
       side || "main",
-      "提示：这里填写模型 ID；填写 API Key 后会自动获取可用模型列表（也可手动输入）。"
+      "填模型ID；配置Key后可自动拉取列表。"
     );
     return;
   }
 
   setModelHint(
     side || "main",
-    "提示：这里填写模型 ID；将自动获取可用模型列表（可下拉选择或直接输入）。"
+    "填模型ID；可下拉选或手动输入。"
   );
 }
 
@@ -1504,10 +1721,10 @@ function renderModelDropdown(side, filterText) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
     empty.textContent = all.length
-      ? "没有匹配的模型，请继续输入过滤或手动输入。"
+      ? "无匹配模型，可继续输入。"
       : isLoading
       ? "正在获取模型列表…"
-      : "暂无模型列表：请先填写 API Key/地址后自动获取。";
+      : "暂无模型列表，请先配置Key/地址。";
     dropdownEl.appendChild(empty);
     return;
   }
@@ -1547,12 +1764,31 @@ function renderModelDropdown(side, filterText) {
   }
 }
 
+function ensureModelDropdownVisibleSpace(inputEl) {
+  const contentEl = elements.configContent;
+  const pickerEl = inputEl?.closest?.(".model-picker");
+  if (!contentEl || !pickerEl) return;
+
+  const contentRect = contentEl.getBoundingClientRect();
+  const pickerRect = pickerEl.getBoundingClientRect();
+  const gap = 10;
+  const need = 250;
+  const spaceBelow = contentRect.bottom - pickerRect.bottom - gap;
+  if (spaceBelow >= need) return;
+
+  const delta = need - spaceBelow;
+  const maxTop = Math.max(0, contentEl.scrollHeight - contentEl.clientHeight);
+  if (maxTop <= 0) return;
+  contentEl.scrollTop = Math.min(maxTop, contentEl.scrollTop + delta);
+}
+
 function openModelDropdown(side) {
   const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   const inputEl =
     side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl || !inputEl) return;
 
+  ensureModelDropdownVisibleSpace(inputEl);
   renderModelDropdown(side, inputEl.value);
   dropdownEl.hidden = false;
   dropdownEl.setAttribute("aria-hidden", "false");
@@ -1573,7 +1809,10 @@ function openModelDropdown(side) {
 
 function toggleModelDropdown(side) {
   if (isModelDropdownOpen(side)) closeModelDropdown(side);
-  else openModelDropdown(side);
+  else {
+    closeAllConfigSelectPickers();
+    openModelDropdown(side);
+  }
 }
 
 function updateModelDropdownFilter(side) {
@@ -1709,7 +1948,7 @@ async function fetchAndUpdateModels(side) {
     if (side !== "Title") {
       setModelHint(
         side,
-        `已自动获取 ${ids.length} 个模型 ID（可下拉选择或直接输入）。`
+        `已获取 ${ids.length} 个模型ID，可下拉选或手动输入。`
       );
     }
     // 只在下拉框已经打开的情况下更新显示，不自动打开
@@ -1727,7 +1966,7 @@ async function fetchAndUpdateModels(side) {
     slot.models = [];
     closeModelDropdown(side);
     if (side !== "Title") {
-      setModelHint(side, "提示：这里填写模型 ID；自动获取失败，可手动输入。");
+      setModelHint(side, "自动获取失败，请手动输入模型ID。");
     }
   } finally {
     slot.inFlight = false;
@@ -1749,13 +1988,9 @@ async function saveConfig() {
     tools: {
       enabled: true,
     },
-    history: {
-      enableHistory: !!elements.enableHistory?.checked,
-      maxHistoryTurns: parseInt(elements.maxHistoryTurns?.value) || 10,
-    },
     autoTitle: {
-      enabled: !!elements.enableAutoTitle?.checked,
-      model: elements.titleGenerationModel?.value || "",
+      enabled: true,
+      model: "",
     },
     model: {
       provider: elements.provider.value,
@@ -1813,21 +2048,6 @@ function loadConfig() {
         elements.reasoningEffortValue.textContent = activeBtn.dataset.label;
       }
     }
-    // 加载对话历史配置（兼容旧的 timeContext 配置）
-    const historyConfig = config.history || config.timeContext;
-    if (historyConfig) {
-      if (elements.enableHistory)
-        elements.enableHistory.checked = historyConfig.enableHistory !== false;
-      if (elements.maxHistoryTurns)
-        elements.maxHistoryTurns.value = historyConfig.maxHistoryTurns || 10;
-    }
-    // 加载话题标题自动生成配置
-    if (config.autoTitle) {
-      if (elements.enableAutoTitle)
-        elements.enableAutoTitle.checked = config.autoTitle.enabled !== false;
-      if (elements.titleGenerationModel)
-        elements.titleGenerationModel.value = config.autoTitle.model || "";
-    }
     // 加载模型配置（兼容旧格式 config.A）
     const modelConfig = config.model || config.A;
     if (modelConfig) {
@@ -1844,6 +2064,7 @@ function loadConfig() {
     console.error("加载配置失败:", e);
   }
 
+  syncAllConfigSelectPickers();
   updateWebSearchProviderUi();
 }
 
@@ -1864,8 +2085,6 @@ async function clearConfig() {
   if (elements.exaApiKey) elements.exaApiKey.value = "";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
-  if (elements.enableHistory) elements.enableHistory.checked = true;
-  if (elements.maxHistoryTurns) elements.maxHistoryTurns.value = 10;
 
   elements.provider.value = "openai";
   elements.apiKey.value = "";
@@ -1874,6 +2093,7 @@ async function clearConfig() {
   if (elements.roleSetting) elements.roleSetting.value = "";
   syncRoleSettingPreview(false);
 
+  syncAllConfigSelectPickers();
   updateProviderUi();
   updateWebSearchProviderUi();
   updateModelNames();
@@ -1947,13 +2167,12 @@ function collapseSidebarForMobile() {
 }
 
 function getConfig(side) {
-  // 标题生成配置：从主模型配置继承，可覆盖模型ID
+  // 标题生成配置：始终跟随主模型
   if (side === "Title") {
-    const customModel = elements.titleGenerationModel?.value || "";
     return {
       provider: elements.provider?.value || "openai",
       apiKey: elements.apiKey?.value || "",
-      model: customModel || elements.model?.value || "",
+      model: elements.model?.value || "",
       apiUrl: elements.apiUrl?.value || "",
       systemPrompt: "", // 标题生成不需要系统提示词
       reasoningEffort: "none",
@@ -1983,15 +2202,6 @@ function getWebSearchConfig() {
   };
 }
 
-
-function getMaxHistoryTurns() {
-  const value = parseInt(elements.maxHistoryTurns?.value);
-  return value >= 1 && value <= 50 ? value : 10;
-}
-
-function isHistoryEnabled() {
-  return !!elements.enableHistory?.checked;
-}
 
 function initChat() {
   const topicsRaw = localStorage.getItem(STORAGE_KEYS.topics);
@@ -2822,8 +3032,6 @@ async function callModel(
       images: images,
       systemPrompt: config.systemPrompt || null,
       reasoningEffort: config.reasoningEffort,
-      enableHistory: isHistoryEnabled(),
-      maxHistoryTurns: getMaxHistoryTurns(),
       historyTurns: historyTurns,
       enableTools: true,
       selectedTools: useWebSearchTool
@@ -3058,9 +3266,6 @@ function bindDialogEvents() {
  * @returns {Promise<string>} 生成的标题
  */
 function resolveAutoTitleModel(topic, config) {
-  const customModel = (config?.model || "").trim();
-  if (customModel) return customModel;
-
   const mainInputModel = (elements.model?.value || "").trim();
   if (mainInputModel) return mainInputModel;
 
@@ -3166,23 +3371,6 @@ async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
   if (!topicId) return;
   const topic = state.chat.topics.find((t) => t.id === topicId) || null;
   if (!topic) return;
-
-  // 检查是否启用自动生成标题
-  const saved = localStorage.getItem(STORAGE_KEYS.config);
-  let autoTitleEnabled = true;
-
-  if (saved) {
-    try {
-      const config = JSON.parse(saved);
-      if (config.autoTitle) {
-        autoTitleEnabled = config.autoTitle.enabled !== false;
-      }
-    } catch (e) {
-      console.error("加载自动标题配置失败:", e);
-    }
-  }
-
-  if (!autoTitleEnabled) return;
 
   // 只在标题为"新话题"且有实际对话时才自动生成
   if (!topic.title.startsWith("新话题")) return;

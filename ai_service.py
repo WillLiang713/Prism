@@ -46,13 +46,13 @@ class ChatRequest(BaseModel):
     images: list[ImageContent] = []
     systemPrompt: str | None = None
 
-    # 功能开关
+    # 推理与工具
     reasoningEffort: str = "none"
-    enableHistory: bool = True
-    maxHistoryTurns: int = Field(default=10, ge=1, le=50)
     enableTools: bool = False  # 是否启用工具调用
     maxToolRounds: int = Field(default=50, ge=1, le=200)  # 最大工具调用轮数（实际不再限制）
     selectedTools: list[str] = []  # 选中的工具名称列表
+
+    # 联网相关
     webSearchProvider: str = Field(default="tavily")  # 联网服务提供方（tavily|exa）
     webSearchMaxResults: int | None = Field(default=None, ge=1, le=20)  # 联网默认结果数量
     tavilyApiKey: str | None = None  # Tavily Key（可选，优先于环境变量）
@@ -60,7 +60,7 @@ class ChatRequest(BaseModel):
     tavilyMaxResults: int = Field(default=5, ge=1, le=20)  # Tavily 默认结果数量
     tavilySearchDepth: str = Field(default="basic")  # Tavily 默认搜索深度（basic|advanced）
 
-    # 历史对话
+    # 历史输入（后端直接使用，不再受开关控制）
     historyTurns: list[HistoryTurn] = []
 
 
@@ -165,17 +165,15 @@ class MessageBuilder:
     def convert_history_to_messages(
         history_turns: list[HistoryTurn],
         side: str,
-        provider_mode: str,
-        max_turns: int
+        provider_mode: str
     ) -> list[dict]:
         """将历史turns转换为消息数组"""
         if not history_turns:
             return []
 
-        recent_turns = history_turns[-max_turns:] if max_turns > 0 else history_turns
         messages = []
 
-        for turn in recent_turns:
+        for turn in history_turns:
             # 跳过未完成或出错的turn
             model_data = turn.models.get(side, {})
             if not model_data.get("content") or model_data.get("status") != "complete":
@@ -463,12 +461,11 @@ class AIService:
 
             # 构建历史消息
             history_messages = []
-            if request.enableHistory and request.historyTurns:
+            if request.historyTurns:
                 history_messages = MessageBuilder.convert_history_to_messages(
                     request.historyTurns,
                     "main",
-                    provider_mode,
-                    request.maxHistoryTurns
+                    provider_mode
                 )
 
             # 构建当前用户消息
