@@ -1546,19 +1546,21 @@ body {
 /* Send button */
 .send-button {
   height: 34px;
-  padding: 0 20px;
+  min-width: 76px;
+  padding: 0 14px;
   margin-left: auto;
-  border-radius: 999px;
+  border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
   transition: all 0.2s;
   background: #e0e0e0;
   color: #000;
   border: none;
   font-size: 13px;
+  line-height: 1;
   font-weight: 600;
   box-shadow: none;
   cursor: pointer;
@@ -3983,6 +3985,13 @@ body {
     min-height: 36px;
   }
 
+  .send-button {
+    height: 36px;
+    min-width: 80px;
+    padding: 0 15px;
+    border-radius: 11px;
+  }
+
   .toolbar-btn.icon-only {
     width: 36px;
     min-width: 36px;
@@ -3995,17 +4004,26 @@ body {
 
 @media (max-width: 520px) {
   .composer-footer {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
   }
 
   .composer-toolbar {
-    width: 100%;
-    max-width: none;
+    flex: 1 1 auto;
+    width: auto;
+    max-width: calc(100% - 86px);
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .send-button {
-    margin-left: 0;
-    width: 100%;
+    margin-left: auto;
+    width: auto;
+    height: 38px;
+    min-width: 74px;
+    padding: 0 12px;
+    border-radius: 10px;
     justify-content: center;
   }
 
