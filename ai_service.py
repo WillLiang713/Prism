@@ -643,10 +643,7 @@ class AIService:
                                         result_summary = str(parsed_result.get("error") or "工具返回错误")
                                     elif isinstance(parsed_result.get("results"), list):
                                         count = len(parsed_result.get("results", []))
-                                        answer = str(parsed_result.get("answer") or "").strip()
                                         result_summary = f"返回 {count} 条结果"
-                                        if answer:
-                                            result_summary += f"，摘要：{answer}"
                                     else:
                                         result_summary = json.dumps(parsed_result, ensure_ascii=False)
                                 else:
