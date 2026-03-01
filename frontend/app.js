@@ -1420,14 +1420,6 @@ function bindEvents() {
     if (e.target === elements.configModal) closeConfigModal();
   });
   document.addEventListener("keydown", (e) => {
-    const key = String(e.key || "").toLowerCase();
-    if ((e.ctrlKey || e.metaKey) && key === "s") {
-      if (elements.configModal?.classList.contains("open")) {
-        e.preventDefault();
-        void saveConfig();
-      }
-      return;
-    }
     if (e.key !== "Escape") return;
     if (isPromptConfirmDialogOpen()) {
       e.preventDefault();

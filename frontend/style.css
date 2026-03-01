@@ -2012,7 +2012,7 @@ body {
 .modal-content .config-content:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); }
 
 #configModal .modal-content {
-  height: min(700px, 90vh);
+  height: min(560px, 88vh);
 }
 
 #configModal .config-panel {
@@ -2065,7 +2065,7 @@ body {
   align-items: flex-start;
   padding: 16px 20px 12px;
   background: var(--surface-solid);
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -2090,7 +2090,7 @@ body {
   gap: 8px;
   padding: 10px 20px 10px;
   background: var(--surface-solid);
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
 }
 
 .config-status-strip {
@@ -2099,7 +2099,7 @@ body {
   flex-wrap: wrap;
   padding: 10px 20px 12px;
   background: var(--surface-solid);
-  border-bottom: 1px solid var(--border);
+  border-bottom: none;
 }
 
 .status-pill {
@@ -2763,12 +2763,38 @@ body {
 
 .config-footer {
   display: flex;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
   padding: 10px 20px;
-  border-top: 1px solid var(--border);
+  border-top: none;
   background: var(--surface-solid);
+}
+
+.config-footer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow: hidden;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.config-footer-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
 }
 
 .config-footer-actions {
@@ -2776,7 +2802,6 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  width: 100%;
 }
 
 .config-footer-actions .btn {
