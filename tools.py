@@ -151,16 +151,24 @@ def tavily_search(
 
     results = data.get("results", [])
     normalized_results: list[dict[str, str]] = []
+    summaries: list[str] = []
     if isinstance(results, list):
         for item in results:
             if not isinstance(item, dict):
                 continue
             normalized_results.append(_normalize_result_item(item))
+            summary = str(item.get("summary", "") or "").strip()
+            if summary:
+                summaries.append(summary)
+
+    answer = str(data.get("answer", "") or "").strip()
+    if not answer and summaries:
+        answer = summaries[0]
 
     return json.dumps(
         {
             "query": query_text,
-            "answer": str(data.get("answer", "") or ""),
+            "answer": answer,
             "results": normalized_results,
         },
         ensure_ascii=False,
@@ -170,6 +178,7 @@ def tavily_search(
 def exa_search(
     query: str,
     max_results: int | None = None,
+    search_type: str | None = None,
 ) -> str:
     """调用 Exa 搜索并返回 JSON 字符串。"""
     query_text = (query or "").strip()
@@ -196,9 +205,23 @@ def exa_search(
         default=5,
     )
 
+    resolved_type = str(
+        search_type
+        or runtime.get("exa_search_type")
+        or "auto"
+    ).lower()
+    if resolved_type not in {"auto", "instant"}:
+        resolved_type = "auto"
+
     payload: dict[str, Any] = {
         "query": query_text,
         "numResults": resolved_max_results,
+        "type": resolved_type,
+        "contents": {
+            "summary": {
+                "query": "提取核心结论"
+            }
+        },
     }
     headers = {
         "Content-Type": "application/json",

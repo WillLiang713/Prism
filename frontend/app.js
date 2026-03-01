@@ -69,6 +69,10 @@ const elements = {
   webSearchProvider: document.getElementById("webSearchProvider"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
   exaApiKey: document.getElementById("exaApiKey"),
+  exaSearchType: document.getElementById("exaSearchType"),
+  exaSearchTypePickerInput: document.getElementById("exaSearchTypePickerInput"),
+  exaSearchTypePickerBtn: document.getElementById("exaSearchTypePickerBtn"),
+  exaSearchTypePickerDropdown: document.getElementById("exaSearchTypePickerDropdown"),
   tavilyMaxResults: document.getElementById("tavilyMaxResults"),
   tavilySearchDepth: document.getElementById("tavilySearchDepth"),
   tavilySearchDepthPickerInput: document.getElementById(
@@ -82,6 +86,7 @@ const elements = {
   ),
   tavilyApiKeyGroup: document.getElementById("tavilyApiKeyGroup"),
   exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
+  exaSearchTypeGroup: document.getElementById("exaSearchTypeGroup"),
   tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
 
   // 初始问候语
@@ -189,6 +194,13 @@ function getConfigSelectPickerDefs() {
       input: elements.tavilySearchDepthPickerInput,
       btn: elements.tavilySearchDepthPickerBtn,
       dropdown: elements.tavilySearchDepthPickerDropdown,
+    },
+    {
+      key: "exaSearchType",
+      select: elements.exaSearchType,
+      input: elements.exaSearchTypePickerInput,
+      btn: elements.exaSearchTypePickerBtn,
+      dropdown: elements.exaSearchTypePickerDropdown,
     },
   ];
 }
@@ -1246,6 +1258,10 @@ function normalizeWebSearchProvider(value) {
   return String(value || "").toLowerCase() === "exa" ? "exa" : "tavily";
 }
 
+function normalizeExaSearchType(value) {
+  return String(value || "").toLowerCase() === "instant" ? "instant" : "auto";
+}
+
 function setStatusPillState(el, isReady, text) {
   if (!el) return;
   el.textContent = text || "";
@@ -1270,9 +1286,10 @@ function updateConfigStatusStrip() {
     Math.min(20, parseInt(elements.tavilyMaxResults?.value) || 5)
   );
   const depth = normalizeTavilySearchDepth(elements.tavilySearchDepth?.value);
+  const exaType = normalizeExaSearchType(elements.exaSearchType?.value);
   const webText =
     webProvider === "exa"
-      ? `联网：Exa · ${maxResults} 条`
+      ? `联网：Exa · ${exaType} · ${maxResults} 条`
       : `联网：Tavily · ${depth} · ${maxResults} 条`;
   setStatusPillState(elements.webStatusPill, true, webText);
 }
@@ -1289,6 +1306,9 @@ function updateWebSearchProviderUi() {
   }
   if (elements.exaApiKeyGroup) {
     elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
+  }
+  if (elements.exaSearchTypeGroup) {
+    elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
   }
   updateConfigStatusStrip();
 }
@@ -1373,6 +1393,7 @@ function bindEvents() {
   });
   elements.tavilyApiKey?.addEventListener("input", updateConfigStatusStrip);
   elements.exaApiKey?.addEventListener("input", updateConfigStatusStrip);
+  elements.exaSearchType?.addEventListener("change", updateConfigStatusStrip);
   elements.tavilyMaxResults?.addEventListener("input", updateConfigStatusStrip);
   elements.tavilySearchDepth?.addEventListener("change", updateConfigStatusStrip);
 
@@ -2122,6 +2143,7 @@ async function saveConfig() {
       provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
       tavilyApiKey: elements.tavilyApiKey?.value || "",
       exaApiKey: elements.exaApiKey?.value || "",
+      exaSearchType: normalizeExaSearchType(elements.exaSearchType?.value),
       maxResults: parseInt(elements.tavilyMaxResults?.value) || 5,
       searchDepth: normalizeTavilySearchDepth(
         elements.tavilySearchDepth?.value
@@ -2171,6 +2193,10 @@ function loadConfig() {
         elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || "";
       if (elements.exaApiKey)
         elements.exaApiKey.value = config.webSearch.exaApiKey || "";
+      if (elements.exaSearchType)
+        elements.exaSearchType.value = normalizeExaSearchType(
+          config.webSearch.exaSearchType
+        );
       if (elements.tavilyMaxResults)
         elements.tavilyMaxResults.value = config.webSearch.maxResults || 5;
       if (elements.tavilySearchDepth) {
@@ -2180,6 +2206,7 @@ function loadConfig() {
       }
     } else if (elements.webSearchProvider) {
       elements.webSearchProvider.value = "tavily";
+      if (elements.exaSearchType) elements.exaSearchType.value = "auto";
     }
     // 加载思考强度配置
     if (config.reasoningEffort && elements.reasoningEffortDropdown) {
@@ -2227,6 +2254,7 @@ async function clearConfig() {
   if (elements.webSearchProvider) elements.webSearchProvider.value = "tavily";
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
   if (elements.exaApiKey) elements.exaApiKey.value = "";
+  if (elements.exaSearchType) elements.exaSearchType.value = "auto";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
 
@@ -2342,6 +2370,7 @@ function getWebSearchConfig() {
     provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
     exaApiKey: (elements.exaApiKey?.value || "").trim(),
+    exaSearchType: normalizeExaSearchType(elements.exaSearchType?.value),
     maxResults: maxResults >= 1 && maxResults <= 20 ? maxResults : 5,
     searchDepth: normalizeTavilySearchDepth(elements.tavilySearchDepth?.value),
   };
@@ -3186,6 +3215,7 @@ async function callModel(
       webSearchMaxResults: webSearchConfig?.maxResults || 5,
       tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,
       exaApiKey: (webSearchConfig?.exaApiKey || "").trim() || null,
+      exaSearchType: webSearchConfig?.exaSearchType || "auto",
       tavilyMaxResults: webSearchConfig?.maxResults || 5,
       tavilySearchDepth: webSearchConfig?.searchDepth || "basic",
     };

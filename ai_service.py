@@ -57,6 +57,7 @@ class ChatRequest(BaseModel):
     webSearchMaxResults: int | None = Field(default=None, ge=1, le=20)  # 联网默认结果数量
     tavilyApiKey: str | None = None  # Tavily Key（可选，优先于环境变量）
     exaApiKey: str | None = None  # Exa Key（可选，优先于环境变量）
+    exaSearchType: str = Field(default="auto")  # Exa 搜索模式（auto|instant）
     tavilyMaxResults: int = Field(default=5, ge=1, le=20)  # Tavily 默认结果数量
     tavilySearchDepth: str = Field(default="basic")  # Tavily 默认搜索深度（basic|advanced）
 
@@ -618,6 +619,7 @@ class AIService:
                             "web_search_max_results": resolved_max_results,
                             "tavily_api_key": (request.tavilyApiKey or "").strip(),
                             "exa_api_key": (request.exaApiKey or "").strip(),
+                            "exa_search_type": str(request.exaSearchType or "auto").lower(),
                             "tavily_max_results": request.tavilyMaxResults,
                             "tavily_search_depth": request.tavilySearchDepth,
                         }
@@ -659,6 +661,11 @@ class AIService:
                                 args["max_results"] = resolved_max_results
                             elif tool_name == "exa_search":
                                 args["max_results"] = resolved_max_results
+                                args["search_type"] = (
+                                    "instant"
+                                    if str(request.exaSearchType).lower() == "instant"
+                                    else "auto"
+                                )
 
                             # 通知前端：开始执行工具
                             yield f"data: {json.dumps({'type': 'tool', 'data': {'status': 'start', 'round': current_round, 'name': tool_name, 'arguments': args}})}\n\n"

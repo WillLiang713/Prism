@@ -2424,6 +2424,31 @@ body {
   font-family: var(--font-body);
 }
 
+/* 静态选择器：点击输入区或展开时，整个控件（含箭头区）统一高亮 */
+#configModal .config-static-picker .model-picker-row input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+#configModal .config-static-picker .model-picker-row input[type="text"]:focus + .model-picker-btn {
+  border-color: var(--accent);
+}
+
+#configModal .config-static-picker .model-picker-row:has(input[type="text"]:focus) {
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+#configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row input[type="text"],
+#configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-btn {
+  border-color: var(--accent);
+}
+
+#configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row {
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
 /* Config modal: make all dropdown-like controls visually match model picker */
 #configModal .form-group select,
 #configModal .form-group input[list] {
@@ -2473,6 +2498,7 @@ body {
   color: var(--text);
   font-size: 13px;
 }
+
 
 .form-group input[type="checkbox"],
 .form-group input[type="radio"] {
