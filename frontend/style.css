@@ -222,15 +222,15 @@ body {
 
 .brand-model-id {
   font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.2;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .brand-mark {
@@ -252,41 +252,42 @@ body {
   display: inline-flex;
   gap: 0;
   align-items: center;
-  padding: 2px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: none;
-  box-shadow: none;
   z-index: 1;
 }
 
 .chat-actions .btn.btn-secondary.btn-settings {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  padding: 0;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-strong);
   color: var(--text-muted);
-  opacity: 0.85;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  line-height: 1;
-  min-height: 30px;
-  padding-top: 0;
-  padding-bottom: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   text-decoration: none;
-  transition: color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.chat-actions .btn.btn-secondary.btn-settings svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.1;
 }
 
 .chat-actions .btn.btn-secondary.btn-settings:hover {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
-  opacity: 1;
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: var(--border-accent);
   text-decoration: none;
 }
 
 .chat-actions .btn.btn-secondary.btn-settings:active {
-  color: var(--accent);
+  transform: scale(0.92);
+  color: var(--text);
 }
 
 .chat-actions .btn.btn-secondary.btn-settings:focus-visible {
@@ -299,6 +300,19 @@ body {
 }
 
 /* ---------- Chat Body (sidebar + thread) ---------- */
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 .chat-body {
   display: flex;
   flex-direction: column;
@@ -4124,6 +4138,13 @@ body {
     background: transparent;
     border: none;
     box-shadow: none;
+  }
+
+  .chat-actions .btn.btn-secondary.btn-settings {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
   }
 
   .chat-body,
