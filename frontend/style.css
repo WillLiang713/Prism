@@ -4036,9 +4036,9 @@ body {
 }
 
 @media (max-width: 900px) {
-  /* 配置弹窗在移动端也保持“居中弹窗”形态（不全屏） */
+  /* 配置弹窗在移动端使用全屏面板 */
   #configModal {
-    padding: 12px;
+    padding: 0;
   }
 
   #configModal .modal-content {
@@ -4048,8 +4048,9 @@ body {
   }
 
   #configModal .config-panel {
-    max-height: 92dvh;
-    border-radius: var(--radius-lg);
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 
   #configModal .config-header {
