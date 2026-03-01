@@ -3316,11 +3316,22 @@ body {
 .response-content a { color: var(--accent-strong); text-decoration: none; }
 .response-content a:hover { text-decoration: underline; }
 
-.response-content table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+.response-content table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
+  margin-bottom: 12px;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .response-content table th, .response-content table td {
   border: 1px solid var(--border);
   padding: 8px 12px;
   text-align: left;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .response-content table th { background: rgba(255, 255, 255, 0.03); font-weight: 600; }
 .response-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
@@ -3763,8 +3774,23 @@ body {
   color: var(--text-muted);
 }
 
-.prompt-preview-content table { border-collapse: collapse; margin: 12px 0; width: 100%; }
-.prompt-preview-content th, .prompt-preview-content td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.prompt-preview-content table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.prompt-preview-content th, .prompt-preview-content td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .prompt-preview-content th { background: rgba(255, 255, 255, 0.03); font-weight: 600; }
 .prompt-preview-content > *:first-child { margin-top: 0; }
 .prompt-preview-content > *:last-child { margin-bottom: 0; }
@@ -4275,6 +4301,14 @@ body {
 }
 
 @media (max-width: 520px) {
+  .chat-main {
+    overflow-x: hidden;
+  }
+
+  .chat-thread {
+    overflow-x: hidden;
+  }
+
   .composer-footer {
     flex-direction: row;
     align-items: center;
@@ -4285,7 +4319,7 @@ body {
     width: auto;
     max-width: calc(100% - 86px);
     min-width: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     overflow: visible;
   }
 
