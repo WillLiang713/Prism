@@ -147,6 +147,39 @@ class ProviderConfig:
 class MessageBuilder:
     """消息构建器"""
 
+    DEFAULT_SYSTEM_PROMPT = """你是一个“实时信息优先”的中文助手，回答目标是：准确、及时、可核实。
+请把以下时间作为本轮对话的判断基准：
+- 当前日期时间：{{datetime}}
+- 当前日期：{{date}}
+- 当前时间：{{time}}
+- 当前时间戳：{{timestamp}}
+
+【核心原则】
+1) 只要问题可能受时间影响，就先联网搜索，再回答。
+2) 不凭记忆猜“最新消息”；不确定就查证。
+3) 若证据不足，明确说“不确定”，不要编造。
+
+【必须优先联网的场景】
+- 用户出现“今天、现在、当前、刚刚、最新、最近、实时、截至”等词。
+- 新闻动态、政策变化、价格/汇率/股价、天气、比赛结果、航班交通、软件版本更新等易变化信息。
+- 任何需要“此刻仍然成立”的结论。
+- 你主观把握不足（低于90%把握）时。
+
+【联网执行规则】
+1) 判定需要联网后，先调用搜索工具，再输出正式答案。
+2) 重要问题至少进行两次检索（换关键词再查一次）并交叉核对。
+3) 检索词尽量包含：主题 + 时间范围 + 地区/对象。
+4) 若首次结果不够新或不够全，自动补搜，不要直接结束。
+
+【回答输出规则】
+1) 先给结论，再给关键依据（时间点、数字、适用条件）。
+2) 明确标注“已确认信息”和“可能变化信息”。
+3) 来源链接会在界面自动展示，正文中不要重复堆链接。
+4) 搜索失败时，清楚说明失败原因，并给出可执行的下一步（如建议稍后重试或提供更具体关键词）。
+
+【无需联网的场景】
+- 稳定基础知识、数学推导、代码语法、通用写作润色（除非用户明确要求最新资料）。"""
+
     @staticmethod
     def _render_system_prompt_template(template: str, now: datetime) -> str:
         """渲染系统提示词中的模板变量。未知变量保持原样。"""
@@ -160,6 +193,13 @@ class MessageBuilder:
         for key, value in replacements.items():
             text = text.replace(key, value)
         return text
+
+    @staticmethod
+    def _resolve_system_prompt(config_prompt: str | None, now: datetime) -> str:
+        """解析系统提示词：用户自定义优先，留空则使用内置默认。"""
+        custom_prompt = (config_prompt or "").strip()
+        template = custom_prompt if custom_prompt else MessageBuilder.DEFAULT_SYSTEM_PROMPT
+        return MessageBuilder._render_system_prompt_template(template, now)
 
     @staticmethod
     def convert_history_to_messages(
@@ -278,10 +318,9 @@ class MessageBuilder:
             "max_tokens": 4096
         }
 
-        # 系统提示词（仅在用户填写时注入，支持模板变量替换）
+        # 系统提示词（用户自定义优先；留空时使用内置默认；支持模板变量替换）
         now = datetime.now()
-        system_text_raw = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
-        system_text = MessageBuilder._render_system_prompt_template(system_text_raw, now) if system_text_raw else ""
+        system_text = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
         if system_text:
             body["system"] = system_text
 
@@ -304,10 +343,9 @@ class MessageBuilder:
         """构建OpenAI格式请求体"""
         messages = []
 
-        # 系统提示词（仅在用户填写时注入，支持模板变量替换）
+        # 系统提示词（用户自定义优先；留空时使用内置默认；支持模板变量替换）
         now = datetime.now()
-        system_text_raw = config.systemPrompt.strip() if config.systemPrompt and config.systemPrompt.strip() else ""
-        system_text = MessageBuilder._render_system_prompt_template(system_text_raw, now) if system_text_raw else ""
+        system_text = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
         if system_text:
             messages.append({"role": "system", "content": system_text})
 
