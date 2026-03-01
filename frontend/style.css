@@ -2012,7 +2012,7 @@ body {
 .modal-content .config-content:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); }
 
 #configModal .modal-content {
-  height: min(560px, 88vh);
+  height: min(660px, 88vh);
 }
 
 #configModal .config-panel {
