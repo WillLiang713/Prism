@@ -1781,10 +1781,10 @@ function updateProviderUi() {
   if (hintEl) {
     if (provider === "openai") {
       hintEl.textContent =
-        "OpenAI 兼容接口，请填写 API 地址。";
+        "OpenAI 兼容接口，请填写 API 地址";
     } else if (provider === "anthropic") {
       hintEl.textContent =
-        "Anthropic 兼容接口，请填写 API 地址。";
+        "Anthropic 兼容接口，请填写 API 地址";
     }
   }
 
@@ -1850,7 +1850,7 @@ function updateModelHint(side) {
   if (!apiKey) {
     setModelHint(
       side || "main",
-      "先填写 API Key、API 地址，再拉取模型列表。"
+      "先填写 API Key、API 地址，再拉取模型列表"
     );
     return;
   }
@@ -1858,14 +1858,14 @@ function updateModelHint(side) {
   if (!apiUrl) {
     setModelHint(
       side || "main",
-      "先填写 API 地址，再拉取模型列表。"
+      "先填写 API 地址，再拉取模型列表"
     );
     return;
   }
 
   setModelHint(
     side || "main",
-    "填模型ID；可下拉选或手动输入。"
+    "填模型ID；可下拉选或手动输入"
   );
 }
 
@@ -1932,10 +1932,10 @@ function renderModelDropdown(side, filterText) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
     empty.textContent = all.length
-      ? "无匹配模型，可继续输入。"
+      ? "无匹配模型，可继续输入"
       : isLoading
       ? "正在获取模型列表…"
-      : "暂无模型列表，请先配置Key/地址。";
+      : "暂无模型列表，请先配置Key/地址";
     dropdownEl.appendChild(empty);
     return;
   }
@@ -2141,7 +2141,7 @@ async function fetchAndUpdateModels(side) {
     if (side !== "Title") {
       setModelHint(
         side,
-        `已获取 ${ids.length} 个模型ID，可下拉选或手动输入。`
+        `已获取 ${ids.length} 个模型ID，可下拉选或手动输入`
       );
     }
     // 只在下拉框已经打开的情况下更新显示，不自动打开
@@ -2159,7 +2159,7 @@ async function fetchAndUpdateModels(side) {
     slot.models = [];
     closeModelDropdown(side);
     if (side !== "Title") {
-      setModelHint(side, "自动获取失败，请手动输入模型ID。");
+      setModelHint(side, "自动获取失败，请手动输入模型ID");
     }
   } finally {
     slot.inFlight = false;
