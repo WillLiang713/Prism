@@ -1259,7 +1259,17 @@ function normalizeWebSearchProvider(value) {
 }
 
 function normalizeExaSearchType(value) {
-  return String(value || "").toLowerCase() === "instant" ? "instant" : "auto";
+  const normalized = String(value || "").toLowerCase();
+  const allowed = new Set([
+    "auto",
+    "neural",
+    "fast",
+    "deep",
+    "deep-reasoning",
+    "deep-max",
+    "instant",
+  ]);
+  return allowed.has(normalized) ? normalized : "auto";
 }
 
 function setStatusPillState(el, isReady, text) {

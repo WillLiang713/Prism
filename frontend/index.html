@@ -479,8 +479,13 @@
                   <div class="form-group" id="exaSearchTypeGroup">
                     <label for="exaSearchTypePickerInput">Exa 搜索模式</label>
                     <select id="exaSearchType" class="config-native-select" aria-hidden="true" tabindex="-1">
-                      <option value="auto">auto（通用）</option>
-                      <option value="instant">instant（实时优先）</option>
+                      <option value="auto">auto（智能混合）</option>
+                      <option value="neural">neural（语义检索）</option>
+                      <option value="fast">fast（快速检索）</option>
+                      <option value="deep">deep（轻量深度）</option>
+                      <option value="deep-reasoning">deep-reasoning（标准深度）</option>
+                      <option value="deep-max">deep-max（最大深度）</option>
+                      <option value="instant">instant（最低延迟）</option>
                     </select>
                     <div class="model-picker config-static-picker" data-picker="exaSearchType">
                       <div class="model-picker-row">
@@ -505,7 +510,7 @@
                       ></div>
                     </div>
                     <div class="form-hint">
-                      默认 auto；需要更强实时性时切换 instant。
+                      可选：auto / neural / fast / deep / deep-reasoning / deep-max / instant。
                     </div>
                   </div>
                   <div class="web-config-tips">

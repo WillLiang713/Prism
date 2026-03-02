@@ -187,6 +187,7 @@ class ExaSearchRequest(BaseModel):
     api_key: str | None = None
     query: str = Field(min_length=1, max_length=2000)
     max_results: int = Field(default=5, ge=1, le=20)
+    search_type: str = Field(default="auto")
 
 
 @app.post("/api/exa/search")
@@ -195,9 +196,15 @@ async def exa_search(payload: ExaSearchRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="缺少 Exa API Key（请设置环境变量 EXA_API_KEY 或在请求体中传 api_key）")
 
+    allowed_types = {"neural", "fast", "auto", "deep", "deep-reasoning", "deep-max", "instant"}
+    resolved_type = str(payload.search_type or "auto").lower()
+    if resolved_type not in allowed_types:
+        resolved_type = "auto"
+
     body = {
         "query": payload.query,
         "numResults": payload.max_results,
+        "type": resolved_type,
     }
     headers = {
         "Content-Type": "application/json",

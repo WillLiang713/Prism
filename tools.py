@@ -210,7 +210,8 @@ def exa_search(
         or runtime.get("exa_search_type")
         or "auto"
     ).lower()
-    if resolved_type not in {"auto", "instant"}:
+    allowed_types = {"neural", "fast", "auto", "deep", "deep-reasoning", "deep-max", "instant"}
+    if resolved_type not in allowed_types:
         resolved_type = "auto"
 
     payload: dict[str, Any] = {

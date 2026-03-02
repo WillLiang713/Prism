@@ -63,6 +63,19 @@
           "max_results": {
             "type": "integer",
             "description": "返回结果条数，范围 1-20。"
+          },
+          "search_type": {
+            "type": "string",
+            "enum": [
+              "neural",
+              "fast",
+              "auto",
+              "deep",
+              "deep-reasoning",
+              "deep-max",
+              "instant"
+            ],
+            "description": "Exa 搜索类型。"
           }
         },
         "required": [
