@@ -967,10 +967,13 @@ function renderImagePreviews() {
   }
 }
 
-function renderWebSearchSection(container, webSearch) {
+function renderWebSearchSection(container, webSearch, options = {}) {
   if (!container) return;
   container.innerHTML = "";
   if (!webSearch) return;
+
+  const allowToggle = options.allowToggle !== false;
+  const defaultCollapsed = options.defaultCollapsed !== false;
 
   const header = document.createElement("div");
   header.className = "web-search-header";
@@ -1027,12 +1030,26 @@ function renderWebSearchSection(container, webSearch) {
       list.className = "web-search-results";
       results.forEach((r) => {
         const item = document.createElement("li");
+        item.className = "web-search-result-card";
+
         const link = document.createElement("a");
+        link.className = "web-search-result-link";
         link.href = r.url || "#";
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.textContent = r.title || r.url || "(无标题)";
         item.appendChild(link);
+
+        if (r.url) {
+          const meta = document.createElement("div");
+          meta.className = "web-search-result-meta";
+          try {
+            meta.textContent = new URL(r.url).hostname || r.url;
+          } catch {
+            meta.textContent = r.url;
+          }
+          item.appendChild(meta);
+        }
 
         const snippet = document.createElement("div");
         snippet.className = "web-search-snippet";
@@ -1050,20 +1067,26 @@ function renderWebSearchSection(container, webSearch) {
     }
   }
 
-  // 绑定折叠/展开事件
-  header.addEventListener("click", () => {
-    container.classList.toggle("collapsed");
-    container.classList.toggle("expanded");
-    // 用户手动操作后，标记为已手动操作，取消自动折叠
-    container.dataset.userToggled = "1";
-  });
+  if (allowToggle) {
+    // 绑定折叠/展开事件
+    header.addEventListener("click", () => {
+      container.classList.toggle("collapsed");
+      container.classList.toggle("expanded");
+      // 用户手动操作后，标记为已手动操作，取消自动折叠
+      container.dataset.userToggled = "1";
+    });
+  }
 
   container.appendChild(header);
   container.appendChild(body);
 
-  // 默认折叠状态
-  container.classList.add("collapsed");
-  container.classList.remove("expanded");
+  if (defaultCollapsed) {
+    container.classList.add("collapsed");
+    container.classList.remove("expanded");
+  } else {
+    container.classList.remove("collapsed");
+    container.classList.add("expanded");
+  }
 }
 
 function formatToolEventText(event) {
@@ -1133,6 +1156,7 @@ function renderToolEvents(sectionEl, listEl, events) {
     sectionEl.appendChild(detail);
 
     header.addEventListener("click", () => {
+      sectionEl.dataset.userToggled = "1";
       sectionEl.classList.toggle("tc-expanded");
     });
   }
@@ -1150,6 +1174,99 @@ function renderToolEvents(sectionEl, listEl, events) {
     li.className = `tool-call-item ${event.status || "info"}`;
     li.textContent = formatToolEventText(event);
     listEl.appendChild(li);
+  });
+}
+
+function renderWebSearchEvents(sectionEl, events) {
+  if (!sectionEl) return;
+  const items = Array.isArray(events) ? events : [];
+  if (!items.length) {
+    sectionEl.style.display = "none";
+    sectionEl.innerHTML = "";
+    return;
+  }
+
+  sectionEl.style.display = "block";
+
+  const hasError = items.some((e) => String(e?.status || "") === "error");
+  const allDone = items.every((e) => String(e?.status || "") !== "loading");
+  sectionEl.classList.remove("sp-running", "sp-success", "sp-error");
+  if (hasError) sectionEl.classList.add("sp-error");
+  else if (allDone) sectionEl.classList.add("sp-success");
+  else sectionEl.classList.add("sp-running");
+
+  let list = sectionEl.querySelector(".search-preview-list");
+  if (!sectionEl.querySelector(".search-preview-header") || !list) {
+    const header = document.createElement("div");
+    header.className = "search-preview-header";
+    header.innerHTML = `
+      <span class="search-preview-header-text"></span>
+      <svg class="search-preview-header-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>`;
+
+    const detail = document.createElement("div");
+    detail.className = "search-preview-detail";
+
+    list = document.createElement("div");
+    list.className = "search-preview-list";
+
+    sectionEl.innerHTML = "";
+    detail.appendChild(list);
+    sectionEl.appendChild(header);
+    sectionEl.appendChild(detail);
+
+    header.addEventListener("click", () => {
+      sectionEl.dataset.userToggled = "1";
+      sectionEl.classList.toggle("sp-expanded");
+    });
+  }
+
+  const headerText = sectionEl.querySelector(".search-preview-header-text");
+  if (headerText) {
+    const roundCount = items.length;
+    headerText.textContent = `联网结果 · ${roundCount} 次`;
+  }
+
+  list.innerHTML = "";
+
+  items.forEach((event) => {
+    const card = document.createElement("div");
+    card.className = "web-search expanded search-preview-item";
+
+    const queryText = (event?.query || "").trim();
+    const answerText = (event?.answer || "").trim();
+    const answerParts = [];
+    if (queryText) answerParts.push(`查询：${queryText}`);
+    if (answerText) answerParts.push(`摘要：${answerText}`);
+
+    renderWebSearchSection(card, {
+      status: event?.status || "ready",
+      answer: answerParts.join("\n"),
+      results: Array.isArray(event?.results) ? event.results : [],
+    }, {
+      allowToggle: false,
+      defaultCollapsed: false,
+    });
+
+    card.classList.remove("collapsed");
+    card.classList.add("expanded");
+
+    const titleEl = card.querySelector(".web-search-title");
+    if (titleEl) {
+      const toolName = (event?.name || "联网搜索").trim();
+      titleEl.textContent = `${toolName} 结果`;
+    }
+
+    const statusTextEl = card.querySelector(".web-search-status span:last-child");
+    if (statusTextEl) {
+      const total = Number(event?.totalResults);
+      const fallbackCount = Array.isArray(event?.results) ? event.results.length : 0;
+      const count = Number.isFinite(total) && total > 0 ? total : fallbackCount;
+      statusTextEl.textContent = count > 0 ? `返回 ${count} 条` : "返回结果";
+    }
+
+    list.appendChild(card);
   });
 }
 
@@ -2785,6 +2902,9 @@ function createAssistantCard(turn) {
   const toolEventsSnapshot = Array.isArray(turn?.models?.main?.toolEvents)
     ? turn.models.main.toolEvents
     : [];
+  const webSearchEventsSnapshot = Array.isArray(turn?.models?.main?.webSearchEvents)
+    ? turn.models.main.webSearchEvents
+    : [];
   const thinkingTimeSnapshot = turn?.models?.main?.thinkingTime || 0;
   const tokenSnapshot = turn?.models?.main?.tokens;
   const timeSnapshot = turn?.models?.main?.timeCostSec;
@@ -2876,6 +2996,11 @@ function createAssistantCard(turn) {
   toolCallsSection.appendChild(toolCallsList);
   renderToolEvents(toolCallsSection, toolCallsList, toolEventsSnapshot);
 
+  const webSearchSection = document.createElement("div");
+  webSearchSection.className = "search-preview-section";
+  webSearchSection.style.display = "none";
+  renderWebSearchEvents(webSearchSection, webSearchEventsSnapshot);
+
   // 来源链接区域
   const sourcesSnapshot = Array.isArray(turn?.models?.main?.sources)
     ? turn.models.main.sources
@@ -2887,6 +3012,7 @@ function createAssistantCard(turn) {
 
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
+  content.appendChild(webSearchSection);
   content.appendChild(responseSection);
   content.appendChild(sourcesSection);
 
@@ -2950,7 +3076,12 @@ function createAssistantCard(turn) {
 
   if (
     statusSnapshot === "loading" &&
-    (thinkingSnapshot || contentSnapshot || toolEventsSnapshot.length > 0)
+    (
+      thinkingSnapshot ||
+      contentSnapshot ||
+      toolEventsSnapshot.length > 0 ||
+      webSearchEventsSnapshot.length > 0
+    )
   ) {
     message.classList.remove("loading");
     message.classList.add("streaming");
@@ -2970,6 +3101,7 @@ function createAssistantCard(turn) {
     timeEl,
     speedEl,
     copyBtn,
+    webSearchSectionEl: webSearchSection,
     sourcesSectionEl: sourcesSection,
     turn: turn,
     side: side,
@@ -3077,6 +3209,7 @@ async function sendPrompt() {
     model: config.model,
     thinking: "",
     toolEvents: [],
+    webSearchEvents: [],
     content: "",
     tokens: null,
     timeCostSec: null,
@@ -3369,6 +3502,40 @@ async function callModel(
                 uiRef.toolCallsListEl,
                 turn.models.main.toolEvents
               );
+              if (uiRef.toolCallsSectionEl.dataset.userToggled !== "1") {
+                uiRef.toolCallsSectionEl.classList.add("tc-expanded");
+              }
+            }
+            scheduleSaveChat();
+            updateScrollToBottomButton();
+            const message = uiRef?.statusEl?.closest(".assistant-message");
+            if (message && message.classList.contains("loading")) {
+              message.classList.remove("loading");
+              message.classList.add("streaming");
+            }
+            if (state.autoScroll && topicId === state.chat.activeTopicId) {
+              scrollToBottom(elements.chatMessages, false);
+            }
+          } else if (chunk.type === "web_search" && chunk.data) {
+            const payload =
+              chunk.data && typeof chunk.data === "object" ? chunk.data : {};
+            if (!Array.isArray(turn.models.main.webSearchEvents)) {
+              turn.models.main.webSearchEvents = [];
+            }
+            turn.models.main.webSearchEvents.push(payload);
+            if (turn.models.main.webSearchEvents.length > 10) {
+              turn.models.main.webSearchEvents = turn.models.main.webSearchEvents.slice(
+                -10
+              );
+            }
+            if (uiRef?.webSearchSectionEl) {
+              renderWebSearchEvents(
+                uiRef.webSearchSectionEl,
+                turn.models.main.webSearchEvents
+              );
+              if (uiRef.webSearchSectionEl.dataset.userToggled !== "1") {
+                uiRef.webSearchSectionEl.classList.add("sp-expanded");
+              }
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -3421,6 +3588,22 @@ async function callModel(
     ) {
       uiRef.thinkingSectionEl.classList.add("collapsed");
       turn.models.main.thinkingCollapsed = true;
+    }
+
+    if (
+      Array.isArray(turn.models.main.toolEvents) &&
+      turn.models.main.toolEvents.length > 0 &&
+      uiRef?.toolCallsSectionEl?.dataset?.userToggled !== "1"
+    ) {
+      uiRef.toolCallsSectionEl.classList.remove("tc-expanded");
+    }
+
+    if (
+      Array.isArray(turn.models.main.webSearchEvents) &&
+      turn.models.main.webSearchEvents.length > 0 &&
+      uiRef?.webSearchSectionEl?.dataset?.userToggled !== "1"
+    ) {
+      uiRef.webSearchSectionEl.classList.remove("sp-expanded");
     }
 
     if (!Number.isFinite(turn.models.main.tokens)) {
