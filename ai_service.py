@@ -609,9 +609,10 @@ class AIService:
                     
                     # 流结束后，如果有工具调用，执行并多轮请求 AI
                     current_round = 0
+                    max_rounds = min(request.maxToolRounds, 200)
                     messages_with_tools = body["messages"].copy()
                     
-                    while tool_calls_buffer and request.enableTools:
+                    while tool_calls_buffer and request.enableTools and current_round < max_rounds:
                         current_round += 1
                         resolved_max_results = request.webSearchMaxResults or request.tavilyMaxResults or 5
                         tool_runtime_context = {
@@ -641,8 +642,16 @@ class AIService:
                             elif "o1" in model_lower:
                                 tool_call_message["reasoning_content"] = assistant_thinking
                         
+                        # 过滤无效的 tool_calls（name 为空）
+                        valid_tool_calls = {
+                            idx: tc for idx, tc in tool_calls_buffer.items()
+                            if tc.get("name", "").strip()
+                        }
+                        if not valid_tool_calls:
+                            break
+                        
                         tool_results = []
-                        for idx, tool_call in sorted(tool_calls_buffer.items()):
+                        for idx, tool_call in sorted(valid_tool_calls.items()):
                             tool_name = tool_call["name"]
                             try:
                                 args = json.loads(tool_call["arguments"]) if tool_call["arguments"] else {}
@@ -833,6 +842,11 @@ class AIService:
                                     
                                     except json.JSONDecodeError:
                                         continue
+                            
+                            # 检查是否达到最大轮数限制
+                            if current_round >= max_rounds and tool_calls_buffer:
+                                yield f"data: {json.dumps({'type': 'error', 'data': f'已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具'})}\n\n"
+                                break
 
 
         except Exception as e:
