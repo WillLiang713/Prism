@@ -974,34 +974,43 @@ function renderWebSearchSection(container, webSearch, options = {}) {
 
   const allowToggle = options.allowToggle !== false;
   const defaultCollapsed = options.defaultCollapsed !== false;
+  const showTitle = options.showTitle !== false;
+  const showStatus = options.showStatus !== false;
+  const customStatusText = typeof options.statusText === "string"
+    ? options.statusText
+    : "";
 
   const header = document.createElement("div");
   header.className = "web-search-header";
 
-  const title = document.createElement("span");
-  title.className = "web-search-title";
-  title.textContent = "联网搜索";
+  if (showTitle) {
+    const title = document.createElement("span");
+    title.className = "web-search-title";
+    title.textContent = "联网搜索";
+    header.appendChild(title);
+  }
 
-  const status = document.createElement("span");
-  status.className = `web-search-status ${webSearch.status || "ready"}`;
+  if (showStatus) {
+    const status = document.createElement("span");
+    status.className = `web-search-status ${webSearch.status || "ready"}`;
 
-  // 添加spinner元素
-  const spinner = document.createElement("span");
-  spinner.className = "web-search-status-spinner";
-  status.appendChild(spinner);
+    // 添加spinner元素
+    const spinner = document.createElement("span");
+    spinner.className = "web-search-status-spinner";
+    status.appendChild(spinner);
 
-  // 添加状态文本
-  const statusText = document.createElement("span");
-  statusText.textContent =
-    webSearch.status === "loading"
-      ? "搜索中"
-      : webSearch.status === "error"
-      ? "搜索失败"
-      : "联网搜索";
-  status.appendChild(statusText);
-
-  header.appendChild(status);
-  header.appendChild(title);
+    // 添加状态文本
+    const statusText = document.createElement("span");
+    statusText.textContent = customStatusText || (
+      webSearch.status === "loading"
+        ? "搜索中"
+        : webSearch.status === "error"
+        ? "搜索失败"
+        : "联网搜索"
+    );
+    status.appendChild(statusText);
+    header.appendChild(status);
+  }
 
   const body = document.createElement("div");
   body.className = "web-search-body";
@@ -1067,7 +1076,7 @@ function renderWebSearchSection(container, webSearch, options = {}) {
     }
   }
 
-  if (allowToggle) {
+  if (allowToggle && header.childElementCount > 0) {
     // 绑定折叠/展开事件
     header.addEventListener("click", () => {
       container.classList.toggle("collapsed");
@@ -1077,7 +1086,9 @@ function renderWebSearchSection(container, webSearch, options = {}) {
     });
   }
 
-  container.appendChild(header);
+  if (header.childElementCount > 0) {
+    container.appendChild(header);
+  }
   container.appendChild(body);
 
   if (defaultCollapsed) {
@@ -1089,28 +1100,48 @@ function renderWebSearchSection(container, webSearch, options = {}) {
   }
 }
 
-function formatToolEventText(event) {
-  if (!event || typeof event !== "object") return "";
-  const name = event.name || "未知工具";
+function formatToolEventDisplay(event) {
+  if (!event || typeof event !== "object") {
+    return {
+      title: "未知工具",
+      body: "",
+    };
+  }
+
+  const name = (event.name || "未知工具").trim();
   const status = event.status || "info";
+  const rawArgs = event.arguments;
+  const args = rawArgs && typeof rawArgs === "object"
+    ? JSON.stringify(rawArgs, null, 0)
+    : typeof rawArgs === "string"
+    ? rawArgs
+    : "";
 
   if (status === "start") {
-    const args = event.arguments && typeof event.arguments === "object"
-      ? JSON.stringify(event.arguments, null, 0)
-      : "";
-    return args ? `调用 ${name}，参数：${truncateText(args, 120)}` : `调用 ${name}`;
+    return {
+      title: name,
+      body: args ? `参数：${truncateText(args, 180)}` : "等待工具返回结果",
+    };
   }
 
   if (status === "error") {
-    return `${name} 失败：${event.resultSummary || event.error || "未知错误"}`;
+    return {
+      title: name,
+      body: event.resultSummary || event.error || "未知错误",
+    };
   }
 
   if (status === "success") {
-    return `${name} 完成：${event.resultSummary || "调用完成"}`;
+    return {
+      title: name,
+      body: event.resultSummary || "调用完成",
+    };
   }
 
-
-  return `${name}：${event.resultSummary || ""}`;
+  return {
+    title: name,
+    body: event.resultSummary || "",
+  };
 }
 
 function renderToolEvents(sectionEl, listEl, events) {
@@ -1170,9 +1201,27 @@ function renderToolEvents(sectionEl, listEl, events) {
 
   // Render items
   items.forEach((event) => {
+    const display = formatToolEventDisplay(event);
     const li = document.createElement("li");
     li.className = `tool-call-item ${event.status || "info"}`;
-    li.textContent = formatToolEventText(event);
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "tool-call-item-title-row";
+
+    const title = document.createElement("span");
+    title.className = "tool-call-item-title";
+    title.textContent = display.title;
+
+    titleRow.appendChild(title);
+    li.appendChild(titleRow);
+
+    if (display.body) {
+      const body = document.createElement("div");
+      body.className = "tool-call-item-body";
+      body.textContent = display.body;
+      li.appendChild(body);
+    }
+
     listEl.appendChild(li);
   });
 }
@@ -1247,24 +1296,12 @@ function renderWebSearchEvents(sectionEl, events) {
     }, {
       allowToggle: false,
       defaultCollapsed: false,
+      showTitle: false,
+      showStatus: false,
     });
 
     card.classList.remove("collapsed");
     card.classList.add("expanded");
-
-    const titleEl = card.querySelector(".web-search-title");
-    if (titleEl) {
-      const toolName = (event?.name || "联网搜索").trim();
-      titleEl.textContent = `${toolName} 结果`;
-    }
-
-    const statusTextEl = card.querySelector(".web-search-status span:last-child");
-    if (statusTextEl) {
-      const total = Number(event?.totalResults);
-      const fallbackCount = Array.isArray(event?.results) ? event.results.length : 0;
-      const count = Number.isFinite(total) && total > 0 ? total : fallbackCount;
-      statusTextEl.textContent = count > 0 ? `返回 ${count} 条` : "返回结果";
-    }
 
     list.appendChild(card);
   });
