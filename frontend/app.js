@@ -1471,33 +1471,13 @@ function bindEvents() {
     }
   });
 
-  elements.newTopicBtn.addEventListener("click", () => {
-    if (state.chat.isCreatingTopic) return; // 防止重复创建
+  elements.newTopicBtn.addEventListener("click", triggerCreateTopic);
 
-    // 检查当前话题是否为空（无消息）
-    const currentTopic = getActiveTopic();
-    if (currentTopic) {
-      const hasRealContent = currentTopic.turns.some(
-        (turn) => turn.prompt?.trim()
-      );
-
-      if (!hasRealContent && currentTopic.turns.length <= 1) {
-        // 当前话题为空，无需创建新话题
-        elements.promptInput.focus();
-        return;
-      }
-    }
-
-    state.chat.isCreatingTopic = true;
-    try {
-      const topic = createTopic();
-      setActiveTopic(topic.id);
-      collapseSidebarForMobile();
-      renderAll();
-      elements.promptInput.focus();
-    } finally {
-      state.chat.isCreatingTopic = false;
-    }
+  // 新建话题快捷键：Mac Cmd+Alt+N / Windows-Linux Ctrl+Alt+N
+  document.addEventListener("keydown", (e) => {
+    if (!isNewTopicShortcut(e)) return;
+    e.preventDefault();
+    triggerCreateTopic();
   });
 
   // 监听提供商变化，更新API地址提示 + 自动获取模型列表
@@ -1556,12 +1536,14 @@ function bindEvents() {
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
   window.addEventListener("resize", repositionOpenFloatingDropdowns);
 
-  // Enter 发送（Shift+Enter 换行）
+  // Enter 换行；Ctrl/Cmd+Enter 发送
   elements.promptInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-      e.preventDefault();
-      if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
-    }
+    if (e.isComposing) return;
+    if (e.key !== "Enter") return;
+    if (!(e.ctrlKey || e.metaKey)) return;
+
+    e.preventDefault();
+    if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
   });
 
   elements.promptInput.addEventListener("input", autoGrowPromptInput);
@@ -1605,6 +1587,57 @@ function bindEvents() {
 
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
+}
+
+function triggerCreateTopic() {
+  if (state.chat.isCreatingTopic) return; // 防止重复创建
+
+  // 检查当前话题是否为空（无消息）
+  const currentTopic = getActiveTopic();
+  if (currentTopic) {
+    const hasRealContent = currentTopic.turns.some(
+      (turn) => turn.prompt?.trim()
+    );
+
+    if (!hasRealContent && currentTopic.turns.length <= 1) {
+      // 当前话题为空，无需创建新话题
+      elements.promptInput?.focus();
+      return;
+    }
+  }
+
+  state.chat.isCreatingTopic = true;
+  try {
+    const topic = createTopic();
+    setActiveTopic(topic.id);
+    collapseSidebarForMobile();
+    renderAll();
+    elements.promptInput?.focus();
+  } finally {
+    state.chat.isCreatingTopic = false;
+  }
+}
+
+function isNewTopicShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+
+  const target = e.target;
+  if (target instanceof HTMLElement) {
+    const tagName = target.tagName;
+    const isEditableTarget =
+      tagName === "INPUT" ||
+      tagName === "TEXTAREA" ||
+      tagName === "SELECT" ||
+      target.isContentEditable;
+    if (isEditableTarget) return false;
+  }
+
+  const key = (e.key || "").toLowerCase();
+  const hasAlt = !!e.altKey;
+  const isMacShortcut = !!e.metaKey && !e.ctrlKey;
+  const isWinLinuxShortcut = !!e.ctrlKey && !e.metaKey;
+
+  return key === "n" && hasAlt && (isMacShortcut || isWinLinuxShortcut);
 }
 
 function setActiveConfigTab(tabName = "model") {
