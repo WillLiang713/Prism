@@ -2392,7 +2392,7 @@ function getConfig(side) {
     apiUrl: elements.apiUrl?.value || "",
     // 角色设定：发送给后端作为系统提示词
     systemPrompt: elements.roleSetting?.value || "",
-    reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "medium",
+    reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "none",
   };
 }
 
