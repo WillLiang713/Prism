@@ -1663,11 +1663,32 @@ function bindEvents() {
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
   window.addEventListener("resize", repositionOpenFloatingDropdowns);
 
-  // Enter 换行；Ctrl/Cmd+Enter 发送
+  // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）
+  let promptImeComposing = false;
+  let promptImeEndAt = 0;
+  const PROMPT_IME_GUARD_MS = 120;
+
+  elements.promptInput.addEventListener("compositionstart", () => {
+    promptImeComposing = true;
+  });
+
+  elements.promptInput.addEventListener("compositionend", () => {
+    promptImeComposing = false;
+    promptImeEndAt = Date.now();
+  });
+
   elements.promptInput.addEventListener("keydown", (e) => {
-    if (e.isComposing) return;
     if (e.key !== "Enter") return;
-    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.shiftKey) return;
+
+    const isImeGuarded =
+      e.isComposing ||
+      promptImeComposing ||
+      e.keyCode === 229 ||
+      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
+    if (isImeGuarded) return;
+
+    if (isMobileLayout()) return;
 
     e.preventDefault();
     if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
