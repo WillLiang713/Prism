@@ -1670,11 +1670,13 @@ body {
   display: block;
 }
 
-.scroll-to-bottom-btn:hover {
-  color: var(--text);
-  border-color: var(--border-accent);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+@media (hover: hover) and (pointer: fine) {
+  .scroll-to-bottom-btn:hover {
+    color: var(--text);
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  }
 }
 
 .scroll-to-bottom-btn:active {
