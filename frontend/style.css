@@ -3133,12 +3133,13 @@ body {
 }
 
 .tool-calls-detail {
-  max-height: 400px;
-  overflow-y: auto;
+  max-height: 0;
+  overflow: hidden;
   transition: max-height 0.25s ease;
 }
 
 .tool-calls-section.tc-expanded .tool-calls-detail {
+  max-height: 400px;
   overflow-y: auto;
 }
 
