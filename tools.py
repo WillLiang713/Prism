@@ -66,6 +66,45 @@ def _normalize_result_item(item: dict[str, Any]) -> dict[str, str]:
     }
 
 
+_EXA_HIGHLIGHTS_MAX_CHARACTERS = 2000
+_EXA_RESULT_CONTENT_MAX_CHARS = 800
+
+
+def _compress_text(value: Any, max_chars: int | None = None) -> str:
+    text = " ".join(str(value or "").split())
+    if max_chars and len(text) > max_chars:
+        return text[:max_chars].rstrip() + "..."
+    return text
+
+
+def _normalize_exa_result_item(item: dict[str, Any]) -> dict[str, str]:
+    highlights = item.get("highlights")
+    highlight_text = ""
+    if isinstance(highlights, list):
+        pieces = [
+            _compress_text(part)
+            for part in highlights
+            if isinstance(part, str) and part.strip()
+        ]
+        if pieces:
+            highlight_text = " | ".join(pieces[:3])
+
+    content = (
+        highlight_text
+        or item.get("summary")
+        or item.get("content")
+        or item.get("text")
+        or item.get("snippet")
+        or ""
+    )
+
+    return {
+        "title": _compress_text(item.get("title")),
+        "url": str(item.get("url", "") or ""),
+        "content": _compress_text(content, _EXA_RESULT_CONTENT_MAX_CHARS),
+    }
+
+
 def tavily_search(
     query: str,
     search_depth: str | None = None,
@@ -84,7 +123,9 @@ def tavily_search(
 
     if not api_key:
         return json.dumps(
-            {"error": "缺少 Tavily API Key（请在设置中填写，或配置环境变量 TAVILY_API_KEY）"},
+            {
+                "error": "缺少 Tavily API Key（请在设置中填写，或配置环境变量 TAVILY_API_KEY）"
+            },
             ensure_ascii=False,
         )
 
@@ -102,7 +143,9 @@ def tavily_search(
     depth_candidate = search_depth
     if depth_candidate is None or not str(depth_candidate).strip():
         depth_candidate = runtime.get("tavily_search_depth")
-    resolved_depth = "advanced" if str(depth_candidate).lower() == "advanced" else "basic"
+    resolved_depth = (
+        "advanced" if str(depth_candidate).lower() == "advanced" else "basic"
+    )
 
     payload: dict[str, Any] = {
         "api_key": api_key,
@@ -198,30 +241,30 @@ def exa_search(
             max_results
             if max_results is not None
             else (
-                runtime.get("web_search_max_results")
-                or runtime.get("exa_max_results")
+                runtime.get("web_search_max_results") or runtime.get("exa_max_results")
             )
         ),
         default=5,
     )
 
-    resolved_type = str(
-        search_type
-        or runtime.get("exa_search_type")
-        or "auto"
-    ).lower()
-    if resolved_type not in {"auto", "instant"}:
+    resolved_type = str(search_type or runtime.get("exa_search_type") or "auto").lower()
+    allowed_types = {
+        "neural",
+        "fast",
+        "auto",
+        "deep",
+        "deep-reasoning",
+        "deep-max",
+        "instant",
+    }
+    if resolved_type not in allowed_types:
         resolved_type = "auto"
 
     payload: dict[str, Any] = {
         "query": query_text,
         "numResults": resolved_max_results,
         "type": resolved_type,
-        "contents": {
-            "summary": {
-                "query": "提取核心结论"
-            }
-        },
+        "contents": {"highlights": {"maxCharacters": _EXA_HIGHLIGHTS_MAX_CHARACTERS}},
     }
     headers = {
         "Content-Type": "application/json",
@@ -231,7 +274,9 @@ def exa_search(
 
     try:
         with httpx.Client(timeout=30.0) as client:
-            response = client.post("https://api.exa.ai/search", json=payload, headers=headers)
+            response = client.post(
+                "https://api.exa.ai/search", json=payload, headers=headers
+            )
     except Exception as e:
         return json.dumps(
             {"error": f"Exa 请求失败: {type(e).__name__} - {str(e)}"},
@@ -262,11 +307,18 @@ def exa_search(
 
     results = data.get("results", [])
     normalized_results: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
     if isinstance(results, list):
         for item in results:
             if not isinstance(item, dict):
                 continue
-            normalized_results.append(_normalize_result_item(item))
+            normalized = _normalize_exa_result_item(item)
+            url = normalized.get("url", "")
+            if url and url in seen_urls:
+                continue
+            if url:
+                seen_urls.add(url)
+            normalized_results.append(normalized)
 
     return json.dumps(
         {
@@ -285,12 +337,22 @@ def get_current_time(timezone: str | None = None) -> str:
         tz = ZoneInfo(tz_name)
     except Exception:
         return json.dumps(
-            {"error": f"无效的时区: '{tz_name}'，请使用 IANA 时区名称，如 Asia/Shanghai、America/New_York、Europe/London 等"},
+            {
+                "error": f"无效的时区: '{tz_name}'，请使用 IANA 时区名称，如 Asia/Shanghai、America/New_York、Europe/London 等"
+            },
             ensure_ascii=False,
         )
 
     now = datetime.now(tz)
-    weekday_names = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+    weekday_names = [
+        "星期一",
+        "星期二",
+        "星期三",
+        "星期四",
+        "星期五",
+        "星期六",
+        "星期日",
+    ]
 
     return json.dumps(
         {

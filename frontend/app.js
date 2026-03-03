@@ -967,38 +967,50 @@ function renderImagePreviews() {
   }
 }
 
-function renderWebSearchSection(container, webSearch) {
+function renderWebSearchSection(container, webSearch, options = {}) {
   if (!container) return;
   container.innerHTML = "";
   if (!webSearch) return;
 
+  const allowToggle = options.allowToggle !== false;
+  const defaultCollapsed = options.defaultCollapsed !== false;
+  const showTitle = options.showTitle !== false;
+  const showStatus = options.showStatus !== false;
+  const customStatusText = typeof options.statusText === "string"
+    ? options.statusText
+    : "";
+
   const header = document.createElement("div");
   header.className = "web-search-header";
 
-  const title = document.createElement("span");
-  title.className = "web-search-title";
-  title.textContent = "联网搜索";
+  if (showTitle) {
+    const title = document.createElement("span");
+    title.className = "web-search-title";
+    title.textContent = "联网搜索";
+    header.appendChild(title);
+  }
 
-  const status = document.createElement("span");
-  status.className = `web-search-status ${webSearch.status || "ready"}`;
+  if (showStatus) {
+    const status = document.createElement("span");
+    status.className = `web-search-status ${webSearch.status || "ready"}`;
 
-  // 添加spinner元素
-  const spinner = document.createElement("span");
-  spinner.className = "web-search-status-spinner";
-  status.appendChild(spinner);
+    // 添加spinner元素
+    const spinner = document.createElement("span");
+    spinner.className = "web-search-status-spinner";
+    status.appendChild(spinner);
 
-  // 添加状态文本
-  const statusText = document.createElement("span");
-  statusText.textContent =
-    webSearch.status === "loading"
-      ? "搜索中"
-      : webSearch.status === "error"
-      ? "搜索失败"
-      : "联网搜索";
-  status.appendChild(statusText);
-
-  header.appendChild(status);
-  header.appendChild(title);
+    // 添加状态文本
+    const statusText = document.createElement("span");
+    statusText.textContent = customStatusText || (
+      webSearch.status === "loading"
+        ? "搜索中"
+        : webSearch.status === "error"
+        ? "搜索失败"
+        : "联网搜索"
+    );
+    status.appendChild(statusText);
+    header.appendChild(status);
+  }
 
   const body = document.createElement("div");
   body.className = "web-search-body";
@@ -1027,12 +1039,26 @@ function renderWebSearchSection(container, webSearch) {
       list.className = "web-search-results";
       results.forEach((r) => {
         const item = document.createElement("li");
+        item.className = "web-search-result-card";
+
         const link = document.createElement("a");
+        link.className = "web-search-result-link";
         link.href = r.url || "#";
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.textContent = r.title || r.url || "(无标题)";
         item.appendChild(link);
+
+        if (r.url) {
+          const meta = document.createElement("div");
+          meta.className = "web-search-result-meta";
+          try {
+            meta.textContent = new URL(r.url).hostname || r.url;
+          } catch {
+            meta.textContent = r.url;
+          }
+          item.appendChild(meta);
+        }
 
         const snippet = document.createElement("div");
         snippet.className = "web-search-snippet";
@@ -1050,44 +1076,72 @@ function renderWebSearchSection(container, webSearch) {
     }
   }
 
-  // 绑定折叠/展开事件
-  header.addEventListener("click", () => {
-    container.classList.toggle("collapsed");
-    container.classList.toggle("expanded");
-    // 用户手动操作后，标记为已手动操作，取消自动折叠
-    container.dataset.userToggled = "1";
-  });
+  if (allowToggle && header.childElementCount > 0) {
+    // 绑定折叠/展开事件
+    header.addEventListener("click", () => {
+      container.classList.toggle("collapsed");
+      container.classList.toggle("expanded");
+      // 用户手动操作后，标记为已手动操作，取消自动折叠
+      container.dataset.userToggled = "1";
+    });
+  }
 
-  container.appendChild(header);
+  if (header.childElementCount > 0) {
+    container.appendChild(header);
+  }
   container.appendChild(body);
 
-  // 默认折叠状态
-  container.classList.add("collapsed");
-  container.classList.remove("expanded");
+  if (defaultCollapsed) {
+    container.classList.add("collapsed");
+    container.classList.remove("expanded");
+  } else {
+    container.classList.remove("collapsed");
+    container.classList.add("expanded");
+  }
 }
 
-function formatToolEventText(event) {
-  if (!event || typeof event !== "object") return "";
-  const name = event.name || "未知工具";
+function formatToolEventDisplay(event) {
+  if (!event || typeof event !== "object") {
+    return {
+      title: "未知工具",
+      body: "",
+    };
+  }
+
+  const name = (event.name || "未知工具").trim();
   const status = event.status || "info";
+  const rawArgs = event.arguments;
+  const args = rawArgs && typeof rawArgs === "object"
+    ? JSON.stringify(rawArgs, null, 0)
+    : typeof rawArgs === "string"
+    ? rawArgs
+    : "";
 
   if (status === "start") {
-    const args = event.arguments && typeof event.arguments === "object"
-      ? JSON.stringify(event.arguments, null, 0)
-      : "";
-    return args ? `调用 ${name}，参数：${truncateText(args, 120)}` : `调用 ${name}`;
+    return {
+      title: name,
+      body: args ? `参数：${truncateText(args, 180)}` : "等待工具返回结果",
+    };
   }
 
   if (status === "error") {
-    return `${name} 失败：${event.resultSummary || event.error || "未知错误"}`;
+    return {
+      title: name,
+      body: event.resultSummary || event.error || "未知错误",
+    };
   }
 
   if (status === "success") {
-    return `${name} 完成：${event.resultSummary || "调用完成"}`;
+    return {
+      title: name,
+      body: event.resultSummary || "调用完成",
+    };
   }
 
-
-  return `${name}：${event.resultSummary || ""}`;
+  return {
+    title: name,
+    body: event.resultSummary || "",
+  };
 }
 
 function renderToolEvents(sectionEl, listEl, events) {
@@ -1133,6 +1187,7 @@ function renderToolEvents(sectionEl, listEl, events) {
     sectionEl.appendChild(detail);
 
     header.addEventListener("click", () => {
+      sectionEl.dataset.userToggled = "1";
       sectionEl.classList.toggle("tc-expanded");
     });
   }
@@ -1146,10 +1201,109 @@ function renderToolEvents(sectionEl, listEl, events) {
 
   // Render items
   items.forEach((event) => {
+    const display = formatToolEventDisplay(event);
     const li = document.createElement("li");
     li.className = `tool-call-item ${event.status || "info"}`;
-    li.textContent = formatToolEventText(event);
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "tool-call-item-title-row";
+
+    const title = document.createElement("span");
+    title.className = "tool-call-item-title";
+    title.textContent = display.title;
+
+    titleRow.appendChild(title);
+    li.appendChild(titleRow);
+
+    if (display.body) {
+      const body = document.createElement("div");
+      body.className = "tool-call-item-body";
+      body.textContent = display.body;
+      li.appendChild(body);
+    }
+
     listEl.appendChild(li);
+  });
+}
+
+function renderWebSearchEvents(sectionEl, events) {
+  if (!sectionEl) return;
+  const items = Array.isArray(events) ? events : [];
+  if (!items.length) {
+    sectionEl.style.display = "none";
+    sectionEl.innerHTML = "";
+    return;
+  }
+
+  sectionEl.style.display = "block";
+
+  const hasError = items.some((e) => String(e?.status || "") === "error");
+  const allDone = items.every((e) => String(e?.status || "") !== "loading");
+  sectionEl.classList.remove("sp-running", "sp-success", "sp-error");
+  if (hasError) sectionEl.classList.add("sp-error");
+  else if (allDone) sectionEl.classList.add("sp-success");
+  else sectionEl.classList.add("sp-running");
+
+  let list = sectionEl.querySelector(".search-preview-list");
+  if (!sectionEl.querySelector(".search-preview-header") || !list) {
+    const header = document.createElement("div");
+    header.className = "search-preview-header";
+    header.innerHTML = `
+      <span class="search-preview-header-text"></span>
+      <svg class="search-preview-header-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>`;
+
+    const detail = document.createElement("div");
+    detail.className = "search-preview-detail";
+
+    list = document.createElement("div");
+    list.className = "search-preview-list";
+
+    sectionEl.innerHTML = "";
+    detail.appendChild(list);
+    sectionEl.appendChild(header);
+    sectionEl.appendChild(detail);
+
+    header.addEventListener("click", () => {
+      sectionEl.dataset.userToggled = "1";
+      sectionEl.classList.toggle("sp-expanded");
+    });
+  }
+
+  const headerText = sectionEl.querySelector(".search-preview-header-text");
+  if (headerText) {
+    const roundCount = items.length;
+    headerText.textContent = `联网结果 · ${roundCount} 次`;
+  }
+
+  list.innerHTML = "";
+
+  items.forEach((event) => {
+    const card = document.createElement("div");
+    card.className = "web-search expanded search-preview-item";
+
+    const queryText = (event?.query || "").trim();
+    const answerText = (event?.answer || "").trim();
+    const answerParts = [];
+    if (queryText) answerParts.push(`查询：${queryText}`);
+    if (answerText) answerParts.push(`摘要：${answerText}`);
+
+    renderWebSearchSection(card, {
+      status: event?.status || "ready",
+      answer: answerParts.join("\n"),
+      results: Array.isArray(event?.results) ? event.results : [],
+    }, {
+      allowToggle: false,
+      defaultCollapsed: false,
+      showTitle: false,
+      showStatus: false,
+    });
+
+    card.classList.remove("collapsed");
+    card.classList.add("expanded");
+
+    list.appendChild(card);
   });
 }
 
@@ -1259,7 +1413,17 @@ function normalizeWebSearchProvider(value) {
 }
 
 function normalizeExaSearchType(value) {
-  return String(value || "").toLowerCase() === "instant" ? "instant" : "auto";
+  const normalized = String(value || "").toLowerCase();
+  const allowed = new Set([
+    "auto",
+    "neural",
+    "fast",
+    "deep",
+    "deep-reasoning",
+    "deep-max",
+    "instant",
+  ]);
+  return allowed.has(normalized) ? normalized : "auto";
 }
 
 function setStatusPillState(el, isReady, text) {
@@ -1536,11 +1700,32 @@ function bindEvents() {
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
   window.addEventListener("resize", repositionOpenFloatingDropdowns);
 
-  // Enter 换行；Ctrl/Cmd+Enter 发送
+  // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）
+  let promptImeComposing = false;
+  let promptImeEndAt = 0;
+  const PROMPT_IME_GUARD_MS = 120;
+
+  elements.promptInput.addEventListener("compositionstart", () => {
+    promptImeComposing = true;
+  });
+
+  elements.promptInput.addEventListener("compositionend", () => {
+    promptImeComposing = false;
+    promptImeEndAt = Date.now();
+  });
+
   elements.promptInput.addEventListener("keydown", (e) => {
-    if (e.isComposing) return;
     if (e.key !== "Enter") return;
-    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.shiftKey) return;
+
+    const isImeGuarded =
+      e.isComposing ||
+      promptImeComposing ||
+      e.keyCode === 229 ||
+      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
+    if (isImeGuarded) return;
+
+    if (isMobileLayout()) return;
 
     e.preventDefault();
     if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
@@ -1771,10 +1956,10 @@ function updateProviderUi() {
   if (hintEl) {
     if (provider === "openai") {
       hintEl.textContent =
-        "OpenAI 兼容接口，请填写 API 地址。";
+        "OpenAI 兼容接口，请填写 API 地址";
     } else if (provider === "anthropic") {
       hintEl.textContent =
-        "Anthropic 兼容接口，请填写 API 地址。";
+        "Anthropic 兼容接口，请填写 API 地址";
     }
   }
 
@@ -1840,7 +2025,7 @@ function updateModelHint(side) {
   if (!apiKey) {
     setModelHint(
       side || "main",
-      "先填写 API Key、API 地址，再拉取模型列表。"
+      "先填写 API Key、API 地址，再拉取模型列表"
     );
     return;
   }
@@ -1848,14 +2033,14 @@ function updateModelHint(side) {
   if (!apiUrl) {
     setModelHint(
       side || "main",
-      "先填写 API 地址，再拉取模型列表。"
+      "先填写 API 地址，再拉取模型列表"
     );
     return;
   }
 
   setModelHint(
     side || "main",
-    "填模型ID；可下拉选或手动输入。"
+    "填模型ID；可下拉选或手动输入"
   );
 }
 
@@ -1922,10 +2107,10 @@ function renderModelDropdown(side, filterText) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
     empty.textContent = all.length
-      ? "无匹配模型，可继续输入。"
+      ? "无匹配模型，可继续输入"
       : isLoading
       ? "正在获取模型列表…"
-      : "暂无模型列表，请先配置Key/地址。";
+      : "暂无模型列表，请先配置Key/地址";
     dropdownEl.appendChild(empty);
     return;
   }
@@ -2131,7 +2316,7 @@ async function fetchAndUpdateModels(side) {
     if (side !== "Title") {
       setModelHint(
         side,
-        `已获取 ${ids.length} 个模型ID，可下拉选或手动输入。`
+        `已获取 ${ids.length} 个模型ID，可下拉选或手动输入`
       );
     }
     // 只在下拉框已经打开的情况下更新显示，不自动打开
@@ -2149,7 +2334,7 @@ async function fetchAndUpdateModels(side) {
     slot.models = [];
     closeModelDropdown(side);
     if (side !== "Title") {
-      setModelHint(side, "自动获取失败，请手动输入模型ID。");
+      setModelHint(side, "自动获取失败，请手动输入模型ID");
     }
   } finally {
     slot.inFlight = false;
@@ -2775,6 +2960,9 @@ function createAssistantCard(turn) {
   const toolEventsSnapshot = Array.isArray(turn?.models?.main?.toolEvents)
     ? turn.models.main.toolEvents
     : [];
+  const webSearchEventsSnapshot = Array.isArray(turn?.models?.main?.webSearchEvents)
+    ? turn.models.main.webSearchEvents
+    : [];
   const thinkingTimeSnapshot = turn?.models?.main?.thinkingTime || 0;
   const tokenSnapshot = turn?.models?.main?.tokens;
   const timeSnapshot = turn?.models?.main?.timeCostSec;
@@ -2866,6 +3054,11 @@ function createAssistantCard(turn) {
   toolCallsSection.appendChild(toolCallsList);
   renderToolEvents(toolCallsSection, toolCallsList, toolEventsSnapshot);
 
+  const webSearchSection = document.createElement("div");
+  webSearchSection.className = "search-preview-section";
+  webSearchSection.style.display = "none";
+  renderWebSearchEvents(webSearchSection, webSearchEventsSnapshot);
+
   // 来源链接区域
   const sourcesSnapshot = Array.isArray(turn?.models?.main?.sources)
     ? turn.models.main.sources
@@ -2877,6 +3070,7 @@ function createAssistantCard(turn) {
 
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
+  content.appendChild(webSearchSection);
   content.appendChild(responseSection);
   content.appendChild(sourcesSection);
 
@@ -2940,7 +3134,12 @@ function createAssistantCard(turn) {
 
   if (
     statusSnapshot === "loading" &&
-    (thinkingSnapshot || contentSnapshot || toolEventsSnapshot.length > 0)
+    (
+      thinkingSnapshot ||
+      contentSnapshot ||
+      toolEventsSnapshot.length > 0 ||
+      webSearchEventsSnapshot.length > 0
+    )
   ) {
     message.classList.remove("loading");
     message.classList.add("streaming");
@@ -2960,6 +3159,7 @@ function createAssistantCard(turn) {
     timeEl,
     speedEl,
     copyBtn,
+    webSearchSectionEl: webSearchSection,
     sourcesSectionEl: sourcesSection,
     turn: turn,
     side: side,
@@ -3067,6 +3267,7 @@ async function sendPrompt() {
     model: config.model,
     thinking: "",
     toolEvents: [],
+    webSearchEvents: [],
     content: "",
     tokens: null,
     timeCostSec: null,
@@ -3359,6 +3560,40 @@ async function callModel(
                 uiRef.toolCallsListEl,
                 turn.models.main.toolEvents
               );
+              if (uiRef.toolCallsSectionEl.dataset.userToggled !== "1") {
+                uiRef.toolCallsSectionEl.classList.add("tc-expanded");
+              }
+            }
+            scheduleSaveChat();
+            updateScrollToBottomButton();
+            const message = uiRef?.statusEl?.closest(".assistant-message");
+            if (message && message.classList.contains("loading")) {
+              message.classList.remove("loading");
+              message.classList.add("streaming");
+            }
+            if (state.autoScroll && topicId === state.chat.activeTopicId) {
+              scrollToBottom(elements.chatMessages, false);
+            }
+          } else if (chunk.type === "web_search" && chunk.data) {
+            const payload =
+              chunk.data && typeof chunk.data === "object" ? chunk.data : {};
+            if (!Array.isArray(turn.models.main.webSearchEvents)) {
+              turn.models.main.webSearchEvents = [];
+            }
+            turn.models.main.webSearchEvents.push(payload);
+            if (turn.models.main.webSearchEvents.length > 10) {
+              turn.models.main.webSearchEvents = turn.models.main.webSearchEvents.slice(
+                -10
+              );
+            }
+            if (uiRef?.webSearchSectionEl) {
+              renderWebSearchEvents(
+                uiRef.webSearchSectionEl,
+                turn.models.main.webSearchEvents
+              );
+              if (uiRef.webSearchSectionEl.dataset.userToggled !== "1") {
+                uiRef.webSearchSectionEl.classList.add("sp-expanded");
+              }
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -3411,6 +3646,22 @@ async function callModel(
     ) {
       uiRef.thinkingSectionEl.classList.add("collapsed");
       turn.models.main.thinkingCollapsed = true;
+    }
+
+    if (
+      Array.isArray(turn.models.main.toolEvents) &&
+      turn.models.main.toolEvents.length > 0 &&
+      uiRef?.toolCallsSectionEl?.dataset?.userToggled !== "1"
+    ) {
+      uiRef.toolCallsSectionEl.classList.remove("tc-expanded");
+    }
+
+    if (
+      Array.isArray(turn.models.main.webSearchEvents) &&
+      turn.models.main.webSearchEvents.length > 0 &&
+      uiRef?.webSearchSectionEl?.dataset?.userToggled !== "1"
+    ) {
+      uiRef.webSearchSectionEl.classList.remove("sp-expanded");
     }
 
     if (!Number.isFinite(turn.models.main.tokens)) {
