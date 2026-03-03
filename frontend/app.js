@@ -146,6 +146,7 @@ const elements = {
   providerHint: document.getElementById("providerHint"),
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),
+  modelCustomName: document.getElementById("modelCustomName"),
   apiUrl: document.getElementById("apiUrl"),
   roleSetting: document.getElementById("roleSetting"),
   roleSettingPreview: document.getElementById("roleSettingPreview"),
@@ -1800,6 +1801,11 @@ function bindEvents() {
     updateModelDropdownFilter("main");
   });
 
+  elements.modelCustomName?.addEventListener("input", () => {
+    updateModelNames();
+    updateConfigStatusStrip();
+  });
+
   elements.modelDropdownBtn?.addEventListener("click", () =>
     toggleModelDropdown("main")
   );
@@ -2109,16 +2115,24 @@ function updateApiUrlPlaceholder() {
   urlInput.placeholder = placeholders[provider] || "";
 }
 
+function resolveModelDisplayName(modelId, customName) {
+  const alias = (customName || "").trim();
+  if (alias) return alias;
+  return (modelId || "").trim();
+}
+
 function updateModelNames() {
-  const modelVal = elements.model.value || "";
+  const modelId = elements.model?.value || "";
+  const customName = elements.modelCustomName?.value || "";
+  const displayName = resolveModelDisplayName(modelId, customName);
 
   // 更新模型名称（未配置时不显示任何内容）
-  elements.modelName.textContent = modelVal || "";
+  elements.modelName.textContent = displayName || "";
 
   // 根据配置状态显示/隐藏模型行
   const modelLine = elements.modelName.closest(".brand-model");
   if (modelLine) {
-    modelLine.style.display = modelVal ? "" : "none";
+    modelLine.style.display = displayName ? "" : "none";
   }
 }
 
@@ -2475,6 +2489,7 @@ async function saveConfig() {
   const apiKey = (elements.apiKey?.value || "").trim();
   const apiUrl = (elements.apiUrl?.value || "").trim();
   const model = (elements.model?.value || "").trim();
+  const customName = (elements.modelCustomName?.value || "").trim();
 
   if (!apiKey || !apiUrl || !model) {
     setActiveConfigTab("model");
@@ -2507,6 +2522,7 @@ async function saveConfig() {
       provider,
       apiKey,
       model,
+      customName,
       apiUrl,
       systemPrompt: elements.roleSetting?.value || "",
     },
@@ -2571,6 +2587,9 @@ function loadConfig() {
       elements.provider.value = modelConfig.provider || "openai";
       elements.apiKey.value = modelConfig.apiKey || "";
       elements.model.value = modelConfig.model || "";
+      if (elements.modelCustomName) {
+        elements.modelCustomName.value = modelConfig.customName || "";
+      }
       elements.apiUrl.value = modelConfig.apiUrl || "";
       if (elements.roleSetting)
         elements.roleSetting.value =
@@ -2608,6 +2627,7 @@ async function clearConfig() {
   elements.provider.value = "openai";
   elements.apiKey.value = "";
   elements.model.value = "";
+  if (elements.modelCustomName) elements.modelCustomName.value = "";
   elements.apiUrl.value = "";
   if (elements.roleSetting) elements.roleSetting.value = "";
   syncRoleSettingPreview(false);
@@ -2693,6 +2713,7 @@ function getConfig(side) {
       provider: elements.provider?.value || "openai",
       apiKey: elements.apiKey?.value || "",
       model: elements.model?.value || "",
+      customModelName: (elements.modelCustomName?.value || "").trim(),
       apiUrl: elements.apiUrl?.value || "",
       systemPrompt: "", // 标题生成不需要系统提示词
       reasoningEffort: "none",
@@ -2703,6 +2724,7 @@ function getConfig(side) {
     provider: elements.provider?.value || "openai",
     apiKey: elements.apiKey?.value || "",
     model: elements.model?.value || "",
+    customModelName: (elements.modelCustomName?.value || "").trim(),
     apiUrl: elements.apiUrl?.value || "",
     // 角色设定：发送给后端作为系统提示词
     systemPrompt: elements.roleSetting?.value || "",
@@ -3083,6 +3105,7 @@ function createTurnElement(turn) {
 
 function createAssistantCard(turn) {
   const side = "main";
+  const modelDisplaySnapshot = (turn?.models?.main?.displayName || "").trim();
   const modelSnapshot = turn?.models?.main?.model || "";
   const contentSnapshot = turn?.models?.main?.content || "";
   const thinkingSnapshot = turn?.models?.main?.thinking || "";
@@ -3107,7 +3130,7 @@ function createAssistantCard(turn) {
   const modelName = document.createElement("span");
   modelName.className = "assistant-model-name";
   modelName.textContent =
-    modelSnapshot || elements.modelName.textContent || "未配置";
+    modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || "未配置";
 
   const statusEl = document.createElement("span");
   statusEl.className = "status";
@@ -3394,6 +3417,7 @@ async function sendPrompt() {
   turn.models.main = {
     provider: config.provider,
     model: config.model,
+    displayName: resolveModelDisplayName(config.model, config.customModelName),
     thinking: "",
     toolEvents: [],
     webSearchEvents: [],
@@ -3501,7 +3525,8 @@ async function callModel(
   const initUi = resolveUi();
   if (initUi) {
     applyStatus(initUi.statusEl, "loading");
-    initUi.modelNameEl.textContent = config.model || "未配置";
+    initUi.modelNameEl.textContent =
+      resolveModelDisplayName(config.model, config.customModelName) || "未配置";
   }
 
   const abortController = new AbortController();
