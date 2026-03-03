@@ -259,12 +259,13 @@ body {
   grid-column: 3;
   justify-self: end;
   display: inline-flex;
-  gap: 0;
+  gap: 8px;
   align-items: center;
   z-index: 1;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings {
+.chat-actions .btn.btn-secondary.btn-settings,
+.chat-actions .btn.btn-secondary.btn-shortcuts {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -281,30 +282,47 @@ body {
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
+.chat-actions .btn.btn-secondary.btn-shortcuts {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chat-actions .btn.btn-secondary.btn-shortcuts .shortcut-mark {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
 .chat-actions .btn.btn-secondary.btn-settings svg {
   width: 14px;
   height: 14px;
   stroke-width: 2.1;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:hover {
+.chat-actions .btn.btn-secondary.btn-settings:hover,
+.chat-actions .btn.btn-secondary.btn-shortcuts:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   border-color: var(--border-accent);
   text-decoration: none;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:active {
+.chat-actions .btn.btn-secondary.btn-settings:active,
+.chat-actions .btn.btn-secondary.btn-shortcuts:active {
   transform: scale(0.92);
   color: var(--text);
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:focus-visible {
+.chat-actions .btn.btn-secondary.btn-settings:focus-visible,
+.chat-actions .btn.btn-secondary.btn-shortcuts:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:disabled {
+.chat-actions .btn.btn-secondary.btn-settings:disabled,
+.chat-actions .btn.btn-secondary.btn-shortcuts:disabled {
   opacity: 0.4;
 }
 
@@ -3694,6 +3712,115 @@ body {
   box-shadow: none;
 }
 
+/* ---------- Shortcut help modal ---------- */
+#shortcutHelpModal .modal-content.shortcut-help-content {
+  width: min(760px, 94vw);
+}
+
+.shortcut-help-panel {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.shortcut-help-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-solid);
+}
+
+.shortcut-help-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.shortcut-help-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.shortcut-help-body {
+  max-height: min(62vh, 540px);
+  overflow: auto;
+}
+
+.shortcut-help-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.shortcut-help-table th,
+.shortcut-help-table td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcut-help-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(17, 17, 17, 0.96);
+}
+
+.shortcut-help-table td {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.shortcut-help-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.shortcut-help-table .shortcut-action {
+  font-weight: 600;
+}
+
+.shortcut-help-table .shortcut-note {
+  color: var(--text-dim);
+}
+
+.shortcut-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.shortcut-sep {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
 /* ---------- Prompt management styles ---------- */
 #promptModal .modal-content {
   width: 900px;
@@ -4465,11 +4592,26 @@ body {
     box-shadow: none;
   }
 
-  .chat-actions .btn.btn-secondary.btn-settings {
+  .chat-actions .btn.btn-secondary.btn-settings,
+  .chat-actions .btn.btn-secondary.btn-shortcuts {
     width: 36px;
     height: 36px;
     min-width: 36px;
     min-height: 36px;
+  }
+
+  #shortcutHelpModal .modal-content.shortcut-help-content {
+    width: min(94vw, 620px);
+  }
+
+  .shortcut-help-header {
+    padding: 14px 14px 12px;
+  }
+
+  .shortcut-help-table th,
+  .shortcut-help-table td {
+    padding: 10px 12px;
+    font-size: 12px;
   }
 
   .chat-body,

@@ -7,6 +7,33 @@ const STORAGE_KEYS = {
 
 const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
 
+const SHORTCUTS = [
+  {
+    action: "新建话题",
+    mac: ["Cmd", "Alt", "N"],
+    win: ["Ctrl", "Alt", "N"],
+    note: "仅在非输入状态下生效",
+  },
+  {
+    action: "打开快捷键帮助",
+    mac: ["Shift", "?"],
+    win: ["Shift", "?"],
+    note: "仅在非输入状态下生效",
+  },
+  {
+    action: "发送消息",
+    mac: ["Enter"],
+    win: ["Enter"],
+    note: "输入框聚焦时",
+  },
+  {
+    action: "换行",
+    mac: ["Shift", "Enter"],
+    win: ["Shift", "Enter"],
+    note: "输入框聚焦时",
+  },
+];
+
 const state = {
   modelFetch: {
     main: {
@@ -61,6 +88,10 @@ const elements = {
   webStatusPill: document.getElementById("webStatusPill"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
+  openShortcutHelpBtn: document.getElementById("openShortcutHelpBtn"),
+  closeShortcutHelpBtn: document.getElementById("closeShortcutHelpBtn"),
+  shortcutHelpModal: document.getElementById("shortcutHelpModal"),
+  shortcutHelpList: document.getElementById("shortcutHelpList"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),
 
@@ -149,6 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
   syncAllConfigSelectPickers();
   updateProviderUi();
   initChat();
+  renderShortcutHelpList();
   bindEvents();
   bindDialogEvents();
   updateModelNames();
@@ -520,6 +552,74 @@ function syncBodyScrollLock() {
 
 function isPromptConfirmDialogOpen() {
   return !!elements.promptConfirmModal?.classList.contains("open");
+}
+
+function isShortcutHelpModalOpen() {
+  return !!elements.shortcutHelpModal?.classList.contains("open");
+}
+
+function createShortcutKeysElement(keys = []) {
+  const wrap = document.createElement("div");
+  wrap.className = "shortcut-keys";
+  keys.forEach((key, index) => {
+    const kbd = document.createElement("kbd");
+    kbd.textContent = key;
+    wrap.appendChild(kbd);
+    if (index < keys.length - 1) {
+      const sep = document.createElement("span");
+      sep.className = "shortcut-sep";
+      sep.textContent = "+";
+      wrap.appendChild(sep);
+    }
+  });
+  return wrap;
+}
+
+function renderShortcutHelpList() {
+  if (!elements.shortcutHelpList) return;
+  elements.shortcutHelpList.innerHTML = "";
+
+  SHORTCUTS.forEach((item) => {
+    const tr = document.createElement("tr");
+
+    const actionTd = document.createElement("td");
+    actionTd.className = "shortcut-action";
+    actionTd.textContent = item.action;
+
+    const macTd = document.createElement("td");
+    macTd.appendChild(createShortcutKeysElement(item.mac));
+
+    const winTd = document.createElement("td");
+    winTd.appendChild(createShortcutKeysElement(item.win));
+
+    const noteTd = document.createElement("td");
+    noteTd.className = "shortcut-note";
+    noteTd.textContent = item.note || "";
+
+    tr.appendChild(actionTd);
+    tr.appendChild(macTd);
+    tr.appendChild(winTd);
+    tr.appendChild(noteTd);
+    elements.shortcutHelpList.appendChild(tr);
+  });
+}
+
+function openShortcutHelpModal() {
+  if (!elements.shortcutHelpModal) return;
+  elements.shortcutHelpModal.classList.add("open");
+  elements.shortcutHelpModal.setAttribute("aria-hidden", "false");
+  syncBodyScrollLock();
+
+  window.setTimeout(() => {
+    elements.closeShortcutHelpBtn?.focus();
+  }, 0);
+}
+
+function closeShortcutHelpModal() {
+  if (!elements.shortcutHelpModal) return;
+  elements.shortcutHelpModal.classList.remove("open");
+  elements.shortcutHelpModal.setAttribute("aria-hidden", "true");
+  syncBodyScrollLock();
 }
 
 function resolvePromptConfirmDialog(confirmed) {
@@ -1596,6 +1696,8 @@ function bindEvents() {
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
+  elements.openShortcutHelpBtn?.addEventListener("click", openShortcutHelpModal);
+  elements.closeShortcutHelpBtn?.addEventListener("click", closeShortcutHelpModal);
   elements.configTabs?.addEventListener("click", (e) => {
     const tabBtn = e.target?.closest?.(".config-tab[data-tab]");
     if (!tabBtn) return;
@@ -1604,11 +1706,19 @@ function bindEvents() {
   elements.configModal?.addEventListener("click", (e) => {
     if (e.target === elements.configModal) closeConfigModal();
   });
+  elements.shortcutHelpModal?.addEventListener("click", (e) => {
+    if (e.target === elements.shortcutHelpModal) closeShortcutHelpModal();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (isPromptConfirmDialogOpen()) {
       e.preventDefault();
       resolvePromptConfirmDialog(false);
+      return;
+    }
+    if (isShortcutHelpModalOpen()) {
+      e.preventDefault();
+      closeShortcutHelpModal();
       return;
     }
     closeConfigModal();
@@ -1642,6 +1752,13 @@ function bindEvents() {
     if (!isNewTopicShortcut(e)) return;
     e.preventDefault();
     triggerCreateTopic();
+  });
+
+  // 打开快捷键帮助：Shift+/
+  document.addEventListener("keydown", (e) => {
+    if (!isShortcutHelpShortcut(e)) return;
+    e.preventDefault();
+    openShortcutHelpModal();
   });
 
   // 监听提供商变化，更新API地址提示 + 自动获取模型列表
@@ -1806,16 +1923,7 @@ function triggerCreateTopic() {
 function isNewTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
 
-  const target = e.target;
-  if (target instanceof HTMLElement) {
-    const tagName = target.tagName;
-    const isEditableTarget =
-      tagName === "INPUT" ||
-      tagName === "TEXTAREA" ||
-      tagName === "SELECT" ||
-      target.isContentEditable;
-    if (isEditableTarget) return false;
-  }
+  if (isEditableKeyboardTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasAlt = !!e.altKey;
@@ -1823,6 +1931,27 @@ function isNewTopicShortcut(e) {
   const isWinLinuxShortcut = !!e.ctrlKey && !e.metaKey;
 
   return key === "n" && hasAlt && (isMacShortcut || isWinLinuxShortcut);
+}
+
+function isEditableKeyboardTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  const tagName = target.tagName;
+  return (
+    tagName === "INPUT" ||
+    tagName === "TEXTAREA" ||
+    tagName === "SELECT" ||
+    target.isContentEditable
+  );
+}
+
+function isShortcutHelpShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (elements.configModal?.classList.contains("open")) return false;
+  if (isEditableKeyboardTarget(e.target)) return false;
+  if (e.ctrlKey || e.metaKey || e.altKey) return false;
+  const key = (e.key || "").toLowerCase();
+  return e.shiftKey && (key === "?" || key === "/");
 }
 
 function setActiveConfigTab(tabName = "model") {
