@@ -7,16 +7,27 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-$pythonCommand = Get-Command py -ErrorAction SilentlyContinue
-if ($pythonCommand) {
-  $pythonArgs = @("-3")
+$venvPython = Join-Path $projectRoot "venv\Scripts\python.exe"
+$pythonCommand = $null
+$pythonArgs = @()
+
+if (Test-Path $venvPython) {
+  $pythonCommand = $venvPython
 } else {
-  $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
-  $pythonArgs = @()
+  $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+  if ($pyLauncher) {
+    $pythonCommand = $pyLauncher.Source
+    $pythonArgs = @("-3")
+  } else {
+    $pythonExe = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonExe) {
+      $pythonCommand = $pythonExe.Source
+    }
+  }
 }
 
 if (-not $pythonCommand) {
-  throw "未找到 Python 启动器，可先安装 Python 3.12+。"
+  throw "Python 3.12+ was not found."
 }
 
 $sidecarDir = Join-Path $projectRoot "src-tauri\binaries"
@@ -27,12 +38,12 @@ if (-not (Test-Path $sidecarDir)) {
 }
 
 if (-not $SkipBackendBuild) {
-  & $pythonCommand.Source @pythonArgs -m PyInstaller --version *> $null
+  & $pythonCommand @pythonArgs -m PyInstaller --version *> $null
   if ($LASTEXITCODE -ne 0) {
-    throw "未检测到 PyInstaller，请先执行：py -3 -m pip install pyinstaller"
+    throw "PyInstaller is required. Run: .\venv\Scripts\python.exe -m pip install pyinstaller"
   }
 
-  & $pythonCommand.Source @pythonArgs -m PyInstaller `
+  & $pythonCommand @pythonArgs -m PyInstaller `
     --noconfirm `
     --clean `
     --onefile `
