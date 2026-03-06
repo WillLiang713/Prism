@@ -52,7 +52,7 @@ class ChatRequest(BaseModel):
     systemPrompt: str | None = None
 
     # 推理与工具
-    reasoningEffort: str = "none"
+    reasoningEffort: str = "medium"
     enableTools: bool = False  # 是否启用工具调用
     maxToolRounds: int = Field(
         default=50, ge=1, le=200

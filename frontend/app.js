@@ -74,6 +74,19 @@ function delay(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+function getDesktopWindowBridge() {
+  if (!isDesktopRuntime()) return null;
+  try {
+    const tauriWindow = window.__TAURI__?.window;
+    if (!tauriWindow || typeof tauriWindow.getCurrentWindow !== "function") {
+      return null;
+    }
+    return tauriWindow.getCurrentWindow();
+  } catch (_error) {
+    return null;
+  }
+}
+
 const state = {
   modelFetch: {
     main: {
@@ -113,6 +126,9 @@ const state = {
   runtime: {
     bootstrapped: false,
     bootstrapInFlight: false,
+    desktopWindow: null,
+    isWindowMaximized: false,
+    isWindowFocused: true,
   },
   autoScroll: true, // 是否自动跟随滚动
   isSidebarCollapsed: false,
@@ -185,6 +201,11 @@ const elements = {
   bootstrapTitle: document.getElementById("bootstrapTitle"),
   bootstrapMessage: document.getElementById("bootstrapMessage"),
   bootstrapRetryBtn: document.getElementById("bootstrapRetryBtn"),
+  desktopTitlebar: document.getElementById("desktopTitlebar"),
+  desktopWindowControls: document.getElementById("desktopWindowControls"),
+  windowMinimizeBtn: document.getElementById("windowMinimizeBtn"),
+  windowMaximizeBtn: document.getElementById("windowMaximizeBtn"),
+  windowCloseBtn: document.getElementById("windowCloseBtn"),
 
   // 模型配置
   provider: document.getElementById("provider"),
@@ -257,6 +278,7 @@ async function bootstrapApplication() {
 }
 
 function startApplication() {
+  document.body.classList.toggle("is-desktop-runtime", isDesktopRuntime());
   initMarkdown();
   initConfigSelectPickers();
   loadConfig();
@@ -273,6 +295,7 @@ function startApplication() {
   initLayout(); // 初始化布局
   renderAll();
   startHeaderClock();
+  initDesktopWindowShell();
 }
 
 function bindBootstrapEvents() {
@@ -280,6 +303,112 @@ function bindBootstrapEvents() {
     if (state.runtime.bootstrapInFlight || state.runtime.bootstrapped) return;
     bootstrapApplication();
   });
+}
+
+function applyDesktopWindowState() {
+  document.body.classList.toggle(
+    "is-window-maximized",
+    !!state.runtime.isWindowMaximized
+  );
+  document.body.classList.toggle(
+    "is-window-blurred",
+    state.runtime.isWindowFocused === false
+  );
+
+  if (elements.windowMaximizeBtn) {
+    elements.windowMaximizeBtn.setAttribute(
+      "title",
+      state.runtime.isWindowMaximized ? "还原" : "最大化"
+    );
+    elements.windowMaximizeBtn.setAttribute(
+      "aria-label",
+      state.runtime.isWindowMaximized ? "还原" : "最大化"
+    );
+  }
+}
+
+async function syncDesktopWindowState() {
+  const appWindow = state.runtime.desktopWindow;
+  if (!appWindow) return;
+
+  try {
+    state.runtime.isWindowMaximized = await appWindow.isMaximized();
+  } catch (_error) {
+    state.runtime.isWindowMaximized = false;
+  }
+
+  try {
+    state.runtime.isWindowFocused = await appWindow.isFocused();
+  } catch (_error) {
+    state.runtime.isWindowFocused = true;
+  }
+
+  applyDesktopWindowState();
+}
+
+async function initDesktopWindowShell() {
+  if (!isDesktopRuntime()) return;
+
+  const appWindow = getDesktopWindowBridge();
+  state.runtime.desktopWindow = appWindow;
+  if (!appWindow) {
+    console.warn("Desktop window bridge unavailable");
+    return;
+  }
+
+  bindDesktopTitlebarControls(appWindow);
+  await syncDesktopWindowState();
+
+  if (typeof appWindow.onResized === "function") {
+    appWindow.onResized(() => {
+      syncDesktopWindowState();
+    });
+  }
+  if (typeof appWindow.onFocusChanged === "function") {
+    appWindow.onFocusChanged(({ payload }) => {
+      state.runtime.isWindowFocused = payload !== false;
+      applyDesktopWindowState();
+    });
+  }
+}
+
+function bindDesktopTitlebarControls(appWindow) {
+  if (elements.desktopTitlebar && !elements.desktopTitlebar.dataset.bound) {
+    elements.desktopTitlebar.addEventListener("dblclick", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.closest(".no-drag")) return;
+      appWindow.toggleMaximize().then(syncDesktopWindowState).catch(console.error);
+    });
+    elements.desktopTitlebar.dataset.bound = "1";
+  }
+
+  if (elements.windowMinimizeBtn && !elements.windowMinimizeBtn.dataset.bound) {
+    elements.windowMinimizeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      appWindow.minimize().catch(console.error);
+    });
+    elements.windowMinimizeBtn.dataset.bound = "1";
+  }
+
+  if (elements.windowMaximizeBtn && !elements.windowMaximizeBtn.dataset.bound) {
+    elements.windowMaximizeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      appWindow.toggleMaximize().then(syncDesktopWindowState).catch(console.error);
+    });
+    elements.windowMaximizeBtn.dataset.bound = "1";
+  }
+
+  if (elements.windowCloseBtn && !elements.windowCloseBtn.dataset.bound) {
+    elements.windowCloseBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      appWindow.close().catch(console.error);
+    });
+    elements.windowCloseBtn.dataset.bound = "1";
+  }
 }
 
 function setBootstrapStatus(mode, title = "", message = "") {
@@ -2728,6 +2857,16 @@ function loadConfig() {
       if (activeBtn && elements.reasoningEffortValue) {
         elements.reasoningEffortValue.textContent = activeBtn.dataset.label;
       }
+    } else if (elements.reasoningEffortDropdown && elements.reasoningEffortValue) {
+      const defaultBtn = elements.reasoningEffortDropdown.querySelector(
+        'button[data-value="medium"]'
+      );
+      elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => {
+        b.classList.toggle("active", b === defaultBtn);
+      });
+      if (defaultBtn) {
+        elements.reasoningEffortValue.textContent = defaultBtn.dataset.label;
+      }
     }
     // 加载模型配置（兼容旧格式 config.A）
     const modelConfig = config.model || config.A;
@@ -2778,6 +2917,12 @@ async function clearConfig() {
   if (elements.modelCustomName) elements.modelCustomName.value = "";
   elements.apiUrl.value = "";
   if (elements.roleSetting) elements.roleSetting.value = "";
+  if (elements.reasoningEffortDropdown && elements.reasoningEffortValue) {
+    elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => {
+      b.classList.toggle("active", b.dataset.value === "medium");
+    });
+    elements.reasoningEffortValue.textContent = "中";
+  }
   syncRoleSettingPreview(false);
 
   syncAllConfigSelectPickers();
@@ -2876,7 +3021,7 @@ function getConfig(side) {
     apiUrl: elements.apiUrl?.value || "",
     // 角色设定：发送给后端作为系统提示词
     systemPrompt: elements.roleSetting?.value || "",
-    reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "none",
+    reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "medium",
   };
 }
 

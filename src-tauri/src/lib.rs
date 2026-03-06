@@ -152,6 +152,7 @@ pub fn run() {
                 .title("Prism")
                 .inner_size(1440.0, 960.0)
                 .min_inner_size(1100.0, 760.0)
+                .decorations(false)
                 .center()
                 .initialization_script(init_script)
                 .build()

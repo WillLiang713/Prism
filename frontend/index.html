@@ -60,9 +60,9 @@
           </div>
 
           <div class="chat-main">
-            <div class="chat-header">
+            <div class="chat-header" id="desktopTitlebar">
               <button
-                class="sidebar-expand-btn"
+                class="sidebar-expand-btn no-drag"
                 id="expandSidebarBtn"
                 title="展开侧栏"
               >
@@ -79,7 +79,7 @@
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
               </button>
-              <div class="header-brand" aria-label="模型信息">
+              <div class="header-brand desktop-drag-region" aria-label="模型信息" data-tauri-drag-region>
                 <div class="brand-meta">
                   <span class="brand-model" id="headerModelInfo">
                     <span class="brand-model-id" id="modelName"></span>
@@ -87,17 +87,57 @@
                 </div>
               </div>
               <div class="chat-actions">
-                <button class="btn btn-secondary btn-shortcuts" id="openShortcutHelpBtn" title="快捷键 (Shift+/)" aria-label="快捷键帮助">
+                <button class="btn btn-secondary btn-shortcuts no-drag" id="openShortcutHelpBtn" title="快捷键 (Shift+/)" aria-label="快捷键帮助">
                   <span class="shortcut-mark" aria-hidden="true">?</span>
                   <span class="sr-only">快捷键帮助</span>
                 </button>
-                <button class="btn btn-secondary btn-settings" id="openConfigBtn" title="设置" aria-label="设置">
+                <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" title="设置" aria-label="设置">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
                   </svg>
                   <span class="sr-only">设置</span>
                 </button>
+                <div class="desktop-window-controls" id="desktopWindowControls" aria-label="窗口控制">
+                  <button
+                    class="desktop-window-btn no-drag"
+                    id="windowMinimizeBtn"
+                    type="button"
+                    title="最小化"
+                    aria-label="最小化"
+                  >
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                      <path d="M2 6h8"></path>
+                    </svg>
+                  </button>
+                  <button
+                    class="desktop-window-btn no-drag"
+                    id="windowMaximizeBtn"
+                    type="button"
+                    title="最大化"
+                    aria-label="最大化"
+                  >
+                    <svg class="icon-maximize" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                      <rect x="2.5" y="2.5" width="7" height="7" rx="0.8"></rect>
+                    </svg>
+                    <svg class="icon-restore" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                      <path d="M4 2.5h4.5v4.5"></path>
+                      <path d="M3.5 4.5h5v5h-5z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    class="desktop-window-btn desktop-window-btn-close no-drag"
+                    id="windowCloseBtn"
+                    type="button"
+                    title="关闭"
+                    aria-label="关闭"
+                  >
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                      <path d="M3 3l6 6"></path>
+                      <path d="M9 3l-6 6"></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -177,14 +217,14 @@
                         <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
                           <span class="reasoning-effort-current">
                             <span class="reasoning-effort-label">思考</span>
-                            <span class="reasoning-effort-value" id="reasoningEffortValue">关</span>
+                            <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
                             <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 5 6 8 9 5"></polyline></svg>
                           </span>
                           <div class="reasoning-effort-dropdown" id="reasoningEffortDropdown">
-                            <button type="button" data-value="none" data-label="关" class="active">关</button>
+                            <button type="button" data-value="none" data-label="关">关</button>
                             <button type="button" data-value="minimal" data-label="微">微</button>
                             <button type="button" data-value="low" data-label="低">低</button>
-                            <button type="button" data-value="medium" data-label="中">中</button>
+                            <button type="button" data-value="medium" data-label="中" class="active">中</button>
                             <button type="button" data-value="high" data-label="高">高</button>
                             <button type="button" data-value="xhigh" data-label="极高">极高</button>
                           </div>
