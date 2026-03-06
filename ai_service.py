@@ -13,6 +13,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 import httpx
 import json
+from runtime_paths import TOOLS_JSON_PATH
 
 
 # ==================== 数据模型 ====================
@@ -392,7 +393,7 @@ class MessageBuilder:
             try:
                 import json
 
-                with open("tools.json", "r", encoding="utf-8") as f:
+                with open(TOOLS_JSON_PATH, "r", encoding="utf-8") as f:
                     all_tools = json.load(f)
 
                     # selectedTools 有值时按选择加载；为空时默认加载全部

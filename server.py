@@ -11,6 +11,14 @@ Prism - CORS代理服务器 (Python版本)
 - 自动转发到真实API地址，并添加CORS头
 """
 
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import datetime
+from urllib.parse import urlparse
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -20,12 +28,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import httpx
-import os
-import json
-import re
-from datetime import datetime
-from urllib.parse import urlparse
 from ai_service import AIService, ChatRequest
+from runtime_paths import TOOLS_JSON_PATH, frontend_path, has_frontend_assets
+
+
+def _parse_runtime_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--host", default=os.getenv("PRISM_HOST", "localhost"))
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("PRISM_PORT", "3000")),
+    )
+    parser.add_argument(
+        "--desktop-mode",
+        action="store_true",
+        default=os.getenv("PRISM_DESKTOP_MODE", "").strip() == "1",
+    )
+    args, _ = parser.parse_known_args(argv)
+    return args
+
+
+RUNTIME_ARGS = _parse_runtime_args(sys.argv[1:])
+DESKTOP_MODE = bool(RUNTIME_ARGS.desktop_mode)
 
 app = FastAPI(title="CORS代理服务器")
 
@@ -39,13 +64,25 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# 挂载静态文件目录（必须在通配符路由之前定义）
-app.mount("/libs", StaticFiles(directory="frontend/libs"), name="libs")
+if has_frontend_assets() and frontend_path("libs").exists():
+    # 挂载静态文件目录（必须在通配符路由之前定义）
+    app.mount("/libs", StaticFiles(directory=str(frontend_path("libs"))), name="libs")
 
 BUILD_ID = (os.getenv("PRISM_BUILD_ID") or datetime.now().strftime("%Y%m%d%H%M%S")).strip()
-INDEX_HTML_PATH = "frontend/index.html"
+INDEX_HTML_PATH = frontend_path("index.html")
+
+
+def _ensure_frontend_asset(path, label: str) -> None:
+    if path.exists():
+        return
+    raise HTTPException(
+        status_code=404,
+        detail=f"{label} 不可用：当前运行模式未携带前端静态资源",
+    )
+
 
 def _render_index_html() -> str:
+    _ensure_frontend_asset(INDEX_HTML_PATH, "主页")
     with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
     html = re.sub(r'href="style\.css(?:\?[^"]*)?"', f'href="style.css?v={BUILD_ID}"', html, count=1)
@@ -80,44 +117,52 @@ async def serve_index_html():
 @app.get("/style.css")
 async def serve_style():
     """提供样式文件"""
+    style_path = frontend_path("style.css")
+    _ensure_frontend_asset(style_path, "样式文件")
     return FileResponse(
-        "frontend/style.css",
+        style_path,
         headers={"Cache-Control": "public, max-age=31536000, immutable"},
     )
 
 @app.get("/app.js")
 async def serve_app():
     """提供JS文件"""
+    app_path = frontend_path("app.js")
+    _ensure_frontend_asset(app_path, "脚本文件")
     return FileResponse(
-        "frontend/app.js",
+        app_path,
         headers={"Cache-Control": "public, max-age=31536000, immutable"},
     )
 
 @app.get("/favicon.svg")
 async def serve_favicon_svg():
     """提供站点图标（SVG）"""
-    return FileResponse("frontend/favicon.svg")
+    favicon_path = frontend_path("favicon.svg")
+    _ensure_frontend_asset(favicon_path, "站点图标")
+    return FileResponse(favicon_path)
 
 @app.get("/favicon.ico")
 async def serve_favicon_ico():
     """兼容部分浏览器默认请求 /favicon.ico"""
-    return FileResponse("frontend/favicon.svg", media_type="image/svg+xml")
+    favicon_path = frontend_path("favicon.svg")
+    _ensure_frontend_asset(favicon_path, "站点图标")
+    return FileResponse(favicon_path, media_type="image/svg+xml")
 
-@app.get("/api/tools")
-async def get_tools():
-    """获取所有可用工具列表"""
-    try:
-        with open("tools.json", "r", encoding="utf-8") as f:
-            tools = json.load(f)
-        return {"tools": tools}
-    except Exception as e:
-        return {"tools": [], "error": str(e)}
-# 获取工具列表
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "mode": "desktop" if DESKTOP_MODE else "web",
+        "buildId": BUILD_ID,
+    }
+
+
 @app.get("/api/tools")
 async def get_tools():
     """从 tools.json 读取工具定义"""
     try:
-        with open("tools.json", "r", encoding="utf-8") as f:
+        with open(TOOLS_JSON_PATH, "r", encoding="utf-8") as f:
             tools = json.load(f)
         return {"tools": tools}
     except FileNotFoundError:
@@ -590,9 +635,10 @@ async def proxy(full_path: str, request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+
     print("=" * 50)
     print("服务器已启动")
     print("=" * 50)
-    print("访问地址: http://localhost:3000")
+    print(f"访问地址: http://{RUNTIME_ARGS.host}:{RUNTIME_ARGS.port}")
     print("=" * 50)
-    uvicorn.run(app, host="localhost", port=3000)
+    uvicorn.run(app, host=RUNTIME_ARGS.host, port=RUNTIME_ARGS.port)

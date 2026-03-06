@@ -5,6 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
+node_modules/
+src-tauri/target/
 
 # Virtual environments
 .venv

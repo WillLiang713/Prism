@@ -2058,6 +2058,67 @@ body {
   display: flex;
 }
 
+.bootstrap-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 45%),
+    rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.bootstrap-overlay[hidden] {
+  display: none !important;
+}
+
+.bootstrap-panel {
+  width: min(420px, 100%);
+  padding: 28px 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  background: rgba(16, 16, 16, 0.92);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  display: grid;
+  gap: 12px;
+}
+
+.bootstrap-badge {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.bootstrap-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.bootstrap-message {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.bootstrap-overlay[data-mode="error"] .bootstrap-panel {
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.bootstrap-overlay[data-mode="error"] .bootstrap-title {
+  color: #f3b2b2;
+}
+
 .modal-content {
   width: min(720px, 96vw);
   max-height: 92vh;

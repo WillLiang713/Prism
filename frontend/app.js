@@ -6,6 +6,9 @@ const STORAGE_KEYS = {
 };
 
 const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
+const DESKTOP_DEFAULT_API_BASE = "http://127.0.0.1:33100";
+const BOOTSTRAP_HEALTH_TIMEOUT_MS = 15000;
+const BOOTSTRAP_HEALTH_INTERVAL_MS = 500;
 
 const SHORTCUTS = [
   {
@@ -33,6 +36,43 @@ const SHORTCUTS = [
     note: "输入框聚焦时",
   },
 ];
+
+function resolveRuntimeConfig() {
+  const runtime = window.__PRISM_RUNTIME__ || {};
+  const params = new URLSearchParams(window.location.search);
+  const queryApiBase = (params.get("apiBase") || "").trim();
+  const injectedApiBase = String(runtime.apiBase || "").trim();
+  const apiBase = (queryApiBase || injectedApiBase || "").replace(/\/+$/, "");
+  const platform =
+    runtime.platform || (apiBase ? "desktop" : "web");
+
+  return {
+    platform,
+    apiBase: apiBase || (platform === "desktop" ? DESKTOP_DEFAULT_API_BASE : ""),
+    backendManagedByDesktop:
+      runtime.backendManagedByDesktop === true || platform === "desktop",
+    startupError: String(runtime.startupError || "").trim(),
+  };
+}
+
+const PRISM_RUNTIME = resolveRuntimeConfig();
+
+function buildApiUrl(path) {
+  const normalizedPath = String(path || "").startsWith("/")
+    ? String(path || "")
+    : `/${String(path || "")}`;
+
+  if (!PRISM_RUNTIME.apiBase) return normalizedPath;
+  return `${PRISM_RUNTIME.apiBase}${normalizedPath}`;
+}
+
+function isDesktopRuntime() {
+  return PRISM_RUNTIME.platform === "desktop";
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 const state = {
   modelFetch: {
@@ -69,6 +109,10 @@ const state = {
   },
   dialog: {
     resolver: null,
+  },
+  runtime: {
+    bootstrapped: false,
+    bootstrapInFlight: false,
   },
   autoScroll: true, // 是否自动跟随滚动
   isSidebarCollapsed: false,
@@ -137,6 +181,10 @@ const elements = {
   topicList: document.getElementById("topicList"),
   chatMessages: document.getElementById("chatMessages"),
   scrollToBottomBtn: document.getElementById("scrollToBottomBtn"),
+  bootstrapOverlay: document.getElementById("bootstrapOverlay"),
+  bootstrapTitle: document.getElementById("bootstrapTitle"),
+  bootstrapMessage: document.getElementById("bootstrapMessage"),
+  bootstrapRetryBtn: document.getElementById("bootstrapRetryBtn"),
 
   // 模型配置
   provider: document.getElementById("provider"),
@@ -174,7 +222,41 @@ const elements = {
   promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  bindBootstrapEvents();
+  await bootstrapApplication();
+});
+
+async function bootstrapApplication() {
+  if (state.runtime.bootstrapped || state.runtime.bootstrapInFlight) return;
+
+  state.runtime.bootstrapInFlight = true;
+  try {
+    if (PRISM_RUNTIME.startupError) {
+      throw new Error(PRISM_RUNTIME.startupError);
+    }
+
+    if (isDesktopRuntime()) {
+      setBootstrapStatus("loading", "正在启动本地服务", "等待桌面端后端就绪...");
+      await waitForDesktopBackend();
+    }
+
+    startApplication();
+    state.runtime.bootstrapped = true;
+    setBootstrapStatus("ready");
+  } catch (error) {
+    console.error("bootstrap failed:", error);
+    setBootstrapStatus(
+      "error",
+      "本地服务启动失败",
+      error instanceof Error ? error.message : String(error || "未知错误")
+    );
+  } finally {
+    state.runtime.bootstrapInFlight = false;
+  }
+}
+
+function startApplication() {
   initMarkdown();
   initConfigSelectPickers();
   loadConfig();
@@ -191,8 +273,74 @@ document.addEventListener("DOMContentLoaded", () => {
   initLayout(); // 初始化布局
   renderAll();
   startHeaderClock();
+}
 
-});
+function bindBootstrapEvents() {
+  elements.bootstrapRetryBtn?.addEventListener("click", () => {
+    if (state.runtime.bootstrapInFlight || state.runtime.bootstrapped) return;
+    bootstrapApplication();
+  });
+}
+
+function setBootstrapStatus(mode, title = "", message = "") {
+  const overlay = elements.bootstrapOverlay;
+  if (!overlay) return;
+
+  if (mode === "ready") {
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    return;
+  }
+
+  overlay.hidden = false;
+  overlay.setAttribute("aria-hidden", "false");
+  overlay.dataset.mode = mode;
+
+  if (elements.bootstrapTitle) {
+    elements.bootstrapTitle.textContent = title || "正在准备应用";
+  }
+  if (elements.bootstrapMessage) {
+    elements.bootstrapMessage.textContent =
+      message || "请稍候，正在初始化客户端。";
+  }
+  if (elements.bootstrapRetryBtn) {
+    elements.bootstrapRetryBtn.hidden = mode !== "error";
+    elements.bootstrapRetryBtn.disabled = state.runtime.bootstrapInFlight;
+  }
+}
+
+async function waitForDesktopBackend() {
+  const deadline = Date.now() + BOOTSTRAP_HEALTH_TIMEOUT_MS;
+  let lastError = "";
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(buildApiUrl("/api/health"), {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload?.status === "ok") return payload;
+        lastError = "健康检查返回格式异常";
+      } else {
+        lastError = `健康检查失败：HTTP ${response.status}`;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error || "");
+    }
+
+    setBootstrapStatus(
+      "loading",
+      "正在启动本地服务",
+      lastError ? `等待本地服务就绪：${lastError}` : "等待本地服务就绪..."
+    );
+    await delay(BOOTSTRAP_HEALTH_INTERVAL_MS);
+  }
+
+  throw new Error(lastError || "本地服务启动超时，请检查 sidecar 或端口占用情况");
+}
 
 function getProviderMode(config) {
   const provider = config?.provider || "openai";
@@ -1584,13 +1732,13 @@ async function tavilySearch(
   maxResults = 5,
   searchDepth = "basic"
 ) {
-  if (window.location.protocol === "file:") {
+  if (!isDesktopRuntime() && window.location.protocol === "file:") {
     throw new Error(
       "当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000"
     );
   }
 
-  const resp = await fetch("/api/tavily/search", {
+  const resp = await fetch(buildApiUrl("/api/tavily/search"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -2384,7 +2532,7 @@ function normalizeBaseUrlForModels(config) {
 }
 
 async function fetchModelsOnce(config) {
-  const resp = await fetch("/api/models/list", {
+  const resp = await fetch(buildApiUrl("/api/models/list"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -3609,7 +3757,7 @@ async function callModel(
     };
 
     // 调用后端接口
-    const response = await fetch("/api/chat/stream", {
+    const response = await fetch(buildApiUrl("/api/chat/stream"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
@@ -3952,7 +4100,7 @@ async function generateTopicTitle(topicId, config) {
 
   try {
     // 调用后端API生成标题
-    const response = await fetch("/api/topics/generate-title", {
+    const response = await fetch(buildApiUrl("/api/topics/generate-title"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

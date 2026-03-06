@@ -33,6 +33,41 @@ python server.py
 http://localhost:3000
 ```
 
+## Tauri 桌面端（Windows 首版）
+
+### 开发态
+
+1. 手动启动本地 Python 服务：
+
+```bash
+py -3 server.py --host 127.0.0.1 --port 33100
+```
+
+2. 安装桌面端依赖并启动 Tauri：
+
+```bash
+npm install
+npm run tauri:dev
+```
+
+默认会把桌面端前端连接到 `http://127.0.0.1:33100`。如需改端口，可设置环境变量 `PRISM_DESKTOP_API_BASE`。
+
+### Windows 打包
+
+首次打包前需要安装：
+
+- Rust / Cargo
+- Visual Studio Build Tools（含 MSVC 与 Windows SDK）
+- PyInstaller
+
+打包命令：
+
+```bash
+powershell -ExecutionPolicy Bypass -File .\scripts\build-tauri-windows.ps1
+```
+
+该脚本会先生成 `prism-backend.exe` sidecar，再执行 `tauri build`。
+
 ## 配置说明
 
 在页面右上角进入“配置”：
