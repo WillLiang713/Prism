@@ -1,169 +1,191 @@
 # Prism
 
-Prism 是一个轻量的对话式 AI 客户端，提供统一的模型接入、联网搜索和会话管理能力。
+[简体中文](./README.zh-CN.md)
 
-## 下载与发布
+Prism is a lightweight AI chat client with a Python backend and a static frontend. It provides unified model access, web search tools, local topic management, and a Windows desktop build powered by Tauri.
 
-- 仓库地址：<https://github.com/WillLiang713/Prism>
-- Releases 页面：<https://github.com/WillLiang713/Prism/releases>
-- 如果你只是想在 Windows 上直接使用桌面版，优先从 Releases 页面下载已发布的安装包
-- 如果你需要参与开发或自行修改代码，再继续阅读下方的本地运行与打包说明
+## Download
 
-## 功能概览
+- Repository: <https://github.com/WillLiang713/Prism>
+- Releases: <https://github.com/WillLiang713/Prism/releases>
+- If you only want to use the Windows desktop app, download the latest installer from Releases.
+- If you want to develop locally or customize the project, continue with the setup instructions below.
 
-- 模型对话与流式输出
-- 支持 OpenAI 兼容与 Anthropic 兼容接口
-- 思考强度设置与思考过程展示
-- 联网搜索工具（Tavily / Exa）
-- 会话与话题管理（本地保存历史）
-- 新建话题快捷键：`Ctrl/Cmd + Alt + N`
-- Markdown 渲染与代码高亮
-- 图片上传输入
+## Highlights
 
-## 快速开始
+- Streaming chat responses
+- OpenAI-compatible and Anthropic-compatible API support
+- Web search integration with Tavily and Exa
+- Topic-based conversation management with local history
+- Reasoning effort controls and reasoning display
+- Markdown rendering and code highlighting
+- Image upload support
+- Quick new-topic shortcut: `Ctrl/Cmd + Alt + N`
 
-1. 安装依赖
+## Quick Start
+
+### Run the web app locally
+
+1. Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. 启动服务
+2. Start the server:
 
 ```bash
 python server.py
 ```
 
-3. 打开页面
+3. Open the app in your browser:
 
 ```text
 http://localhost:3000
 ```
 
-## Tauri 桌面端（Windows 首版）
+### Run with Docker
 
-### 下载安装
+```bash
+docker compose up --build
+```
 
-如果你只是想使用桌面版，而不是参与开发：
+The app will be available on the port defined by `PRISM_PORT` in your environment, or `3000` by default.
 
-1. 打开 Releases 页面：
+## Windows Desktop App (Tauri)
+
+### Use a released build
+
+If you just want to use Prism on Windows:
+
+1. Open the Releases page:
 
 ```text
 https://github.com/WillLiang713/Prism/releases
 ```
 
-2. 下载最新发布版本中的 Windows 安装包
+2. Download the latest Windows installer.
+3. Install and launch the app.
 
-3. 安装后直接启动即可
+### Desktop development
 
-如果你需要本地开发、调试或自行打包，再继续看下面的开发态与打包说明。
-
-### 开发态
-
-推荐命令：
+Recommended command:
 
 ```bash
 npm install
 npm run desktop:dev
 ```
 
-这条命令会：
+This workflow will:
 
-- 自动启动本地 Python 后端（默认 `127.0.0.1:33100`）
-- 等待健康检查通过
-- 再启动 Tauri 桌面壳
-- 退出 Tauri 时自动停止后端进程
+- start the local Python backend automatically on `127.0.0.1:33100`
+- wait for the health check to pass
+- launch the Tauri shell
+- stop the backend process when Tauri exits
 
-后端开发日志默认写到：
+Development backend logs are written to:
 
-```bash
+```text
 logs/desktop-dev-backend.stdout.log
 logs/desktop-dev-backend.stderr.log
 ```
 
-底层命令仍然保留：
+Low-level commands are still available:
 
 ```bash
 python server.py --host 127.0.0.1 --port 33100
 npm run tauri:dev
 ```
 
-说明：
+Notes:
 
-- 推荐日常开发优先使用 `npm run desktop:dev`
-- `npm run tauri:dev` 是底层 Tauri 调试命令，本身不会帮你启动 Python 后端
-- 如果已经激活 `venv`，请优先使用 `python`，不要用 `py -3`，否则可能绕过当前虚拟环境，导致依赖缺失
+- `npm run desktop:dev` is the recommended daily workflow.
+- `npm run tauri:dev` does not start the Python backend for you.
+- If you already activated a virtual environment, prefer `python` over `py -3` so you do not bypass the active environment.
+- The desktop frontend connects to `http://127.0.0.1:33100` by default. Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL.
 
-默认会把桌面端前端连接到 `http://127.0.0.1:33100`。如需改端口，可设置环境变量 `PRISM_DESKTOP_API_BASE`。
+### Build the Windows desktop app
 
-### Windows 打包
-
-首次打包前需要安装：
+Before the first build, install:
 
 - Rust / Cargo
-- Visual Studio Build Tools（含 MSVC 与 Windows SDK）
+- Visual Studio Build Tools with MSVC and Windows SDK
 - PyInstaller
 
-打包命令：
+Build command:
 
 ```bash
 npm run desktop:build
 ```
 
-说明：
+Notes:
 
-- 不建议直接执行 `npm run tauri:build`
-- 推荐完整打包入口是 `npm run desktop:build`
-- `desktop:build` 实际调用的是 `scripts/build-tauri-windows.ps1`
-- 该脚本会先用 `PyInstaller` 生成 `prism-backend.exe` sidecar，再执行 `npm install` 和 `npm run tauri:build`
-- 只有走这条脚本，桌面包里才会带上最新的 Python 后端可执行文件
+- Prefer `npm run desktop:build` over calling `npm run tauri:build` directly.
+- The build entry point is `scripts/build-tauri-windows.ps1`.
+- The script first packages the Python backend into `prism-backend.exe`, then runs the Tauri build.
+- This is the path that ensures the desktop package includes the latest backend sidecar.
 
-当前打包行为：
+Current desktop packaging behavior:
 
-- `prism-backend.exe` 以无控制台方式启动，正常情况下不会再弹出黑色命令行窗口
-- 桌面端主界面会先显示，后端在后台完成健康检查后自动进入可用状态
-- 后端启动过程中不再显示全屏 Loading 或头部等待提示；未就绪前仅禁用输入框和发送按钮
-- 如果本地后端启动失败，当前版本不会显示额外提示胶囊，需重启应用后重试
+- `prism-backend.exe` starts without opening a visible console window
+- the desktop UI appears first and becomes interactive after backend health checks pass
+- the app disables the input and send button while the backend is not ready
+- if the local backend fails to start, restart the app and check logs
 
-### 桌面端日志
+### Desktop logs
 
-Windows 打包版后端日志默认写入：
+Packaged Windows backend logs are written to:
 
 ```text
 %LOCALAPPDATA%\Prism\logs\
 ```
 
-日志说明：
+Behavior:
 
-- 按天生成，文件名形如 `backend-2026-03-10.log`
-- 应用启动时会自动清理 7 天前的旧日志
-- 主要用于排查桌面端后端启动失败、接口异常、未捕获异常等问题
+- log files are rotated daily, for example `backend-2026-03-10.log`
+- logs older than 7 days are cleaned up automatically on startup
+- logs help diagnose backend startup failures, API errors, and uncaught exceptions
 
-## 配置说明
+## Configuration
 
-在页面右上角进入“配置”：
+Open the configuration panel from the top-right corner of the app.
 
-- 模型配置：provider、apiKey、apiUrl、model、systemPrompt
-- 联网配置：webSearchProvider、Tavily/Exa Key、结果数量、搜索深度
+UI configuration covers:
 
-也可通过环境变量提供联网密钥：
+- Model settings: `provider`, `apiKey`, `apiUrl`, `model`, `systemPrompt`
+- Web search settings: `webSearchProvider`, Tavily / Exa keys, result count, and search depth
+
+You can also provide search keys through environment variables:
 
 - `TAVILY_API_KEY`
 - `EXA_API_KEY`
 
-## 技术栈
+## Environment Variables
 
-- 前端：HTML / CSS / JavaScript（marked.js、highlight.js）
-- 后端：FastAPI、httpx
+| Name | Purpose | Default |
+| --- | --- | --- |
+| `PRISM_PORT` | Public port used by the local server or Docker mapping | `3000` |
+| `TAVILY_API_KEY` | Optional Tavily API key for web search | empty |
+| `EXA_API_KEY` | Optional Exa API key for web search | empty |
+| `PRISM_DESKTOP_API_BASE` | Optional desktop backend base URL for development | built-in desktop default |
 
-## 项目结构
+## Tech Stack
+
+- Frontend: HTML, CSS, JavaScript, marked.js, highlight.js
+- Backend: FastAPI, httpx
+- Desktop: Tauri 2
+
+## Project Structure
 
 ```text
 Prism/
-├── frontend/          # 前端页面与交互逻辑
-├── server.py          # HTTP 服务与接口
-├── ai_service.py      # 模型调用与工具编排
-├── tools.py           # 联网搜索等工具实现
-├── docker-compose.yml # 容器部署配置
+├── frontend/              # Static UI assets
+├── src-tauri/             # Tauri desktop shell
+├── scripts/               # Desktop dev/build scripts
+├── server.py              # FastAPI entry point and routes
+├── ai_service.py          # Model orchestration and streaming
+├── tools.py               # Web search tool implementations
+├── docker-compose.yml     # Container setup
+├── .env.example           # Environment variable template
 └── README.md
 ```
