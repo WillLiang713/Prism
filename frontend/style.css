@@ -377,10 +377,11 @@ body {
 }
 
 .is-desktop-runtime .desktop-window-controls {
+  display: inline-flex;
   gap: 0;
   margin-left: 10px;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
-  padding-left: 10px;
+  border-left: none;
+  padding-left: 0;
 }
 
 .is-desktop-runtime .desktop-window-btn {
@@ -418,7 +419,7 @@ body {
 }
 
 .is-desktop-runtime .chat-side {
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: none;
 }
 
 .is-desktop-runtime .chat-composer {
@@ -4839,7 +4840,7 @@ body {
     bottom: 0;
     width: min(82vw, 300px);
     max-height: none;
-    border-right: 1px solid var(--border);
+    border-right: none;
     border-bottom: none;
     z-index: 90;
     box-shadow: var(--shadow-md);
@@ -4852,7 +4853,7 @@ body {
 
   .sidebar-collapsed .chat-side {
     width: min(82vw, 300px);
-    border-right-width: 1px;
+    border-right-width: 0;
     transform: translateX(calc(-100% - 8px));
     opacity: 0;
     pointer-events: none;
