@@ -1733,31 +1733,8 @@ function renderSources(sectionEl, sources) {
     chip.target = "_blank";
     chip.rel = "noopener noreferrer";
 
-    // Favicon
     let hostname = "";
     try { hostname = new URL(s.url).hostname; } catch (_) {}
-    const favicon = document.createElement("img");
-    favicon.className = "source-chip-favicon";
-    favicon.alt = "";
-    favicon.loading = "lazy";
-    if (hostname) {
-      favicon.src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-      favicon.onerror = function () {
-        // fallback 1: 尝试网站自身的 favicon
-        this.onerror = function () {
-          // fallback 2: 尝试国内 favicon 服务
-          this.onerror = function () {
-            // 最终 fallback: 显示默认地球图标
-            this.onerror = null;
-            this.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>');
-          };
-          this.src = `https://favicon.im/${hostname}`;
-        };
-        this.src = `https://${hostname}/favicon.ico`;
-      };
-    } else {
-      favicon.style.display = "none";
-    }
 
     // Body (title + url)
     const body = document.createElement("div");
@@ -1774,7 +1751,6 @@ function renderSources(sectionEl, sources) {
     body.appendChild(label);
     body.appendChild(urlLine);
 
-    chip.appendChild(favicon);
     chip.appendChild(body);
     list.appendChild(chip);
   });
