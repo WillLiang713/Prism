@@ -95,6 +95,7 @@ const state = {
       lastKey: "",
       lastFetchedAt: 0,
       models: [],
+      pendingAfterReady: false,
       datalistFillToken: 0,
       dropdownLimit: 120,
     },
@@ -104,6 +105,7 @@ const state = {
       lastKey: "",
       lastFetchedAt: 0,
       models: [],
+      pendingAfterReady: false,
       datalistFillToken: 0,
       dropdownLimit: 120,
     },
@@ -126,6 +128,9 @@ const state = {
   runtime: {
     bootstrapped: false,
     bootstrapInFlight: false,
+    backendReady: !isDesktopRuntime(),
+    backendFailed: false,
+    backendLastError: "",
     desktopWindow: null,
     isWindowMaximized: false,
     isWindowFocused: true,
@@ -197,10 +202,6 @@ const elements = {
   topicList: document.getElementById("topicList"),
   chatMessages: document.getElementById("chatMessages"),
   scrollToBottomBtn: document.getElementById("scrollToBottomBtn"),
-  bootstrapOverlay: document.getElementById("bootstrapOverlay"),
-  bootstrapTitle: document.getElementById("bootstrapTitle"),
-  bootstrapMessage: document.getElementById("bootstrapMessage"),
-  bootstrapRetryBtn: document.getElementById("bootstrapRetryBtn"),
   desktopTitlebar: document.getElementById("desktopTitlebar"),
   desktopWindowControls: document.getElementById("desktopWindowControls"),
   windowMinimizeBtn: document.getElementById("windowMinimizeBtn"),
@@ -243,37 +244,20 @@ const elements = {
   promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
 };
 
-document.addEventListener("DOMContentLoaded", async () => {
-  bindBootstrapEvents();
-  await bootstrapApplication();
+document.addEventListener("DOMContentLoaded", () => {
+  bootstrapApplication();
 });
 
-async function bootstrapApplication() {
-  if (state.runtime.bootstrapped || state.runtime.bootstrapInFlight) return;
+function bootstrapApplication() {
+  if (state.runtime.bootstrapped) return;
 
-  state.runtime.bootstrapInFlight = true;
-  try {
-    if (PRISM_RUNTIME.startupError) {
-      throw new Error(PRISM_RUNTIME.startupError);
-    }
+  startApplication();
+  state.runtime.bootstrapped = true;
 
-    if (isDesktopRuntime()) {
-      setBootstrapStatus("loading", "正在启动本地服务", "等待桌面端后端就绪...");
-      await waitForDesktopBackend();
-    }
-
-    startApplication();
-    state.runtime.bootstrapped = true;
-    setBootstrapStatus("ready");
-  } catch (error) {
-    console.error("bootstrap failed:", error);
-    setBootstrapStatus(
-      "error",
-      "本地服务启动失败",
-      error instanceof Error ? error.message : String(error || "未知错误")
-    );
-  } finally {
-    state.runtime.bootstrapInFlight = false;
+  if (isDesktopRuntime()) {
+    void beginDesktopBackendBootstrap();
+  } else {
+    syncDesktopBackendUi();
   }
 }
 
@@ -296,13 +280,7 @@ function startApplication() {
   renderAll();
   startHeaderClock();
   initDesktopWindowShell();
-}
-
-function bindBootstrapEvents() {
-  elements.bootstrapRetryBtn?.addEventListener("click", () => {
-    if (state.runtime.bootstrapInFlight || state.runtime.bootstrapped) return;
-    bootstrapApplication();
-  });
+  syncDesktopBackendUi();
 }
 
 function applyDesktopWindowState() {
@@ -411,30 +389,75 @@ function bindDesktopTitlebarControls(appWindow) {
   }
 }
 
-function setBootstrapStatus(mode, title = "", message = "") {
-  const overlay = elements.bootstrapOverlay;
-  if (!overlay) return;
+function isDesktopBackendAvailable() {
+  return !isDesktopRuntime() || state.runtime.backendReady;
+}
 
-  if (mode === "ready") {
-    overlay.hidden = true;
-    overlay.setAttribute("aria-hidden", "true");
-    return;
+function syncDesktopBackendUi() {
+  const isReady = isDesktopBackendAvailable();
+  const isFailed = isDesktopRuntime() && state.runtime.backendFailed;
+
+  const promptPlaceholder = isFailed
+    ? "本地服务启动失败，请重启应用"
+    : "本地服务启动中，请稍候...";
+  if (elements.promptInput) {
+    elements.promptInput.disabled = !isReady;
+    elements.promptInput.placeholder = isReady ? "随便聊点什么..." : promptPlaceholder;
+    elements.promptInput.title = isReady ? "" : promptPlaceholder;
   }
 
-  overlay.hidden = false;
-  overlay.setAttribute("aria-hidden", "false");
-  overlay.dataset.mode = mode;
+  if (elements.sendBtn) {
+    elements.sendBtn.disabled = !isReady;
+    if (!isReady) {
+      elements.sendBtn.title = promptPlaceholder;
+      elements.sendBtn.setAttribute("aria-label", promptPlaceholder);
+    } else {
+      setSendButtonMode(elements.sendBtn.dataset.mode);
+    }
+  }
 
-  if (elements.bootstrapTitle) {
-    elements.bootstrapTitle.textContent = title || "正在准备应用";
+  updateModelHint("main");
+}
+
+function flushPendingModelFetches() {
+  for (const [side, slot] of Object.entries(state.modelFetch)) {
+    if (!slot?.pendingAfterReady) continue;
+    slot.pendingAfterReady = false;
+    scheduleFetchModels(side, 0);
   }
-  if (elements.bootstrapMessage) {
-    elements.bootstrapMessage.textContent =
-      message || "请稍候，正在初始化客户端。";
-  }
-  if (elements.bootstrapRetryBtn) {
-    elements.bootstrapRetryBtn.hidden = mode !== "error";
-    elements.bootstrapRetryBtn.disabled = state.runtime.bootstrapInFlight;
+}
+
+async function beginDesktopBackendBootstrap(options = {}) {
+  if (!isDesktopRuntime() || state.runtime.bootstrapInFlight) return;
+
+  state.runtime.bootstrapInFlight = true;
+  state.runtime.backendReady = false;
+  state.runtime.backendFailed = false;
+  state.runtime.backendLastError = "";
+  syncDesktopBackendUi();
+
+  try {
+    const startupError = options.ignoreStartupError
+      ? ""
+      : String(PRISM_RUNTIME.startupError || "").trim();
+    if (startupError) {
+      throw new Error(startupError);
+    }
+
+    await waitForDesktopBackend();
+    state.runtime.backendReady = true;
+    state.runtime.backendFailed = false;
+    state.runtime.backendLastError = "";
+    flushPendingModelFetches();
+  } catch (error) {
+    console.error("desktop backend bootstrap failed:", error);
+    state.runtime.backendReady = false;
+    state.runtime.backendFailed = true;
+    state.runtime.backendLastError =
+      error instanceof Error ? error.message : String(error || "未知错误");
+  } finally {
+    state.runtime.bootstrapInFlight = false;
+    syncDesktopBackendUi();
   }
 }
 
@@ -460,11 +483,8 @@ async function waitForDesktopBackend() {
       lastError = error instanceof Error ? error.message : String(error || "");
     }
 
-    setBootstrapStatus(
-      "loading",
-      "正在启动本地服务",
-      lastError ? `等待本地服务就绪：${lastError}` : "等待本地服务就绪..."
-    );
+    state.runtime.backendLastError = lastError;
+    syncDesktopBackendUi();
     await delay(BOOTSTRAP_HEALTH_INTERVAL_MS);
   }
 
@@ -764,6 +784,7 @@ function isTopicRunning(topicId) {
 function syncSendButtonModeByActiveTopic() {
   const activeTopicId = state.chat.activeTopicId;
   setSendButtonMode(isTopicRunning(activeTopicId) ? "stop" : "send");
+  syncDesktopBackendUi();
 }
 
 function markTopicRunning(topicId, controller) {
@@ -2442,6 +2463,16 @@ function updateModelHint(side) {
   const apiKey = (config.apiKey || "").trim();
   const apiUrl = (config.apiUrl || "").trim();
 
+  if (isDesktopRuntime() && !state.runtime.backendReady) {
+    setModelHint(
+      side || "main",
+      state.runtime.backendFailed
+        ? "本地服务启动失败，重试成功后再拉取模型列表"
+        : "本地服务启动中，后端就绪后会自动拉取模型列表"
+    );
+    return;
+  }
+
   if (!apiKey) {
     setModelHint(
       side || "main",
@@ -2700,6 +2731,11 @@ function scheduleFetchModels(side, delayMs = 400) {
   if (!slot) return;
 
   if (slot.timer) clearTimeout(slot.timer);
+  if (isDesktopRuntime() && !state.runtime.backendReady) {
+    slot.pendingAfterReady = true;
+    if (side !== "Title") updateModelHint(side);
+    return;
+  }
   slot.timer = setTimeout(() => {
     slot.timer = null;
     void fetchAndUpdateModels(side);
@@ -2709,6 +2745,11 @@ function scheduleFetchModels(side, delayMs = 400) {
 async function fetchAndUpdateModels(side) {
   const slot = state.modelFetch[side];
   if (!slot || slot.inFlight) return;
+  if (isDesktopRuntime() && !state.runtime.backendReady) {
+    slot.pendingAfterReady = true;
+    if (side !== "Title") updateModelHint(side);
+    return;
+  }
 
   const config = getConfigFromForm(side);
   const apiKey = (config.apiKey || "").trim();
@@ -3657,6 +3698,18 @@ function applyStatus(statusEl, status) {
 
 
 async function sendPrompt() {
+  if (!isDesktopBackendAvailable()) {
+    await showAlert(
+      state.runtime.backendFailed
+        ? "本地服务启动失败，请重启应用后再试。"
+        : "本地服务仍在启动中，请稍候再发送。",
+      {
+        title: "暂不可发送",
+      }
+    );
+    return;
+  }
+
   const prompt = (elements.promptInput.value || "").trim();
   const hasImages =
     state.images.selectedImages && state.images.selectedImages.length > 0;

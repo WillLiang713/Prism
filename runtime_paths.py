@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import sys
 
@@ -28,3 +29,13 @@ def frontend_path(*parts: str) -> Path:
 
 def has_frontend_assets() -> bool:
     return frontend_path("index.html").exists()
+
+
+def desktop_logs_dir(app_name: str = "Prism") -> Path:
+    """返回桌面端日志目录，优先写入用户本地应用数据目录。"""
+    local_appdata = (os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or "").strip()
+    if local_appdata:
+        return Path(local_appdata) / app_name / "logs"
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent / "logs"
+    return PROJECT_ROOT / "logs"

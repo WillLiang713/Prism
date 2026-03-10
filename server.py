@@ -13,6 +13,7 @@ Prism - CORS代理服务器 (Python版本)
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -29,7 +30,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import httpx
 from ai_service import AIService, ChatRequest
-from runtime_paths import TOOLS_JSON_PATH, frontend_path, has_frontend_assets
+from runtime_paths import (
+    TOOLS_JSON_PATH,
+    desktop_logs_dir,
+    frontend_path,
+    has_frontend_assets,
+)
 
 
 def _parse_runtime_args(argv: list[str]) -> argparse.Namespace:
@@ -51,6 +57,60 @@ def _parse_runtime_args(argv: list[str]) -> argparse.Namespace:
 
 RUNTIME_ARGS = _parse_runtime_args(sys.argv[1:])
 DESKTOP_MODE = bool(RUNTIME_ARGS.desktop_mode)
+DESKTOP_RELEASE_MODE = DESKTOP_MODE and bool(getattr(sys, "frozen", False))
+DESKTOP_LOG_RETENTION_DAYS = 7
+DESKTOP_LOG_STREAM = None
+
+
+def _cleanup_old_desktop_logs(log_dir, retention_days: int = DESKTOP_LOG_RETENTION_DAYS) -> None:
+    cutoff_ts = datetime.now().timestamp() - max(1, retention_days) * 24 * 60 * 60
+    for path in log_dir.glob("backend-*.log"):
+        try:
+            if path.stat().st_mtime < cutoff_ts:
+                path.unlink()
+        except OSError:
+            continue
+
+
+def _desktop_log_path():
+    log_dir = desktop_logs_dir()
+    log_dir.mkdir(parents=True, exist_ok=True)
+    _cleanup_old_desktop_logs(log_dir)
+    return log_dir / f"backend-{datetime.now().strftime('%Y-%m-%d')}.log"
+
+
+def _init_desktop_release_logging() -> None:
+    global DESKTOP_LOG_STREAM
+
+    if not DESKTOP_RELEASE_MODE or DESKTOP_LOG_STREAM is not None:
+        return
+
+    log_path = _desktop_log_path()
+    log_stream = open(log_path, "a", encoding="utf-8", buffering=1)
+    DESKTOP_LOG_STREAM = log_stream
+    sys.stdout = log_stream
+    sys.stderr = log_stream
+
+    def _handle_unhandled_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            return sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        print("未捕获异常:", file=log_stream)
+        logging.getLogger("prism.desktop").exception(
+            "Unhandled exception",
+            exc_info=(exc_type, exc_value, exc_traceback),
+        )
+
+    sys.excepthook = _handle_unhandled_exception
+    logging.basicConfig(
+        level=logging.INFO,
+        stream=log_stream,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+        force=True,
+    )
+    logging.getLogger("prism.desktop").info("Desktop backend logging initialized: %s", log_path)
+
+
+_init_desktop_release_logging()
 
 app = FastAPI(title="CORS代理服务器")
 

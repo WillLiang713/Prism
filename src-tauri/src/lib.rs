@@ -132,6 +132,14 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(SidecarState::default())
+        .on_window_event(|window, event| {
+            if matches!(
+                event,
+                tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
+            ) {
+                shutdown_sidecar(&window.app_handle());
+            }
+        })
         .setup(|app| {
             let runtime = prepare_runtime(app.handle());
 

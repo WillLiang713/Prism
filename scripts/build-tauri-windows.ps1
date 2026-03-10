@@ -47,6 +47,7 @@ if (-not $SkipBackendBuild) {
     --noconfirm `
     --clean `
     --onefile `
+    --noconsole `
     --name prism-backend `
     --add-data "tools.json;." `
     --hidden-import uvicorn.logging `
