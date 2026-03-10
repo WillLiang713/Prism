@@ -2060,6 +2060,19 @@ function bindEvents() {
     openShortcutHelpModal();
   });
 
+  // 密钥输入框明文切换
+  document.querySelectorAll(".password-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.dataset.target;
+      const input = document.getElementById(targetId);
+      if (!input) return;
+      const isPassword = input.type === "password";
+      input.type = isPassword ? "text" : "password";
+      btn.querySelector(".eye-open").style.display = isPassword ? "none" : "";
+      btn.querySelector(".eye-closed").style.display = isPassword ? "" : "none";
+    });
+  });
+
   // 监听提供商变化，更新API地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
     updateProviderUi();

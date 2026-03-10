@@ -2674,6 +2674,40 @@ body {
   line-height: 1.4;
 }
 
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper input {
+  padding-right: 40px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  transition: color 0.2s ease;
+  border-radius: 4px;
+}
+
+.password-toggle-btn:hover {
+  color: var(--text);
+}
+
+.password-toggle-btn .eye-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .form-group input[type="text"],
 .form-group input[type="password"],
 .form-group select,
@@ -3191,10 +3225,10 @@ body {
 
 .thinking-header > span:first-child::before {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid var(--panel-text-tertiary);
-  border-bottom: 2px solid var(--panel-text-tertiary);
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--panel-text-tertiary);
+  border-bottom: 1.5px solid var(--panel-text-tertiary);
   transform: rotate(45deg);
   transition: transform 0.2s ease, border-color 0.2s ease;
   margin-top: -2px;
@@ -3369,8 +3403,12 @@ body {
   width: 12px;
   height: 12px;
   color: var(--panel-text-tertiary);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, color 0.2s ease;
   flex-shrink: 0;
+}
+
+.tool-calls-header:hover .tool-calls-header-arrow {
+  color: var(--panel-link);
 }
 
 .tool-calls-section.tc-expanded .tool-calls-header-arrow {
@@ -3496,8 +3534,12 @@ body {
   width: 12px;
   height: 12px;
   color: var(--panel-text-tertiary);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, color 0.2s ease;
   flex-shrink: 0;
+}
+
+.search-preview-header:hover .search-preview-header-arrow {
+  color: var(--panel-link);
 }
 
 .search-preview-section.sp-expanded .search-preview-header-arrow {
@@ -3614,19 +3656,18 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.02);
   color: var(--text-muted);
   font-size: 12px;
   text-decoration: none;
-  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s;
+  transition: background 0.18s, color 0.18s, transform 0.18s;
   min-width: 0;
 }
 
 .source-chip:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: var(--border-accent);
   color: var(--text);
   transform: translateY(-1px);
 }

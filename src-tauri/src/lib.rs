@@ -158,7 +158,7 @@ pub fn run() {
                 .map_err(std::io::Error::other)?;
             WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
                 .title("Prism")
-                .inner_size(1440.0, 960.0)
+                .inner_size(1280.0, 800.0)
                 .min_inner_size(1100.0, 760.0)
                 .decorations(false)
                 .center()
