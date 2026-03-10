@@ -791,10 +791,6 @@ body {
   display: none;
 }
 
-.topic-item.running:not(.active) {
-  background: rgba(255, 255, 255, 0.05);
-}
-
 .topic-item.running .topic-meta {
   color: var(--text-muted);
 }

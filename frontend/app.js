@@ -807,10 +807,20 @@ function unmarkTopicRunning(topicId, controller) {
   renderTopicList();
 }
 
-function getLiveTurnUi(turnId, fallbackUi) {
+function getLiveTurnUi(topicId, turnId, fallbackUi) {
   const liveUi = state.chat.turnUiById.get(turnId);
   if (liveUi?.statusEl?.isConnected) return liveUi;
-  return fallbackUi || null;
+
+  const fallbackIsLive = !!fallbackUi?.statusEl?.isConnected;
+  if (topicId !== state.chat.activeTopicId) {
+    return fallbackIsLive ? fallbackUi : null;
+  }
+
+  renderChatMessages();
+  const reboundUi = state.chat.turnUiById.get(turnId);
+  if (reboundUi?.statusEl?.isConnected) return reboundUi;
+
+  return fallbackIsLive ? fallbackUi : null;
 }
 
 function formatTime(ts) {
@@ -3469,7 +3479,6 @@ function createAssistantCard(turn) {
 
   const statusEl = document.createElement("span");
   statusEl.className = "status";
-  applyStatus(statusEl, statusSnapshot);
 
   header.appendChild(modelName);
   header.appendChild(statusEl);
@@ -3618,6 +3627,7 @@ function createAssistantCard(turn) {
   message.appendChild(header);
   message.appendChild(content);
   message.appendChild(footer);
+  applyStatus(statusEl, statusSnapshot);
 
   if (
     statusSnapshot === "loading" &&
@@ -3864,7 +3874,7 @@ async function callModel(
   webSearchConfig
 ) {
   const resolveUi = () => {
-    const nextUi = getLiveTurnUi(turn.id, ui);
+    const nextUi = getLiveTurnUi(topicId, turn.id, ui);
     if (nextUi) ui = nextUi;
     return ui;
   };
