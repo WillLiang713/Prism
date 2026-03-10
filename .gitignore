@@ -1,12 +1,15 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.spec
+*.syntax-check.pyc.*
 build/
 dist/
 wheels/
 *.egg-info
 node_modules/
 src-tauri/target/
+logs/
 
 # Virtual environments
 .venv
