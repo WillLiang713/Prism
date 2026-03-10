@@ -2,6 +2,13 @@
 
 Prism 是一个轻量的对话式 AI 客户端，提供统一的模型接入、联网搜索和会话管理能力。
 
+## 下载与发布
+
+- 仓库地址：<https://github.com/WillLiang713/Prism>
+- Releases 页面：<https://github.com/WillLiang713/Prism/releases>
+- 如果你只是想在 Windows 上直接使用桌面版，优先从 Releases 页面下载已发布的安装包
+- 如果你需要参与开发或自行修改代码，再继续阅读下方的本地运行与打包说明
+
 ## 功能概览
 
 - 模型对话与流式输出
@@ -34,6 +41,22 @@ http://localhost:3000
 ```
 
 ## Tauri 桌面端（Windows 首版）
+
+### 下载安装
+
+如果你只是想使用桌面版，而不是参与开发：
+
+1. 打开 Releases 页面：
+
+```text
+https://github.com/WillLiang713/Prism/releases
+```
+
+2. 下载最新发布版本中的 Windows 安装包
+
+3. 安装后直接启动即可
+
+如果你需要本地开发、调试或自行打包，再继续看下面的开发态与打包说明。
 
 ### 开发态
 
