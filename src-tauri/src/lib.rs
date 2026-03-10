@@ -130,6 +130,14 @@ fn shutdown_sidecar(app: &tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            // 已有实例运行时，聚焦到已有窗口
+            if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .manage(SidecarState::default())
         .on_window_event(|window, event| {
