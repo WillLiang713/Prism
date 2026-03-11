@@ -147,7 +147,8 @@ export function initScrollbarAutoHide() {
     "pointerdown",
     (e) => {
       const container = resolveScrollableContainer(e.target);
-      if (container) activateScrollbar(container, 1200);
+      if (!container) return;
+      activateScrollbar(container, 1200);
     },
     true
   );

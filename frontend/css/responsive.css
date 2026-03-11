@@ -345,43 +345,46 @@
   }
 }
 
-/* Scrollbar styles (legacy override) */
-.chat-messages::-webkit-scrollbar,
-.history-list::-webkit-scrollbar {
-  width: 6px;
+/* Unified scrollbar style (single source of truth) */
+.chat-messages-wrapper:hover .chat-messages,
+:is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail):is(:hover, :focus-within, :active, .scrollbar-active) {
+  scrollbar-color: rgba(255, 255, 255, 0.10) transparent !important;
 }
 
-.chat-messages::-webkit-scrollbar-track,
-.history-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb,
-.history-list::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 3px;
-}
-
-.chat-messages.scrollbar-active::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover,
-.history-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-/* Chromium/WebKit: avoid scrollbar-color/scrollbar-width conflicts with ::-webkit-scrollbar */
 @supports selector(::-webkit-scrollbar) {
-  .chat-messages,
-  .topic-list,
-  .image-preview-container,
-  .modal-content .config-content,
-  #configModal .config-content,
-  .prompt-list,
-  .web-search-body,
-  .tool-calls-detail {
-    scrollbar-color: auto !important;
+  :is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail) {
     scrollbar-width: auto !important;
+    scrollbar-color: transparent transparent !important;
+  }
+
+  :is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail)::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  :is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail)::-webkit-scrollbar-thumb {
+    background: transparent !important;
+    border-radius: 3px !important;
+    box-shadow: none;
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .chat-messages-wrapper:hover .chat-messages::-webkit-scrollbar-thumb,
+  :is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail):is(:hover, :focus-within, :active, .scrollbar-active)::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.10) !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.20),
+      0 0 10px rgba(160, 200, 255, 0.35);
+  }
+
+  :is(.chat-messages, .topic-list, .image-preview-container, .modal-content .config-content, #configModal .config-content, .prompt-list, .web-search-body, .tool-calls-detail)::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.28),
+      0 0 14px rgba(160, 200, 255, 0.48);
   }
 }
