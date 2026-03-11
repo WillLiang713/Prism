@@ -11,23 +11,39 @@
 
 @media (min-width: 901px) {
   #configModal .modal-content {
-    width: min(980px, 96vw);
+    width: 100vw;
+  }
+
+  #configModal .config-tab-panel {
+    min-height: calc(100vh - 220px);
+    min-height: calc(100dvh - 220px);
+  }
+
+  #configModal .config-section,
+  #configModal .global-config,
+  #configModal .config-section-model .model-config-layout,
+  #configModal .web-config-layout,
+  #configModal .config-section-model .model-config-main,
+  #configModal .config-section-model .model-config-side,
+  #configModal .web-config-main,
+  #configModal .web-config-side {
+    min-height: 100%;
   }
 
   .config-section-model .model-config-layout {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-    gap: 14px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+    gap: 40px;
   }
 
   .required-credentials-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 12px;
+    gap: 16px;
     align-items: start;
   }
 
   .web-config-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.68fr);
-    gap: 14px;
+    grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+    gap: 40px;
   }
 
   .config-section-model .model-config-main .form-group:last-child {

@@ -14,13 +14,13 @@ export function applyDesktopWindowState() {
 
   if (elements.windowMaximizeBtn) {
     elements.windowMaximizeBtn.setAttribute(
-      "title",
-      state.runtime.isWindowMaximized ? "还原" : "最大化"
-    );
+    "title",
+    state.runtime.isWindowMaximized ? "还原" : "最大化"
+  );
     elements.windowMaximizeBtn.setAttribute(
-      "aria-label",
-      state.runtime.isWindowMaximized ? "还原" : "最大化"
-    );
+    "aria-label",
+    state.runtime.isWindowMaximized ? "还原" : "最大化"
+  );
   }
 }
 
