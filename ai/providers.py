@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from runtime_paths import TOOLS_JSON_PATH
@@ -256,6 +257,10 @@ class MessageBuilder:
         if system_text:
             body["system"] = system_text
 
+        tools = MessageBuilder._load_selected_tools(config)
+        if tools:
+            body["tools"] = MessageBuilder._convert_tools_to_anthropic(tools)
+
         # 思考模式
         if config.reasoningEffort and config.reasoningEffort != "none":
             budget_map = {
@@ -301,32 +306,66 @@ class MessageBuilder:
         }
 
         # 添加工具定义
-        if config.enableTools:
-            try:
-                import json
-
-                with open(TOOLS_JSON_PATH, "r", encoding="utf-8") as f:
-                    all_tools = json.load(f)
-
-                    # selectedTools 有值时按选择加载；为空时默认加载全部
-                    if config.selectedTools:
-                        tools = [
-                            tool
-                            for tool in all_tools
-                            if tool.get("function", {}).get("name")
-                            in config.selectedTools
-                        ]
-                    else:
-                        # 向后兼容：未传或为空时加载全部工具
-                        tools = all_tools
-
-                    if tools:
-                        body["tools"] = tools
-            except Exception:
-                pass
+        tools = MessageBuilder._load_selected_tools(config)
+        if tools:
+            body["tools"] = tools
 
         # 思考模式
         if config.reasoningEffort and config.reasoningEffort != "none":
             body["reasoning_effort"] = config.reasoningEffort
 
         return body
+
+    @staticmethod
+    def _load_selected_tools(config: ChatRequest) -> list[dict]:
+        if not config.enableTools:
+            return []
+
+        try:
+            with open(TOOLS_JSON_PATH, "r", encoding="utf-8") as f:
+                all_tools = json.load(f)
+        except Exception:
+            return []
+
+        if not isinstance(all_tools, list):
+            return []
+
+        if config.selectedTools:
+            selected = set(config.selectedTools)
+            return [
+                tool
+                for tool in all_tools
+                if tool.get("function", {}).get("name") in selected
+            ]
+
+        return all_tools
+
+    @staticmethod
+    def _convert_tools_to_anthropic(tools: list[dict]) -> list[dict]:
+        anthropic_tools = []
+
+        for tool in tools:
+            if not isinstance(tool, dict):
+                continue
+
+            func = tool.get("function")
+            if not isinstance(func, dict):
+                continue
+
+            name = str(func.get("name") or "").strip()
+            if not name:
+                continue
+
+            input_schema = func.get("parameters")
+            if not isinstance(input_schema, dict):
+                input_schema = {"type": "object", "properties": {}}
+
+            anthropic_tools.append(
+                {
+                    "name": name,
+                    "description": str(func.get("description") or "").strip(),
+                    "input_schema": input_schema,
+                }
+            )
+
+        return anthropic_tools

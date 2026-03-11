@@ -8,18 +8,156 @@ class StreamParser:
     """流式响应解析器"""
 
     @staticmethod
-    def parse_anthropic_chunk(chunk: dict) -> dict:
+    def parse_anthropic_chunk(
+        chunk: dict,
+        content_blocks_state: dict[int, dict[str, Any]] | None = None,
+        tool_use_state: dict[int, dict[str, str]] | None = None,
+    ) -> dict:
         """解析Anthropic流式响应块"""
-        result = {"thinking": "", "content": "", "tokens": None}
+        result = {
+            "thinking": "",
+            "content": "",
+            "tokens": None,
+            "tool_calls": None,
+            "completed_block": None,
+        }
 
-        if chunk.get("type") == "content_block_delta":
+        chunk_type = chunk.get("type")
+
+        if chunk_type == "content_block_start":
+            index = int(chunk.get("index") or 0)
+            content_block = chunk.get("content_block", {})
+            if (
+                content_blocks_state is not None
+                and isinstance(content_block, dict)
+                and content_block
+            ):
+                block_copy = dict(content_block)
+                if block_copy.get("type") == "tool_use":
+                    input_value = block_copy.get("input")
+                    if not isinstance(input_value, dict):
+                        input_value = {}
+                    block_copy["input"] = input_value
+                    block_copy["_input_json_buffer"] = ""
+                content_blocks_state[index] = block_copy
+
+            if isinstance(content_block, dict) and content_block.get("type") == "tool_use":
+                tool_call = {
+                    "index": index,
+                    "id": str(content_block.get("id") or ""),
+                    "function": {
+                        "name": str(content_block.get("name") or ""),
+                    },
+                }
+
+                input_value = content_block.get("input")
+                if isinstance(input_value, dict) and input_value:
+                    arguments = json.dumps(input_value, ensure_ascii=False)
+                    tool_call["function"]["arguments"] = arguments
+                    if tool_use_state is not None:
+                        tool_use_state[index] = {
+                            "id": tool_call["id"],
+                            "name": tool_call["function"]["name"],
+                            "arguments": arguments,
+                        }
+                elif tool_use_state is not None:
+                    tool_use_state[index] = {
+                        "id": tool_call["id"],
+                        "name": tool_call["function"]["name"],
+                        "arguments": "",
+                    }
+
+                result["tool_calls"] = [tool_call]
+
+        elif chunk_type == "content_block_delta":
+            index = int(chunk.get("index") or 0)
             delta = chunk.get("delta", {})
-            if delta.get("type") == "thinking_delta":
-                result["thinking"] = delta.get("thinking", "")
-            elif delta.get("type") == "text_delta":
-                result["content"] = delta.get("text", "")
+            delta_type = delta.get("type")
 
-        elif chunk.get("type") == "message_delta":
+            if delta_type == "thinking_delta":
+                result["thinking"] = delta.get("thinking", "")
+                if (
+                    content_blocks_state is not None
+                    and index in content_blocks_state
+                    and content_blocks_state[index].get("type") == "thinking"
+                ):
+                    content_blocks_state[index]["thinking"] = (
+                        str(content_blocks_state[index].get("thinking") or "")
+                        + result["thinking"]
+                    )
+            elif delta_type == "signature_delta":
+                if (
+                    content_blocks_state is not None
+                    and index in content_blocks_state
+                    and content_blocks_state[index].get("type") == "thinking"
+                ):
+                    content_blocks_state[index]["signature"] = str(
+                        delta.get("signature") or ""
+                    )
+            elif delta_type == "text_delta":
+                result["content"] = delta.get("text", "")
+                if (
+                    content_blocks_state is not None
+                    and index in content_blocks_state
+                    and content_blocks_state[index].get("type") == "text"
+                ):
+                    content_blocks_state[index]["text"] = (
+                        str(content_blocks_state[index].get("text") or "")
+                        + result["content"]
+                    )
+            elif delta_type == "input_json_delta":
+                partial_json = str(delta.get("partial_json") or "")
+                if partial_json:
+                    if (
+                        content_blocks_state is not None
+                        and index in content_blocks_state
+                        and content_blocks_state[index].get("type") == "tool_use"
+                    ):
+                        content_blocks_state[index]["_input_json_buffer"] = (
+                            str(
+                                content_blocks_state[index].get(
+                                    "_input_json_buffer"
+                                )
+                                or ""
+                            )
+                            + partial_json
+                        )
+
+                    tool_id = ""
+                    if tool_use_state is not None:
+                        tool_state = tool_use_state.setdefault(
+                            index, {"id": "", "name": "", "arguments": ""}
+                        )
+                        tool_state["arguments"] += partial_json
+                        tool_id = tool_state.get("id", "")
+
+                    result["tool_calls"] = [
+                        {
+                            "index": index,
+                            "id": tool_id,
+                            "function": {
+                                "arguments": partial_json,
+                            },
+                        }
+                    ]
+        elif chunk_type == "content_block_stop":
+            index = int(chunk.get("index") or 0)
+            if content_blocks_state is not None:
+                completed_block = content_blocks_state.pop(index, None)
+                if isinstance(completed_block, dict):
+                    if completed_block.get("type") == "tool_use":
+                        input_json = str(
+                            completed_block.pop("_input_json_buffer", "") or ""
+                        )
+                        if input_json:
+                            try:
+                                parsed_input = json.loads(input_json)
+                            except Exception:
+                                parsed_input = completed_block.get("input") or {}
+                            if isinstance(parsed_input, dict):
+                                completed_block["input"] = parsed_input
+                    result["completed_block"] = completed_block
+        elif chunk_type == "message_delta":
             usage = chunk.get("usage", {})
             if usage:
                 result["tokens"] = usage.get("output_tokens", 0)
@@ -99,6 +237,8 @@ class ToolCallsAccumulator:
 async def parse_sse_stream(response: httpx.Response, provider_mode: str) -> AsyncIterator[dict]:
     """统一 SSE 流解析：字节流 -> data 行 -> JSON -> 标准化 parsed 块。"""
     buffer = ""
+    anthropic_content_blocks: dict[int, dict[str, Any]] = {}
+    anthropic_tool_use_state: dict[int, dict[str, str]] = {}
 
     async for chunk in response.aiter_bytes():
         buffer += chunk.decode("utf-8", errors="ignore")
@@ -124,7 +264,11 @@ async def parse_sse_stream(response: httpx.Response, provider_mode: str) -> Asyn
                 continue
 
             if provider_mode == "anthropic":
-                yield StreamParser.parse_anthropic_chunk(chunk_json)
+                yield StreamParser.parse_anthropic_chunk(
+                    chunk_json,
+                    anthropic_content_blocks,
+                    anthropic_tool_use_state,
+                )
             else:
                 yield StreamParser.parse_openai_chunk(chunk_json)
 

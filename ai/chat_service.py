@@ -87,8 +87,12 @@ class AIService:
                     tool_calls_buffer = ToolCallsAccumulator()
                     assistant_thinking = ""
                     assistant_content = ""
+                    assistant_blocks: list[dict[str, Any]] = []
 
                     async for parsed in parse_sse_stream(response, provider_mode):
+                        if provider_mode == "anthropic" and parsed.get("completed_block"):
+                            assistant_blocks.append(parsed["completed_block"])
+
                         # 发送thinking增量
                         if parsed.get("thinking"):
                             assistant_thinking += parsed["thinking"]
@@ -136,21 +140,36 @@ class AIService:
                         }
 
                         # 构建工具调用消息
-                        tool_call_message = {"role": "assistant", "tool_calls": []}
+                        assistant_message: dict[str, Any] | None = None
+                        anthropic_tool_results: list[dict[str, Any]] = []
+                        if provider_mode == "anthropic":
+                            assistant_message = {
+                                "role": "assistant",
+                                "content": list(assistant_blocks),
+                            }
+                            use_synthetic_anthropic_blocks = (
+                                len(assistant_message["content"]) == 0
+                            )
+                        else:
+                            assistant_message = {
+                                "role": "assistant",
+                                "tool_calls": [],
+                            }
+                            use_synthetic_anthropic_blocks = False
 
-                        # 为 DeepSeek 等模型添加必需的字段
-                        if assistant_content:
-                            tool_call_message["content"] = assistant_content
-                        if assistant_thinking and provider_mode == "openai":
-                            model_lower = request.model.lower()
-                            if "deepseek" in model_lower:
-                                tool_call_message["reasoning_content"] = (
-                                    assistant_thinking
-                                )
-                            elif "o1" in model_lower:
-                                tool_call_message["reasoning_content"] = (
-                                    assistant_thinking
-                                )
+                            # 为 DeepSeek 等模型添加必需的字段
+                            if assistant_content:
+                                assistant_message["content"] = assistant_content
+                            if assistant_thinking:
+                                model_lower = request.model.lower()
+                                if "deepseek" in model_lower:
+                                    assistant_message["reasoning_content"] = (
+                                        assistant_thinking
+                                    )
+                                elif "o1" in model_lower:
+                                    assistant_message["reasoning_content"] = (
+                                        assistant_thinking
+                                    )
 
                         # 过滤无效的 tool_calls（name 为空）
                         valid_tool_calls = tool_calls_buffer.valid_calls()
@@ -168,6 +187,8 @@ class AIService:
                                     else {}
                                 )
                             except Exception:
+                                args = {}
+                            if not isinstance(args, dict):
                                 args = {}
 
                             # 对 Tavily 搜索强制使用前端配置的默认深度，
@@ -242,34 +263,85 @@ class AIService:
                                     pass
 
                             # 构建标准格式的 tool_call
-                            tool_call_message["tool_calls"].append(
-                                {
-                                    "id": tool_call["id"] or f"call_{idx}",
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool_name,
-                                        "arguments": tool_call["arguments"],
-                                    },
-                                }
-                            )
-
-                            # 构建工具结果消息
-                            tool_results.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": tool_call["id"] or f"call_{idx}",
+                            tool_call_id = tool_call["id"] or f"call_{idx}"
+                            if provider_mode == "anthropic":
+                                if use_synthetic_anthropic_blocks:
+                                    assistant_content_blocks = assistant_message.get(
+                                        "content", []
+                                    )
+                                    if not assistant_content_blocks and assistant_content:
+                                        assistant_content_blocks.append(
+                                            {
+                                                "type": "text",
+                                                "text": assistant_content,
+                                            }
+                                        )
+                                    assistant_content_blocks.append(
+                                        {
+                                            "type": "tool_use",
+                                            "id": tool_call_id,
+                                            "name": tool_name,
+                                            "input": args,
+                                        }
+                                    )
+                                anthropic_tool_result = {
+                                    "type": "tool_result",
+                                    "tool_use_id": tool_call_id,
                                     "content": result,
                                 }
-                            )
+                                if result_status == "error":
+                                    anthropic_tool_result["is_error"] = True
+                                anthropic_tool_results.append(anthropic_tool_result)
+                            else:
+                                assistant_message["tool_calls"].append(
+                                    {
+                                        "id": tool_call_id,
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool_name,
+                                            "arguments": tool_call["arguments"],
+                                        },
+                                    }
+                                )
+
+                                # 构建工具结果消息
+                                tool_results.append(
+                                    {
+                                        "role": "tool",
+                                        "tool_call_id": tool_call_id,
+                                        "content": result,
+                                    }
+                                )
 
                         # 追加工具调用和结果到消息列表
-                        messages_with_tools.append(tool_call_message)
-                        messages_with_tools.extend(tool_results)
+                        if provider_mode == "anthropic":
+                            assistant_content_blocks = (
+                                assistant_message.get("content", [])
+                                if isinstance(assistant_message, dict)
+                                else []
+                            )
+                            if not assistant_content_blocks and assistant_content:
+                                assistant_content_blocks.append(
+                                    {"type": "text", "text": assistant_content}
+                                )
+                            if assistant_message and assistant_content_blocks:
+                                messages_with_tools.append(assistant_message)
+                            if anthropic_tool_results:
+                                messages_with_tools.append(
+                                    {
+                                        "role": "user",
+                                        "content": anthropic_tool_results,
+                                    }
+                                )
+                        else:
+                            messages_with_tools.append(assistant_message)
+                            messages_with_tools.extend(tool_results)
 
                         # 清空并准备下一轮
                         tool_calls_buffer.clear()
                         assistant_thinking = ""
                         assistant_content = ""
+                        assistant_blocks = []
 
                         # 再次请求 AI
                         body_next = body.copy()
@@ -288,9 +360,15 @@ class AIService:
                             async for parsed in parse_sse_stream(
                                 response_next, provider_mode
                             ):
-                                # 累积 thinking(不发送，用于构建下一轮消息)
+                                if provider_mode == "anthropic" and parsed.get(
+                                    "completed_block"
+                                ):
+                                    assistant_blocks.append(parsed["completed_block"])
+
+                                # 累积 thinking 并继续推给前端
                                 if parsed.get("thinking"):
                                     assistant_thinking += parsed["thinking"]
+                                    yield f"data: {json.dumps({'type': 'thinking', 'data': parsed['thinking']})}\n\n"
 
                                 # 发送content增量
                                 if parsed.get("content"):
