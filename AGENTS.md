@@ -87,3 +87,17 @@ Recent history uses concise, type-led messages such as `feat(frontend): ...`, `s
 - 先给出分步执行方案，再由用户决定是否继续下一步。
 - Avoid heavy jargon; explain technical points in plain language without assuming deep prior knowledge.
 - 避免大量术语；解释时尽量通俗，不假设用户具备深厚技术背景。
+
+## Difficult Bug Investigation
+复杂问题排查
+
+- For hard production bugs or issues involving deployment, Docker, reverse proxy, CDN, browser cache, MIME type, module loading, streaming, or cross-environment differences, search the web for similar public cases before locking onto a root cause.
+- 对于棘手的线上问题，尤其是涉及部署、Docker、反向代理、CDN、浏览器缓存、MIME 类型、模块加载、流式输出或环境差异时，在下结论前应先联网搜索公开相似案例。
+- Prioritize GitHub Issues, official docs, browser/vendor docs, and high-signal postmortems; do not rely only on local intuition when symptoms are hard to explain.
+- 搜索时优先看 GitHub Issues、官方文档、浏览器或平台厂商文档，以及高质量复盘；当现象反直觉时，不要只凭本地经验判断。
+- After finding similar cases, compare them against the repository code and the actual runtime evidence (request URL, response headers, cache headers, logs, network panel, curl output) before proposing a fix.
+- 找到相似案例后，必须把案例与当前仓库实现和真实运行证据进行对照，例如请求 URL、响应头、缓存头、日志、浏览器 Network 面板和 `curl` 结果，再给出修复方案。
+- When presenting the diagnosis, clearly separate confirmed facts, likely inferences, and external references that inspired the hypothesis.
+- 输出诊断结论时，要明确区分：已经确认的事实、基于证据的推断，以及作为启发来源的外部案例。
+- For cache-related frontend deployment problems, treat "new entry file + stale imported modules/chunks" and "cached error response" as default suspects, and verify cache strategy explicitly.
+- 对前端部署类缓存问题，默认优先怀疑“新入口文件配旧模块/旧 chunk”以及“错误响应被缓存”这两类情况，并显式检查缓存策略。
