@@ -475,6 +475,28 @@
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+/* Keep browser autofill from overriding theme colors in config inputs */
+.form-group input[type="text"]:-webkit-autofill,
+.form-group input[type="text"]:-webkit-autofill:hover,
+.form-group input[type="text"]:-webkit-autofill:focus,
+.form-group input[type="password"]:-webkit-autofill,
+.form-group input[type="password"]:-webkit-autofill:hover,
+.form-group input[type="password"]:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.04) inset;
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.04) inset;
+  transition: background-color 99999s ease-in-out 0s;
+}
+
+.form-group input[type="text"]:-moz-autofill,
+.form-group input[type="text"]:-moz-autofill:focus,
+.form-group input[type="password"]:-moz-autofill,
+.form-group input[type="password"]:-moz-autofill:focus {
+  box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.04) inset;
+  -moz-text-fill-color: var(--text);
+}
+
 .form-group select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%237b8ba5' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");

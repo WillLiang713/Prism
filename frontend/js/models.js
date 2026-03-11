@@ -167,7 +167,8 @@ export function openModelDropdown(side) {
   if (!dropdownEl || !inputEl) return;
 
   renderModelDropdown(side, inputEl.value);
-  openFloatingDropdown(dropdownEl, inputEl);
+  const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
+  openFloatingDropdown(dropdownEl, anchorEl);
   setModelDropdownButtonState(side, true);
 
   dropdownEl.onscroll = () => {

@@ -224,7 +224,8 @@ export function openConfigSelectPicker(key) {
   _closeModelDropdown("main");
   closeAllConfigSelectPickers(key);
   renderConfigSelectPicker(key);
-  openFloatingDropdown(picker.dropdown, picker.input);
+  const anchorEl = picker.input.closest?.(".model-picker-row") || picker.input;
+  openFloatingDropdown(picker.dropdown, anchorEl);
   setConfigSelectPickerButtonState(key, true);
 }
 
