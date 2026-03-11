@@ -56,11 +56,42 @@
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.25s ease;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
 .tool-calls-section.tc-expanded .tool-calls-detail {
   max-height: 400px;
-  overflow-y: auto;
+  overflow-y: scroll;
+}
+
+.tool-calls-detail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tool-calls-detail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tool-calls-detail::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.tool-calls-detail:is(:hover, :focus-within, :active),
+.tool-calls-detail.scrollbar-active {
+  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+}
+
+.tool-calls-detail:hover::-webkit-scrollbar-thumb,
+.tool-calls-detail:is(:focus-within, :active)::-webkit-scrollbar-thumb,
+.tool-calls-detail.scrollbar-active::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.tool-calls-detail::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .tool-calls-list {

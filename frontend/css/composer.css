@@ -7,7 +7,7 @@
 }
 
 .composer-wrapper {
-  max-width: var(--content-max-width);
+  max-width: var(--turn-max-width);
   width: 100%;
   margin: 0;
   transition: max-width 0.3s ease;

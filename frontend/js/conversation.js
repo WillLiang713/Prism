@@ -2,7 +2,7 @@ import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, esti
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
-import { normalizeWebSearchProvider, renderToolEvents, renderWebSearchEvents, renderSources } from './web-search.js';
+import { normalizeWebSearchProvider, renderToolEvents, renderWebSearchEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
 import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic } from './chat.js';
 import { clearImages } from './images.js';
@@ -417,9 +417,11 @@ export async function callModel(
       applyStatus(uiRef.statusEl, "complete");
     }
 
-    // 响应完成后再渲染来源链接，避免来源先于内容显示
-    if (uiRef?.sourcesSectionEl && Array.isArray(turn.models.main.sources) && turn.models.main.sources.length) {
-      renderSources(uiRef.sourcesSectionEl, turn.models.main.sources);
+    // 响应完成后再渲染来源入口与详情，避免来源先于内容显示
+    if (Array.isArray(turn.models.main.sources)) {
+      renderSourcesStatus(uiRef?.sourcesStatusEl, turn.models.main.sources);
+      renderSourcesToggle(uiRef?.sourcesToggleBtnEl, turn.models.main.sources);
+      renderSources(uiRef?.sourcesSectionEl, turn.models.main.sources);
     }
 
     if (

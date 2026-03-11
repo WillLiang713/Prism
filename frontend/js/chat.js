@@ -1,6 +1,6 @@
 import { state, elements, STORAGE_KEYS, createId, formatTime } from './state.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
-import { renderWebSearchSection, renderToolEvents, renderWebSearchEvents, renderSources } from './web-search.js';
+import { renderWebSearchSection, renderToolEvents, renderWebSearchEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
 import { showConfirm } from './dialog.js';
 import { collapseSidebarForMobile } from './layout.js';
@@ -10,6 +10,14 @@ import { estimateTokensFromText } from './state.js';
 
 let _stopGeneration = () => {};
 export function setStopGeneration(fn) { _stopGeneration = fn; }
+
+function setSourcesPanelExpanded(panelEl, buttonEl, expanded) {
+  if (!panelEl || !buttonEl) return;
+  panelEl.hidden = !expanded;
+  panelEl.dataset.expanded = expanded ? "1" : "0";
+  buttonEl.setAttribute("aria-expanded", expanded ? "true" : "false");
+  buttonEl.classList.toggle("is-active", expanded);
+}
 
 export function isTopicRunning(topicId) {
   return !!topicId && state.chat.runningControllers.has(topicId);
@@ -501,20 +509,20 @@ export function createAssistantCard(turn) {
   webSearchSection.style.display = "none";
   renderWebSearchEvents(webSearchSection, webSearchEventsSnapshot);
 
-  // 来源链接区域
+  // 来源状态条
   const sourcesSnapshot = Array.isArray(turn?.models?.main?.sources)
     ? turn.models.main.sources
     : [];
-  const sourcesSection = document.createElement("div");
-  sourcesSection.className = "sources-section";
-  sourcesSection.style.display = "none";
-  renderSources(sourcesSection, sourcesSnapshot);
+  const sourcesStatus = document.createElement("div");
+  sourcesStatus.className = "sources-status";
+  sourcesStatus.hidden = true;
+  renderSourcesStatus(sourcesStatus, sourcesSnapshot);
 
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
   content.appendChild(webSearchSection);
+  content.appendChild(sourcesStatus);
   content.appendChild(responseSection);
-  content.appendChild(sourcesSection);
 
   // 底部：元数据 + 操作按钮
   const footer = document.createElement("div");
@@ -555,6 +563,13 @@ export function createAssistantCard(turn) {
   metaInfo.appendChild(timeEl);
   metaInfo.appendChild(speedEl);
 
+  const sourcesToggleBtn = document.createElement("button");
+  sourcesToggleBtn.type = "button";
+  sourcesToggleBtn.className = "source-toggle-btn";
+  sourcesToggleBtn.hidden = true;
+  sourcesToggleBtn.setAttribute("aria-expanded", "false");
+  renderSourcesToggle(sourcesToggleBtn, sourcesSnapshot);
+
   const actions = document.createElement("div");
   actions.className = "message-actions";
 
@@ -568,11 +583,25 @@ export function createAssistantCard(turn) {
   actions.appendChild(copyBtn);
 
   footer.appendChild(metaInfo);
+  footer.appendChild(sourcesToggleBtn);
   footer.appendChild(actions);
+
+  const sourcesPanel = document.createElement("div");
+  sourcesPanel.className = "sources-section sources-panel";
+  sourcesPanel.hidden = true;
+  sourcesPanel.dataset.expanded = "0";
+  renderSources(sourcesPanel, sourcesSnapshot);
+
+  sourcesToggleBtn.addEventListener("click", () => {
+    if (sourcesToggleBtn.hidden) return;
+    const expanded = sourcesPanel.dataset.expanded === "1";
+    setSourcesPanelExpanded(sourcesPanel, sourcesToggleBtn, !expanded);
+  });
 
   message.appendChild(header);
   message.appendChild(content);
   message.appendChild(footer);
+  message.appendChild(sourcesPanel);
   applyStatus(statusEl, statusSnapshot);
 
   if (
@@ -603,7 +632,9 @@ export function createAssistantCard(turn) {
     speedEl,
     copyBtn,
     webSearchSectionEl: webSearchSection,
-    sourcesSectionEl: sourcesSection,
+    sourcesStatusEl: sourcesStatus,
+    sourcesToggleBtnEl: sourcesToggleBtn,
+    sourcesSectionEl: sourcesPanel,
     turn: turn,
     side: side,
   };

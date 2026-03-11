@@ -340,37 +340,114 @@ export function renderWebSearchEvents(sectionEl, events) {
   });
 }
 
+function getSourceHostname(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "");
+  } catch (_) {
+    return "";
+  }
+}
+
+function getSourceItems(sources) {
+  return Array.isArray(sources) ? sources.filter((item) => item?.url) : [];
+}
+
+function getUniqueSourceHosts(items) {
+  const hosts = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    const hostname = getSourceHostname(item.url);
+    if (!hostname || seen.has(hostname)) return;
+    seen.add(hostname);
+    hosts.push(hostname);
+  });
+  return hosts;
+}
+
+export function renderSourcesStatus(statusEl, sources) {
+  if (!statusEl) return;
+  const items = getSourceItems(sources);
+  if (!items.length) {
+    statusEl.hidden = true;
+    statusEl.innerHTML = "";
+    return;
+  }
+
+  const hosts = getUniqueSourceHosts(items);
+  const visibleHosts = hosts.slice(0, 3);
+
+  statusEl.hidden = false;
+  statusEl.innerHTML = "";
+
+  const text = document.createElement("span");
+  text.className = "sources-status-text";
+  text.textContent = `已核对 ${items.length} 个来源`;
+  statusEl.appendChild(text);
+
+  visibleHosts.forEach((host) => {
+    const chip = document.createElement("span");
+    chip.className = "sources-status-chip";
+    chip.textContent = host;
+    statusEl.appendChild(chip);
+  });
+
+  if (hosts.length > visibleHosts.length) {
+    const more = document.createElement("span");
+    more.className = "sources-status-more";
+    more.textContent = `+${hosts.length - visibleHosts.length}`;
+    statusEl.appendChild(more);
+  }
+}
+
+export function renderSourcesToggle(buttonEl, sources) {
+  if (!buttonEl) return;
+  const items = getSourceItems(sources);
+  if (!items.length) {
+    buttonEl.hidden = true;
+    buttonEl.textContent = "来源";
+    buttonEl.setAttribute("aria-label", "暂无来源");
+    buttonEl.setAttribute("title", "暂无来源");
+    return;
+  }
+
+  buttonEl.hidden = false;
+  buttonEl.textContent = `来源 ${items.length}`;
+  buttonEl.setAttribute("aria-label", `查看 ${items.length} 个来源`);
+  buttonEl.setAttribute("title", `查看 ${items.length} 个来源`);
+}
+
 export function renderSources(sectionEl, sources) {
   if (!sectionEl) return;
-  const items = Array.isArray(sources) ? sources : [];
+  const items = getSourceItems(sources);
   if (!items.length) {
-    sectionEl.style.display = "none";
+    sectionEl.hidden = true;
     sectionEl.innerHTML = "";
     return;
   }
 
-  sectionEl.style.display = "block";
   sectionEl.innerHTML = "";
 
   const title = document.createElement("div");
   title.className = "sources-title";
-  title.textContent = "来源";
+  title.textContent = `来源 · ${items.length}`;
   sectionEl.appendChild(title);
 
   const list = document.createElement("div");
   list.className = "sources-list";
 
-  items.forEach((s) => {
+  items.forEach((s, index) => {
     const chip = document.createElement("a");
     chip.className = "source-chip";
     chip.href = s.url || "#";
     chip.target = "_blank";
     chip.rel = "noopener noreferrer";
 
-    let hostname = "";
-    try { hostname = new URL(s.url).hostname; } catch (_) {}
+    const hostname = getSourceHostname(s.url);
 
-    // Body (title + url)
+    const order = document.createElement("span");
+    order.className = "source-chip-index";
+    order.textContent = String(index + 1).padStart(2, "0");
+
     const body = document.createElement("div");
     body.className = "source-chip-body";
 
@@ -380,11 +457,12 @@ export function renderSources(sectionEl, sources) {
 
     const urlLine = document.createElement("span");
     urlLine.className = "source-chip-url";
-    urlLine.textContent = hostname;
+    urlLine.textContent = hostname || s.url;
 
     body.appendChild(label);
     body.appendChild(urlLine);
 
+    chip.appendChild(order);
     chip.appendChild(body);
     list.appendChild(chip);
   });
@@ -396,7 +474,7 @@ export function buildPromptWithWebSearch(originalPrompt, webSearch) {
   const results = Array.isArray(webSearch?.results) ? webSearch.results : [];
   const lines = [];
   lines.push(
-    "你将获得一些联网搜索结果。请优先基于这些结果作答。来源链接会自动展示在回复下方，回复中无需重复列出参考链接。"
+    "你将获得一些联网搜索结果。请优先基于这些结果作答。来源入口会在界面中自动展示，回复中无需重复列出参考链接。"
   );
 
   if (webSearch?.answer)

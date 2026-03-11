@@ -1,6 +1,21 @@
 import { state, elements, estimateTokensFromText } from './state.js';
 import { renderMarkdownToElement } from './markdown.js';
 
+const SCROLLBAR_INTERACTIVE_SELECTOR = [
+  ".chat-messages",
+  ".topic-list",
+  ".image-preview-container",
+  ".modal-content .config-content",
+  "#configModal .config-content",
+  ".prompt-list",
+  ".web-search-body",
+  ".tool-calls-detail",
+].join(", ");
+const SCROLLBAR_ACTIVE_CLASS = "scrollbar-active";
+const SCROLLBAR_HIDE_DELAY_MS = 900;
+const scrollbarHideTimers = new WeakMap();
+let scrollbarAutoHideBound = false;
+
 // Late-bound to avoid circular dependencies
 let _sendPrompt = () => {};
 let _stopGeneration = () => {};
@@ -68,6 +83,101 @@ export function scrollToBottom(container, smooth = false) {
   } else {
     container.scrollTop = container.scrollHeight;
   }
+}
+
+function resolveScrollableContainer(target) {
+  if (!(target instanceof Element)) return null;
+  return target.closest(SCROLLBAR_INTERACTIVE_SELECTOR);
+}
+
+function clearHideTimer(container) {
+  const timer = scrollbarHideTimers.get(container);
+  if (timer) {
+    clearTimeout(timer);
+    scrollbarHideTimers.delete(container);
+  }
+}
+
+function scheduleScrollbarHide(container, delayMs = SCROLLBAR_HIDE_DELAY_MS) {
+  if (!container) return;
+  clearHideTimer(container);
+  const timer = setTimeout(() => {
+    container.classList.remove(SCROLLBAR_ACTIVE_CLASS);
+    scrollbarHideTimers.delete(container);
+  }, delayMs);
+  scrollbarHideTimers.set(container, timer);
+}
+
+function activateScrollbar(container, keepVisibleMs = SCROLLBAR_HIDE_DELAY_MS) {
+  if (!container) return;
+  container.classList.add(SCROLLBAR_ACTIVE_CLASS);
+  scheduleScrollbarHide(container, keepVisibleMs);
+}
+
+export function initScrollbarAutoHide() {
+  if (scrollbarAutoHideBound || typeof document === "undefined") return;
+  scrollbarAutoHideBound = true;
+
+  document.querySelectorAll(SCROLLBAR_INTERACTIVE_SELECTOR).forEach((container) => {
+    container.classList.remove(SCROLLBAR_ACTIVE_CLASS);
+  });
+
+  document.addEventListener(
+    "pointerover",
+    (e) => {
+      const container = resolveScrollableContainer(e.target);
+      if (container) activateScrollbar(container);
+    },
+    true
+  );
+
+  document.addEventListener(
+    "pointerout",
+    (e) => {
+      const container = resolveScrollableContainer(e.target);
+      if (!container) return;
+      const nextContainer = resolveScrollableContainer(e.relatedTarget);
+      if (nextContainer === container) return;
+      scheduleScrollbarHide(container, 260);
+    },
+    true
+  );
+
+  document.addEventListener(
+    "pointerdown",
+    (e) => {
+      const container = resolveScrollableContainer(e.target);
+      if (container) activateScrollbar(container, 1200);
+    },
+    true
+  );
+
+  document.addEventListener(
+    "wheel",
+    (e) => {
+      const container = resolveScrollableContainer(e.target);
+      if (container) activateScrollbar(container, 1200);
+    },
+    { capture: true, passive: true }
+  );
+
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      const container = resolveScrollableContainer(e.target);
+      if (container) activateScrollbar(container, 1200);
+    },
+    { capture: true, passive: true }
+  );
+
+  document.addEventListener(
+    "scroll",
+    (e) => {
+      const container = resolveScrollableContainer(e.target);
+      if (container) activateScrollbar(container, 1200);
+    },
+    true
+  );
 }
 
 export function updateHeaderMeta() {

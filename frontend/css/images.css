@@ -11,11 +11,20 @@
   scrollbar-color: transparent transparent;
 }
 
-.image-preview-container:hover { scrollbar-color: rgba(255, 255, 255, 0.12) transparent; }
+.composer-box:hover .image-preview-container,
+.image-preview-container:is(:hover, :focus-within, :active),
+.image-preview-container.scrollbar-active {
+  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+}
 .image-preview-container::-webkit-scrollbar { height: 6px; }
 .image-preview-container::-webkit-scrollbar-track { background: transparent; }
-.image-preview-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
-.image-preview-container:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
+.image-preview-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+.composer-box:hover .image-preview-container::-webkit-scrollbar-thumb,
+.image-preview-container:is(:hover, :focus-within, :active)::-webkit-scrollbar-thumb,
+.image-preview-container.scrollbar-active::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+}
+.image-preview-container::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 
 .image-preview-item {
   position: relative;

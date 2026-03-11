@@ -4,13 +4,15 @@ import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, 
 import { updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
-import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick } from './ui.js';
+import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning } from './chat.js';
 import { addImages } from './images.js';
 import { toggleSidebar, isMobileLayout } from './layout.js';
 
 export function bindEvents() {
+  initScrollbarAutoHide();
+
   elements.saveConfig.addEventListener("click", saveConfig);
   elements.clearConfig.addEventListener("click", clearConfig);
 
