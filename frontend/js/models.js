@@ -5,6 +5,11 @@ import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPicker
 let _updateModelNames = () => {};
 let _getConfigFromForm = () => ({});
 
+const PRESS_START_EVENT =
+  typeof window !== "undefined" && "PointerEvent" in window
+    ? "pointerdown"
+    : "mousedown";
+
 export function setConfigFns(fns) {
   if (fns.updateModelNames) _updateModelNames = fns.updateModelNames;
   if (fns.getConfigFromForm) _getConfigFromForm = fns.getConfigFromForm;
@@ -132,7 +137,7 @@ export function renderModelDropdown(side, filterText) {
     btn.className = "model-dropdown-item";
     btn.textContent = id;
     btn.dataset.value = id;
-    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     btn.addEventListener("click", () => {
       const input =
         side === "Title"
@@ -151,7 +156,7 @@ export function renderModelDropdown(side, filterText) {
     more.className = "model-dropdown-item";
     more.style.fontFamily = "inherit";
     more.textContent = `加载更多（已显示 ${shown.length}/${models.length}）`;
-    more.addEventListener("mousedown", (e) => e.preventDefault());
+    more.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     more.addEventListener("click", () => {
       increaseModelDropdownLimit(side, 240);
       renderModelDropdown(side, filterText);

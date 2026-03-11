@@ -14,10 +14,15 @@ export function bindEvents() {
   elements.saveConfig.addEventListener("click", saveConfig);
   elements.clearConfig.addEventListener("click", clearConfig);
 
+  const PRESS_START_EVENT =
+    typeof window !== "undefined" && "PointerEvent" in window
+      ? "pointerdown"
+      : "mousedown";
+
   // 联网搜索开关的label元素，阻止焦点转移
   const webSearchLabel = elements.enableWebSearch?.parentElement;
   if (webSearchLabel) {
-    webSearchLabel.addEventListener("mousedown", (e) => {
+    webSearchLabel.addEventListener(PRESS_START_EVENT, (e) => {
       // 只阻止label本身的默认行为，不阻止checkbox的点击
       if (
         e.target === webSearchLabel ||
@@ -217,7 +222,7 @@ export function bindEvents() {
     updateModelDropdownFilter("main")
   );
 
-  document.addEventListener("mousedown", (e) => {
+  document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;
     if (!(t instanceof Node)) return;
     if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
@@ -261,7 +266,7 @@ export function bindEvents() {
   elements.promptInput.addEventListener("input", autoGrowPromptInput);
 
   // 图片上传按钮点击事件
-  elements.imageUploadBtn?.addEventListener("mousedown", (e) => {
+  elements.imageUploadBtn?.addEventListener(PRESS_START_EVENT, (e) => {
     e.preventDefault(); // 阻止按钮获得焦点，避免触发输入框容器的选中效果
   });
   elements.imageUploadBtn?.addEventListener("click", () => {

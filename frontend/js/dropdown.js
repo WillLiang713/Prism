@@ -4,6 +4,11 @@ import { elements, floatingDropdownOrigins, floatingDropdownAnchors } from './st
 let _closeModelDropdown = () => {};
 export function setCloseModelDropdown(fn) { _closeModelDropdown = fn; }
 
+const PRESS_START_EVENT =
+  typeof window !== "undefined" && "PointerEvent" in window
+    ? "pointerdown"
+    : "mousedown";
+
 export function getConfigSelectPickerDefs() {
   return [
     {
@@ -210,7 +215,7 @@ export function renderConfigSelectPicker(key) {
     btn.className = "model-dropdown-item";
     btn.dataset.value = opt.value;
     btn.textContent = (opt.textContent || opt.value || "").trim();
-    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     btn.addEventListener("click", () =>
       applyConfigSelectPickerValue(key, opt.value)
     );

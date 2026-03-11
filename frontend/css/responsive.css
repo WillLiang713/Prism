@@ -147,6 +147,7 @@
     justify-content: space-between;
     align-items: center;
     position: relative;
+    isolation: isolate;
   }
 
   .header-brand {
@@ -156,6 +157,8 @@
     max-width: calc(100vw - 160px);
     width: max-content;
     min-width: 0;
+    pointer-events: none;
+    z-index: 0;
   }
 
   .brand-session {
@@ -168,6 +171,8 @@
     background: transparent;
     border: none;
     box-shadow: none;
+    position: relative;
+    z-index: 2;
   }
 
   .chat-actions .btn.btn-secondary.btn-settings,
@@ -208,6 +213,11 @@
     z-index: 90;
     box-shadow: var(--shadow-md);
     transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .sidebar-expand-btn {
+    position: relative;
+    z-index: 2;
   }
 
   .chat-layout:not(.layout-ready) .chat-side {
