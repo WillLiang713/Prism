@@ -8,22 +8,38 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-$venvPython = Join-Path $projectRoot "venv\Scripts\python.exe"
 $pythonCommand = $null
 $pythonArgs = @()
+$venvCandidates = @()
 
-if (Test-Path $venvPython) {
-  $pythonCommand = $venvPython
-} else {
+if ($env:VIRTUAL_ENV) {
+  $venvCandidates += (Join-Path $env:VIRTUAL_ENV "Scripts\python.exe")
+}
+
+$venvCandidates += @(
+  (Join-Path $projectRoot ".venv\Scripts\python.exe"),
+  (Join-Path $projectRoot "venv\Scripts\python.exe")
+)
+
+foreach ($candidate in $venvCandidates) {
+  if ($candidate -and (Test-Path $candidate)) {
+    $pythonCommand = $candidate
+    break
+  }
+}
+
+if (-not $pythonCommand) {
+  $pythonExe = Get-Command python -ErrorAction SilentlyContinue
+  if ($pythonExe) {
+    $pythonCommand = $pythonExe.Source
+  }
+}
+
+if (-not $pythonCommand) {
   $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
   if ($pyLauncher) {
     $pythonCommand = $pyLauncher.Source
     $pythonArgs = @("-3")
-  } else {
-    $pythonExe = Get-Command python -ErrorAction SilentlyContinue
-    if ($pythonExe) {
-      $pythonCommand = $pythonExe.Source
-    }
   }
 }
 
