@@ -10,13 +10,8 @@
 }
 
 @media (min-width: 901px) {
-  #configModal .modal-content {
-    width: 100vw;
-  }
-
   #configModal .config-tab-panel {
-    min-height: calc(100vh - 220px);
-    min-height: calc(100dvh - 220px);
+    min-height: calc(var(--app-shell-height) - 220px);
   }
 
   #configModal .config-section,

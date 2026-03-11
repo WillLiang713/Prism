@@ -45,25 +45,21 @@
 .modal-content .config-content:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); }
 
 #configModal {
-  padding: 0;
+  padding: var(--app-shell-offset) var(--app-shell-side-padding);
 }
 
 #configModal .modal-content {
-  width: 100vw;
-  max-width: none;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
+  width: 100%;
+  max-width: var(--app-shell-max-width);
+  height: var(--app-shell-height);
+  max-height: var(--app-shell-height);
 }
 
 #configModal .config-panel {
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
-  border-radius: 0;
-  box-shadow: none;
+  height: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
 }
 
 #configModal .config-header {

@@ -94,6 +94,11 @@ body {
   --radius-sm: 8px;
 
   /* Layout */
+  --app-shell-container-max-width: 1440px;
+  --app-shell-max-width: 1260px;
+  --app-shell-side-padding: 12px;
+  --app-shell-offset: 3vh;
+  --app-shell-height: 94vh;
   --content-max-width: 960px;
   --turn-max-width: 820px;
   --chat-font-size: 14px;

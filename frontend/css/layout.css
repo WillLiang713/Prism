@@ -1,10 +1,10 @@
 /* ---------- Container ---------- */
 .container {
   width: 100%;
-  max-width: 1440px;
-  margin: 3vh auto;
-  padding: 0 12px;
-  height: 94vh;
+  max-width: var(--app-shell-container-max-width);
+  margin: var(--app-shell-offset) auto;
+  padding: 0 var(--app-shell-side-padding);
+  height: var(--app-shell-height);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -34,7 +34,7 @@
   overflow: hidden;
   flex: 1;
   width: 100%;
-  max-width: 1260px;
+  max-width: var(--app-shell-max-width);
   margin: 0 auto;
   transition: border-radius 0.3s ease, box-shadow 0.3s ease;
 }
