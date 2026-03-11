@@ -35,8 +35,18 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-if has_frontend_assets() and frontend_path("libs").exists():
-    app.mount("/libs", StaticFiles(directory=str(frontend_path("libs"))), name="libs")
+if has_frontend_assets():
+    static_mounts = (
+        ("libs", "libs"),
+        ("css", "css"),
+        ("js", "js"),
+        ("styles", "styles"),
+        ("app", "app"),
+    )
+    for route_path, asset_dir in static_mounts:
+        asset_path = frontend_path(asset_dir)
+        if asset_path.exists():
+            app.mount(f"/{route_path}", StaticFiles(directory=str(asset_path)), name=route_path)
 
 
 @app.get("/api/health")

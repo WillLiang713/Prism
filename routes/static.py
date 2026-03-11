@@ -30,8 +30,11 @@ def _render_index_html() -> str:
     _ensure_frontend_asset(INDEX_HTML_PATH, "主页")
     with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
-    html = re.sub(r'href="style\.css(?:\?[^"]*)?"', f'href="style.css?v={BUILD_ID}"', html, count=1)
-    html = re.sub(r'src="app\.js(?:\?[^"]*)?"', f'src="app.js?v={BUILD_ID}"', html, count=1)
+    html = re.sub(
+        r'(href|src)="((?:css|js|libs|styles|app)/[^"?]+|style\.css|app\.js|favicon\.svg)(?:\?[^"]*)?"',
+        lambda match: f'{match.group(1)}="{match.group(2)}?v={BUILD_ID}"',
+        html,
+    )
     return html
 
 
