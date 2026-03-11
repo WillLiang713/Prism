@@ -26,6 +26,10 @@ body {
   height: 100%;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 /* ---------- Design Tokens ---------- */
 :root {
   --font-body: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",

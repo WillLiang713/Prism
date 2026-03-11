@@ -593,7 +593,7 @@ export function createAssistantCard(turn) {
   renderSources(sourcesPanel, sourcesSnapshot);
 
   sourcesToggleBtn.addEventListener("click", () => {
-    if (sourcesToggleBtn.hidden) return;
+    if (sourcesToggleBtn.hidden || sourcesToggleBtn.disabled) return;
     const expanded = sourcesPanel.dataset.expanded === "1";
     setSourcesPanelExpanded(sourcesPanel, sourcesToggleBtn, !expanded);
   });
