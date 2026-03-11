@@ -24,6 +24,9 @@ NO_CACHE_HEADERS = {
 IMMUTABLE_CACHE_HEADERS = {
     "Cache-Control": "public, max-age=31536000, immutable",
 }
+REVALIDATE_CACHE_HEADERS = {
+    "Cache-Control": "public, max-age=0, must-revalidate",
+}
 
 
 def _ensure_frontend_asset(path, label: str) -> None:
@@ -48,13 +51,18 @@ def _resolve_frontend_sub_asset(asset_dir: str, asset_path: str, label: str) -> 
     return candidate
 
 
-def _serve_frontend_sub_asset(asset_dir: str, asset_path: str, label: str) -> FileResponse:
+def _serve_frontend_sub_asset(
+    asset_dir: str,
+    asset_path: str,
+    label: str,
+    headers: dict[str, str] | None = None,
+) -> FileResponse:
     file_path = _resolve_frontend_sub_asset(asset_dir, asset_path, label)
     media_type, _ = mimetypes.guess_type(str(file_path))
     return FileResponse(
         file_path,
         media_type=media_type,
-        headers=IMMUTABLE_CACHE_HEADERS,
+        headers=headers or IMMUTABLE_CACHE_HEADERS,
     )
 
 
@@ -116,7 +124,13 @@ async def serve_favicon_ico():
 
 @router.get("/js/{asset_path:path}")
 async def serve_js_asset(asset_path: str):
-    return _serve_frontend_sub_asset("js", asset_path, "脚本文件")
+    # ES module imports are not versioned in URL, so they must revalidate on deploy.
+    return _serve_frontend_sub_asset(
+        "js",
+        asset_path,
+        "脚本文件",
+        headers=REVALIDATE_CACHE_HEADERS,
+    )
 
 
 @router.get("/css/{asset_path:path}")
@@ -136,5 +150,9 @@ async def serve_styles_asset(asset_path: str):
 
 @router.get("/app/{asset_path:path}")
 async def serve_app_asset(asset_path: str):
-    return _serve_frontend_sub_asset("app", asset_path, "应用文件")
-
+    return _serve_frontend_sub_asset(
+        "app",
+        asset_path,
+        "应用文件",
+        headers=REVALIDATE_CACHE_HEADERS,
+    )
