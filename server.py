@@ -8,11 +8,9 @@ load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from config import BUILD_ID, DESKTOP_MODE, DESKTOP_RELEASE_MODE, RUNTIME_ARGS
 from desktop_logging import init_desktop_release_logging
-from runtime_paths import frontend_path, has_frontend_assets
 
 from routes.chat import router as chat_router
 from routes.models import router as models_router
@@ -34,19 +32,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
-if has_frontend_assets():
-    static_mounts = (
-        ("libs", "libs"),
-        ("css", "css"),
-        ("js", "js"),
-        ("styles", "styles"),
-        ("app", "app"),
-    )
-    for route_path, asset_dir in static_mounts:
-        asset_path = frontend_path(asset_dir)
-        if asset_path.exists():
-            app.mount(f"/{route_path}", StaticFiles(directory=str(asset_path)), name=route_path)
 
 
 @app.get("/api/health")

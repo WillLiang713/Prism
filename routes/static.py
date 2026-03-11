@@ -8,6 +8,10 @@ from fastapi.responses import FileResponse, HTMLResponse
 from config import BUILD_ID
 from runtime_paths import frontend_path
 
+mimetypes.init()
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("application/json", ".json")
 
 router = APIRouter()
 

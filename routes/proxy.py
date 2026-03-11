@@ -1,9 +1,9 @@
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 
-router = APIRouter()
+router = APIRouter(prefix="/proxy")
 
 
 @router.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
@@ -12,7 +12,7 @@ async def proxy(full_path: str, request: Request):
         return {"status": "ok"}
 
     if not full_path.startswith("http"):
-        return {"error": "无效的目标URL"}
+        raise HTTPException(status_code=404, detail="无效的目标URL")
 
     target_url = full_path
     headers = dict(request.headers)
