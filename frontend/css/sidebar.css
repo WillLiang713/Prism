@@ -1,0 +1,179 @@
+/* ---------- Chat Body (sidebar + thread) ---------- */
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+
+.sidebar-collapsed .chat-body {
+}
+
+/* ---------- Sidebar ---------- */
+.chat-side {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg-chat);
+  flex-shrink: 0;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+  border-right: none;
+}
+
+.sidebar-collapsed .chat-side {
+  width: 0;
+  border-right-width: 0;
+  opacity: 0;
+}
+
+.sidebar-section {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sidebar-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sidebar-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Sidebar top bar */
+.sidebar-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sidebar-top-bar .topic-new-btn {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+/* Sidebar toggle handle (circular) */
+.sidebar-toggle-handle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.12s ease, box-shadow 0.12s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-handle:active {
+  transform: scale(0.94);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+}
+
+.sidebar-toggle-handle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.sidebar-toggle-handle svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.1;
+}
+
+/* Expand sidebar button (shown when collapsed) */
+.sidebar-expand-btn {
+  display: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-muted);
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.12s ease, box-shadow 0.12s ease;
+  flex-shrink: 0;
+  grid-column: 1;
+  justify-self: start;
+  z-index: 2;
+}
+
+.sidebar-expand-btn:active {
+  transform: scale(0.94);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-toggle-handle:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    border-color: var(--border-accent);
+  }
+
+  .sidebar-expand-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    border-color: var(--border-accent);
+  }
+}
+
+.sidebar-expand-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.sidebar-expand-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.1;
+}
+
+.sidebar-collapsed .sidebar-expand-btn {
+  display: flex;
+}
+
+.sidebar-collapsed .chat-header {
+  transition: padding-left 0.3s ease;
+}

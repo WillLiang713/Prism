@@ -1,0 +1,49 @@
+/* ---------- Container ---------- */
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 3vh auto;
+  padding: 0 12px;
+  height: 94vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: max-width 0.3s ease, margin 0.3s ease, height 0.3s ease,
+    padding 0.3s ease;
+}
+
+/* ---------- Chat Layout ---------- */
+.chat-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat-panel {
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  flex: 1;
+  width: 100%;
+  max-width: 1260px;
+  margin: 0 auto;
+  transition: border-radius 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chat-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}

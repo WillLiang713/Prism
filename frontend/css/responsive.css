@@ -1,0 +1,347 @@
+/* ---------- Responsive ---------- */
+@media (max-width: 1200px) {
+  .turn-assistants {
+    grid-template-columns: 1fr;
+  }
+
+  .config-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 901px) {
+  #configModal .modal-content {
+    width: min(980px, 96vw);
+  }
+
+  .config-section-model .model-config-layout {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 14px;
+  }
+
+  .required-credentials-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  .web-config-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.68fr);
+    gap: 14px;
+  }
+
+  .config-section-model .model-config-main .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .topic-config-layout {
+    grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+}
+
+@media (max-width: 900px) {
+  /* 配置弹窗在移动端使用全屏面板 */
+  #configModal {
+    padding: 0;
+  }
+
+  #configModal .modal-content {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  #configModal .config-panel {
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  #configModal .config-header {
+    padding: 12px;
+  }
+
+  #configModal .config-status-strip {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  #configModal .status-pill-tip {
+    margin-left: 0;
+  }
+
+  #configModal .config-footer {
+    padding: 10px 12px;
+  }
+
+  #configModal .config-footer-actions {
+    gap: 8px;
+  }
+
+  #configModal .config-footer-actions .btn {
+    padding: 6px 10px;
+  }
+
+  #configModal .config-tabs {
+    padding: 10px 12px 10px;
+    gap: 6px;
+    overflow: visible;
+    scrollbar-width: none;
+  }
+
+  #configModal .config-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  #configModal .config-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  #configModal .config-content {
+    padding: 14px 12px 12px;
+  }
+
+  #configModal .web-config-main,
+  #configModal .web-config-side,
+  #configModal .config-section-model .model-config-main,
+  #configModal .config-section-model .model-config-side {
+    padding: 10px;
+  }
+
+  .container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    height: 100dvh;
+    transition: none;
+  }
+
+  .chat-panel {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .chat-header {
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+  }
+
+  .header-brand {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 160px);
+    width: max-content;
+    min-width: 0;
+  }
+
+  .brand-session {
+    max-width: 100%;
+  }
+
+  .chat-actions {
+    flex-shrink: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .chat-actions .btn.btn-secondary.btn-settings,
+  .chat-actions .btn.btn-secondary.btn-shortcuts {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  #shortcutHelpModal .modal-content.shortcut-help-content {
+    width: min(94vw, 620px);
+  }
+
+  .shortcut-help-header {
+    padding: 14px 14px 12px;
+  }
+
+  .shortcut-help-table th,
+  .shortcut-help-table td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .chat-body,
+  .sidebar-collapsed .chat-body {
+  }
+
+  .chat-side {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 300px);
+    max-height: none;
+    border-right: none;
+    border-bottom: none;
+    z-index: 90;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .chat-layout:not(.layout-ready) .chat-side {
+    transition: none !important;
+  }
+
+  .sidebar-collapsed .chat-side {
+    width: min(82vw, 300px);
+    border-right-width: 0;
+    transform: translateX(calc(-100% - 8px));
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .chat-messages {
+    padding: 14px 12px 20px;
+  }
+
+  .chat-composer {
+    padding: 10px 12px 14px;
+  }
+
+  .composer-footer {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .composer-toolbar {
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: calc(100% - 86px);
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .toolbar-btn,
+  .toolbar-switch,
+  .reasoning-effort-current {
+    min-height: 36px;
+  }
+
+  .send-button {
+    height: 36px;
+    min-width: 80px;
+    padding: 0 15px;
+    border-radius: 11px;
+  }
+
+  .toolbar-btn.icon-only {
+    width: 36px;
+    min-width: 36px;
+  }
+
+  .composer-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .chat-main {
+    overflow-x: hidden;
+  }
+
+  .chat-thread {
+    overflow-x: hidden;
+  }
+
+  .composer-footer {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .composer-toolbar {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: calc(100% - 86px);
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .send-button {
+    margin-left: auto;
+    width: auto;
+    height: 38px;
+    min-width: 74px;
+    padding: 0 12px;
+    border-radius: 10px;
+    justify-content: center;
+  }
+
+  .toolbar-btn,
+  .toolbar-switch,
+  .reasoning-effort-current {
+    min-height: 38px;
+  }
+
+  .toolbar-btn.icon-only {
+    width: 38px;
+    min-width: 38px;
+  }
+
+  .model-chip + .model-chip {
+    margin-left: 8px;
+  }
+
+  .image-preview-container {
+    padding: 8px 10px 4px;
+  }
+
+  .image-preview-item {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .composer-box::before {
+    animation: none !important;
+  }
+}
+
+/* Scrollbar styles (legacy override) */
+.chat-messages::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

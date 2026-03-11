@@ -1,0 +1,110 @@
+/* ============================================================
+   Prism – Premium Dark UI
+   ============================================================ */
+
+/* ---------- Reset ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* ---------- Design Tokens ---------- */
+:root {
+  --font-body: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    sans-serif;
+  --font-display: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Core palette – pure black */
+  --bg: #000000;
+  --bg-elev: #0a0a0a;
+  --bg-chat: #161616;
+  --surface: rgba(20, 20, 20, 0.92);
+  --surface-solid: #141414;
+  --surface-muted: rgba(20, 20, 20, 0.7);
+  --glass: rgba(20, 20, 20, 0.55);
+  --glass-strong: rgba(20, 20, 20, 0.78);
+
+  /* Borders – minimal */
+  --border: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.09);
+  --border-accent: rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --text: #e4e4e4;
+  --text-muted: #888888;
+  --text-dim: #555555;
+
+  /* Shared panel text semantics */
+  --panel-text-primary: var(--text);
+  --panel-text-secondary: var(--text-muted);
+  --panel-text-tertiary: var(--text-dim);
+  --panel-link: var(--accent-strong);
+  --panel-status-running: var(--warm);
+  --panel-status-success: #22c55e;
+  --panel-status-error: var(--danger);
+
+  /* Accent – neutral warm */
+  --accent: #a0a0a0;
+  --accent-strong: #d4d4d4;
+  --accent-glow: rgba(255, 255, 255, 0.06);
+
+  /* Secondary – muted */
+  --violet: #9a8aaa;
+  --violet-glow: rgba(160, 140, 180, 0.12);
+
+  /* Tertiary – subtle */
+  --cyan: #a0a0a0;
+  --cyan-glow: rgba(180, 180, 180, 0.1);
+
+  /* Warning/danger */
+  --warm: #f97316;
+  --warm-strong: #ea580c;
+  --danger: #ef4444;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --shadow-glow: none;
+
+  /* Radius */
+  --radius-xl: 20px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+
+  /* Layout */
+  --content-max-width: 960px;
+  --turn-max-width: 820px;
+  --chat-font-size: 14px;
+}
+
+/* ---------- Body ---------- */
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow: hidden;
+  letter-spacing: 0.2px;
+}

@@ -1,0 +1,245 @@
+export function initMarkdown() {
+  if (typeof marked === "undefined") return;
+  marked.setOptions({
+    highlight: function (code, lang) {
+      if (typeof hljs !== "undefined") {
+        try {
+          // 如果指定了语言且该语言已注册，则使用指定语言高亮
+          if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          // 否则尝试自动检测语言
+          return hljs.highlightAuto(code).value;
+        } catch (e) {
+          console.error("代码高亮失败:", e);
+        }
+      }
+      return code;
+    },
+    breaks: true,
+    gfm: true,
+  });
+}
+
+export function renderMarkdownToElement(element, text) {
+  if (!element) return;
+  if (typeof marked !== "undefined") {
+    try {
+      element.innerHTML = marked.parse(text || "");
+      enhanceRenderedMarkdown(element);
+      return;
+    } catch (e) {
+      console.error("Markdown渲染失败:", e);
+    }
+  }
+  element.textContent = text || "";
+}
+
+export function enhanceRenderedMarkdown(root) {
+  if (!root) return;
+
+  // 手动高亮所有代码块
+  if (typeof hljs !== "undefined") {
+    const codeBlocks = root.querySelectorAll("pre code");
+    codeBlocks.forEach((block) => {
+      try {
+        // 获取语言类型
+        const lang = getLanguageFromCodeEl(block);
+
+        // 跳过不支持的语言（如 mermaid、plantuml 等需要特殊渲染的）
+        const unsupportedLanguages = ["mermaid", "plantuml", "graphviz", "dot"];
+        if (unsupportedLanguages.includes(lang.toLowerCase())) {
+          return;
+        }
+
+        // 只高亮支持的语言
+        if (!lang || hljs.getLanguage(lang)) {
+          hljs.highlightElement(block);
+        }
+      } catch (e) {
+        console.error("手动高亮代码块失败:", e);
+      }
+    });
+  }
+
+  addCopyButtonsToCodeBlocks(root);
+  // 为所有链接添加 target="_blank" 和 rel="noopener noreferrer"
+  const links = root.querySelectorAll("a[href]");
+  links.forEach((link) => {
+    link.setAttribute("target", "_blank");
+    link.setAttribute("rel", "noopener noreferrer");
+  });
+}
+
+export function getLanguageFromCodeEl(codeEl) {
+  const className = (codeEl?.className || "").toString();
+  const m = className.match(/(?:^|\s)(?:language|lang)-([\w-]+)(?:\s|$)/i);
+  return m?.[1] || "";
+}
+
+export async function copyTextToClipboard(text) {
+  const content = (text ?? "").toString();
+  if (!content) return false;
+
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(content);
+      return true;
+    } catch {
+      // 回退到 execCommand
+    }
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = content;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return !!ok;
+  } catch {
+    return false;
+  }
+}
+
+export function createCopyButton(getText, options = {}) {
+  const {
+    className = "message-copy-btn",
+    label = "复制",
+    loadingText = "复制…",
+    successText = "已复制",
+    errorText = "失败",
+    resetDelayMs = 1800,
+    icon = false,
+  } = options || {};
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = className;
+
+  if (icon) {
+    btn.classList.add("copy-icon-btn");
+    btn.setAttribute("aria-label", label);
+    btn.title = label;
+
+    const mkSvg = (svgClass, inner) => {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("aria-hidden", "true");
+      svg.classList.add("icon", svgClass);
+      svg.innerHTML = inner;
+      return svg;
+    };
+
+    btn.appendChild(
+      mkSvg(
+        "icon-copy",
+        '<rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>'
+      )
+    );
+    btn.appendChild(mkSvg("icon-check", '<path d="M20 6L9 17l-5-5"></path>'));
+    btn.appendChild(mkSvg("icon-x", '<path d="M18 6L6 18M6 6l12 12"></path>'));
+  } else {
+    btn.textContent = label;
+  }
+
+  btn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const original = icon
+      ? btn.getAttribute("aria-label") || label
+      : btn.textContent;
+    btn.disabled = true;
+    if (icon) {
+      btn.dataset.copyState = "loading";
+      btn.title = loadingText;
+    } else {
+      btn.textContent = loadingText;
+    }
+
+    const text = typeof getText === "function" ? getText() : getText;
+    const ok = await copyTextToClipboard(text);
+    if (icon) {
+      btn.dataset.copyState = ok ? "success" : "error";
+      btn.title = ok ? successText : errorText;
+    } else {
+      btn.textContent = ok ? successText : errorText;
+    }
+
+    setTimeout(() => {
+      // 成功状态直接消失，不恢复原状态
+      if (icon && ok) {
+        // 添加淡出类，但保持success状态显示对勾图标
+        btn.classList.add("copy-btn-fade-out");
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.classList.remove("copy-btn-fade-out");
+          delete btn.dataset.copyState;
+          btn.title = original;
+        }, 300);
+      } else {
+        // 错误状态或非图标按钮恢复原状态
+        btn.disabled = false;
+        if (icon) {
+          delete btn.dataset.copyState;
+          btn.title = original;
+        } else {
+          btn.textContent = original;
+        }
+      }
+    }, resetDelayMs);
+  });
+
+  return btn;
+}
+
+export function addCopyButtonsToCodeBlocks(root) {
+  const codeBlocks = root.querySelectorAll("pre > code");
+  for (const codeEl of codeBlocks) {
+    const preEl = codeEl.parentElement;
+    if (!preEl || preEl.tagName !== "PRE") continue;
+    if (preEl.closest(".code-block")) continue;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "code-block";
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "code-toolbar";
+
+    const language = getLanguageFromCodeEl(codeEl);
+
+    const lang = document.createElement("span");
+    lang.className = "code-lang";
+    lang.textContent = language || "text";
+    toolbar.appendChild(lang);
+
+    // 使用统一的createCopyButton函数创建复制按钮
+    const btn = createCopyButton(() => codeEl.textContent || "", {
+      label: "复制代码",
+      icon: true,
+      className: "code-copy-btn",
+    });
+
+    // 检查是否在 loading 状态的消息中，如果是则立即禁用按钮
+    const message = root.closest(".assistant-message");
+    if (message && message.classList.contains("loading")) {
+      btn.disabled = true;
+      btn.style.opacity = "0.5";
+      btn.style.cursor = "not-allowed";
+    }
+
+    toolbar.appendChild(btn);
+
+    const parent = preEl.parentNode;
+    if (!parent) continue;
+    parent.insertBefore(wrapper, preEl);
+    wrapper.appendChild(toolbar);
+    wrapper.appendChild(preEl);
+  }
+}
