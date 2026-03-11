@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 
 from config import BUILD_ID
 from runtime_paths import frontend_path
@@ -27,6 +27,14 @@ IMMUTABLE_CACHE_HEADERS = {
 REVALIDATE_CACHE_HEADERS = {
     "Cache-Control": "public, max-age=0, must-revalidate",
 }
+LOCAL_JS_IMPORT_PATTERN = re.compile(
+    r'(?P<prefix>\bimport\s+(?:[^"\']+?\s+from\s+)?|'
+    r'\bexport\s+[^"\']*?\s+from\s+|'
+    r'\bimport\s*\()'
+    r'(?P<quote>["\'])'
+    r'(?P<specifier>\.{1,2}/[^"\']+?\.js)'
+    r'(?P=quote)'
+)
 
 
 def _ensure_frontend_asset(path, label: str) -> None:
@@ -66,6 +74,30 @@ def _serve_frontend_sub_asset(
     )
 
 
+def _append_build_id_to_local_js_imports(source: str) -> str:
+    def repl(match: re.Match[str]) -> str:
+        specifier = match.group("specifier")
+        separator = "&" if "?" in specifier else "?"
+        versioned = f"{specifier}{separator}v={BUILD_ID}"
+        return f'{match.group("prefix")}{match.group("quote")}{versioned}{match.group("quote")}'
+
+    return LOCAL_JS_IMPORT_PATTERN.sub(repl, source)
+
+
+def _serve_versioned_js_asset(
+    file_path: Path,
+    headers: dict[str, str],
+) -> Response:
+    with open(file_path, "r", encoding="utf-8") as f:
+        source = f.read()
+    content = _append_build_id_to_local_js_imports(source)
+    return Response(
+        content=content,
+        media_type="application/javascript",
+        headers=headers,
+    )
+
+
 def _render_index_html() -> str:
     _ensure_frontend_asset(INDEX_HTML_PATH, "主页")
     with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
@@ -102,9 +134,9 @@ async def serve_style():
 async def serve_app():
     app_path = frontend_path("app.js")
     _ensure_frontend_asset(app_path, "脚本文件")
-    return FileResponse(
+    return _serve_versioned_js_asset(
         app_path,
-        headers=IMMUTABLE_CACHE_HEADERS,
+        headers=REVALIDATE_CACHE_HEADERS,
     )
 
 
@@ -124,11 +156,9 @@ async def serve_favicon_ico():
 
 @router.get("/js/{asset_path:path}")
 async def serve_js_asset(asset_path: str):
-    # ES module imports are not versioned in URL, so they must revalidate on deploy.
-    return _serve_frontend_sub_asset(
-        "js",
-        asset_path,
-        "脚本文件",
+    file_path = _resolve_frontend_sub_asset("js", asset_path, "脚本文件")
+    return _serve_versioned_js_asset(
+        file_path,
         headers=REVALIDATE_CACHE_HEADERS,
     )
 
@@ -150,9 +180,8 @@ async def serve_styles_asset(asset_path: str):
 
 @router.get("/app/{asset_path:path}")
 async def serve_app_asset(asset_path: str):
-    return _serve_frontend_sub_asset(
-        "app",
-        asset_path,
-        "应用文件",
+    file_path = _resolve_frontend_sub_asset("app", asset_path, "应用文件")
+    return _serve_versioned_js_asset(
+        file_path,
         headers=REVALIDATE_CACHE_HEADERS,
     )
