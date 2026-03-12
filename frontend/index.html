@@ -22,6 +22,15 @@
     <link rel="stylesheet" href="css/sources.css" />
     <link rel="stylesheet" href="css/content.css" />
     <link rel="stylesheet" href="css/responsive.css" />
+    <script>
+      // 破坏 WebView2 对 CSS 文件的缓存，确保每次构建加载最新样式
+      document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
+        var href = link.getAttribute("href");
+        if (href && !href.startsWith("http")) {
+          link.setAttribute("href", href + "?v=__BUILD__");
+        }
+      });
+    </script>
     <!-- Markdown解析库 -->
     <script src="libs/marked/marked.min.js"></script>
     <!-- 代码高亮库 -->

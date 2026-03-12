@@ -7,6 +7,18 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
+function Remove-BuildArtifact {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path
+  )
+
+  if (Test-Path $Path) {
+    Write-Host "Removing build artifact: $Path"
+    Remove-Item -Path $Path -Recurse -Force
+  }
+}
+
 $pythonCommand = $null
 $pythonArgs = @()
 $venvCandidates = @()
@@ -48,12 +60,25 @@ if (-not $pythonCommand) {
 
 $sidecarDir = Join-Path $projectRoot "src-tauri\binaries"
 $sidecarTarget = Join-Path $sidecarDir "prism-backend-x86_64-pc-windows-msvc.exe"
+$pyInstallerBuildDir = Join-Path $projectRoot "build"
+$pyInstallerDistDir = Join-Path $projectRoot "dist"
+$tauriTargetDir = Join-Path $projectRoot "src-tauri\target"
 
 if (-not (Test-Path $sidecarDir)) {
   New-Item -ItemType Directory -Path $sidecarDir | Out-Null
 }
 
+Remove-BuildArtifact -Path $tauriTargetDir
+
 if (-not $SkipBackendBuild) {
+  Remove-BuildArtifact -Path $pyInstallerBuildDir
+  Remove-BuildArtifact -Path $pyInstallerDistDir
+
+  if (Test-Path $sidecarTarget) {
+    Write-Host "Removing old backend sidecar: $sidecarTarget"
+    Remove-Item -Path $sidecarTarget -Force
+  }
+
   & $pythonCommand @pythonArgs -m PyInstaller --version *> $null
   if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller is required for the selected Python interpreter. Run: `"$pythonCommand`" $($pythonArgs -join ' ') -m pip install pyinstaller"
@@ -78,5 +103,17 @@ if (-not $SkipBackendBuild) {
     $sidecarTarget
 }
 
+# 将 __BUILD__ 占位符替换为当前时间戳以破坏 WebView2 缓存
+$indexHtml = Join-Path $projectRoot "frontend\index.html"
+$buildStamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$originalContent = Get-Content $indexHtml -Raw -Encoding UTF8
+$stampedContent = $originalContent -replace '__BUILD__', $buildStamp
+[System.IO.File]::WriteAllText($indexHtml, $stampedContent, [System.Text.UTF8Encoding]::new($false))
+
 npm install
-npm run tauri:build
+try {
+  npm run tauri:build
+} finally {
+  # 构建完成后恢复 index.html 中的占位符，避免污染源文件
+  [System.IO.File]::WriteAllText($indexHtml, $originalContent, [System.Text.UTF8Encoding]::new($false))
+}
