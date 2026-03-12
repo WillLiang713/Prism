@@ -38,16 +38,12 @@
   transition: scrollbar-color 0.3s ease;
 }
 
-.modal-content:hover .config-content,
-.modal-content .config-content:is(:hover, :focus-within, :active),
 .modal-content .config-content.scrollbar-active {
   scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
 }
 .modal-content .config-content::-webkit-scrollbar { width: 6px; }
 .modal-content .config-content::-webkit-scrollbar-track { background: transparent; }
 .modal-content .config-content::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
-.modal-content:hover .config-content::-webkit-scrollbar-thumb,
-.modal-content .config-content:is(:hover, :focus-within, :active)::-webkit-scrollbar-thumb,
 .modal-content .config-content.scrollbar-active::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.10);
 }
@@ -104,7 +100,6 @@
   border-radius: 3px;
 }
 
-#configModal .config-content:is(:hover, :focus-within, :active)::-webkit-scrollbar-thumb,
 #configModal .config-content.scrollbar-active::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.10);
 }

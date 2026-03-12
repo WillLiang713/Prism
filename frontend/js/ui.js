@@ -129,37 +129,6 @@ export function initScrollbarAutoHide() {
   });
 
   document.addEventListener(
-    "pointerover",
-    (e) => {
-      const container = resolveScrollableContainer(e.target);
-      if (container) activateScrollbar(container);
-    },
-    true
-  );
-
-  document.addEventListener(
-    "pointerout",
-    (e) => {
-      const container = resolveScrollableContainer(e.target);
-      if (!container) return;
-      const nextContainer = resolveScrollableContainer(e.relatedTarget);
-      if (nextContainer === container) return;
-      scheduleScrollbarHide(container, 260);
-    },
-    true
-  );
-
-  document.addEventListener(
-    "pointerdown",
-    (e) => {
-      const container = resolveScrollableContainer(e.target);
-      if (!container) return;
-      activateScrollbar(container, 1200);
-    },
-    true
-  );
-
-  document.addEventListener(
     "wheel",
     (e) => {
       const container = resolveScrollableContainer(e.target);

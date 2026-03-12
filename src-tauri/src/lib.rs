@@ -4,6 +4,7 @@ use std::sync::Mutex;
 
 use serde::Serialize;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::webview::Color;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 
 const WINDOW_LABEL: &str = "main";
@@ -168,6 +169,7 @@ pub fn run() {
                 .title("Prism")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(1100.0, 760.0)
+                .background_color(Color(0, 0, 0, 255))
                 .decorations(false)
                 .center()
                 .initialization_script(init_script)
