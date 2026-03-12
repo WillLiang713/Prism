@@ -251,6 +251,7 @@ export function bindEvents() {
   elements.promptInput.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     if (e.shiftKey) return;
+    if (elements.promptInput.readOnly) return;
 
     const isImeGuarded =
       e.isComposing ||

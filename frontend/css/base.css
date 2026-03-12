@@ -32,11 +32,12 @@ body {
 
 /* ---------- Design Tokens ---------- */
 :root {
-  --font-body: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
-    sans-serif;
-  --font-display: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
-    sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --font-body: "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas,
+    "Liberation Mono", Menlo, monospace;
 
   /* Core palette – pure black */
   --bg: #000000;

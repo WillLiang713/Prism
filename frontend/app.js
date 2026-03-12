@@ -54,11 +54,11 @@ function startApplication() {
   bindDialogEvents();
   updateModelNames();
   setSendButtonMode("send");
-  autoGrowPromptInput();
   updateConfigStatusStrip();
   initLayout();
   renderAll();
   startHeaderClock();
   initDesktopWindowShell();
   syncDesktopBackendUi();
+  autoGrowPromptInput();
 }

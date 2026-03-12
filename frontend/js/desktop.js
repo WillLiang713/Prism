@@ -1,6 +1,18 @@
 import { state, elements, isDesktopRuntime, getDesktopWindowBridge, delay, buildApiUrl, BOOTSTRAP_HEALTH_TIMEOUT_MS, BOOTSTRAP_HEALTH_INTERVAL_MS, PRISM_RUNTIME, isDesktopBackendAvailable } from './state.js';
-import { setSendButtonMode } from './ui.js';
+import { setSendButtonMode, autoGrowPromptInput } from './ui.js';
 import { updateModelHint, scheduleFetchModels } from './models.js';
+
+let promptLayoutSyncToken = 0;
+
+function schedulePromptLayoutSync() {
+  if (!elements.promptInput) return;
+
+  const token = ++promptLayoutSyncToken;
+  window.requestAnimationFrame(() => {
+    if (token !== promptLayoutSyncToken) return;
+    autoGrowPromptInput();
+  });
+}
 
 export function applyDesktopWindowState() {
   document.body.classList.toggle(
@@ -110,14 +122,12 @@ export function bindDesktopTitlebarControls(appWindow) {
 
 export function syncDesktopBackendUi() {
   const isReady = isDesktopBackendAvailable();
-  const isFailed = isDesktopRuntime() && state.runtime.backendFailed;
-
-  const promptPlaceholder = isFailed
-    ? "本地服务启动失败，请重启应用"
-    : "本地服务启动中，请稍候...";
+  const promptPlaceholder = "";
   if (elements.promptInput) {
-    elements.promptInput.disabled = !isReady;
-    elements.promptInput.placeholder = isReady ? "随便聊点什么..." : promptPlaceholder;
+    elements.promptInput.disabled = false;
+    elements.promptInput.readOnly = !isReady;
+    elements.promptInput.setAttribute("aria-readonly", String(!isReady));
+    elements.promptInput.placeholder = promptPlaceholder;
     elements.promptInput.title = isReady ? "" : promptPlaceholder;
   }
 
@@ -132,6 +142,7 @@ export function syncDesktopBackendUi() {
   }
 
   updateModelHint("main");
+  schedulePromptLayoutSync();
 }
 
 export function flushPendingModelFetches() {

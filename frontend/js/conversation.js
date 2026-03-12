@@ -9,14 +9,6 @@ import { clearImages } from './images.js';
 
 export async function sendPrompt() {
   if (!isDesktopBackendAvailable()) {
-    await showAlert(
-      state.runtime.backendFailed
-        ? "本地服务启动失败，请重启应用后再试。"
-        : "本地服务仍在启动中，请稍候再发送。",
-      {
-        title: "暂不可发送",
-      }
-    );
     return;
   }
 

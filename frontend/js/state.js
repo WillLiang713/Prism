@@ -8,7 +8,7 @@ export const STORAGE_KEYS = {
 export const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
 export const DESKTOP_DEFAULT_API_BASE = "http://127.0.0.1:33100";
 export const BOOTSTRAP_HEALTH_TIMEOUT_MS = 15000;
-export const BOOTSTRAP_HEALTH_INTERVAL_MS = 500;
+export const BOOTSTRAP_HEALTH_INTERVAL_MS = 100;
 
 export const SHORTCUTS = [
   {

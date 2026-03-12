@@ -29,6 +29,12 @@ export function autoGrowPromptInput() {
   const el = elements.promptInput;
   if (!el) return;
 
+  if (!el.value) {
+    el.style.height = "";
+    el.style.overflowY = "hidden";
+    return;
+  }
+
   const maxHeight = 160; // 与 CSS max-height 保持一致
   el.style.height = "0px";
   const nextHeight = Math.min(el.scrollHeight, maxHeight);

@@ -28,12 +28,7 @@ export function updateModelHint(side) {
   const apiUrl = (config.apiUrl || "").trim();
 
   if (isDesktopRuntime() && !state.runtime.backendReady) {
-    setModelHint(
-      side || "main",
-      state.runtime.backendFailed
-        ? "本地服务启动失败，重试成功后再拉取模型列表"
-        : "本地服务启动中，后端就绪后会自动拉取模型列表"
-    );
+    setModelHint(side || "main", "");
     return;
   }
 
