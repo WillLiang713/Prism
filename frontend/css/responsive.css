@@ -60,13 +60,13 @@
 
   #configModal .modal-content {
     width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: var(--mobile-visible-height, 100dvh);
+    max-height: var(--mobile-visible-height, 100dvh);
   }
 
   #configModal .config-panel {
-    height: 100dvh;
-    max-height: 100dvh;
+    height: var(--mobile-visible-height, 100dvh);
+    max-height: var(--mobile-visible-height, 100dvh);
     border-radius: 0;
   }
 
@@ -126,8 +126,8 @@
     max-width: none;
     margin: 0;
     padding: 0;
-    height: 100vh;
-    height: 100dvh;
+    height: var(--mobile-visible-height, 100dvh);
+    max-height: var(--mobile-visible-height, 100dvh);
     transition: none;
   }
 
@@ -232,7 +232,7 @@
   }
 
   .chat-composer {
-    padding: 10px 12px 14px;
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .composer-footer {
