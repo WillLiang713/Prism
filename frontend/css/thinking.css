@@ -15,6 +15,7 @@
   margin-bottom: 12px;
   display: flex;
   align-items: center;
+  gap: 6px;
   cursor: pointer;
   user-select: none;
 }
@@ -22,7 +23,21 @@
 .thinking-header > span:first-child {
   display: inline-flex;
   align-items: center;
+  flex: 0 1 auto;
   min-width: 0;
+}
+
+.thinking-header-arrow {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: currentColor;
+  opacity: 0.8;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.thinking-header:hover .thinking-header-arrow {
+  opacity: 1;
 }
 
 .thinking-summary {
@@ -52,6 +67,12 @@
 .thinking-section.collapsed { padding: 8px 0; }
 .thinking-section.collapsed .thinking-header { margin-bottom: 0; }
 .thinking-section.collapsed .thinking-content { display: none; }
+.thinking-section:not(.collapsed) .thinking-header-arrow { transform: rotate(180deg); }
+.thinking-section:not(.collapsed) .thinking-content {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  margin-left: 2px;
+  padding-left: 12px;
+}
 
 .thinking-content {
   font-size: 13px;

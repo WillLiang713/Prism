@@ -523,6 +523,21 @@ export function createAssistantCard(turn) {
   thinkingLabel.textContent = thinkingSummary;
   thinkingLabel.title = thinkingSummary;
   thinkingHeader.appendChild(thinkingLabel);
+
+  const thinkingArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  thinkingArrow.setAttribute("class", "thinking-header-arrow");
+  thinkingArrow.setAttribute("viewBox", "0 0 24 24");
+  thinkingArrow.setAttribute("fill", "none");
+  thinkingArrow.setAttribute("stroke", "currentColor");
+  thinkingArrow.setAttribute("stroke-width", "2");
+  thinkingArrow.setAttribute("stroke-linecap", "round");
+  thinkingArrow.setAttribute("stroke-linejoin", "round");
+
+  const thinkingArrowLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  thinkingArrowLine.setAttribute("points", "6 9 12 15 18 9");
+  thinkingArrow.appendChild(thinkingArrowLine);
+  thinkingHeader.appendChild(thinkingArrow);
+
   thinkingHeader.addEventListener("click", () => {
     thinkingSection.dataset.userToggled = "1";
     thinkingSection.classList.toggle("collapsed");
