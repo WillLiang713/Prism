@@ -342,8 +342,11 @@ export function renderTopicList() {
     item.appendChild(footer);
 
     item.addEventListener("click", () => {
-      setActiveTopic(topic.id);
+      const isAlreadyActive = topic.id === state.chat.activeTopicId;
       collapseSidebarForMobile();
+      if (isAlreadyActive) return;
+
+      setActiveTopic(topic.id);
       renderAll();
     });
 

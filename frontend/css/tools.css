@@ -30,26 +30,13 @@
 
 .tool-calls-header-text {
   flex: 1;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--panel-text-secondary);
-  letter-spacing: 0.2px;
-}
-
-.tool-calls-header-arrow {
-  width: 12px;
-  height: 12px;
-  color: var(--panel-text-tertiary);
-  transition: transform 0.2s ease, color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.tool-calls-header:hover .tool-calls-header-arrow {
-  color: var(--panel-link);
-}
-
-.tool-calls-section.tc-expanded .tool-calls-header-arrow {
-  transform: rotate(180deg);
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--message-label-font-size);
+  font-weight: var(--message-label-font-weight);
+  color: var(--message-label-color);
+  letter-spacing: var(--message-label-letter-spacing);
+  line-height: var(--message-label-line-height);
 }
 
 .tool-calls-detail {

@@ -35,7 +35,8 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--panel-text-secondary);
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
+  line-height: 1.2;
 }
 
 .search-preview-header-text::before {
@@ -150,20 +151,24 @@
   flex-wrap: wrap;
   gap: 6px;
   margin: 0 0 12px;
-  padding: 9px 0;
+  padding: 8px 0;
+  min-height: 18px;
 }
 
 .sources-status-text {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
+  line-height: 1.2;
 }
 
 .sources-status-chip,
 .sources-status-more {
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.2;
   color: var(--text-dim);
 }
 
@@ -210,13 +215,14 @@
 }
 
 .source-chip-index {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   min-width: 20px;
   color: var(--text-dim);
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
-  padding-top: 1px;
+  line-height: 1.2;
 }
 
 .source-chip-body {

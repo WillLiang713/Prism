@@ -12,7 +12,7 @@
 .assistant-message {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   max-width: 100%;
   min-width: 0;
   animation: fade-in 0.4s ease-out;
@@ -26,17 +26,22 @@
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 4px;
-  padding-left: 2px;
+  padding-left: 0;
+  min-height: 18px;
 }
 
 .assistant-model-name {
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0.2px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--message-label-font-size);
+  font-weight: var(--message-label-font-weight);
+  color: var(--message-label-color);
+  letter-spacing: var(--message-label-letter-spacing);
+  line-height: var(--message-label-line-height);
 }
 
 .assistant-message .assistant-model-name {
-  color: var(--text-muted);
+  color: var(--message-label-color);
 }
 
 .assistant-message.loading .assistant-message-content,
@@ -62,7 +67,7 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 4px;
-  padding-left: 2px;
+  padding-left: 0;
   font-size: 11px;
   color: var(--text-dim);
   min-height: 24px;
@@ -75,19 +80,29 @@
   gap: 12px;
 }
 
+.message-meta .meta-item {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
 .source-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   height: 24px;
+  min-height: 24px;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--text-dim);
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.2;
   cursor: pointer;
   transition: color 0.18s ease;
+  font-variant-numeric: tabular-nums;
 }
 
 .source-toggle-btn:hover {

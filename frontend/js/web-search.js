@@ -315,10 +315,7 @@ export function renderToolEvents(sectionEl, listEl, events) {
     header.className = "tool-calls-header";
 
     header.innerHTML = `
-      <span class="tool-calls-header-text"></span>
-      <svg class="tool-calls-header-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>`;
+      <span class="tool-calls-header-text"></span>`;
 
     // Wrap list in detail container
     const detail = document.createElement("div");
