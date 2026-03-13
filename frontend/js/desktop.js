@@ -3,6 +3,7 @@ import { setSendButtonMode, autoGrowPromptInput } from './ui.js';
 import { updateModelHint, scheduleFetchModels } from './models.js';
 
 let promptLayoutSyncToken = 0;
+const PROMPT_PLACEHOLDER = "随便聊点什么吧";
 
 function schedulePromptLayoutSync() {
   if (!elements.promptInput) return;
@@ -122,7 +123,7 @@ export function bindDesktopTitlebarControls(appWindow) {
 
 export function syncDesktopBackendUi() {
   const isReady = isDesktopBackendAvailable();
-  const promptPlaceholder = "";
+  const promptPlaceholder = PROMPT_PLACEHOLDER;
   if (elements.promptInput) {
     elements.promptInput.disabled = false;
     elements.promptInput.readOnly = !isReady;

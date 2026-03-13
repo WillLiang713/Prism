@@ -1,6 +1,9 @@
 import { state, elements, createId } from './state.js';
 import { showAlert } from './dialog.js';
 
+const MAX_IMAGE_FILE_SIZE_MB = 50;
+const MAX_IMAGE_FILE_SIZE_BYTES = MAX_IMAGE_FILE_SIZE_MB * 1024 * 1024;
+
 export function readImageAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith("image/")) {
@@ -8,10 +11,8 @@ export function readImageAsDataUrl(file) {
       return;
     }
 
-    // 限制图片大小为10MB
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      reject(new Error("图片大小不能超过10MB"));
+    if (file.size > MAX_IMAGE_FILE_SIZE_BYTES) {
+      reject(new Error(`图片大小不能超过${MAX_IMAGE_FILE_SIZE_MB}MB`));
       return;
     }
 

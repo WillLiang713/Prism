@@ -32,7 +32,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: rgba(30, 30, 30, 0.95);
+  background: rgba(14, 14, 14, 0.96);
   z-index: -1;
   transition: background 0.24s ease;
 }
@@ -45,7 +45,7 @@
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.28),
-    rgba(255, 255, 255, 0.10),
+    rgba(255, 255, 255, 0.08),
     rgba(255, 255, 255, 0.18),
     rgba(255, 255, 255, 0.24)
   );
@@ -56,7 +56,7 @@
   animation: gradient-rotate 8s ease infinite;
   pointer-events: none;
   will-change: background-position, opacity;
-  filter: saturate(1.08);
+  filter: saturate(1);
 }
 
 .composer-box:hover {
@@ -66,20 +66,18 @@
 
 .composer-box:focus-within {
   border-color: transparent;
-  transform: translateY(-1px);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 0 0 4px rgba(255, 255, 255, 0.03),
-    0 18px 44px rgba(0, 0, 0, 0.48),
-    0 6px 18px rgba(255, 255, 255, 0.03);
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 0 3px rgba(255, 255, 255, 0.035),
+    0 10px 28px rgba(0, 0, 0, 0.36);
 }
 
 .composer-box:focus-within::before {
-  opacity: 1;
+  opacity: 0.98;
 }
 
 .composer-box:focus-within::after {
-  background: rgba(36, 36, 36, 0.98);
+  background: rgba(16, 16, 16, 0.98);
 }
 
 .composer-box:focus-within .composer-footer {
