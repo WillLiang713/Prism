@@ -32,7 +32,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: rgba(14, 14, 14, 0.96);
+  background: rgba(20, 20, 20, 0.96);
   z-index: -1;
   transition: background 0.24s ease;
 }
@@ -77,7 +77,7 @@
 }
 
 .composer-box:focus-within::after {
-  background: rgba(16, 16, 16, 0.98);
+  background: rgba(20, 20, 20, 0.96);
 }
 
 .composer-box:focus-within .composer-footer {
@@ -105,7 +105,41 @@
   background: transparent;
   color: var(--text);
   overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
   transition: color 0.2s ease;
+}
+
+#promptInput.scrollbar-active {
+  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+}
+
+#promptInput::-webkit-scrollbar {
+  width: 6px;
+}
+
+#promptInput::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#promptInput::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+#promptInput.scrollbar-active::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.20),
+    0 0 10px rgba(160, 200, 255, 0.35);
+}
+
+#promptInput::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 0 14px rgba(160, 200, 255, 0.48);
 }
 
 #promptInput:focus {

@@ -2,6 +2,7 @@ import { state, elements, estimateTokensFromText } from './state.js';
 import { renderMarkdownToElement } from './markdown.js';
 
 const SCROLLBAR_INTERACTIVE_SELECTOR = [
+  "#promptInput",
   ".chat-messages",
   ".topic-list",
   ".image-preview-container",

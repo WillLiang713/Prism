@@ -3,58 +3,54 @@
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 12px 16px;
+  padding: 12px 0;
   margin-bottom: 16px;
   transition: all 0.2s ease;
 }
 
 .thinking-header {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--panel-text-secondary);
   margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   cursor: pointer;
   user-select: none;
 }
 
-.thinking-time {
-  font-size: 12px;
-  color: var(--panel-text-tertiary);
-  font-family: var(--font-mono);
-  margin-left: 8px;
-}
-
-.thinking-time:empty { display: none; }
-
 .thinking-header > span:first-child {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  min-width: 0;
 }
 
-.thinking-header > span:first-child::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-right: 1.5px solid var(--panel-text-tertiary);
-  border-bottom: 1.5px solid var(--panel-text-tertiary);
-  transform: rotate(45deg);
-  transition: transform 0.2s ease, border-color 0.2s ease;
-  margin-top: -2px;
+.thinking-summary {
+  display: inline-block;
+  max-width: 100%;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.thinking-header:hover > span:first-child::before {
-  border-color: var(--panel-link);
+.assistant-message.loading .thinking-summary:not(.is-complete),
+.assistant-message.streaming .thinking-summary:not(.is-complete) {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.20) 0%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.20) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
 }
 
-.thinking-section.collapsed { padding: 8px 16px; }
+.thinking-section.collapsed { padding: 8px 0; }
 .thinking-section.collapsed .thinking-header { margin-bottom: 0; }
-.thinking-section.collapsed .thinking-header > span:first-child::before { transform: rotate(-45deg); }
 .thinking-section.collapsed .thinking-content { display: none; }
 
 .thinking-content {
@@ -62,7 +58,7 @@
   color: var(--panel-text-secondary);
   line-height: 1.6;
   word-wrap: break-word;
-  padding-left: 4px;
+  padding-left: 0;
 }
 
 /* Thinking content markdown */

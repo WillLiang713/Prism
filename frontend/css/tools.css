@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
+  padding: 9px 0;
   cursor: pointer;
   user-select: none;
   transition: background 0.15s;
@@ -93,7 +93,7 @@
 
 .tool-calls-list {
   margin: 0;
-  padding: 4px 14px 6px;
+  padding: 4px 0 6px;
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -141,6 +141,38 @@
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.tool-call-search-preview {
+  margin-top: 8px;
+}
+
+.tool-call-search-preview.web-search.expanded {
+  max-width: 100%;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.tool-call-search-preview .web-search-body {
+  padding: 8px 0 4px;
+  max-height: none;
+  overflow: visible;
+}
+
+.tool-call-search-preview .web-search-answer {
+  margin-bottom: 8px;
+  padding: 4px 0 8px;
+}
+
+.tool-call-search-preview .web-search-results {
+  gap: 6px;
+}
+
+.tool-call-search-preview .web-search-result-card {
+  padding: 10px 0;
 }
 
 .tool-call-item:hover {

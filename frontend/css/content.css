@@ -306,7 +306,7 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
-  background: rgba(17, 17, 17, 0.96);
+  background: rgba(24, 24, 24, 0.96);
 }
 
 .shortcut-help-table td {
@@ -319,7 +319,8 @@
 }
 
 .shortcut-help-table .shortcut-action {
-  font-weight: 600;
+  color: inherit;
+  font-weight: 400;
 }
 
 .shortcut-help-table .shortcut-note {

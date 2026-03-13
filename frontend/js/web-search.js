@@ -177,6 +177,117 @@ export function formatToolEventDisplay(event) {
   };
 }
 
+function normalizeToolEventRound(value) {
+  const round = Number(value);
+  return Number.isFinite(round) ? round : null;
+}
+
+function isSameToolCall(event, webSearchEvent) {
+  if (!event || !webSearchEvent) return false;
+  const eventName = String(event.name || "").trim();
+  const searchName = String(webSearchEvent.name || "").trim();
+  if (!eventName || !searchName || eventName !== searchName) return false;
+
+  const eventRound = normalizeToolEventRound(event.round);
+  const searchRound = normalizeToolEventRound(webSearchEvent.round);
+  return eventRound !== null && searchRound !== null && eventRound === searchRound;
+}
+
+function createNormalizedWebSearchEvent(webSearchEvent) {
+  if (!webSearchEvent || typeof webSearchEvent !== "object") return null;
+  return {
+    ...webSearchEvent,
+    name: String(webSearchEvent.name || "联网搜索").trim() || "联网搜索",
+    query: String(webSearchEvent.query || "").trim(),
+    answer: String(webSearchEvent.answer || "").trim(),
+    results: Array.isArray(webSearchEvent.results) ? webSearchEvent.results : [],
+  };
+}
+
+export function attachWebSearchToToolEvents(toolEvents, webSearchEvent) {
+  const items = Array.isArray(toolEvents) ? toolEvents : [];
+  const normalized = createNormalizedWebSearchEvent(webSearchEvent);
+  if (!normalized) return items;
+
+  let matchedIndex = -1;
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const event = items[index];
+    if (!event || typeof event !== "object") continue;
+    if (!isSameToolCall(event, normalized)) continue;
+    if (event.status === "error") continue;
+    if (!event.webSearch) {
+      matchedIndex = index;
+      break;
+    }
+    if (matchedIndex === -1) matchedIndex = index;
+  }
+
+  if (matchedIndex >= 0) {
+    items[matchedIndex] = {
+      ...items[matchedIndex],
+      webSearch: normalized,
+    };
+    return items;
+  }
+
+  items.push({
+    status: normalized.status === "error" ? "error" : "success",
+    round: normalized.round,
+    name: normalized.name,
+    resultSummary: normalized.query
+      ? `查询：${truncateText(normalized.query, 80)}`
+      : "联网搜索",
+    webSearch: normalized,
+    synthetic: true,
+  });
+  return items;
+}
+
+export function mergeToolEventsWithWebSearch(toolEvents, webSearchEvents) {
+  const merged = Array.isArray(toolEvents)
+    ? toolEvents.map((event) =>
+        event && typeof event === "object" ? { ...event } : event
+      )
+    : [];
+
+  const searches = Array.isArray(webSearchEvents) ? webSearchEvents : [];
+  searches.forEach((event) => {
+    attachWebSearchToToolEvents(merged, event);
+  });
+  return merged;
+}
+
+function renderToolEventWebSearch(container, webSearchEvent) {
+  const normalized = createNormalizedWebSearchEvent(webSearchEvent);
+  if (!container || !normalized) return;
+
+  const card = document.createElement("div");
+  card.className = "web-search expanded tool-call-search-preview";
+
+  const answerParts = [];
+  if (normalized.query) answerParts.push(`查询：${normalized.query}`);
+  if (normalized.answer) answerParts.push(`摘要：${normalized.answer}`);
+
+  renderWebSearchSection(
+    card,
+    {
+      status: normalized.status || "ready",
+      answer: answerParts.join("\n"),
+      results: normalized.results,
+    },
+    {
+      allowToggle: false,
+      defaultCollapsed: false,
+      showTitle: false,
+      showStatus: false,
+    }
+  );
+
+  card.classList.remove("collapsed");
+  card.classList.add("expanded");
+  container.appendChild(card);
+}
+
 export function renderToolEvents(sectionEl, listEl, events) {
   if (!sectionEl || !listEl) return;
   const items = Array.isArray(events) ? events : [];
@@ -222,6 +333,13 @@ export function renderToolEvents(sectionEl, listEl, events) {
     header.addEventListener("click", () => {
       sectionEl.dataset.userToggled = "1";
       sectionEl.classList.toggle("tc-expanded");
+      sectionEl.dispatchEvent(
+        new CustomEvent("toolcalls-toggle", {
+          detail: {
+            expanded: sectionEl.classList.contains("tc-expanded"),
+          },
+        })
+      );
     });
   }
 
@@ -253,6 +371,10 @@ export function renderToolEvents(sectionEl, listEl, events) {
       body.className = "tool-call-item-body";
       body.textContent = display.body;
       li.appendChild(body);
+    }
+
+    if (event?.webSearch) {
+      renderToolEventWebSearch(li, event.webSearch);
     }
 
     listEl.appendChild(li);

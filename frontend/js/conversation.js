@@ -2,10 +2,68 @@ import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, esti
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
-import { normalizeWebSearchProvider, renderToolEvents, renderWebSearchEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
+import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
 import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic } from './chat.js';
 import { clearImages } from './images.js';
+
+function stripMarkdownForThinkingSummary(text) {
+  return String(text || "")
+    .replace(/\r/g, "")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[`*_~>#-]+/g, " ")
+    .replace(/<\/?[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractThinkingSummary(thinkingText) {
+  const raw = String(thinkingText || "").replace(/\r/g, "").trim();
+  if (!raw) return "";
+  const hasTrailingNewline = /\n\s*$/.test(String(thinkingText || "").replace(/\r/g, ""));
+
+  const lines = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let latestTitle = "";
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const isLastLine = index === lines.length - 1;
+    if (isLastLine && !hasTrailingNewline) continue;
+    if (line.startsWith("```")) continue;
+
+    let candidate = "";
+    if (/^#{1,6}\s+/.test(line)) {
+      candidate = line.replace(/^#{1,6}\s+/, "");
+    } else if (/^\*\*[^*]+\*\*$/.test(line) || /^__[^_]+__$/.test(line)) {
+      candidate = line.replace(/^\*\*|\*\*$|^__|__$/g, "");
+    } else {
+      const plain = stripMarkdownForThinkingSummary(line);
+      const looksLikeTitle =
+        plain.length >= 4 &&
+        plain.length <= 72 &&
+        !/[。！？.!?：:]$/.test(plain);
+      if (looksLikeTitle) candidate = plain;
+    }
+
+    candidate = stripMarkdownForThinkingSummary(candidate);
+    if (!candidate) continue;
+    latestTitle = candidate;
+  }
+
+  if (latestTitle) return latestTitle;
+  return "";
+}
+
+function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = "") {
+  if (isComplete && String(thinkingText || "").trim()) return "思考完成";
+  const summary = extractThinkingSummary(thinkingText);
+  if (summary) return summary;
+  return previousLabel || "思考中";
+}
 
 export async function sendPrompt() {
   if (!isDesktopBackendAvailable()) {
@@ -67,6 +125,8 @@ export async function sendPrompt() {
     model: config.model,
     displayName: resolveModelDisplayName(config.model, config.customModelName),
     thinking: "",
+    thinkingLabel: "思考中",
+    thinkingComplete: false,
     toolEvents: [],
     webSearchEvents: [],
     content: "",
@@ -168,11 +228,6 @@ export async function callModel(
     const uiRef = resolveUi();
     if (uiRef) {
       uiRef.timeEl.textContent = `${elapsed.toFixed(1)}s`;
-      if (thinkingStartTime) {
-        uiRef.thinkingTimeEl.textContent = `${turn.models.main.thinkingTime.toFixed(
-          1
-        )}s`;
-      }
     }
 
     // 实时更新速度
@@ -269,13 +324,21 @@ export async function callModel(
             turn.models.main.thinking += chunk.data;
             if (uiRef?.thinkingSectionEl) {
               uiRef.thinkingSectionEl.style.display = "block";
-              if (uiRef.thinkingSectionEl.dataset.userToggled !== "1") {
-                uiRef.thinkingSectionEl.classList.remove("collapsed");
-              }
               renderMarkdownToElement(
                 uiRef.thinkingContentEl,
                 turn.models.main.thinking
               );
+              if (uiRef.thinkingLabelEl) {
+                const summary = buildThinkingLabel(
+                  turn.models.main.thinking,
+                  false,
+                  turn.models.main.thinkingLabel
+                );
+                turn.models.main.thinkingLabel = summary;
+                uiRef.thinkingLabelEl.textContent = summary;
+                uiRef.thinkingLabelEl.title = summary;
+                uiRef.thinkingLabelEl.classList.remove("is-complete");
+              }
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -297,6 +360,12 @@ export async function callModel(
               renderMarkdownToElement(uiRef.responseEl, turn.models.main.content);
               const tokens = estimateTokensFromText(turn.models.main.content);
               uiRef.tokenEl.textContent = `${tokens} tokens`;
+            }
+            if (thinkingStartTime && uiRef?.thinkingLabelEl) {
+              turn.models.main.thinkingComplete = true;
+              uiRef.thinkingLabelEl.textContent = "思考完成";
+              uiRef.thinkingLabelEl.title = "思考完成";
+              uiRef.thinkingLabelEl.classList.add("is-complete");
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -334,9 +403,6 @@ export async function callModel(
                 uiRef.toolCallsListEl,
                 turn.models.main.toolEvents
               );
-              if (uiRef.toolCallsSectionEl.dataset.userToggled !== "1") {
-                uiRef.toolCallsSectionEl.classList.add("tc-expanded");
-              }
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -351,23 +417,16 @@ export async function callModel(
           } else if (chunk.type === "web_search" && chunk.data) {
             const payload =
               chunk.data && typeof chunk.data === "object" ? chunk.data : {};
-            if (!Array.isArray(turn.models.main.webSearchEvents)) {
-              turn.models.main.webSearchEvents = [];
+            if (!Array.isArray(turn.models.main.toolEvents)) {
+              turn.models.main.toolEvents = [];
             }
-            turn.models.main.webSearchEvents.push(payload);
-            if (turn.models.main.webSearchEvents.length > 10) {
-              turn.models.main.webSearchEvents = turn.models.main.webSearchEvents.slice(
-                -10
+            attachWebSearchToToolEvents(turn.models.main.toolEvents, payload);
+            if (uiRef?.toolCallsSectionEl && uiRef?.toolCallsListEl) {
+              renderToolEvents(
+                uiRef.toolCallsSectionEl,
+                uiRef.toolCallsListEl,
+                turn.models.main.toolEvents
               );
-            }
-            if (uiRef?.webSearchSectionEl) {
-              renderWebSearchEvents(
-                uiRef.webSearchSectionEl,
-                turn.models.main.webSearchEvents
-              );
-              if (uiRef.webSearchSectionEl.dataset.userToggled !== "1") {
-                uiRef.webSearchSectionEl.classList.add("sp-expanded");
-              }
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
@@ -423,21 +482,22 @@ export async function callModel(
       uiRef.thinkingSectionEl.classList.add("collapsed");
       turn.models.main.thinkingCollapsed = true;
     }
+    if (turn.models.main.thinking && uiRef?.thinkingLabelEl) {
+      turn.models.main.thinkingComplete = true;
+      uiRef.thinkingLabelEl.textContent = "思考完成";
+      uiRef.thinkingLabelEl.title = "思考完成";
+      uiRef.thinkingLabelEl.classList.add("is-complete");
+    }
 
     if (
       Array.isArray(turn.models.main.toolEvents) &&
       turn.models.main.toolEvents.length > 0 &&
-      uiRef?.toolCallsSectionEl?.dataset?.userToggled !== "1"
+      uiRef?.toolCallsSectionEl
     ) {
-      uiRef.toolCallsSectionEl.classList.remove("tc-expanded");
-    }
-
-    if (
-      Array.isArray(turn.models.main.webSearchEvents) &&
-      turn.models.main.webSearchEvents.length > 0 &&
-      uiRef?.webSearchSectionEl?.dataset?.userToggled !== "1"
-    ) {
-      uiRef.webSearchSectionEl.classList.remove("sp-expanded");
+      uiRef.toolCallsSectionEl.classList.toggle(
+        "tc-expanded",
+        turn.models.main.toolCallsExpanded === true
+      );
     }
 
     if (!Number.isFinite(turn.models.main.tokens)) {

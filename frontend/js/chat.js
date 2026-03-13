@@ -1,6 +1,6 @@
 import { state, elements, STORAGE_KEYS, createId, formatTime } from './state.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
-import { renderWebSearchSection, renderToolEvents, renderWebSearchEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
+import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
 import { showConfirm } from './dialog.js';
 import { collapseSidebarForMobile } from './layout.js';
@@ -17,6 +17,64 @@ function setSourcesPanelExpanded(panelEl, buttonEl, expanded) {
   panelEl.dataset.expanded = expanded ? "1" : "0";
   buttonEl.setAttribute("aria-expanded", expanded ? "true" : "false");
   buttonEl.classList.toggle("is-active", expanded);
+}
+
+function stripMarkdownForThinkingSummary(text) {
+  return String(text || "")
+    .replace(/\r/g, "")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[`*_~>#-]+/g, " ")
+    .replace(/<\/?[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractThinkingSummary(thinkingText) {
+  const raw = String(thinkingText || "").replace(/\r/g, "").trim();
+  if (!raw) return "";
+  const hasTrailingNewline = /\n\s*$/.test(String(thinkingText || "").replace(/\r/g, ""));
+
+  const lines = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let latestTitle = "";
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const isLastLine = index === lines.length - 1;
+    if (isLastLine && !hasTrailingNewline) continue;
+    if (line.startsWith("```")) continue;
+
+    let candidate = "";
+    if (/^#{1,6}\s+/.test(line)) {
+      candidate = line.replace(/^#{1,6}\s+/, "");
+    } else if (/^\*\*[^*]+\*\*$/.test(line) || /^__[^_]+__$/.test(line)) {
+      candidate = line.replace(/^\*\*|\*\*$|^__|__$/g, "");
+    } else {
+      const plain = stripMarkdownForThinkingSummary(line);
+      const looksLikeTitle =
+        plain.length >= 4 &&
+        plain.length <= 72 &&
+        !/[。！？.!?：:]$/.test(plain);
+      if (looksLikeTitle) candidate = plain;
+    }
+
+    candidate = stripMarkdownForThinkingSummary(candidate);
+    if (!candidate) continue;
+    latestTitle = candidate;
+  }
+
+  if (latestTitle) return latestTitle;
+  return "";
+}
+
+function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = "") {
+  if (isComplete && String(thinkingText || "").trim()) return "思考完成";
+  const summary = extractThinkingSummary(thinkingText);
+  if (summary) return summary;
+  return previousLabel || "思考中";
 }
 
 export function isTopicRunning(topicId) {
@@ -414,7 +472,10 @@ export function createAssistantCard(turn) {
   const webSearchEventsSnapshot = Array.isArray(turn?.models?.main?.webSearchEvents)
     ? turn.models.main.webSearchEvents
     : [];
-  const thinkingTimeSnapshot = turn?.models?.main?.thinkingTime || 0;
+  const mergedToolEventsSnapshot = mergeToolEventsWithWebSearch(
+    toolEventsSnapshot,
+    webSearchEventsSnapshot
+  );
   const tokenSnapshot = turn?.models?.main?.tokens;
   const timeSnapshot = turn?.models?.main?.timeCostSec;
   const statusSnapshot = turn?.models?.main?.status || "ready";
@@ -448,14 +509,20 @@ export function createAssistantCard(turn) {
   const thinkingHeader = document.createElement("div");
   thinkingHeader.className = "thinking-header";
   const thinkingLabel = document.createElement("span");
-  thinkingLabel.textContent = "思考过程";
-  const thinkingTime = document.createElement("span");
-  thinkingTime.className = "thinking-time";
-  if (thinkingTimeSnapshot > 0) {
-    thinkingTime.textContent = `${thinkingTimeSnapshot.toFixed(1)}s`;
+  const storedThinkingLabel = turn?.models?.[side]?.thinkingLabel || "";
+  const thinkingCompleteSnapshot = !!turn?.models?.[side]?.thinkingComplete;
+  const thinkingSummary = buildThinkingLabel(
+    thinkingSnapshot,
+    statusSnapshot === "complete" || thinkingCompleteSnapshot,
+    storedThinkingLabel
+  );
+  thinkingLabel.className = "thinking-summary";
+  if (thinkingCompleteSnapshot || statusSnapshot === "complete") {
+    thinkingLabel.classList.add("is-complete");
   }
+  thinkingLabel.textContent = thinkingSummary;
+  thinkingLabel.title = thinkingSummary;
   thinkingHeader.appendChild(thinkingLabel);
-  thinkingHeader.appendChild(thinkingTime);
   thinkingHeader.addEventListener("click", () => {
     thinkingSection.dataset.userToggled = "1";
     thinkingSection.classList.toggle("collapsed");
@@ -502,12 +569,18 @@ export function createAssistantCard(turn) {
   toolCallsList.className = "tool-calls-list";
 
   toolCallsSection.appendChild(toolCallsList);
-  renderToolEvents(toolCallsSection, toolCallsList, toolEventsSnapshot);
-
-  const webSearchSection = document.createElement("div");
-  webSearchSection.className = "search-preview-section";
-  webSearchSection.style.display = "none";
-  renderWebSearchEvents(webSearchSection, webSearchEventsSnapshot);
+  renderToolEvents(toolCallsSection, toolCallsList, mergedToolEventsSnapshot);
+  toolCallsSection.classList.toggle(
+    "tc-expanded",
+    turn?.models?.[side]?.toolCallsExpanded === true
+  );
+  toolCallsSection.addEventListener("toolcalls-toggle", (event) => {
+    const expanded = event?.detail?.expanded === true;
+    if (turn?.models?.[side]) {
+      turn.models[side].toolCallsExpanded = expanded;
+      scheduleSaveChat();
+    }
+  });
 
   // 来源状态条
   const sourcesSnapshot = Array.isArray(turn?.models?.main?.sources)
@@ -520,7 +593,6 @@ export function createAssistantCard(turn) {
 
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
-  content.appendChild(webSearchSection);
   content.appendChild(sourcesStatus);
   content.appendChild(responseSection);
 
@@ -577,7 +649,7 @@ export function createAssistantCard(turn) {
   const copyBtn = createCopyButton(() => turn?.models?.[side]?.content || "", {
     label: "复制",
     icon: true,
-    className: "action-btn copy-btn",
+    className: "action-btn copy-btn message-copy-btn",
   });
 
   actions.appendChild(copyBtn);
@@ -609,8 +681,7 @@ export function createAssistantCard(turn) {
     (
       thinkingSnapshot ||
       contentSnapshot ||
-      toolEventsSnapshot.length > 0 ||
-      webSearchEventsSnapshot.length > 0
+      mergedToolEventsSnapshot.length > 0
     )
   ) {
     message.classList.remove("loading");
@@ -626,12 +697,11 @@ export function createAssistantCard(turn) {
     toolCallsListEl: toolCallsList,
     thinkingSectionEl: thinkingSection,
     thinkingContentEl: thinkingContent,
-    thinkingTimeEl: thinkingTime,
+    thinkingLabelEl: thinkingLabel,
     tokenEl,
     timeEl,
     speedEl,
     copyBtn,
-    webSearchSectionEl: webSearchSection,
     sourcesStatusEl: sourcesStatus,
     sourcesToggleBtnEl: sourcesToggleBtn,
     sourcesSectionEl: sourcesPanel,
