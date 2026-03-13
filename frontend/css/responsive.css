@@ -270,6 +270,10 @@
   .composer-toolbar::-webkit-scrollbar {
     display: none;
   }
+
+  .scroll-to-bottom-btn {
+    bottom: calc(100% + 8px);
+  }
 }
 
 @media (max-width: 520px) {
