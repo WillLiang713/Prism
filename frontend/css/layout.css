@@ -47,3 +47,23 @@
   min-height: 0;
   min-width: 0;
 }
+
+/* ---------- Fullscreen Web Shell ---------- */
+body:not(.is-desktop-runtime) .container {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  height: 100dvh;
+}
+
+body:not(.is-desktop-runtime) .chat-layout {
+  height: 100%;
+}
+
+body:not(.is-desktop-runtime) .chat-panel {
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
