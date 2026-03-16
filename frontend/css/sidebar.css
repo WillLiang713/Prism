@@ -45,6 +45,7 @@
 }
 
 .sidebar-section {
+  --topic-list-align-offset: 22px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;

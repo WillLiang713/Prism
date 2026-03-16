@@ -292,8 +292,7 @@
   opacity: 0.88;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings,
-.chat-actions .btn.btn-secondary.btn-shortcuts {
+.chat-actions .btn.btn-secondary.btn-settings {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -310,52 +309,29 @@
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
-.chat-actions .btn.btn-secondary.btn-shortcuts {
-  font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.chat-actions .btn.btn-secondary.btn-shortcuts .shortcut-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.chat-actions .btn.btn-secondary.btn-shortcuts .shortcut-mark svg {
-  width: 15px;
-  height: 15px;
-}
-
 .chat-actions .btn.btn-secondary.btn-settings svg {
   width: 14px;
   height: 14px;
   stroke-width: 2.1;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:hover,
-.chat-actions .btn.btn-secondary.btn-shortcuts:hover {
+.chat-actions .btn.btn-secondary.btn-settings:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
   border-color: var(--border-accent);
   text-decoration: none;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:active,
-.chat-actions .btn.btn-secondary.btn-shortcuts:active {
+.chat-actions .btn.btn-secondary.btn-settings:active {
   transform: scale(0.92);
   color: var(--text);
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:focus-visible,
-.chat-actions .btn.btn-secondary.btn-shortcuts:focus-visible {
+.chat-actions .btn.btn-secondary.btn-settings:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:disabled,
-.chat-actions .btn.btn-secondary.btn-shortcuts:disabled {
+.chat-actions .btn.btn-secondary.btn-settings:disabled {
   opacity: 0.4;
 }

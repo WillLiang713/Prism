@@ -27,17 +27,16 @@ export function setActiveConfigTab(tabName = "model") {
   const panels = document.querySelectorAll(".config-tab-panel[data-panel]");
   if (!tabs.length || !panels.length) return;
 
-  const target = String(tabName || "model");
-  let found = false;
+  const target = typeof tabName === "string" ? tabName : "model";
+  const hasTarget = Array.from(tabs).some((tab) => tab.dataset.tab === target);
+  const finalTab = hasTarget ? target : "model";
 
   tabs.forEach((tab) => {
-    const active = tab.dataset.tab === target;
+    const active = tab.dataset.tab === finalTab;
     tab.classList.toggle("is-active", active);
     tab.setAttribute("aria-selected", active ? "true" : "false");
-    if (active) found = true;
   });
 
-  const finalTab = found ? target : "model";
   panels.forEach((panel) => {
     const active = panel.dataset.panel === finalTab;
     panel.classList.toggle("is-active", active);
@@ -51,9 +50,9 @@ export function setActiveConfigTab(tabName = "model") {
   }
 }
 
-export function openConfigModal() {
+export function openConfigModal(tabName = "model") {
   if (!elements.configModal) return;
-  setActiveConfigTab("model");
+  setActiveConfigTab(typeof tabName === "string" ? tabName : "model");
   syncAllConfigSelectPickers();
   elements.configModal.classList.add("open");
   elements.configModal.setAttribute("aria-hidden", "false");

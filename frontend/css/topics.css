@@ -4,7 +4,8 @@
   flex-direction: column;
   gap: 4px;
   overflow-y: scroll;
-  padding-right: 4px;
+  /* Reserve the same visual lane as the sidebar toggle so cards align with the new-topic button. */
+  padding-right: calc(4px + var(--topic-list-align-offset, 0px));
   flex: 1;
   min-height: 0;
   scrollbar-gutter: stable;

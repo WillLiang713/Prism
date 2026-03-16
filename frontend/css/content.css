@@ -245,35 +245,7 @@
   box-shadow: none;
 }
 
-/* ---------- Shortcut help modal ---------- */
-#shortcutHelpModal .modal-content.shortcut-help-content {
-  width: min(760px, 94vw);
-}
-
-.shortcut-help-panel {
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--surface-solid);
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-md);
-}
-
-.shortcut-help-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-solid);
-}
-
-.shortcut-help-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-}
-
+/* ---------- Shortcut help content ---------- */
 .shortcut-help-body {
   max-height: min(62vh, 540px);
   overflow: auto;

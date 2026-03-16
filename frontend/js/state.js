@@ -17,9 +17,9 @@ export const SHORTCUTS = [
     note: "仅在非输入状态下生效",
   },
   {
-    action: "打开快捷键帮助",
+    action: "打开快捷键页",
     keys: ["Shift", "?"],
-    note: "仅在非输入状态下生效",
+    note: "仅在非输入状态下生效，会打开配置中心",
   },
   {
     action: "删除当前话题",
@@ -156,9 +156,6 @@ export const elements = {
   webStatusPill: document.getElementById("webStatusPill"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
-  openShortcutHelpBtn: document.getElementById("openShortcutHelpBtn"),
-  closeShortcutHelpBtn: document.getElementById("closeShortcutHelpBtn"),
-  shortcutHelpModal: document.getElementById("shortcutHelpModal"),
   shortcutHelpList: document.getElementById("shortcutHelpList"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),

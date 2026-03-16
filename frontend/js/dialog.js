@@ -12,10 +12,6 @@ export function isPromptConfirmDialogOpen() {
   return !!elements.promptConfirmModal?.classList.contains("open");
 }
 
-export function isShortcutHelpModalOpen() {
-  return !!elements.shortcutHelpModal?.classList.contains("open");
-}
-
 export function createShortcutKeysElement(keys = []) {
   const wrap = document.createElement("div");
   wrap.className = "shortcut-keys";
@@ -56,24 +52,6 @@ export function renderShortcutHelpList() {
     tr.appendChild(noteTd);
     elements.shortcutHelpList.appendChild(tr);
   });
-}
-
-export function openShortcutHelpModal() {
-  if (!elements.shortcutHelpModal) return;
-  elements.shortcutHelpModal.classList.add("open");
-  elements.shortcutHelpModal.setAttribute("aria-hidden", "false");
-  syncBodyScrollLock();
-
-  window.setTimeout(() => {
-    elements.closeShortcutHelpBtn?.focus();
-  }, 0);
-}
-
-export function closeShortcutHelpModal() {
-  if (!elements.shortcutHelpModal) return;
-  elements.shortcutHelpModal.classList.remove("open");
-  elements.shortcutHelpModal.setAttribute("aria-hidden", "true");
-  syncBodyScrollLock();
 }
 
 export function resolvePromptConfirmDialog(confirmed) {

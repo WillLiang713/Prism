@@ -109,19 +109,6 @@
                 </div>
               </div>
               <div class="chat-actions">
-                <button class="btn btn-secondary btn-shortcuts no-drag" id="openShortcutHelpBtn" title="快捷键 (Shift+/)" aria-label="快捷键帮助">
-                  <span class="shortcut-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="2.75" y="5.5" width="8.25" height="13" rx="2.2"></rect>
-                      <rect x="13" y="5.5" width="8.25" height="13" rx="2.2"></rect>
-                      <path d="M6.5 10.25h.01"></path>
-                      <path d="M17.1 9.2l-.9 1.05"></path>
-                      <path d="M17.1 14.8l.9-1.05"></path>
-                      <path d="M15.8 13.75l2.6-3.5"></path>
-                    </svg>
-                  </span>
-                  <span class="sr-only">快捷键帮助</span>
-                </button>
                 <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" title="设置" aria-label="设置">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"></circle>
@@ -319,6 +306,17 @@
               aria-controls="configPanelWeb"
             >
               联网
+            </button>
+            <button
+              type="button"
+              class="config-tab"
+              id="configTabShortcuts"
+              data-tab="shortcuts"
+              role="tab"
+              aria-selected="false"
+              aria-controls="configPanelShortcuts"
+            >
+              快捷键
             </button>
           </div>
 
@@ -611,6 +609,33 @@
               </div>
             </div>
             </section>
+            <section
+              class="config-tab-panel"
+              id="configPanelShortcuts"
+              data-panel="shortcuts"
+              role="tabpanel"
+              aria-labelledby="configTabShortcuts"
+              hidden
+            >
+            <div class="global-config shortcuts-config">
+              <div class="shortcut-config-intro">
+                <h3>快捷键</h3>
+                <p>所有全局快捷键都集中在这里查看。输入框聚焦时，仅保留编辑相关操作。</p>
+              </div>
+              <div class="shortcut-help-body shortcut-help-inline-body">
+                <table class="shortcut-help-table" aria-label="快捷键列表">
+                  <thead>
+                    <tr>
+                      <th scope="col">操作</th>
+                      <th scope="col">按键</th>
+                      <th scope="col">说明</th>
+                    </tr>
+                  </thead>
+                  <tbody id="shortcutHelpList"></tbody>
+                </table>
+              </div>
+            </div>
+            </section>
           </div>
           <div class="config-footer">
 
@@ -629,40 +654,6 @@
         </div>
       </div>
     </div>
- 
-    <!-- 快捷键帮助弹窗 -->
-    <div class="modal-overlay modal-compact" id="shortcutHelpModal" aria-hidden="true">
-      <div class="modal-content modal-compact-content shortcut-help-content">
-        <div class="config-panel shortcut-help-panel">
-          <div class="shortcut-help-header">
-            <div>
-              <div class="shortcut-help-title">快捷键</div>
-            </div>
-            <button
-              class="btn btn-secondary btn-small"
-              id="closeShortcutHelpBtn"
-              type="button"
-              aria-label="关闭快捷键帮助"
-            >
-              关闭
-            </button>
-          </div>
-          <div class="shortcut-help-body">
-            <table class="shortcut-help-table" aria-label="快捷键列表">
-              <thead>
-                <tr>
-                  <th scope="col">操作</th>
-                  <th scope="col">Windows</th>
-                  <th scope="col">说明</th>
-                </tr>
-              </thead>
-              <tbody id="shortcutHelpList"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 通用确认弹窗 -->
     <div class="modal-overlay modal-compact" id="promptConfirmModal" aria-hidden="true">
       <div class="modal-content modal-compact-content">

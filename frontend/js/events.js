@@ -1,5 +1,5 @@
 import { state, elements, STORAGE_KEYS } from './state.js';
-import { showConfirm, isPromptConfirmDialogOpen, isShortcutHelpModalOpen, resolvePromptConfirmDialog, openShortcutHelpModal, closeShortcutHelpModal } from './dialog.js';
+import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
 import { updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
@@ -95,8 +95,6 @@ export function bindEvents() {
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
-  elements.openShortcutHelpBtn?.addEventListener("click", openShortcutHelpModal);
-  elements.closeShortcutHelpBtn?.addEventListener("click", closeShortcutHelpModal);
   elements.configTabs?.addEventListener("click", (e) => {
     const tabBtn = e.target?.closest?.(".config-tab[data-tab]");
     if (!tabBtn) return;
@@ -105,19 +103,11 @@ export function bindEvents() {
   elements.configModal?.addEventListener("click", (e) => {
     if (e.target === elements.configModal) closeConfigModal();
   });
-  elements.shortcutHelpModal?.addEventListener("click", (e) => {
-    if (e.target === elements.shortcutHelpModal) closeShortcutHelpModal();
-  });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (isPromptConfirmDialogOpen()) {
       e.preventDefault();
       resolvePromptConfirmDialog(false);
-      return;
-    }
-    if (isShortcutHelpModalOpen()) {
-      e.preventDefault();
-      closeShortcutHelpModal();
       return;
     }
     closeConfigModal();
@@ -160,11 +150,11 @@ export function bindEvents() {
     await requestDeleteTopic();
   });
 
-  // 打开快捷键帮助：Shift+/
+  // 打开快捷键页：Shift+/
   document.addEventListener("keydown", (e) => {
     if (!isShortcutHelpShortcut(e)) return;
     e.preventDefault();
-    openShortcutHelpModal();
+    openConfigModal("shortcuts");
   });
 
   // 密钥输入框明文切换
@@ -348,7 +338,6 @@ export function isShortcutHelpShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isShortcutHelpModalOpen()) return false;
   if (isEditableKeyboardTarget(e.target)) return false;
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   const key = (e.key || "").toLowerCase();
@@ -358,7 +347,6 @@ export function isShortcutHelpShortcut(e) {
 export function isDeleteCurrentTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
-  if (isShortcutHelpModalOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
   if (isEditableKeyboardTarget(e.target)) return false;
 

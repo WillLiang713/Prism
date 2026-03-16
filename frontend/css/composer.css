@@ -8,7 +8,7 @@
 
 .composer-wrapper {
   position: relative;
-  max-width: var(--turn-max-width);
+  max-width: none;
   width: 100%;
   margin: 0;
   transition: max-width 0.3s ease;

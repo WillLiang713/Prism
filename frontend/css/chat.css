@@ -20,7 +20,7 @@
 .chat-messages {
   flex: 1;
   margin: 0;
-  padding: 24px calc(50% - var(--content-max-width) / 2);
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -60,8 +60,8 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-width: var(--turn-max-width);
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .user-bubble-wrap {

@@ -181,20 +181,11 @@
     z-index: 2;
   }
 
-  .chat-actions .btn.btn-secondary.btn-settings,
-  .chat-actions .btn.btn-secondary.btn-shortcuts {
+  .chat-actions .btn.btn-secondary.btn-settings {
     width: 36px;
     height: 36px;
     min-width: 36px;
     min-height: 36px;
-  }
-
-  #shortcutHelpModal .modal-content.shortcut-help-content {
-    width: min(94vw, 620px);
-  }
-
-  .shortcut-help-header {
-    padding: 14px 14px 12px;
   }
 
   .shortcut-help-table th,
