@@ -8,6 +8,42 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
+function Resolve-PythonFromPyLauncher {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PyLauncherPath
+  )
+
+  try {
+    $resolved = & $PyLauncherPath -3 -c "import sys; print(sys.executable)" 2>$null
+    $resolved = ($resolved | Select-Object -First 1).ToString().Trim()
+    if ($resolved -and (Test-Path $resolved)) {
+      return $resolved
+    }
+  } catch {
+    # ignore resolution failure and let caller decide fallback
+  }
+
+  return $null
+}
+
+function Stop-ProcessTree {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$ProcessId
+  )
+
+  try {
+    & taskkill /PID $ProcessId /T /F *> $null
+  } catch {
+    try {
+      Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    } catch {
+      # ignore cleanup failure
+    }
+  }
+}
+
 $pythonCommand = $null
 $pythonArgs = @()
 $venvCandidates = @()
@@ -38,8 +74,13 @@ if (-not $pythonCommand) {
 if (-not $pythonCommand) {
   $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
   if ($pyLauncher) {
-    $pythonCommand = $pyLauncher.Source
-    $pythonArgs = @("-3")
+    $resolvedPython = Resolve-PythonFromPyLauncher -PyLauncherPath $pyLauncher.Source
+    if ($resolvedPython) {
+      $pythonCommand = $resolvedPython
+    } else {
+      $pythonCommand = $pyLauncher.Source
+      $pythonArgs = @("-3")
+    }
   }
 }
 
@@ -65,6 +106,7 @@ $apiBase = "http://${BackendHost}:$Port"
 $tauriExitCode = 0
 
 Write-Host "Starting desktop backend at $apiBase"
+Write-Host "Using Python interpreter: $pythonCommand"
 $backendProcess = Start-Process `
   -FilePath $pythonCommand `
   -ArgumentList $backendArgs `
@@ -104,7 +146,7 @@ try {
   $tauriExitCode = $LASTEXITCODE
 } finally {
   if ($backendProcess -and -not $backendProcess.HasExited) {
-    Stop-Process -Id $backendProcess.Id -Force
+    Stop-ProcessTree -ProcessId $backendProcess.Id
   }
 }
 

@@ -110,7 +110,16 @@
               </div>
               <div class="chat-actions">
                 <button class="btn btn-secondary btn-shortcuts no-drag" id="openShortcutHelpBtn" title="快捷键 (Shift+/)" aria-label="快捷键帮助">
-                  <span class="shortcut-mark" aria-hidden="true">?</span>
+                  <span class="shortcut-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2.75" y="5.5" width="8.25" height="13" rx="2.2"></rect>
+                      <rect x="13" y="5.5" width="8.25" height="13" rx="2.2"></rect>
+                      <path d="M6.5 10.25h.01"></path>
+                      <path d="M17.1 9.2l-.9 1.05"></path>
+                      <path d="M17.1 14.8l.9-1.05"></path>
+                      <path d="M15.8 13.75l2.6-3.5"></path>
+                    </svg>
+                  </span>
                   <span class="sr-only">快捷键帮助</span>
                 </button>
                 <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" title="设置" aria-label="设置">
@@ -354,7 +363,6 @@
                           hidden
                         ></div>
                       </div>
-                      <div class="form-hint" id="providerHint"></div>
                     </div>
                     <div class="form-group">
                       <label for="model">模型</label>
@@ -410,9 +418,6 @@
                         placeholder="https://api.example.com/v1/chat/completions"
                         required
                       />
-                      <div class="form-hint">
-                        必填。支持填写域名或完整接口地址
-                      </div>
                       </div>
                     </div>
                   </div>
@@ -486,9 +491,6 @@
                         hidden
                       ></div>
                     </div>
-                    <div class="form-hint">
-                      工具调用时使用的搜索服务
-                    </div>
                   </div>
                   <div class="form-group" id="tavilyApiKeyGroup">
                     <label for="tavilyApiKey">Tavily Key</label>
@@ -536,9 +538,6 @@
                       value="5"
                       class="input-compact"
                     />
-                    <div class="form-hint">
-                      建议 5（范围 1-20）
-                    </div>
                   </div>
                   <div class="form-group" id="tavilySearchDepthGroup">
                     <label for="tavilySearchDepthPickerInput">搜索深度</label>
@@ -567,9 +566,6 @@
                         id="tavilySearchDepthPickerDropdown"
                         hidden
                       ></div>
-                    </div>
-                    <div class="form-hint">
-                      普通问题用 basic；复杂检索再切 advanced
                     </div>
                   </div>
                   <div class="form-group" id="exaSearchTypeGroup">
@@ -609,10 +605,6 @@
                       可选：auto / neural / fast / deep / deep-reasoning / deep-max / instant
                     </div>
                   </div>
-                  <div class="web-config-tips">
-                    <p>如果你只想快速可用：</p>
-                    <p>1. 选服务  2. 保持默认数量  3. 直接保存</p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -643,7 +635,6 @@
           <div class="shortcut-help-header">
             <div>
               <div class="shortcut-help-title">快捷键</div>
-              <div class="shortcut-help-subtitle">提升操作速度的常用组合键</div>
             </div>
             <button
               class="btn btn-secondary btn-small"
@@ -659,8 +650,7 @@
               <thead>
                 <tr>
                   <th scope="col">操作</th>
-                  <th scope="col">Mac</th>
-                  <th scope="col">Windows / Linux</th>
+                  <th scope="col">Windows</th>
                   <th scope="col">说明</th>
                 </tr>
               </thead>

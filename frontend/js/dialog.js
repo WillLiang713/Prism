@@ -44,19 +44,15 @@ export function renderShortcutHelpList() {
     actionTd.className = "shortcut-action";
     actionTd.textContent = item.action;
 
-    const macTd = document.createElement("td");
-    macTd.appendChild(createShortcutKeysElement(item.mac));
-
-    const winTd = document.createElement("td");
-    winTd.appendChild(createShortcutKeysElement(item.win));
+    const keysTd = document.createElement("td");
+    keysTd.appendChild(createShortcutKeysElement(item.keys));
 
     const noteTd = document.createElement("td");
     noteTd.className = "shortcut-note";
     noteTd.textContent = item.note || "";
 
     tr.appendChild(actionTd);
-    tr.appendChild(macTd);
-    tr.appendChild(winTd);
+    tr.appendChild(keysTd);
     tr.appendChild(noteTd);
     elements.shortcutHelpList.appendChild(tr);
   });

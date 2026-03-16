@@ -2,11 +2,11 @@ import { state, elements, STORAGE_KEYS } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, isShortcutHelpModalOpen, resolvePromptConfirmDialog, openShortcutHelpModal, closeShortcutHelpModal } from './dialog.js';
 import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
 import { updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
-import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter } from './models.js';
+import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
-import { triggerCreateTopic, isTopicRunning } from './chat.js';
+import { triggerCreateTopic, isTopicRunning, requestDeleteTopic } from './chat.js';
 import { addImages } from './images.js';
 import { toggleSidebar, isMobileLayout } from './layout.js';
 
@@ -146,11 +146,18 @@ export function bindEvents() {
 
   elements.newTopicBtn.addEventListener("click", triggerCreateTopic);
 
-  // 新建话题快捷键：Mac Cmd+Alt+N / Windows-Linux Ctrl+Alt+N
+  // 新建话题快捷键：Ctrl+Shift+O
   document.addEventListener("keydown", (e) => {
     if (!isNewTopicShortcut(e)) return;
     e.preventDefault();
     triggerCreateTopic();
+  });
+
+  // 删除当前话题快捷键：Ctrl+Shift+Backspace
+  document.addEventListener("keydown", async (e) => {
+    if (!isDeleteCurrentTopicShortcut(e)) return;
+    e.preventDefault();
+    await requestDeleteTopic();
   });
 
   // 打开快捷键帮助：Shift+/
@@ -220,9 +227,13 @@ export function bindEvents() {
   elements.modelDropdownBtn?.addEventListener("click", () =>
     toggleModelDropdown("main")
   );
-  elements.model?.addEventListener("focus", () =>
-    updateModelDropdownFilter("main")
-  );
+  elements.model?.addEventListener("focus", () => {
+    const models = getCachedModelIds("main");
+    if (models.length) {
+      closeAllConfigSelectPickers();
+      openModelDropdown("main");
+    }
+  });
 
   document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;
@@ -315,11 +326,11 @@ export function isNewTopicShortcut(e) {
   if (isEditableKeyboardTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
-  const hasAlt = !!e.altKey;
-  const isMacShortcut = !!e.metaKey && !e.ctrlKey;
-  const isWinLinuxShortcut = !!e.ctrlKey && !e.metaKey;
+  const hasShift = !!e.shiftKey;
 
-  return key === "n" && hasAlt && (isMacShortcut || isWinLinuxShortcut);
+  if (e.metaKey || e.altKey) return false;
+  if (!e.ctrlKey) return false;
+  return key === "o" && hasShift;
 }
 
 export function isEditableKeyboardTarget(target) {
@@ -337,8 +348,24 @@ export function isShortcutHelpShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
+  if (isShortcutHelpModalOpen()) return false;
   if (isEditableKeyboardTarget(e.target)) return false;
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   const key = (e.key || "").toLowerCase();
   return e.shiftKey && (key === "?" || key === "/");
+}
+
+export function isDeleteCurrentTopicShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (isShortcutHelpModalOpen()) return false;
+  if (elements.configModal?.classList.contains("open")) return false;
+  if (isEditableKeyboardTarget(e.target)) return false;
+
+  const key = (e.key || "").toLowerCase();
+  const hasShift = !!e.shiftKey;
+
+  if (e.metaKey || e.altKey) return false;
+  if (!e.ctrlKey) return false;
+  return key === "backspace" && hasShift;
 }

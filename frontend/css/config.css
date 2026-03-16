@@ -381,15 +381,89 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+  align-items: start;
 }
 
 .web-config-main,
 .web-config-side {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 16px;
+  align-content: start;
   min-width: 0;
   border: none;
   border-radius: 0;
   padding: 0;
   background: transparent;
+}
+
+.web-config-main .form-group,
+.web-config-side .form-group {
+  width: 100%;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.web-config-layout .password-input-wrapper,
+.web-config-layout .model-picker,
+.web-config-layout .config-static-picker,
+.web-config-layout .input-compact,
+.web-config-layout .form-group > input[type="number"] {
+  width: 100%;
+  max-width: 100%;
+}
+
+.web-config-layout .form-group > input[type="number"] {
+  min-height: 40px;
+  height: 40px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.web-config-main .form-group label,
+.web-config-side .form-group label {
+  min-height: 18px;
+}
+
+.web-config-layout .form-group input[type="text"],
+.web-config-layout .form-group input[type="password"],
+.web-config-layout .form-group input[type="number"] {
+  height: 40px;
+}
+
+.web-config-layout .password-input-wrapper,
+.web-config-layout .model-picker-row,
+.web-config-layout .model-picker-btn {
+  min-height: 40px;
+}
+
+.web-config-layout .model-picker-btn {
+  height: 40px;
+}
+
+#webSearchProviderGroup {
+  grid-area: provider;
+}
+
+#webSearchMaxResultsGroup {
+  grid-area: results;
+}
+
+#tavilyApiKeyGroup {
+  grid-area: tavily;
+}
+
+#tavilySearchDepthGroup {
+  grid-area: depth;
+}
+
+#exaApiKeyGroup {
+  grid-area: exaKey;
+}
+
+#exaSearchTypeGroup {
+  grid-area: exaType;
 }
 
 .web-config-tips {

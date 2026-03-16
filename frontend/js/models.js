@@ -92,23 +92,39 @@ export function setModelDropdownButtonState(side, isOpen) {
 
 export function closeModelDropdown(side) {
   const el = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
+  const slot = state.modelFetch[side];
   if (!el) return;
   el.onscroll = null;
   el.hidden = true;
   el.setAttribute("aria-hidden", "true");
   el.innerHTML = "";
+  if (slot) slot.dropdownQuery = null;
   closeFloatingDropdown(el);
   setModelDropdownButtonState(side, false);
 }
 
-export function renderModelDropdown(side, filterText) {
+export function getModelDropdownQuery(side, fallback = "") {
+  const slot = state.modelFetch[side];
+  if (!slot) return (fallback || "").toString();
+  return slot.dropdownQuery == null ? null : String(slot.dropdownQuery || fallback || "");
+}
+
+export function setModelDropdownQuery(side, query) {
+  const slot = state.modelFetch[side];
+  if (!slot) return;
+  slot.dropdownQuery = query == null ? null : String(query || "");
+}
+
+export function renderModelDropdown(side, filterText = null) {
   const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   if (!dropdownEl) return;
 
   const slot = state.modelFetch[side];
   const isLoading = !!slot?.inFlight;
   const all = getCachedModelIds(side);
-  const q = (filterText || "").toString().trim().toLowerCase();
+  const q = filterText == null
+    ? ""
+    : String(filterText || "").trim().toLowerCase();
   const models = q ? all.filter((m) => m.toLowerCase().includes(q)) : all;
   const limit = getModelDropdownLimit(side);
 
@@ -166,7 +182,8 @@ export function openModelDropdown(side) {
     side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl || !inputEl) return;
 
-  renderModelDropdown(side, inputEl.value);
+  setModelDropdownQuery(side, null);
+  renderModelDropdown(side, null);
   const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
   openFloatingDropdown(dropdownEl, anchorEl);
   setModelDropdownButtonState(side, true);
@@ -176,11 +193,12 @@ export function openModelDropdown(side) {
       dropdownEl.scrollHeight - dropdownEl.scrollTop - dropdownEl.clientHeight;
     if (remaining > 40) return;
     const all = getCachedModelIds(side);
-    const q = (inputEl.value || "").toString().trim().toLowerCase();
+    const activeQuery = getModelDropdownQuery(side, inputEl.value);
+    const q = (activeQuery || "").toString().trim().toLowerCase();
     const models = q ? all.filter((m) => m.toLowerCase().includes(q)) : all;
     if (getModelDropdownLimit(side) >= models.length) return;
     increaseModelDropdownLimit(side, 240);
-    renderModelDropdown(side, inputEl.value);
+    renderModelDropdown(side, activeQuery);
   };
 }
 
@@ -198,14 +216,23 @@ export function updateModelDropdownFilter(side) {
     side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl || !inputEl) return;
 
+  const nextQuery = inputEl.value || "";
+  setModelDropdownQuery(side, nextQuery);
+
   if (!isModelDropdownOpen(side)) {
     const models = getCachedModelIds(side);
-    if (models.length) openModelDropdown(side);
+    if (models.length) {
+      resetModelDropdownLimit(side);
+      renderModelDropdown(side, nextQuery);
+      const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
+      openFloatingDropdown(dropdownEl, anchorEl);
+      setModelDropdownButtonState(side, true);
+    }
     return;
   }
 
   resetModelDropdownLimit(side);
-  renderModelDropdown(side, inputEl.value);
+  renderModelDropdown(side, nextQuery);
 }
 
 export function normalizeBaseUrlForModels(config) {
@@ -346,7 +373,7 @@ export async function fetchAndUpdateModels(side) {
         side === "Title"
           ? elements.titleGenerationModel
           : elements.model;
-      renderModelDropdown(side, inputEl?.value || "");
+      renderModelDropdown(side, getModelDropdownQuery(side, inputEl?.value || ""));
     }
     slot.lastKey = fetchKey;
     slot.lastFetchedAt = now;

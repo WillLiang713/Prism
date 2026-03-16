@@ -236,6 +236,37 @@ export function deleteTopic(topicId) {
   if (before !== state.chat.topics.length) scheduleSaveChat();
 }
 
+export async function requestDeleteTopic(topicId = state.chat.activeTopicId) {
+  const topic = state.chat.topics.find((item) => item.id === topicId);
+  if (!topic) return false;
+
+  if (isTopicRunning(topic.id)) {
+    const stopThenDelete = await showConfirm(
+      "该话题正在生成中，删除前会先停止生成，是否继续？",
+      {
+        title: "删除话题",
+        okText: "继续",
+      }
+    );
+    if (!stopThenDelete) return false;
+  }
+
+  const confirmed = await showConfirm(
+    `确定要删除话题「${topic.title || "未命名话题"}」吗？`,
+    {
+      title: "删除话题",
+      okText: "删除",
+      danger: true,
+      hint: "",
+    }
+  );
+  if (!confirmed) return false;
+
+  deleteTopic(topic.id);
+  renderAll();
+  return true;
+}
+
 export function getActiveTopic() {
   return (
     state.chat.topics.find((t) => t.id === state.chat.activeTopicId) || null
@@ -309,31 +340,7 @@ export function renderTopicList() {
       deleteBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-
-        if (isTopicRunning(topic.id)) {
-          const stopThenDelete = await showConfirm(
-            "该话题正在生成中，删除前会先停止生成，是否继续？",
-            {
-              title: "删除话题",
-              okText: "继续",
-            }
-          );
-          if (!stopThenDelete) return;
-        }
-
-        const confirmed = await showConfirm(
-          `确定要删除话题「${topic.title || "未命名话题"}」吗？`,
-          {
-            title: "删除话题",
-            okText: "删除",
-            danger: true,
-            hint: "",
-          }
-        );
-        if (!confirmed) return;
-
-        deleteTopic(topic.id);
-        renderAll();
+        await requestDeleteTopic(topic.id);
       });
       footer.appendChild(deleteBtn);
     }

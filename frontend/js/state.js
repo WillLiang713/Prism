@@ -13,26 +13,27 @@ export const BOOTSTRAP_HEALTH_INTERVAL_MS = 100;
 export const SHORTCUTS = [
   {
     action: "新建话题",
-    mac: ["Cmd", "Alt", "N"],
-    win: ["Ctrl", "Alt", "N"],
+    keys: ["Ctrl", "Shift", "O"],
     note: "仅在非输入状态下生效",
   },
   {
     action: "打开快捷键帮助",
-    mac: ["Shift", "?"],
-    win: ["Shift", "?"],
+    keys: ["Shift", "?"],
     note: "仅在非输入状态下生效",
   },
   {
+    action: "删除当前话题",
+    keys: ["Ctrl", "Shift", "Backspace"],
+    note: "仅在非输入状态下生效，会弹出确认",
+  },
+  {
     action: "发送消息",
-    mac: ["Enter"],
-    win: ["Enter"],
+    keys: ["Enter"],
     note: "输入框聚焦时",
   },
   {
     action: "换行",
-    mac: ["Shift", "Enter"],
-    win: ["Shift", "Enter"],
+    keys: ["Shift", "Enter"],
     note: "输入框聚焦时",
   },
 ];
@@ -95,6 +96,7 @@ export const state = {
       lastKey: "",
       lastFetchedAt: 0,
       models: [],
+      dropdownQuery: null,
       pendingAfterReady: false,
       datalistFillToken: 0,
       dropdownLimit: 120,
@@ -105,6 +107,7 @@ export const state = {
       lastKey: "",
       lastFetchedAt: 0,
       models: [],
+      dropdownQuery: null,
       pendingAfterReady: false,
       datalistFillToken: 0,
       dropdownLimit: 120,
