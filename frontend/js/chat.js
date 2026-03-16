@@ -314,6 +314,7 @@ export function renderTopicList() {
     const title = document.createElement("div");
     title.className = "topic-title";
     title.textContent = topic.title || "未命名话题";
+    title.title = topic.title || "未命名话题";
 
     const meta = document.createElement("div");
     meta.className = "topic-meta";

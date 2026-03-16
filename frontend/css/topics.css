@@ -107,7 +107,9 @@
   font-weight: 600;
   color: var(--text);
   margin-bottom: 4px;
-  word-break: break-word;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .topic-footer {
@@ -115,11 +117,16 @@
   justify-content: space-between;
   align-items: flex-end;
   gap: 10px;
+  min-width: 0;
 }
 
 .topic-meta {
   font-size: 11px;
   color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .topic-delete-btn {
