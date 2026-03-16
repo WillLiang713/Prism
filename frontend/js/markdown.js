@@ -1,3 +1,5 @@
+import { isDesktopRuntime } from "./state.js";
+
 export function initMarkdown() {
   if (typeof marked === "undefined") return;
   marked.setOptions({
@@ -68,7 +70,57 @@ export function enhanceRenderedMarkdown(root) {
   links.forEach((link) => {
     link.setAttribute("target", "_blank");
     link.setAttribute("rel", "noopener noreferrer");
+    bindExternalLinkHandler(link);
   });
+}
+
+function bindExternalLinkHandler(link) {
+  if (!link || link.dataset.desktopExternalBound === "1") return;
+
+  link.addEventListener("click", async (event) => {
+    if (!isDesktopRuntime()) return;
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const href = String(link.href || "").trim();
+    if (!isSupportedExternalHref(href)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const opened = await openExternalHref(href);
+    if (!opened) {
+      console.error("打开外部链接失败:", href);
+    }
+  });
+
+  link.dataset.desktopExternalBound = "1";
+}
+
+function isSupportedExternalHref(href) {
+  if (!href) return false;
+
+  try {
+    const url = new URL(href);
+    return ["http:", "https:", "mailto:", "tel:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+async function openExternalHref(href) {
+  const invoke =
+    window.__TAURI__?.core?.invoke || window.__TAURI_INTERNALS__?.invoke;
+  if (typeof invoke !== "function") return false;
+
+  try {
+    await invoke("plugin:shell|open", { path: href });
+    return true;
+  } catch (error) {
+    console.error("调用桌面外部链接能力失败:", error);
+    return false;
+  }
 }
 
 export function getLanguageFromCodeEl(codeEl) {
