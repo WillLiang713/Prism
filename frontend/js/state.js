@@ -125,6 +125,11 @@ export const state = {
   images: {
     selectedImages: [], // 存储当前选择的图片 { id, dataUrl, name, size }
   },
+  webSearch: {
+    enabled: false,
+    toolMode: "tavily",
+    selectorOpen: false,
+  },
   dialog: {
     resolver: null,
   },
@@ -161,8 +166,13 @@ export const elements = {
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),
 
   // 联网搜索
-  enableWebSearch: document.getElementById("enableWebSearch"),
+  webSearchControl: document.getElementById("webSearchControl"),
+  webSearchSwitchText: document.getElementById("webSearchSwitchText"),
+  webSearchToolCurrent: document.getElementById("webSearchToolCurrent"),
+  webSearchToolValue: document.getElementById("webSearchToolValue"),
+  webSearchToolDropdown: document.getElementById("webSearchToolDropdown"),
   webSearchProvider: document.getElementById("webSearchProvider"),
+  webSearchProviderGroup: document.getElementById("webSearchProviderGroup"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
   exaApiKey: document.getElementById("exaApiKey"),
   exaSearchType: document.getElementById("exaSearchType"),
@@ -184,6 +194,7 @@ export const elements = {
   exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
   exaSearchTypeGroup: document.getElementById("exaSearchTypeGroup"),
   tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
+  webSearchMaxResultsGroup: document.getElementById("webSearchMaxResultsGroup"),
 
   // 初始问候语
 
@@ -214,9 +225,13 @@ export const elements = {
   providerPickerBtn: document.getElementById("providerPickerBtn"),
   providerPickerDropdown: document.getElementById("providerPickerDropdown"),
   providerHint: document.getElementById("providerHint"),
+  endpointMode: document.getElementById("endpointMode"),
+  endpointModePickerInput: document.getElementById("endpointModePickerInput"),
+  endpointModePickerBtn: document.getElementById("endpointModePickerBtn"),
+  endpointModePickerDropdown: document.getElementById("endpointModePickerDropdown"),
+  endpointModeHint: document.getElementById("endpointModeHint"),
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),
-  modelCustomName: document.getElementById("modelCustomName"),
   apiUrl: document.getElementById("apiUrl"),
   roleSetting: document.getElementById("roleSetting"),
   roleSettingPreview: document.getElementById("roleSettingPreview"),

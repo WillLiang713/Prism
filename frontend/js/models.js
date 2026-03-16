@@ -258,6 +258,8 @@ export function normalizeBaseUrlForModels(config) {
       basePath = path.slice(0, v1Index + 3);
     } else if (pathLower.endsWith("/chat/completions")) {
       basePath = path.slice(0, -"/chat/completions".length);
+    } else if (pathLower.endsWith("/responses")) {
+      basePath = path.slice(0, -"/responses".length);
     } else if (pathLower.endsWith("/messages")) {
       basePath = path.slice(0, -"/messages".length);
     } else if (pathLower.endsWith("/models")) {

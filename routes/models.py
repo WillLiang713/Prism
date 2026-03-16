@@ -43,6 +43,8 @@ def build_models_base_url(raw_url: str, provider_mode: str) -> str:
         base_path = path[: v1_index + 3]
     elif path_lower.endswith("/chat/completions"):
         base_path = path[: -len("/chat/completions")]
+    elif path_lower.endswith("/responses"):
+        base_path = path[: -len("/responses")]
     elif path_lower.endswith("/messages"):
         base_path = path[: -len("/messages")]
     elif path_lower.endswith("/models"):

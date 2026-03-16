@@ -243,7 +243,7 @@
   line-height: 1;
   padding: 7px 12px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
 .config-tab:hover {
@@ -253,22 +253,29 @@
 
 .config-tab.is-active,
 .config-tab[aria-selected="true"] {
-  border-color: var(--border-accent);
+  border-color: rgba(255, 255, 255, 0.14);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04)),
-    rgba(255, 255, 255, 0.06);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.025);
   color: var(--text);
-  font-weight: 700;
+  font-weight: 600;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 8px 18px rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 0 16px rgba(255, 255, 255, 0.035);
 }
 
 .config-tab.is-active:hover,
 .config-tab[aria-selected="true"]:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.026)),
+    rgba(255, 255, 255, 0.03);
   color: var(--text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.075),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 18px rgba(255, 255, 255, 0.045);
 }
 
 .config-tab:focus-visible {
@@ -440,6 +447,7 @@
   min-height: 18px;
 }
 
+
 .web-config-layout .form-group input[type="text"],
 .web-config-layout .form-group input[type="password"],
 .web-config-layout .form-group input[type="number"] {
@@ -464,20 +472,14 @@
   grid-area: results;
 }
 
-#tavilyApiKeyGroup {
-  grid-area: tavily;
-}
-
-#tavilySearchDepthGroup {
-  grid-area: depth;
-}
-
+#tavilyApiKeyGroup,
 #exaApiKeyGroup {
-  grid-area: exaKey;
+  grid-area: serviceKey;
 }
 
+#tavilySearchDepthGroup,
 #exaSearchTypeGroup {
-  grid-area: exaType;
+  grid-area: serviceOption;
 }
 
 .web-config-tips {

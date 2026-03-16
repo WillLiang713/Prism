@@ -11,6 +11,7 @@ class ProviderConfig:
 
     DEFAULT_URLS = {
         "openai": "https://api.openai.com/v1/chat/completions",
+        "openai_responses": "https://api.openai.com/v1/responses",
         "anthropic": "https://api.anthropic.com/v1/messages",
     }
 
@@ -31,38 +32,58 @@ class ProviderConfig:
         return "anthropic" if provider == "anthropic" else "openai"
 
     @staticmethod
-    def get_api_url(provider: str, api_url: str | None, provider_mode: str) -> str:
+    def get_api_url(
+        provider: str,
+        api_url: str | None,
+        provider_mode: str,
+        endpoint_mode: str = "chat_completions",
+    ) -> str:
         """获取API地址，自动拼接v1路径"""
         url = ProviderConfig.normalize_api_url(api_url)
 
         if not url:
             if provider == "custom":
                 raise ValueError("选择'自定义'时必须填写 API 地址")
-            return ProviderConfig.DEFAULT_URLS.get(
-                provider_mode, ProviderConfig.DEFAULT_URLS["openai"]
-            )
+            if provider_mode == "anthropic":
+                return ProviderConfig.DEFAULT_URLS["anthropic"]
+            if endpoint_mode == "responses":
+                return ProviderConfig.DEFAULT_URLS["openai_responses"]
+            return ProviderConfig.DEFAULT_URLS["openai"]
 
         # 移除末尾的斜杠
         url = url.rstrip("/")
         url_lower = url.lower()
+        responses_suffix = "/responses"
+        openai_suffix = "/chat/completions"
+        anthropic_suffix = "/messages"
+        models_suffix = "/models"
 
-        # 检查是否已经包含完整的API端点
-        if "/chat/completions" not in url_lower and "/messages" not in url_lower:
-            # 根据provider_mode自动拼接对应的端点
-            if provider_mode == "anthropic":
-                # Anthropic格式: /v1/messages
-                if not url_lower.endswith("/v1"):
-                    url = f"{url}/v1/messages"
-                else:
-                    url = f"{url}/messages"
-            else:
-                # OpenAI格式: /v1/chat/completions
-                if not url_lower.endswith("/v1"):
-                    url = f"{url}/v1/chat/completions"
-                else:
-                    url = f"{url}/chat/completions"
+        if provider_mode == "anthropic":
+            if anthropic_suffix not in url_lower:
+                if url_lower.endswith("/v1"):
+                    return f"{url}{anthropic_suffix}"
+                return f"{url}/v1{anthropic_suffix}"
+            return url
 
-        return url
+        target_suffix = responses_suffix if endpoint_mode == "responses" else openai_suffix
+
+        if url_lower.endswith(openai_suffix):
+            base = url[: -len(openai_suffix)]
+            return f"{base}{target_suffix}"
+        if url_lower.endswith(responses_suffix):
+            base = url[: -len(responses_suffix)]
+            return f"{base}{target_suffix}"
+        if url_lower.endswith(models_suffix):
+            base = url[: -len(models_suffix)]
+            if base.lower().endswith("/v1"):
+                return f"{base}{target_suffix}"
+            return f"{base}/v1{target_suffix}"
+        if anthropic_suffix in url_lower:
+            raise ValueError("当前 API 地址是 Anthropic /messages 端点，不能用于 OpenAI 协议")
+        if url_lower.endswith("/v1"):
+            return f"{url}{target_suffix}"
+
+        return f"{url}/v1{target_suffix}"
 
     @staticmethod
     def build_headers(api_key: str, provider_mode: str) -> dict[str, str]:
@@ -223,8 +244,16 @@ class MessageBuilder:
         provider_mode: str,
         current_user_content: str | list[dict],
         history_messages: list[dict],
+        endpoint_mode: str = "chat_completions",
     ) -> dict:
         """构建请求体"""
+        if endpoint_mode == "responses":
+            return MessageBuilder.build_responses_request_body(
+                config,
+                current_user_content,
+                history_messages,
+            )
+
         if provider_mode == "anthropic":
             return MessageBuilder._build_anthropic_body(
                 config, current_user_content, history_messages
@@ -315,6 +344,166 @@ class MessageBuilder:
             body["reasoning_effort"] = config.reasoningEffort
 
         return body
+
+    @staticmethod
+    def build_responses_request_body(
+        config: ChatRequest,
+        user_content: str | list[dict],
+        history_messages: list[dict],
+    ) -> dict:
+        """构建 OpenAI Responses API 请求体"""
+        if config.images:
+            raise ValueError("Responses 模式第一阶段暂不支持图片输入")
+
+        now = datetime.now()
+        instructions = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
+
+        input_items: list[dict[str, object]] = []
+        for message in history_messages:
+            response_message = MessageBuilder._convert_message_to_responses_input(message)
+            if response_message:
+                input_items.append(response_message)
+
+        current_message = MessageBuilder._convert_message_to_responses_input(
+            {"role": "user", "content": user_content}
+        )
+        if current_message:
+            input_items.append(current_message)
+
+        body: dict[str, object] = {
+            "model": config.model,
+            "input": input_items,
+            "stream": True,
+        }
+
+        if instructions:
+            body["instructions"] = instructions
+
+        if config.reasoningEffort and config.reasoningEffort != "none":
+            body["reasoning"] = {"effort": config.reasoningEffort}
+
+        response_tools: list[dict[str, object]] = []
+        if config.enableBuiltinWebSearch:
+            response_tools.append({"type": "web_search"})
+            body["include"] = ["web_search_call.action.sources"]
+
+        local_tools = MessageBuilder._load_selected_tools(config)
+        if local_tools:
+            response_tools.extend(MessageBuilder._convert_tools_to_responses(local_tools))
+
+        if response_tools:
+            body["tools"] = response_tools
+
+        return body
+
+    @staticmethod
+    def build_responses_followup_body(
+        config: ChatRequest,
+        previous_response_id: str,
+        tool_outputs: list[dict[str, object]],
+        tools: list[dict[str, object]] | None = None,
+    ) -> dict[str, object]:
+        body: dict[str, object] = {
+            "model": config.model,
+            "previous_response_id": previous_response_id,
+            "input": tool_outputs,
+            "stream": True,
+        }
+
+        if config.reasoningEffort and config.reasoningEffort != "none":
+            body["reasoning"] = {"effort": config.reasoningEffort}
+
+        now = datetime.now()
+        instructions = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
+        if instructions:
+            body["instructions"] = instructions
+
+        if tools:
+            body["tools"] = tools
+
+        if config.enableBuiltinWebSearch:
+            body["include"] = ["web_search_call.action.sources"]
+
+        return body
+
+    @staticmethod
+    def _convert_message_to_responses_input(
+        message: dict[str, object],
+    ) -> dict[str, object] | None:
+        role = str(message.get("role") or "").strip()
+        if role not in {"user", "assistant"}:
+            return None
+
+        text_item_type = (
+            "output_text" if role == "assistant" else "input_text"
+        )
+
+        content = message.get("content")
+        if isinstance(content, str):
+            text = content.strip()
+            if not text:
+                return None
+            return {
+                "role": role,
+                "content": [{"type": text_item_type, "text": text}],
+            }
+
+        if not isinstance(content, list):
+            return None
+
+        response_content: list[dict[str, str]] = []
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            item_type = str(item.get("type") or "").strip()
+            if item_type in {"text", "input_text", "output_text"}:
+                text = str(item.get("text") or "").strip()
+                if text:
+                    response_content.append(
+                        {"type": text_item_type, "text": text}
+                    )
+            elif role == "assistant" and item_type == "refusal":
+                refusal = str(item.get("refusal") or item.get("text") or "").strip()
+                if refusal:
+                    response_content.append({"type": "refusal", "refusal": refusal})
+
+        if not response_content:
+            return None
+
+        return {"role": role, "content": response_content}
+
+    @staticmethod
+    def _convert_tools_to_responses(tools: list[dict]) -> list[dict[str, object]]:
+        responses_tools: list[dict[str, object]] = []
+
+        for tool in tools:
+            if not isinstance(tool, dict):
+                continue
+            if str(tool.get("type") or "").strip() != "function":
+                continue
+
+            func = tool.get("function")
+            if not isinstance(func, dict):
+                continue
+
+            name = str(func.get("name") or "").strip()
+            if not name:
+                continue
+
+            parameters = func.get("parameters")
+            if not isinstance(parameters, dict):
+                parameters = {"type": "object", "properties": {}}
+
+            responses_tools.append(
+                {
+                    "type": "function",
+                    "name": name,
+                    "description": str(func.get("description") or "").strip(),
+                    "parameters": parameters,
+                }
+            )
+
+        return responses_tools
 
     @staticmethod
     def _load_selected_tools(config: ChatRequest) -> list[dict]:

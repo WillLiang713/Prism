@@ -9,6 +9,7 @@ from .stream_parser import (
     ToolCallsAccumulator,
     build_web_search_event,
     extract_sources_from_search_result,
+    parse_responses_sse_stream,
     parse_sse_stream,
     summarize_tool_result,
 )
@@ -16,6 +17,76 @@ from .stream_parser import (
 
 class AIService:
     """AI服务主类"""
+
+    @staticmethod
+    def _sse_chunk(chunk_type: str, data: Any, *, ensure_ascii: bool = True) -> str:
+        return f"data: {json.dumps({'type': chunk_type, 'data': data}, ensure_ascii=ensure_ascii)}\n\n"
+
+    @staticmethod
+    def _extract_error_message(error_payload: Any) -> str:
+        if isinstance(error_payload, dict):
+            error = error_payload.get("error")
+            if isinstance(error, dict):
+                message = str(error.get("message") or "").strip()
+                if message:
+                    return message
+            for key in ("message", "detail", "error"):
+                value = error_payload.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        elif isinstance(error_payload, str) and error_payload.strip():
+            return error_payload.strip()
+        return ""
+
+    @staticmethod
+    async def _format_http_error(response: httpx.Response, context: str = "") -> str:
+        raw_bytes = await response.aread()
+        raw_text = raw_bytes.decode(errors="ignore").strip()
+        detail = ""
+
+        try:
+            payload = json.loads(raw_text)
+        except Exception:
+            payload = None
+
+        if payload is not None:
+            detail = AIService._extract_error_message(payload)
+
+        if not detail:
+            detail = raw_text or response.reason_phrase or ""
+
+        prefix = f"{context} " if context else ""
+        if response.status_code in {404, 405, 501}:
+            base_message = f"{prefix}当前服务不支持 Responses API 或内置网页搜索".strip()
+            if detail and detail.lower() not in {"not found", "method not allowed"}:
+                return f"{base_message}: {detail}"
+            return base_message
+
+        return f"{prefix}HTTP {response.status_code}: {detail}".strip()
+
+    @staticmethod
+    def _merge_sources(
+        existing_urls: set[str],
+        incoming: list[dict[str, str]] | None,
+    ) -> list[dict[str, str]]:
+        if not isinstance(incoming, list):
+            return []
+
+        merged: list[dict[str, str]] = []
+        for source in incoming:
+            if not isinstance(source, dict):
+                continue
+            source_url = str(source.get("url") or "").strip()
+            if not source_url or source_url in existing_urls:
+                continue
+            existing_urls.add(source_url)
+            merged.append(
+                {
+                    "title": str(source.get("title") or "").strip(),
+                    "url": source_url,
+                }
+            )
+        return merged
 
     @staticmethod
     async def execute_tool(
@@ -80,8 +151,8 @@ class AIService:
                     method="POST", url=api_url, headers=headers, json=body
                 ) as response:
                     if response.status_code >= 400:
-                        error_text = await response.aread()
-                        yield f"data: {json.dumps({'type': 'error', 'data': f'HTTP {response.status_code}: {error_text.decode()}'})}\n\n"
+                        error_text = await AIService._format_http_error(response)
+                        yield AIService._sse_chunk("error", error_text)
                         return
 
                     tool_calls_buffer = ToolCallsAccumulator()
@@ -96,12 +167,12 @@ class AIService:
                         # 发送thinking增量
                         if parsed.get("thinking"):
                             assistant_thinking += parsed["thinking"]
-                            yield f"data: {json.dumps({'type': 'thinking', 'data': parsed['thinking']})}\n\n"
+                            yield AIService._sse_chunk("thinking", parsed["thinking"])
 
                         # 发送content增量
                         if parsed.get("content"):
                             assistant_content += parsed["content"]
-                            yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
+                            yield AIService._sse_chunk("content", parsed["content"])
 
                         # 处理工具调用
                         if parsed.get("tool_calls") and request.enableTools:
@@ -109,7 +180,7 @@ class AIService:
 
                         # 发送tokens统计
                         if parsed.get("tokens") is not None:
-                            yield f"data: {json.dumps({'type': 'tokens', 'data': parsed['tokens']})}\n\n"
+                            yield AIService._sse_chunk("tokens", parsed["tokens"])
 
                     # 流结束后，如果有工具调用，执行并多轮请求 AI
                     current_round = 0
@@ -222,8 +293,19 @@ class AIService:
                                     else "auto"
                                 )
 
+                            tool_call_id = tool_call["id"] or f"call_{idx}"
+
                             # 通知前端：开始执行工具
-                            yield f"data: {json.dumps({'type': 'tool', 'data': {'status': 'start', 'round': current_round, 'name': tool_name, 'arguments': args}})}\n\n"
+                            yield AIService._sse_chunk(
+                                "tool",
+                                {
+                                    "callId": tool_call_id,
+                                    "status": "start",
+                                    "round": current_round,
+                                    "name": tool_name,
+                                    "arguments": args,
+                                },
+                            )
 
                             # 执行工具
                             result = await AIService.execute_tool(
@@ -238,7 +320,16 @@ class AIService:
                                 result_summary,
                                 parsed_result_dict,
                             ) = summarize_tool_result(result)
-                            yield f"data: {json.dumps({'type': 'tool', 'data': {'status': result_status, 'round': current_round, 'name': tool_name, 'resultSummary': result_summary}})}\n\n"
+                            yield AIService._sse_chunk(
+                                "tool",
+                                {
+                                    "callId": tool_call_id,
+                                    "status": result_status,
+                                    "round": current_round,
+                                    "name": tool_name,
+                                    "resultSummary": result_summary,
+                                },
+                            )
 
                             # 如果是搜索工具且成功，提取来源链接单独发送
                             if result_status == "success" and tool_name in (
@@ -252,18 +343,26 @@ class AIService:
                                     if isinstance(sr, dict):
                                         sources = extract_sources_from_search_result(sr)
                                         if sources:
-                                            yield f"data: {json.dumps({'type': 'sources', 'data': sources}, ensure_ascii=False)}\n\n"
+                                            yield AIService._sse_chunk(
+                                                "sources",
+                                                sources,
+                                                ensure_ascii=False,
+                                            )
 
                                         web_search_event = build_web_search_event(
                                             sr, args, current_round, tool_name
                                         )
                                         if web_search_event:
-                                            yield f"data: {json.dumps({'type': 'web_search', 'data': web_search_event}, ensure_ascii=False)}\n\n"
+                                            web_search_event["callId"] = tool_call_id
+                                            yield AIService._sse_chunk(
+                                                "web_search",
+                                                web_search_event,
+                                                ensure_ascii=False,
+                                            )
                                 except Exception:
                                     pass
 
                             # 构建标准格式的 tool_call
-                            tool_call_id = tool_call["id"] or f"call_{idx}"
                             if provider_mode == "anthropic":
                                 if use_synthetic_anthropic_blocks:
                                     assistant_content_blocks = assistant_message.get(
@@ -353,8 +452,10 @@ class AIService:
                             method="POST", url=api_url, headers=headers, json=body_next
                         ) as response_next:
                             if response_next.status_code >= 400:
-                                error_text = await response_next.aread()
-                                yield f"data: {json.dumps({'type': 'error', 'data': f'工具调用失败 HTTP {response_next.status_code}: {error_text.decode()}'})}\n\n"
+                                error_text = await AIService._format_http_error(
+                                    response_next, "工具调用失败"
+                                )
+                                yield AIService._sse_chunk("error", error_text)
                                 return
 
                             async for parsed in parse_sse_stream(
@@ -368,12 +469,12 @@ class AIService:
                                 # 累积 thinking 并继续推给前端
                                 if parsed.get("thinking"):
                                     assistant_thinking += parsed["thinking"]
-                                    yield f"data: {json.dumps({'type': 'thinking', 'data': parsed['thinking']})}\n\n"
+                                    yield AIService._sse_chunk("thinking", parsed["thinking"])
 
                                 # 发送content增量
                                 if parsed.get("content"):
                                     assistant_content += parsed["content"]
-                                    yield f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
+                                    yield AIService._sse_chunk("content", parsed["content"])
 
                                 # 处理工具调用
                                 if parsed.get("tool_calls") and request.enableTools:
@@ -381,12 +482,333 @@ class AIService:
 
                                 # 发送tokens统计
                                 if parsed.get("tokens") is not None:
-                                    yield f"data: {json.dumps({'type': 'tokens', 'data': parsed['tokens']})}\n\n"
+                                    yield AIService._sse_chunk("tokens", parsed["tokens"])
 
                             # 检查是否达到最大轮数限制
                             if current_round >= max_rounds and tool_calls_buffer:
-                                yield f"data: {json.dumps({'type': 'error', 'data': f'已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具'})}\n\n"
+                                yield AIService._sse_chunk(
+                                    "error",
+                                    f"已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具",
+                                )
                                 break
 
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+            yield AIService._sse_chunk("error", str(e))
+
+    @staticmethod
+    async def responses_stream(request: ChatRequest) -> AsyncIterator[str]:
+        """OpenAI Responses API 流式接口。"""
+        try:
+            provider_mode = ProviderConfig.get_provider_mode(request.provider)
+            if provider_mode != "openai":
+                yield AIService._sse_chunk(
+                    "error",
+                    "Responses 模式当前只支持 OpenAI 兼容协议",
+                )
+                return
+
+            api_url = ProviderConfig.get_api_url(
+                request.provider,
+                request.apiUrl,
+                provider_mode,
+                endpoint_mode="responses",
+            )
+            headers = ProviderConfig.build_headers(request.apiKey, provider_mode)
+
+            history_messages = []
+            if request.historyTurns:
+                history_messages = MessageBuilder.convert_history_to_messages(
+                    request.historyTurns,
+                    "main",
+                    provider_mode,
+                )
+
+            current_user_content = MessageBuilder._build_user_content(
+                request.prompt,
+                request.images,
+                provider_mode,
+            )
+            body = MessageBuilder.build_request_body(
+                request,
+                provider_mode,
+                current_user_content,
+                history_messages,
+                endpoint_mode="responses",
+            )
+            responses_tools = list(body.get("tools") or [])
+            resolved_max_results = (
+                request.webSearchMaxResults or request.tavilyMaxResults or 5
+            )
+            tool_runtime_context = {
+                "web_search_provider": str(
+                    request.webSearchProvider or "tavily"
+                ).lower(),
+                "web_search_max_results": resolved_max_results,
+                "tavily_api_key": (request.tavilyApiKey or "").strip(),
+                "exa_api_key": (request.exaApiKey or "").strip(),
+                "exa_search_type": str(request.exaSearchType or "auto").lower(),
+                "tavily_max_results": request.tavilyMaxResults,
+                "tavily_search_depth": request.tavilySearchDepth,
+            }
+            known_source_urls: set[str] = set()
+            search_rounds: dict[str, int] = {}
+            next_search_round = 1
+            current_round = 0
+            max_rounds = min(request.maxToolRounds, 200)
+            current_body: dict[str, Any] = dict(body)
+
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                while True:
+                    response_id = ""
+                    pending_function_calls: dict[str, dict[str, Any]] = {}
+
+                    async with client.stream(
+                        method="POST",
+                        url=api_url,
+                        headers=headers,
+                        json=current_body,
+                    ) as response:
+                        if response.status_code >= 400:
+                            yield AIService._sse_chunk(
+                                "error",
+                                await AIService._format_http_error(response),
+                            )
+                            return
+
+                        async for parsed in parse_responses_sse_stream(response):
+                            if parsed.get("error"):
+                                yield AIService._sse_chunk("error", parsed["error"])
+                                return
+
+                            if parsed.get("response_id"):
+                                response_id = str(parsed["response_id"]).strip()
+
+                            if parsed.get("thinking"):
+                                yield AIService._sse_chunk("thinking", parsed["thinking"])
+
+                            if parsed.get("content"):
+                                yield AIService._sse_chunk("content", parsed["content"])
+
+                            call_id = str(parsed.get("call_id") or "").strip()
+                            round_number = None
+                            if call_id and parsed.get("tool"):
+                                round_number = search_rounds.get(call_id)
+                                if round_number is None:
+                                    round_number = next_search_round
+                                    search_rounds[call_id] = round_number
+                                    next_search_round += 1
+
+                            if parsed.get("tool"):
+                                tool_payload = dict(parsed["tool"])
+                                if round_number is not None:
+                                    tool_payload["round"] = round_number
+                                yield AIService._sse_chunk(
+                                    "tool",
+                                    tool_payload,
+                                    ensure_ascii=False,
+                                )
+
+                            if parsed.get("web_search"):
+                                web_search_payload = dict(parsed["web_search"])
+                                if round_number is not None:
+                                    web_search_payload["round"] = round_number
+                                yield AIService._sse_chunk(
+                                    "web_search",
+                                    web_search_payload,
+                                    ensure_ascii=False,
+                                )
+
+                            merged_sources = AIService._merge_sources(
+                                known_source_urls,
+                                parsed.get("sources"),
+                            )
+                            if merged_sources:
+                                yield AIService._sse_chunk(
+                                    "sources",
+                                    merged_sources,
+                                    ensure_ascii=False,
+                                )
+
+                            if parsed.get("tokens") is not None:
+                                yield AIService._sse_chunk("tokens", parsed["tokens"])
+
+                            function_calls = parsed.get("function_calls")
+                            if isinstance(function_calls, list):
+                                for function_call in function_calls:
+                                    if not isinstance(function_call, dict):
+                                        continue
+                                    resolved_call_id = str(
+                                        function_call.get("call_id")
+                                        or function_call.get("id")
+                                        or ""
+                                    ).strip()
+                                    if not resolved_call_id:
+                                        continue
+                                    pending_function_calls[resolved_call_id] = function_call
+
+                    if not pending_function_calls:
+                        break
+
+                    current_round += 1
+                    if current_round > max_rounds:
+                        yield AIService._sse_chunk(
+                            "error",
+                            f"已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具",
+                        )
+                        return
+
+                    tool_outputs: list[dict[str, object]] = []
+                    for function_call in pending_function_calls.values():
+                        tool_name = str(function_call.get("name") or "").strip()
+                        if not tool_name:
+                            continue
+
+                        raw_arguments = str(function_call.get("arguments") or "")
+                        try:
+                            args = json.loads(raw_arguments) if raw_arguments else {}
+                        except Exception:
+                            args = {}
+                        if not isinstance(args, dict):
+                            args = {}
+
+                        if tool_name == "tavily_search":
+                            resolved_depth = (
+                                "advanced"
+                                if str(request.tavilySearchDepth).lower() == "advanced"
+                                else "basic"
+                            )
+                            args["search_depth"] = resolved_depth
+                            args["max_results"] = resolved_max_results
+                        elif tool_name == "exa_search":
+                            args["max_results"] = resolved_max_results
+                            allowed_exa_types = {
+                                "neural",
+                                "fast",
+                                "auto",
+                                "deep",
+                                "deep-reasoning",
+                                "deep-max",
+                                "instant",
+                            }
+                            resolved_exa_type = str(request.exaSearchType or "auto").lower()
+                            args["search_type"] = (
+                                resolved_exa_type
+                                if resolved_exa_type in allowed_exa_types
+                                else "auto"
+                            )
+
+                        yield AIService._sse_chunk(
+                            "tool",
+                            {
+                                "callId": str(
+                                    function_call.get("call_id")
+                                    or function_call.get("id")
+                                    or ""
+                                ).strip(),
+                                "status": "start",
+                                "round": current_round,
+                                "name": tool_name,
+                                "arguments": args,
+                            },
+                            ensure_ascii=False,
+                        )
+
+                        result = await AIService.execute_tool(
+                            tool_name,
+                            args,
+                            tool_runtime_context,
+                        )
+                        result_status, result_summary, parsed_result_dict = (
+                            summarize_tool_result(result)
+                        )
+                        yield AIService._sse_chunk(
+                            "tool",
+                            {
+                                "callId": str(
+                                    function_call.get("call_id")
+                                    or function_call.get("id")
+                                    or ""
+                                ).strip(),
+                                "status": result_status,
+                                "round": current_round,
+                                "name": tool_name,
+                                "resultSummary": result_summary,
+                            },
+                            ensure_ascii=False,
+                        )
+
+                        if result_status == "success" and tool_name in (
+                            "tavily_search",
+                            "exa_search",
+                        ):
+                            try:
+                                search_result = parsed_result_dict
+                                if not isinstance(search_result, dict):
+                                    search_result = json.loads(result)
+                                if isinstance(search_result, dict):
+                                    merged_sources = AIService._merge_sources(
+                                        known_source_urls,
+                                        extract_sources_from_search_result(search_result),
+                                    )
+                                    if merged_sources:
+                                        yield AIService._sse_chunk(
+                                            "sources",
+                                            merged_sources,
+                                            ensure_ascii=False,
+                                        )
+
+                                    web_search_event = build_web_search_event(
+                                        search_result,
+                                        args,
+                                        current_round,
+                                        tool_name,
+                                    )
+                                    if web_search_event:
+                                        web_search_event["callId"] = str(
+                                            function_call.get("call_id")
+                                            or function_call.get("id")
+                                            or ""
+                                        ).strip()
+                                        yield AIService._sse_chunk(
+                                            "web_search",
+                                            web_search_event,
+                                            ensure_ascii=False,
+                                        )
+                            except Exception:
+                                pass
+
+                        tool_outputs.append(
+                            {
+                                "type": "function_call_output",
+                                "call_id": str(
+                                    function_call.get("call_id")
+                                    or function_call.get("id")
+                                    or ""
+                                ).strip(),
+                                "output": result,
+                            }
+                        )
+
+                    if not tool_outputs:
+                        yield AIService._sse_chunk(
+                            "error",
+                            "模型返回了无法执行的工具调用",
+                        )
+                        return
+
+                    if not response_id:
+                        yield AIService._sse_chunk(
+                            "error",
+                            "响应缺少 response_id，无法继续提交工具结果",
+                        )
+                        return
+
+                    current_body = MessageBuilder.build_responses_followup_body(
+                        request,
+                        response_id,
+                        tool_outputs,
+                        responses_tools,
+                    )
+
+        except Exception as e:
+            yield AIService._sse_chunk("error", str(e))

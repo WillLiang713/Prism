@@ -123,7 +123,7 @@ export async function sendPrompt() {
   turn.models.main = {
     provider: config.provider,
     model: config.model,
-    displayName: resolveModelDisplayName(config.model, config.customModelName),
+    displayName: resolveModelDisplayName(config.model),
     thinking: "",
     thinkingLabel: "思考中",
     thinkingComplete: false,
@@ -206,7 +206,7 @@ export async function callModel(
   if (initUi) {
     applyStatus(initUi.statusEl, "loading");
     initUi.modelNameEl.textContent =
-      resolveModelDisplayName(config.model, config.customModelName) || "未配置";
+      resolveModelDisplayName(config.model) || "未配置";
   }
 
   const abortController = new AbortController();
@@ -255,11 +255,26 @@ export async function callModel(
 
     // 构建请求体（发送到后端）
     const useWebSearchTool = !!webSearchConfig?.enabled;
+    const endpointMode = config.endpointMode === "responses"
+      ? "responses"
+      : "chat_completions";
+    const useResponsesEndpoint = endpointMode === "responses";
+    const webSearchToolMode = String(webSearchConfig?.toolMode || "tavily").toLowerCase();
+    const useBuiltinWebSearch =
+      useResponsesEndpoint &&
+      useWebSearchTool &&
+      webSearchToolMode === "builtin";
     const webSearchProvider = normalizeWebSearchProvider(
-      webSearchConfig?.provider
+      webSearchToolMode === "exa" || webSearchToolMode === "tavily"
+        ? webSearchToolMode
+        : webSearchConfig?.provider
     );
     const selectedWebSearchTool =
       webSearchProvider === "exa" ? "exa_search" : "tavily_search";
+    const selectedTools = ["get_current_time"];
+    if (useWebSearchTool && !useBuiltinWebSearch) {
+      selectedTools.unshift(selectedWebSearchTool);
+    }
     const requestBody = {
       provider: config.provider,
       apiKey: config.apiKey,
@@ -268,28 +283,37 @@ export async function callModel(
       prompt: prompt,
       images: images,
       systemPrompt: config.systemPrompt || null,
+      endpointMode,
       reasoningEffort: config.reasoningEffort,
       historyTurns: historyTurns,
+      enableBuiltinWebSearch: useBuiltinWebSearch,
       enableTools: true,
-      selectedTools: useWebSearchTool
-        ? [selectedWebSearchTool, "get_current_time"]
-        : ["get_current_time"],
+      selectedTools,
       webSearchProvider: webSearchProvider,
       webSearchMaxResults: webSearchConfig?.maxResults || 5,
-      tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,
-      exaApiKey: (webSearchConfig?.exaApiKey || "").trim() || null,
+      tavilyApiKey: useResponsesEndpoint
+        ? null
+        : (webSearchConfig?.tavilyApiKey || "").trim() || null,
+      exaApiKey: useResponsesEndpoint
+        ? null
+        : (webSearchConfig?.exaApiKey || "").trim() || null,
       exaSearchType: webSearchConfig?.exaSearchType || "auto",
       tavilyMaxResults: webSearchConfig?.maxResults || 5,
       tavilySearchDepth: webSearchConfig?.searchDepth || "basic",
     };
 
     // 调用后端接口
-    const response = await fetch(buildApiUrl("/api/chat/stream"), {
+    const response = await fetch(
+      buildApiUrl(
+        useResponsesEndpoint ? "/api/responses/stream" : "/api/chat/stream"
+      ),
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
       signal: abortController.signal,
-    });
+      }
+    );
 
     if (!response.ok)
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

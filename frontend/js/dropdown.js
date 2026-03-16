@@ -19,6 +19,13 @@ export function getConfigSelectPickerDefs() {
       dropdown: elements.providerPickerDropdown,
     },
     {
+      key: "endpointMode",
+      select: elements.endpointMode,
+      input: elements.endpointModePickerInput,
+      btn: elements.endpointModePickerBtn,
+      dropdown: elements.endpointModePickerDropdown,
+    },
+    {
       key: "webSearchProvider",
       select: elements.webSearchProvider,
       input: elements.webSearchProviderPickerInput,

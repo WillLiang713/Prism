@@ -34,6 +34,7 @@ class ChatRequest(BaseModel):
     prompt: str
     images: list[ImageContent] = []
     systemPrompt: str | None = None
+    endpointMode: Literal["chat_completions", "responses"] = "chat_completions"
 
     # 推理与工具
     reasoningEffort: str = "medium"
@@ -45,6 +46,7 @@ class ChatRequest(BaseModel):
 
     # 联网相关
     webSearchProvider: str = Field(default="tavily")  # 联网服务提供方（tavily|exa）
+    enableBuiltinWebSearch: bool = False  # Responses 模式下是否启用 OpenAI 内置网页搜索
     webSearchMaxResults: int | None = Field(
         default=None, ge=1, le=20
     )  # 联网默认结果数量

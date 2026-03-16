@@ -1,7 +1,7 @@
-import { state, elements, STORAGE_KEYS } from './state.js';
+import { state, elements } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
-import { updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
@@ -21,38 +21,18 @@ export function bindEvents() {
       ? "pointerdown"
       : "mousedown";
 
-  // 联网搜索开关的label元素，阻止焦点转移
-  const webSearchLabel = elements.enableWebSearch?.parentElement;
-  if (webSearchLabel) {
-    webSearchLabel.addEventListener(PRESS_START_EVENT, (e) => {
-      // 只阻止label本身的默认行为，不阻止checkbox的点击
-      if (
-        e.target === webSearchLabel ||
-        e.target.classList.contains("switch-track") ||
-        e.target.classList.contains("switch-text") ||
-        e.target.tagName === "svg" ||
-        e.target.tagName === "path"
-      ) {
-        e.preventDefault();
-      }
-    });
-  }
-
-  elements.enableWebSearch?.addEventListener("change", (e) => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.config);
-      const config = raw ? JSON.parse(raw) : {};
-      config.webSearch = config.webSearch || {};
-      config.webSearch.enabled = !!elements.enableWebSearch.checked;
-      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-    } catch (e) {
-      console.error("保存联网搜索开关失败:", e);
-    }
-  });
-
   elements.webSearchProvider?.addEventListener("change", () => {
+    const currentMode = getCurrentWebSearchToolMode();
+    if (currentMode !== "builtin") {
+      setWebSearchToolMode(elements.webSearchProvider.value);
+    } else {
+      updateWebSearchProviderUi();
+    }
     updateWebSearchProviderUi();
     updateConfigStatusStrip();
+  });
+  elements.webSearchToolCurrent?.addEventListener("click", () => {
+    toggleWebSearchToolSelector();
   });
   elements.tavilyApiKey?.addEventListener("input", updateConfigStatusStrip);
   elements.exaApiKey?.addEventListener("input", updateConfigStatusStrip);
@@ -90,6 +70,9 @@ export function bindEvents() {
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".reasoning-effort-selector")) {
       elements.reasoningEffortSelector?.classList.remove("open");
+    }
+    if (!e.target.closest(".web-search-control")) {
+      closeWebSearchToolSelector();
     }
   });
 
@@ -178,6 +161,13 @@ export function bindEvents() {
     scheduleFetchModels("main", 0);
   });
 
+  elements.endpointMode?.addEventListener("change", () => {
+    updateProviderUi();
+    updateModelHint();
+    updateConfigStatusStrip();
+    scheduleFetchModels("main", 0);
+  });
+
   elements.apiKey?.addEventListener("input", () => {
     updateModelHint();
     updateConfigStatusStrip();
@@ -207,11 +197,6 @@ export function bindEvents() {
     updateModelNames();
     updateConfigStatusStrip();
     updateModelDropdownFilter("main");
-  });
-
-  elements.modelCustomName?.addEventListener("input", () => {
-    updateModelNames();
-    updateConfigStatusStrip();
   });
 
   elements.modelDropdownBtn?.addEventListener("click", () =>

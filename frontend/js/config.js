@@ -3,7 +3,7 @@ import { showAlert, showConfirm, syncBodyScrollLock } from './dialog.js';
 import { syncAllConfigSelectPickers, closeAllConfigSelectPickers } from './dropdown.js';
 import { closeModelDropdown, scheduleFetchModels, updateModelHint } from './models.js';
 import { renderMarkdownToElement } from './markdown.js';
-import { normalizeWebSearchProvider, normalizeTavilySearchDepth, normalizeExaSearchType, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { getCurrentWebSearchToolMode, isWebSearchEnabled, normalizeEndpointMode, normalizeWebSearchProvider, normalizeTavilySearchDepth, normalizeExaSearchType, setWebSearchEnabled, setWebSearchToolMode, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 
 export function getConfigFromForm(side) {
   // 如果是标题模型，从主配置中获取
@@ -17,6 +17,7 @@ export function getConfigFromForm(side) {
 
   return {
     provider: elements.provider?.value || "openai",
+    endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
     apiKey: elements.apiKey?.value || "",
     apiUrl: elements.apiUrl?.value || "",
   };
@@ -107,20 +108,36 @@ export function syncRoleSettingPreview(preferPreview = true) {
 
 export function updateProviderUi() {
   const provider = elements.provider?.value || "openai";
+  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
   const hintEl = elements.providerHint;
+  const endpointHintEl = elements.endpointModeHint;
 
   if (hintEl) {
     if (provider === "openai") {
       hintEl.textContent =
-        "OpenAI 兼容接口，请填写 API 地址";
+        "OpenAI 接口，请填写 API 地址";
     } else if (provider === "anthropic") {
       hintEl.textContent =
-        "Anthropic 兼容接口，请填写 API 地址";
+        "Anthropic 接口，请填写 API 地址";
+    }
+  }
+
+  if (endpointHintEl) {
+    if (endpointMode === "responses" && provider !== "openai") {
+      endpointHintEl.textContent =
+        "Responses 目前只支持 OpenAI；Anthropic 请继续使用 Chat Completions。";
+    } else if (endpointMode === "responses") {
+      endpointHintEl.textContent =
+        "Responses 会请求 /v1/responses，并在联网时改用 OpenAI 内置网页搜索。";
+    } else {
+      endpointHintEl.textContent =
+        "默认使用 Chat Completions；更稳妥，也会继续走本地工具链路。";
     }
   }
 
   updateApiUrlPlaceholder();
   updateModelHint();
+  updateWebSearchProviderUi();
 }
 
 export function updateApiUrlPlaceholder() {
@@ -129,23 +146,24 @@ export function updateApiUrlPlaceholder() {
   if (!providerEl || !urlInput) return;
 
   const provider = providerEl.value;
+  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
   const placeholders = {
-    openai: "https://api.openai.com/v1/chat/completions",
+    openai:
+      endpointMode === "responses"
+        ? "https://api.openai.com/v1/responses"
+        : "https://api.openai.com/v1/chat/completions",
     anthropic: "https://api.anthropic.com/v1/messages",
   };
   urlInput.placeholder = placeholders[provider] || "";
 }
 
-export function resolveModelDisplayName(modelId, customName) {
-  const alias = (customName || "").trim();
-  if (alias) return alias;
+export function resolveModelDisplayName(modelId) {
   return (modelId || "").trim();
 }
 
 export function updateModelNames() {
   const modelId = elements.model?.value || "";
-  const customName = elements.modelCustomName?.value || "";
-  const displayName = resolveModelDisplayName(modelId, customName);
+  const displayName = resolveModelDisplayName(modelId);
 
   // 更新模型名称（未配置时不显示任何内容）
   elements.modelName.textContent = displayName || "";
@@ -162,9 +180,9 @@ export function getConfig(side) {
   if (side === "Title") {
     return {
       provider: elements.provider?.value || "openai",
+      endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
       apiKey: elements.apiKey?.value || "",
       model: elements.model?.value || "",
-      customModelName: (elements.modelCustomName?.value || "").trim(),
       apiUrl: elements.apiUrl?.value || "",
       systemPrompt: "", // 标题生成不需要系统提示词
       reasoningEffort: "none",
@@ -173,9 +191,9 @@ export function getConfig(side) {
 
   return {
     provider: elements.provider?.value || "openai",
+    endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
     apiKey: elements.apiKey?.value || "",
     model: elements.model?.value || "",
-    customModelName: (elements.modelCustomName?.value || "").trim(),
     apiUrl: elements.apiUrl?.value || "",
     // 角色设定：发送给后端作为系统提示词
     systemPrompt: elements.roleSetting?.value || "",
@@ -184,10 +202,16 @@ export function getConfig(side) {
 }
 
 export function getWebSearchConfig() {
+  const toolMode = getCurrentWebSearchToolMode();
   const maxResults = parseInt(elements.tavilyMaxResults?.value);
   return {
-    enabled: !!elements.enableWebSearch?.checked,
-    provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
+    endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
+    toolMode,
+    enabled: isWebSearchEnabled(),
+    provider:
+      toolMode === "builtin"
+        ? normalizeWebSearchProvider(elements.webSearchProvider?.value)
+        : toolMode,
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
     exaApiKey: (elements.exaApiKey?.value || "").trim(),
     exaSearchType: normalizeExaSearchType(elements.exaSearchType?.value),
@@ -198,10 +222,10 @@ export function getWebSearchConfig() {
 
 export async function saveConfig() {
   const provider = elements.provider?.value || "openai";
+  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
   const apiKey = (elements.apiKey?.value || "").trim();
   const apiUrl = (elements.apiUrl?.value || "").trim();
   const model = (elements.model?.value || "").trim();
-  const customName = (elements.modelCustomName?.value || "").trim();
 
   if (!apiKey || !apiUrl || !model) {
     setActiveConfigTab("model");
@@ -213,7 +237,8 @@ export async function saveConfig() {
 
   const config = {
     webSearch: {
-      enabled: !!elements.enableWebSearch?.checked,
+      enabled: isWebSearchEnabled(),
+      toolMode: getWebSearchConfig().toolMode,
       provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
       tavilyApiKey: elements.tavilyApiKey?.value || "",
       exaApiKey: elements.exaApiKey?.value || "",
@@ -230,11 +255,12 @@ export async function saveConfig() {
       enabled: true,
       model: "",
     },
+    endpointMode,
     model: {
       provider,
+      endpointMode,
       apiKey,
       model,
-      customName,
       apiUrl,
       systemPrompt: elements.roleSetting?.value || "",
     },
@@ -251,19 +277,18 @@ export async function saveConfig() {
 export function loadConfig() {
   const saved = localStorage.getItem(STORAGE_KEYS.config);
   const config = saved ? JSON.parse(saved) : {};
+  let pendingWebSearchToolMode = null;
 
   try {
-    // 加载联网搜索配置 - 总是设置状态，默认关闭
-    if (elements.enableWebSearch) {
-      const webSearchEnabled = config.webSearch?.enabled === true;
-      elements.enableWebSearch.checked = webSearchEnabled;
-    }
+    const pendingWebSearchEnabled = config.webSearch?.enabled === true;
     if (config.webSearch) {
+      const normalizedProvider = normalizeWebSearchProvider(
+        config.webSearch.provider
+      );
       if (elements.webSearchProvider) {
-        elements.webSearchProvider.value = normalizeWebSearchProvider(
-          config.webSearch.provider
-        );
+        elements.webSearchProvider.value = normalizedProvider;
       }
+      pendingWebSearchToolMode = config.webSearch.toolMode || normalizedProvider;
       if (elements.tavilyApiKey)
         elements.tavilyApiKey.value = config.webSearch.tavilyApiKey || "";
       if (elements.exaApiKey)
@@ -281,6 +306,7 @@ export function loadConfig() {
       }
     } else if (elements.webSearchProvider) {
       elements.webSearchProvider.value = "tavily";
+      pendingWebSearchToolMode = "tavily";
       if (elements.exaSearchType) elements.exaSearchType.value = "auto";
     }
     // 加载思考强度配置
@@ -307,22 +333,30 @@ export function loadConfig() {
     const modelConfig = config.model || config.A;
     if (modelConfig) {
       elements.provider.value = modelConfig.provider || "openai";
+      if (elements.endpointMode) {
+        elements.endpointMode.value = normalizeEndpointMode(
+          config.endpointMode || modelConfig.endpointMode
+        );
+      }
       elements.apiKey.value = modelConfig.apiKey || "";
       elements.model.value = modelConfig.model || "";
-      if (elements.modelCustomName) {
-        elements.modelCustomName.value = modelConfig.customName || "";
-      }
       elements.apiUrl.value = modelConfig.apiUrl || "";
       if (elements.roleSetting)
         elements.roleSetting.value =
           modelConfig.systemPrompt || modelConfig.roleSetting || "";
     }
+    if (elements.endpointMode && !modelConfig) {
+      elements.endpointMode.value = normalizeEndpointMode(config.endpointMode);
+    }
+    setWebSearchEnabled(pendingWebSearchEnabled, { persist: false });
+    setWebSearchToolMode(pendingWebSearchToolMode || "tavily", { persist: false });
     syncRoleSettingPreview(true);
   } catch (e) {
     console.error("加载配置失败:", e);
   }
 
   syncAllConfigSelectPickers();
+  updateProviderUi();
   updateWebSearchProviderUi();
   updateConfigStatusStrip();
 }
@@ -338,8 +372,9 @@ export async function clearConfig() {
 
   localStorage.removeItem(STORAGE_KEYS.config);
 
-  if (elements.enableWebSearch) elements.enableWebSearch.checked = false;
+  setWebSearchEnabled(false, { persist: false });
   if (elements.webSearchProvider) elements.webSearchProvider.value = "tavily";
+  setWebSearchToolMode("tavily", { persist: false });
   if (elements.tavilyApiKey) elements.tavilyApiKey.value = "";
   if (elements.exaApiKey) elements.exaApiKey.value = "";
   if (elements.exaSearchType) elements.exaSearchType.value = "auto";
@@ -347,9 +382,9 @@ export async function clearConfig() {
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
 
   elements.provider.value = "openai";
+  if (elements.endpointMode) elements.endpointMode.value = "chat_completions";
   elements.apiKey.value = "";
   elements.model.value = "";
-  if (elements.modelCustomName) elements.modelCustomName.value = "";
   elements.apiUrl.value = "";
   if (elements.roleSetting) elements.roleSetting.value = "";
   if (elements.reasoningEffortDropdown && elements.reasoningEffortValue) {

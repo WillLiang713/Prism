@@ -273,6 +273,458 @@ async def parse_sse_stream(response: httpx.Response, provider_mode: str) -> Asyn
                 yield StreamParser.parse_openai_chunk(chunk_json)
 
 
+def extract_sources_from_annotations(
+    annotations: list[dict[str, Any]] | None,
+) -> list[dict[str, str]]:
+    """从 Responses 输出标注中提取来源。"""
+    if not isinstance(annotations, list):
+        return []
+
+    sources: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for annotation in annotations:
+        if not isinstance(annotation, dict):
+            continue
+        source_url = str(annotation.get("url") or "").strip()
+        if source_url in seen:
+            continue
+        seen.add(source_url)
+        sources.append(
+            {
+                "title": str(annotation.get("title") or "").strip(),
+                "url": source_url,
+            }
+        )
+    return sources
+
+
+def _extract_text_and_annotations_from_response_item(
+    item: dict[str, Any] | None,
+) -> tuple[str, list[dict[str, Any]]]:
+    if not isinstance(item, dict):
+        return "", []
+
+    texts: list[str] = []
+    annotations: list[dict[str, Any]] = []
+    content = item.get("content")
+    if not isinstance(content, list):
+        return "", []
+
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        block_type = str(block.get("type") or "").strip()
+        if block_type not in {"output_text", "text"}:
+            continue
+
+        text = str(block.get("text") or "").strip()
+        if text:
+            texts.append(text)
+
+        block_annotations = block.get("annotations")
+        if isinstance(block_annotations, list):
+            annotations.extend(
+                ann for ann in block_annotations if isinstance(ann, dict)
+            )
+
+    return "".join(texts), annotations
+
+
+def _extract_reasoning_text(item: dict[str, Any] | None) -> str:
+    if not isinstance(item, dict):
+        return ""
+    if str(item.get("type") or "").strip() != "reasoning":
+        return ""
+
+    summaries = item.get("summary")
+    if not isinstance(summaries, list):
+        return ""
+
+    parts: list[str] = []
+    for summary in summaries:
+        if not isinstance(summary, dict):
+            continue
+        text = str(summary.get("text") or "").strip()
+        if text:
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def _extract_web_search_query(item: dict[str, Any]) -> str:
+    action = item.get("action")
+    if isinstance(action, dict):
+        query = str(action.get("query") or "").strip()
+        if query:
+            return query
+        queries = action.get("queries")
+        if isinstance(queries, list):
+            for value in queries:
+                query = str(value or "").strip()
+                if query:
+                    return query
+    return str(item.get("query") or "").strip()
+
+
+def extract_sources_from_responses_web_search_call(
+    item: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    if not isinstance(item, dict):
+        return []
+    if str(item.get("type") or "").strip() != "web_search_call":
+        return []
+
+    sources: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    action = item.get("action")
+    if isinstance(action, dict):
+        action_sources = action.get("sources")
+        if isinstance(action_sources, list):
+            for source in action_sources:
+                if not isinstance(source, dict):
+                    continue
+                source_url = str(source.get("url") or "").strip()
+                if source_url in seen:
+                    continue
+                seen.add(source_url)
+                sources.append(
+                    {
+                        "title": str(source.get("title") or "").strip(),
+                        "url": source_url,
+                    }
+                )
+
+    for result in item.get("results") or []:
+        if not isinstance(result, dict):
+            continue
+        source_url = str(result.get("url") or "").strip()
+        if source_url in seen:
+            continue
+        seen.add(source_url)
+        sources.append(
+            {
+                "title": str(result.get("title") or "").strip(),
+                "url": source_url,
+            }
+        )
+
+    return sources
+
+
+def build_responses_web_search_event(
+    item: dict[str, Any] | None,
+    current_round: int,
+) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    if str(item.get("type") or "").strip() != "web_search_call":
+        return None
+
+    preview_results = []
+    for result in item.get("results") or []:
+        if not isinstance(result, dict):
+            continue
+        title = str(result.get("title") or "").strip()
+        source_url = str(result.get("url") or "").strip()
+        content = str(
+            result.get("text")
+            or result.get("snippet")
+            or result.get("summary")
+            or result.get("content")
+            or ""
+        ).strip()
+        if title or source_url or content:
+            preview_results.append(
+                {
+                    "title": title,
+                    "url": source_url,
+                    "content": content,
+                }
+            )
+
+    if not preview_results:
+        action = item.get("action")
+        if isinstance(action, dict):
+            for source in action.get("sources") or []:
+                if not isinstance(source, dict):
+                    continue
+                title = str(source.get("title") or "").strip()
+                source_url = str(source.get("url") or "").strip()
+                if title or source_url:
+                    preview_results.append(
+                        {"title": title, "url": source_url, "content": ""}
+                    )
+
+    if not preview_results:
+        return None
+
+    return {
+        "callId": str(item.get("id") or "").strip(),
+        "status": "ready",
+        "round": current_round,
+        "name": "web_search_preview",
+        "query": _extract_web_search_query(item),
+        "answer": str(item.get("summary") or "").strip(),
+        "totalResults": len(preview_results),
+        "results": preview_results[:8],
+    }
+
+
+def build_web_search_event_from_sources(
+    sources: list[dict[str, str]] | None,
+    current_round: int = 0,
+) -> dict[str, Any] | None:
+    if not isinstance(sources, list):
+        return None
+
+    preview_results: list[dict[str, str]] = []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        title = str(source.get("title") or "").strip()
+        source_url = str(source.get("url") or "").strip()
+        if title or source_url:
+            preview_results.append(
+                {
+                    "title": title,
+                    "url": source_url,
+                    "content": "",
+                }
+            )
+
+    if not preview_results:
+        return None
+
+    return {
+        "status": "ready",
+        "round": current_round,
+        "name": "web_search_preview",
+        "query": "",
+        "answer": "",
+        "totalResults": len(preview_results),
+        "results": preview_results[:8],
+    }
+
+def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
+    """解析 OpenAI Responses API 流式事件。"""
+    result: dict[str, Any] = {
+        "thinking": "",
+        "content": "",
+        "tokens": None,
+        "tool": None,
+        "web_search": None,
+        "sources": None,
+        "error": None,
+        "call_id": "",
+        "response_id": "",
+        "function_calls": None,
+    }
+
+    event_type = str(chunk.get("type") or "").strip()
+
+    response_payload = chunk.get("response")
+    if isinstance(response_payload, dict):
+        result["response_id"] = str(response_payload.get("id") or "")
+
+    if event_type == "response.output_text.delta":
+        result["content"] = str(chunk.get("delta") or "")
+        return result
+
+    if event_type in {
+        "response.reasoning_summary_text.delta",
+        "response.reasoning_text.delta",
+    }:
+        result["thinking"] = str(chunk.get("delta") or "")
+        return result
+
+    if event_type == "response.output_item.added":
+        item = chunk.get("item")
+        if isinstance(item, dict) and item.get("type") == "web_search_call":
+            result["call_id"] = str(item.get("id") or "")
+            query = _extract_web_search_query(item)
+            result["tool"] = {
+                "callId": result["call_id"],
+                "status": "start",
+                "name": "web_search_preview",
+            }
+            if query:
+                result["tool"]["arguments"] = {"query": query}
+        return result
+
+    if event_type == "response.output_item.done":
+        item = chunk.get("item")
+        if not isinstance(item, dict):
+            return result
+
+        item_type = str(item.get("type") or "").strip()
+        if item_type == "message":
+            _, annotations = _extract_text_and_annotations_from_response_item(item)
+            sources = extract_sources_from_annotations(annotations)
+            if sources:
+                result["sources"] = sources
+            return result
+
+        if item_type == "reasoning":
+            result["thinking"] = _extract_reasoning_text(item)
+            return result
+
+        if item_type == "web_search_call":
+            result["call_id"] = str(item.get("id") or "")
+            status = str(item.get("status") or "").strip().lower()
+            tool_status = "error" if status in {"failed", "error"} else "success"
+            query = _extract_web_search_query(item)
+            result["tool"] = {
+                "callId": result["call_id"],
+                "status": tool_status,
+                "name": "web_search_preview",
+                "resultSummary": (
+                    str(item.get("error") or "").strip()
+                    if tool_status == "error"
+                    else (
+                        f"返回 {len(item.get('results') or [])} 条结果"
+                        if isinstance(item.get("results"), list)
+                        else "搜索完成"
+                    )
+                ),
+            }
+            if query:
+                result["tool"]["arguments"] = {"query": query}
+
+            web_search = build_responses_web_search_event(item, 0)
+            if web_search:
+                result["web_search"] = web_search
+
+            sources = extract_sources_from_responses_web_search_call(item)
+            if sources:
+                result["sources"] = sources
+            return result
+
+        if item_type == "function_call":
+            call_id = str(item.get("call_id") or item.get("id") or "").strip()
+            result["call_id"] = call_id
+            result["function_calls"] = [
+                {
+                    "id": str(item.get("id") or "").strip(),
+                    "call_id": call_id,
+                    "name": str(item.get("name") or "").strip(),
+                    "arguments": str(item.get("arguments") or ""),
+                }
+            ]
+            return result
+
+        return result
+
+    if event_type == "response.completed":
+        response = chunk.get("response")
+        if isinstance(response, dict):
+            collected_sources: list[dict[str, str]] = []
+            output_items = response.get("output")
+            if isinstance(output_items, list):
+                for item in output_items:
+                    if not isinstance(item, dict):
+                        continue
+                    item_type = str(item.get("type") or "").strip()
+                    if item_type == "message":
+                        _, annotations = _extract_text_and_annotations_from_response_item(item)
+                        collected_sources.extend(
+                            extract_sources_from_annotations(annotations)
+                        )
+                    elif item_type == "web_search_call":
+                        if result["web_search"] is None:
+                            web_search = build_responses_web_search_event(item, 0)
+                            if web_search:
+                                result["web_search"] = web_search
+                        collected_sources.extend(
+                            extract_sources_from_responses_web_search_call(item)
+                        )
+
+            if collected_sources:
+                deduped_sources: list[dict[str, str]] = []
+                seen_urls: set[str] = set()
+                for source in collected_sources:
+                    if not isinstance(source, dict):
+                        continue
+                    source_url = str(source.get("url") or "").strip()
+                    if not source_url or source_url in seen_urls:
+                        continue
+                    seen_urls.add(source_url)
+                    deduped_sources.append(
+                        {
+                            "title": str(source.get("title") or "").strip(),
+                            "url": source_url,
+                        }
+                    )
+                if deduped_sources:
+                    result["sources"] = deduped_sources
+                    if result["web_search"] is None:
+                        synthetic_web_search = build_web_search_event_from_sources(
+                            deduped_sources,
+                            0,
+                        )
+                        if synthetic_web_search:
+                            result["web_search"] = synthetic_web_search
+
+            usage = response.get("usage")
+            if isinstance(usage, dict):
+                result["tokens"] = (
+                    usage.get("output_tokens")
+                    or usage.get("completion_tokens")
+                    or usage.get("total_tokens")
+                    or 0
+                )
+        return result
+
+    if event_type == "error":
+        error = chunk.get("error")
+        if isinstance(error, dict):
+            result["error"] = str(error.get("message") or "").strip() or str(error)
+        else:
+            result["error"] = str(error or chunk.get("message") or "").strip()
+        return result
+
+    if event_type == "response.failed":
+        response = chunk.get("response")
+        if isinstance(response, dict):
+            error = response.get("error")
+            if isinstance(error, dict):
+                result["error"] = str(error.get("message") or "").strip() or str(error)
+            elif error:
+                result["error"] = str(error)
+        if not result["error"]:
+            result["error"] = "Responses 请求失败"
+        return result
+
+    return result
+
+
+async def parse_responses_sse_stream(response: httpx.Response) -> AsyncIterator[dict[str, Any]]:
+    """解析 OpenAI Responses API SSE 事件流。"""
+    buffer = ""
+
+    async for chunk in response.aiter_bytes():
+        buffer += chunk.decode("utf-8", errors="ignore")
+        lines = buffer.split("\n")
+        buffer = lines.pop() if lines else ""
+
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith(":"):
+                continue
+            if not line.startswith("data: "):
+                continue
+
+            data = line[6:]
+            if data == "[DONE]":
+                continue
+
+            try:
+                chunk_json = json.loads(data)
+            except json.JSONDecodeError:
+                continue
+
+            yield parse_responses_chunk(chunk_json)
+
+
 def summarize_tool_result(result: str) -> tuple[str, str, dict[str, Any] | None]:
     """生成工具执行摘要，返回 (status, summary, parsed_result_dict)。"""
     result_status = "success"

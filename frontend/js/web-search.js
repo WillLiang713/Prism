@@ -1,4 +1,12 @@
-import { state, elements, truncateText, buildApiUrl, isDesktopRuntime } from './state.js';
+import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime } from './state.js';
+
+const WEB_SEARCH_TOOL_MODE_LABELS = {
+  builtin: "模型内置",
+  tavily: "Tavily",
+  exa: "Exa",
+};
+
+const WEB_SEARCH_DISABLED_LABEL = "关闭联网";
 
 export function renderWebSearchSection(container, webSearch, options = {}) {
   if (!container) return;
@@ -144,8 +152,19 @@ export function formatToolEventDisplay(event) {
   const name = (event.name || "未知工具").trim();
   const status = event.status || "info";
   const rawArgs = event.arguments;
-  const args = rawArgs && typeof rawArgs === "object"
-    ? JSON.stringify(rawArgs, null, 0)
+  const normalizedArgs = rawArgs && typeof rawArgs === "object"
+    ? Object.fromEntries(
+        Object.entries(rawArgs).filter(([, value]) => {
+          if (value == null) return false;
+          if (typeof value === "string") return value.trim() !== "";
+          return true;
+        })
+      )
+    : rawArgs;
+  const args = normalizedArgs && typeof normalizedArgs === "object"
+    ? Object.keys(normalizedArgs).length > 0
+      ? JSON.stringify(normalizedArgs, null, 0)
+      : ""
     : typeof rawArgs === "string"
     ? rawArgs
     : "";
@@ -182,8 +201,73 @@ function normalizeToolEventRound(value) {
   return Number.isFinite(round) ? round : null;
 }
 
+function getToolEventIdentity(event, fallbackIndex = 0) {
+  if (!event || typeof event !== "object") {
+    return `unknown:${fallbackIndex}`;
+  }
+
+  const callId = String(event.callId || "").trim();
+  if (callId) return `call:${callId}`;
+
+  const name = String(event.name || "").trim();
+  const round = normalizeToolEventRound(event.round);
+  if (name && round !== null) return `round:${round}|name:${name}`;
+
+  return `unknown:${fallbackIndex}`;
+}
+
+function mergeToolEventState(previousEvent, nextEvent) {
+  const previous = previousEvent && typeof previousEvent === "object"
+    ? previousEvent
+    : {};
+  const next = nextEvent && typeof nextEvent === "object" ? nextEvent : {};
+
+  return {
+    ...previous,
+    ...next,
+    callId: String(next.callId || previous.callId || "").trim(),
+    arguments: next.arguments ?? previous.arguments,
+    resultSummary: next.resultSummary || previous.resultSummary || "",
+    error: next.error || previous.error || "",
+    webSearch: next.webSearch || previous.webSearch || null,
+  };
+}
+
+function compactToolEvents(events) {
+  const items = Array.isArray(events) ? events : [];
+  const compacted = [];
+  const indexByIdentity = new Map();
+
+  items.forEach((event, index) => {
+    if (!event || typeof event !== "object") return;
+
+    const identity = getToolEventIdentity(event, index);
+    const existingIndex = indexByIdentity.get(identity);
+
+    if (existingIndex === undefined) {
+      indexByIdentity.set(identity, compacted.length);
+      compacted.push({ ...event });
+      return;
+    }
+
+    compacted[existingIndex] = mergeToolEventState(
+      compacted[existingIndex],
+      event
+    );
+  });
+
+  return compacted;
+}
+
 function isSameToolCall(event, webSearchEvent) {
   if (!event || !webSearchEvent) return false;
+
+  const eventCallId = String(event.callId || "").trim();
+  const searchCallId = String(webSearchEvent.callId || "").trim();
+  if (eventCallId && searchCallId) {
+    return eventCallId === searchCallId;
+  }
+
   const eventName = String(event.name || "").trim();
   const searchName = String(webSearchEvent.name || "").trim();
   if (!eventName || !searchName || eventName !== searchName) return false;
@@ -197,6 +281,7 @@ function createNormalizedWebSearchEvent(webSearchEvent) {
   if (!webSearchEvent || typeof webSearchEvent !== "object") return null;
   return {
     ...webSearchEvent,
+    callId: String(webSearchEvent.callId || "").trim(),
     name: String(webSearchEvent.name || "联网搜索").trim() || "联网搜索",
     query: String(webSearchEvent.query || "").trim(),
     answer: String(webSearchEvent.answer || "").trim(),
@@ -231,6 +316,7 @@ export function attachWebSearchToToolEvents(toolEvents, webSearchEvent) {
   }
 
   items.push({
+    callId: String(normalized.callId || "").trim(),
     status: normalized.status === "error" ? "error" : "success",
     round: normalized.round,
     name: normalized.name,
@@ -254,7 +340,7 @@ export function mergeToolEventsWithWebSearch(toolEvents, webSearchEvents) {
   searches.forEach((event) => {
     attachWebSearchToToolEvents(merged, event);
   });
-  return merged;
+  return compactToolEvents(merged);
 }
 
 function renderToolEventWebSearch(container, webSearchEvent) {
@@ -290,7 +376,7 @@ function renderToolEventWebSearch(container, webSearchEvent) {
 
 export function renderToolEvents(sectionEl, listEl, events) {
   if (!sectionEl || !listEl) return;
-  const items = Array.isArray(events) ? events : [];
+  const items = compactToolEvents(events);
 
   if (!items.length) {
     sectionEl.style.display = "none";
@@ -648,6 +734,204 @@ export function normalizeExaSearchType(value) {
   return allowed.has(normalized) ? normalized : "auto";
 }
 
+export function normalizeEndpointMode(value) {
+  return String(value || "").toLowerCase() === "responses"
+    ? "responses"
+    : "chat_completions";
+}
+
+export function canUseBuiltinWebSearch(configLike = {}) {
+  const endpointMode = normalizeEndpointMode(
+    configLike.endpointMode ?? elements.endpointMode?.value
+  );
+  const provider = String(
+    configLike.provider ?? elements.provider?.value ?? "openai"
+  ).toLowerCase();
+  return endpointMode === "responses" && provider === "openai";
+}
+
+export function normalizeWebSearchToolMode(
+  value,
+  supportsBuiltin = canUseBuiltinWebSearch(),
+  fallbackProvider = normalizeWebSearchProvider(elements.webSearchProvider?.value)
+) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "builtin" && supportsBuiltin) return "builtin";
+  if (normalized === "exa") return "exa";
+  if (normalized === "tavily") return "tavily";
+  return fallbackProvider === "exa" ? "exa" : "tavily";
+}
+
+export function isWebSearchEnabled() {
+  return state.webSearch?.enabled === true;
+}
+
+function persistWebSearchConfigPatch(patch) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.config);
+    const config = raw ? JSON.parse(raw) : {};
+    config.webSearch = {
+      ...(config.webSearch || {}),
+      ...patch,
+    };
+    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+  } catch (error) {
+    console.error("保存联网配置失败:", error);
+  }
+}
+
+export function getCurrentWebSearchToolMode() {
+  return normalizeWebSearchToolMode(
+    state.webSearch?.toolMode,
+    canUseBuiltinWebSearch(),
+    normalizeWebSearchProvider(elements.webSearchProvider?.value)
+  );
+}
+
+export function getWebSearchToolModeLabel(mode) {
+  return WEB_SEARCH_TOOL_MODE_LABELS[
+    normalizeWebSearchToolMode(mode, true, "tavily")
+  ] || "Tavily";
+}
+
+export function getAvailableWebSearchToolModes() {
+  const supportsBuiltin = canUseBuiltinWebSearch();
+  const items = [
+    {
+      value: "off",
+      label: WEB_SEARCH_DISABLED_LABEL,
+    },
+  ];
+  if (supportsBuiltin) {
+    items.push({
+      value: "builtin",
+      label: WEB_SEARCH_TOOL_MODE_LABELS.builtin,
+    });
+  }
+  items.push(
+    { value: "tavily", label: WEB_SEARCH_TOOL_MODE_LABELS.tavily },
+    { value: "exa", label: WEB_SEARCH_TOOL_MODE_LABELS.exa }
+  );
+  return items;
+}
+
+export function persistWebSearchToolMode(mode) {
+  persistWebSearchConfigPatch({ toolMode: mode });
+}
+
+export function setWebSearchEnabled(enabled, options = {}) {
+  state.webSearch.enabled = enabled === true;
+  if (options.persist !== false) {
+    persistWebSearchConfigPatch({ enabled: state.webSearch.enabled });
+  }
+  renderWebSearchToolSelector();
+  updateWebSearchProviderUi();
+  return state.webSearch.enabled;
+}
+
+export function setWebSearchToolMode(mode, options = {}) {
+  const supportsBuiltin = canUseBuiltinWebSearch();
+  const normalized = normalizeWebSearchToolMode(
+    mode,
+    supportsBuiltin,
+    normalizeWebSearchProvider(elements.webSearchProvider?.value)
+  );
+  state.webSearch.toolMode = normalized;
+
+  if (normalized === "tavily" || normalized === "exa") {
+    if (elements.webSearchProvider) {
+      elements.webSearchProvider.value = normalized;
+    }
+  }
+
+  if (options.persist !== false) {
+    persistWebSearchToolMode(normalized);
+  }
+
+  renderWebSearchToolSelector();
+  updateWebSearchProviderUi();
+  return normalized;
+}
+
+export function applyWebSearchSelection(selection, options = {}) {
+  const normalizedSelection = String(selection || "").toLowerCase();
+  if (normalizedSelection === "off") {
+    if (options.persist !== false) {
+      persistWebSearchConfigPatch({ enabled: false });
+    }
+    state.webSearch.enabled = false;
+    closeWebSearchToolSelector();
+    renderWebSearchToolSelector();
+    updateWebSearchProviderUi();
+    return "off";
+  }
+
+  const nextMode = setWebSearchToolMode(selection, { persist: false });
+  state.webSearch.enabled = true;
+  if (options.persist !== false) {
+    persistWebSearchConfigPatch({
+      enabled: true,
+      toolMode: nextMode,
+    });
+  }
+  closeWebSearchToolSelector();
+  renderWebSearchToolSelector();
+  updateWebSearchProviderUi();
+  return nextMode;
+}
+
+export function closeWebSearchToolSelector() {
+  state.webSearch.selectorOpen = false;
+  elements.webSearchControl?.classList.remove("is-open");
+  elements.webSearchToolCurrent?.setAttribute("aria-expanded", "false");
+}
+
+export function renderWebSearchToolSelector() {
+  const currentEl = elements.webSearchToolValue;
+  const dropdownEl = elements.webSearchToolDropdown;
+  const buttonEl = elements.webSearchToolCurrent;
+  if (!currentEl || !dropdownEl || !buttonEl) return;
+
+  const toolMode = getCurrentWebSearchToolMode();
+  const enabled = isWebSearchEnabled();
+  const options = getAvailableWebSearchToolModes();
+  currentEl.hidden = !enabled;
+  currentEl.textContent = getWebSearchToolModeLabel(toolMode);
+  dropdownEl.innerHTML = "";
+  buttonEl.classList.toggle("is-active", enabled);
+  elements.webSearchControl?.classList.toggle("is-active", enabled);
+  if (elements.webSearchSwitchText) {
+    elements.webSearchSwitchText.textContent = "联网";
+  }
+
+  options.forEach((option) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.value = option.value;
+    btn.textContent = option.label;
+    const isActive = option.value === "off" ? !enabled : enabled && option.value === toolMode;
+    btn.classList.toggle("active", isActive);
+    btn.addEventListener("click", () => {
+      applyWebSearchSelection(option.value);
+    });
+    dropdownEl.appendChild(btn);
+  });
+
+  elements.webSearchControl?.classList.toggle("is-open", !!state.webSearch.selectorOpen);
+  buttonEl.setAttribute(
+    "aria-expanded",
+    state.webSearch.selectorOpen ? "true" : "false"
+  );
+}
+
+export function toggleWebSearchToolSelector() {
+  if (!elements.webSearchToolCurrent) {
+    return;
+  }
+  state.webSearch.selectorOpen = !state.webSearch.selectorOpen;
+  renderWebSearchToolSelector();
+}
+
 export function setStatusPillState(el, isReady, text) {
   if (!el) return;
   el.textContent = text || "";
@@ -656,13 +940,16 @@ export function setStatusPillState(el, isReady, text) {
 }
 
 export function updateConfigStatusStrip() {
+  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
+  const toolMode = getCurrentWebSearchToolMode();
+  const webSearchEnabled = isWebSearchEnabled();
   const hasApiKey = !!(elements.apiKey?.value || "").trim();
   const hasApiUrl = !!(elements.apiUrl?.value || "").trim();
   const modelName = (elements.model?.value || "").trim();
   const provider = elements.provider?.value === "anthropic" ? "Anthropic" : "OpenAI";
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
-    ? `模型：${provider} · ${modelName}`
+    ? `模型：${provider} · ${endpointMode === "responses" ? "Responses" : "Chat"} · ${modelName}`
     : "模型：待完成（需 Key + 地址 + 模型）";
   setStatusPillState(elements.modelStatusPill, modelReady, modelText);
 
@@ -673,17 +960,29 @@ export function updateConfigStatusStrip() {
   );
   const depth = normalizeTavilySearchDepth(elements.tavilySearchDepth?.value);
   const exaType = normalizeExaSearchType(elements.exaSearchType?.value);
-  const webText =
-    webProvider === "exa"
+  const webText = !webSearchEnabled
+    ? "联网：关闭"
+    : toolMode === "builtin"
+      ? "联网：OpenAI 内置网页搜索"
+      : toolMode === "exa"
       ? `联网：Exa · ${exaType} · ${maxResults} 条`
       : `联网：Tavily · ${depth} · ${maxResults} 条`;
   setStatusPillState(elements.webStatusPill, true, webText);
 }
 
 export function updateWebSearchProviderUi() {
+  state.webSearch.toolMode = getCurrentWebSearchToolMode();
+  state.webSearch.enabled = isWebSearchEnabled();
   const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
   const isExa = provider === "exa";
 
+  renderWebSearchToolSelector();
+  if (elements.webSearchProviderGroup) {
+    elements.webSearchProviderGroup.style.display = "";
+  }
+  if (elements.webSearchMaxResultsGroup) {
+    elements.webSearchMaxResultsGroup.style.display = "";
+  }
   if (elements.tavilyApiKeyGroup) {
     elements.tavilyApiKeyGroup.style.display = isExa ? "none" : "";
   }
@@ -696,6 +995,7 @@ export function updateWebSearchProviderUi() {
   if (elements.exaSearchTypeGroup) {
     elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
   }
+
   updateConfigStatusStrip();
 }
 
