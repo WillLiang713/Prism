@@ -83,10 +83,10 @@ Recent history uses concise, type-led messages such as `feat(frontend): ...`, `s
 ## Agent Communication Preferences
 - Respond in Chinese by default when interacting with the user.
 - 与用户交互时默认使用中文回复。
-- Provide a step-by-step execution plan first, then let the user decide whether to proceed to the next step.
-- 先给出分步执行方案，再由用户决定是否继续下一步。
 - Avoid heavy jargon; explain technical points in plain language without assuming deep prior knowledge.
 - 避免大量术语；解释时尽量通俗，不假设用户具备深厚技术背景。
+- Before executing a plan, ask the user for any missing information that could materially affect the implementation or direction; proceed only after the key details are clarified.
+- 在执行方案之前，如存在会明显影响实现方式或执行方向的关键信息缺失，需先向用户询问并确认，再继续执行。
 
 ## Difficult Bug Investigation
 复杂问题排查
