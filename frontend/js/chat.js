@@ -15,6 +15,29 @@ export function setRegenerateTurn(fn) { _regenerateTurn = fn; }
 let _submitTurnEdit = async () => false;
 export function setSubmitTurnEdit(fn) { _submitTurnEdit = fn; }
 
+export function setEmptyThreadState(isEmpty) {
+  const chatThread = document.querySelector(".chat-thread");
+  if (!chatThread) return;
+  chatThread.classList.toggle("is-empty", isEmpty);
+}
+
+function createEmptyChatState() {
+  const empty = document.createElement("div");
+  empty.className = "empty-chat-state";
+
+  const title = document.createElement("div");
+  title.className = "empty-chat-title";
+  title.textContent = "从这里开始";
+
+  const description = document.createElement("div");
+  description.className = "empty-chat-description";
+  description.textContent = "输入一个问题、需求，或者直接贴一段内容。";
+
+  empty.appendChild(title);
+  empty.appendChild(description);
+  return empty;
+}
+
 function syncTopicActionButtons(topicId) {
   if (!topicId || topicId !== state.chat.activeTopicId || !elements.chatMessages) {
     return;
@@ -512,11 +535,15 @@ export function renderChatMessages() {
 
   const topic = getActiveTopic();
   if (!topic || !Array.isArray(topic.turns) || !topic.turns.length) {
+    setEmptyThreadState(true);
+    elements.chatMessages.appendChild(createEmptyChatState());
     if (elements.scrollToBottomBtn) {
       elements.scrollToBottomBtn.style.display = "none";
     }
     return;
   }
+
+  setEmptyThreadState(false);
 
   for (const turn of topic.turns) {
     const { el, cards } = createTurnElement(turn, topic.id);

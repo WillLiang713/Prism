@@ -282,11 +282,12 @@
   }
 
   .chat-messages {
-    padding: 14px 12px 20px;
+    padding-top: 14px;
+    padding-bottom: 20px;
   }
 
   .chat-composer {
-    padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+    padding: 10px var(--chat-gutter) calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .composer-footer {

@@ -29,19 +29,22 @@
   width: 260px;
   display: flex;
   flex-direction: column;
+  flex: 0 0 260px;
   min-height: 0;
+  min-width: 0;
   border-right: 1px solid var(--border);
   background: var(--bg-chat);
-  flex-shrink: 0;
-  transition: width 0.3s ease, opacity 0.3s ease;
+  transition: width 0.3s ease, flex-basis 0.3s ease, opacity 0.3s ease;
   overflow: hidden;
   border-right: none;
 }
 
 .sidebar-collapsed .chat-side {
   width: 0;
+  flex-basis: 0;
   border-right-width: 0;
   opacity: 0;
+  pointer-events: none;
 }
 
 .sidebar-section {

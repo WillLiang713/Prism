@@ -1,6 +1,6 @@
 /* ---------- Composer (Input Area) ---------- */
 .chat-composer {
-  padding: 14px 24px 22px;
+  padding: 14px var(--chat-gutter) 22px;
   background: transparent;
   display: flex;
   justify-content: center;
@@ -8,9 +8,8 @@
 
 .composer-wrapper {
   position: relative;
-  width: min(100%, var(--turn-max-width));
+  width: 100%;
   max-width: var(--turn-max-width);
-  margin: 0 auto;
   transition: max-width 0.3s ease;
 }
 
@@ -406,13 +405,6 @@
 .chat-thread:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
   opacity: 0;
   pointer-events: none;
-}
-
-@media (max-width: 1100px) {
-  .chat-composer {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
 }
 
 .reasoning-effort-dropdown button {

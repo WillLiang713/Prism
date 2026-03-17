@@ -4,7 +4,7 @@ import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config
 import { renderMarkdownToElement } from './markdown.js';
 import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
-import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic } from './chat.js';
+import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState } from './chat.js';
 import { clearImages } from './images.js';
 
 function stripMarkdownForThinkingSummary(text) {
@@ -147,6 +147,13 @@ export async function sendPrompt() {
   topic.updatedAt = now;
 
   scheduleSaveChat();
+
+  // 如果是该话题的第一条消息，移除空状态提示
+  if (topic.turns.length === 1) {
+    const emptyState = elements.chatMessages.querySelector(".empty-chat-state");
+    if (emptyState) emptyState.remove();
+    setEmptyThreadState(false);
+  }
 
   const createdEls = createTurnElement(turn, topic.id);
   elements.chatMessages.appendChild(createdEls.el);
