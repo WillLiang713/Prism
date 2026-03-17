@@ -38,6 +38,8 @@ class ChatRequest(BaseModel):
     # 推理与工具
     reasoningEffort: str = "medium"
     enableTools: bool = False  # 是否启用工具调用
+    enableGoogleSearch: bool = False  # 是否启用 Gemini 内置 Google Search
+    enableCodeExecution: bool = False  # 是否启用 Gemini 内置 Code Execution
     maxToolRounds: int = Field(
         default=50, ge=1, le=200
     )  # 最大工具调用轮数（实际不再限制）
@@ -66,6 +68,13 @@ class StreamChunk(BaseModel):
     """流式响应块"""
 
     type: Literal[
-        "thinking", "content", "tokens", "error", "tool", "sources", "web_search"
+        "thinking",
+        "content",
+        "tokens",
+        "error",
+        "tool",
+        "sources",
+        "web_search",
+        "code_execution",
     ]
     data: Any

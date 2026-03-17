@@ -116,11 +116,16 @@ export function updateProviderUi() {
     } else if (provider === "anthropic") {
       hintEl.textContent =
         "Anthropic 兼容接口，请填写 API 地址";
+    } else if (provider === "gemini") {
+      hintEl.textContent =
+        "Gemini 原生接口，默认地址为 Google Generative Language API";
     }
   }
 
   updateApiUrlPlaceholder();
   updateModelHint();
+  updateWebSearchProviderUi();
+  syncAllConfigSelectPickers();
 }
 
 export function updateApiUrlPlaceholder() {
@@ -132,6 +137,7 @@ export function updateApiUrlPlaceholder() {
   const placeholders = {
     openai: "https://api.openai.com/v1/chat/completions",
     anthropic: "https://api.anthropic.com/v1/messages",
+    gemini: "https://generativelanguage.googleapis.com/v1beta",
   };
   urlInput.placeholder = placeholders[provider] || "";
 }
@@ -180,6 +186,7 @@ export function getConfig(side) {
     // 角色设定：发送给后端作为系统提示词
     systemPrompt: elements.roleSetting?.value || "",
     reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "medium",
+    enableCodeExecution: !!elements.enableCodeExecution?.checked,
   };
 }
 
@@ -222,6 +229,7 @@ export async function saveConfig() {
       searchDepth: normalizeTavilySearchDepth(
         elements.tavilySearchDepth?.value
       ),
+      enableCodeExecution: !!elements.enableCodeExecution?.checked,
     },
     tools: {
       enabled: true,
@@ -237,6 +245,7 @@ export async function saveConfig() {
       customName,
       apiUrl,
       systemPrompt: elements.roleSetting?.value || "",
+      enableCodeExecution: !!elements.enableCodeExecution?.checked,
     },
   };
 
@@ -279,9 +288,15 @@ export function loadConfig() {
           config.webSearch.searchDepth
         );
       }
+      if (elements.enableCodeExecution) {
+        elements.enableCodeExecution.checked =
+          config.webSearch.enableCodeExecution === true ||
+          config.model?.enableCodeExecution === true;
+      }
     } else if (elements.webSearchProvider) {
       elements.webSearchProvider.value = "tavily";
       if (elements.exaSearchType) elements.exaSearchType.value = "auto";
+      if (elements.enableCodeExecution) elements.enableCodeExecution.checked = false;
     }
     // 加载思考强度配置
     if (config.reasoningEffort && elements.reasoningEffortDropdown) {
@@ -316,6 +331,11 @@ export function loadConfig() {
       if (elements.roleSetting)
         elements.roleSetting.value =
           modelConfig.systemPrompt || modelConfig.roleSetting || "";
+      if (elements.enableCodeExecution && modelConfig.provider === "gemini") {
+        elements.enableCodeExecution.checked =
+          modelConfig.enableCodeExecution === true ||
+          config.webSearch?.enableCodeExecution === true;
+      }
     }
     syncRoleSettingPreview(true);
   } catch (e) {
@@ -345,6 +365,7 @@ export async function clearConfig() {
   if (elements.exaSearchType) elements.exaSearchType.value = "auto";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
+  if (elements.enableCodeExecution) elements.enableCodeExecution.checked = false;
 
   elements.provider.value = "openai";
   elements.apiKey.value = "";

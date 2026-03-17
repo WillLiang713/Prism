@@ -22,12 +22,15 @@ export function bindEvents() {
       : "mousedown";
 
   // 联网搜索开关的label元素，阻止焦点转移
-  const webSearchLabel = elements.enableWebSearch?.parentElement;
-  if (webSearchLabel) {
-    webSearchLabel.addEventListener(PRESS_START_EVENT, (e) => {
+  const switchLabels = [
+    elements.enableWebSearch?.parentElement,
+    elements.enableCodeExecution?.parentElement,
+  ].filter(Boolean);
+  switchLabels.forEach((labelEl) => {
+    labelEl.addEventListener(PRESS_START_EVENT, (e) => {
       // 只阻止label本身的默认行为，不阻止checkbox的点击
       if (
-        e.target === webSearchLabel ||
+        e.target === labelEl ||
         e.target.classList.contains("switch-track") ||
         e.target.classList.contains("switch-text") ||
         e.target.tagName === "svg" ||
@@ -36,7 +39,7 @@ export function bindEvents() {
         e.preventDefault();
       }
     });
-  }
+  });
 
   elements.enableWebSearch?.addEventListener("change", (e) => {
     try {
@@ -47,6 +50,22 @@ export function bindEvents() {
       localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
     } catch (e) {
       console.error("保存联网搜索开关失败:", e);
+    }
+  });
+
+  elements.enableCodeExecution?.addEventListener("change", () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.config);
+      const config = raw ? JSON.parse(raw) : {};
+      config.webSearch = config.webSearch || {};
+      config.model = config.model || {};
+      const enabled = !!elements.enableCodeExecution?.checked;
+      config.webSearch.enableCodeExecution = enabled;
+      config.model.enableCodeExecution = enabled;
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+      updateConfigStatusStrip();
+    } catch (e) {
+      console.error("保存代码执行开关失败:", e);
     }
   });
 

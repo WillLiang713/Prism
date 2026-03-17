@@ -236,6 +236,17 @@
                           <span class="switch-text">联网</span>
                         </label>
 
+                        <label
+                          class="toolbar-switch"
+                          id="codeExecutionSwitch"
+                          title="允许 Gemini 进行代码执行"
+                          style="display: none"
+                        >
+                          <input type="checkbox" id="enableCodeExecution" />
+                          <span class="switch-track" aria-hidden="true"></span>
+                          <span class="switch-text">代码</span>
+                        </label>
+
 
                         <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
                           <span class="reasoning-effort-current">
@@ -340,6 +351,7 @@
                       <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
                         <option value="openai">OpenAI 兼容</option>
                         <option value="anthropic">Anthropic 兼容</option>
+                        <option value="gemini">Google Gemini</option>
                       </select>
                       <div class="model-picker config-static-picker" data-picker="provider">
                         <div class="model-picker-row">
@@ -468,6 +480,7 @@
                     <select id="webSearchProvider" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="tavily">Tavily</option>
                       <option value="exa">Exa</option>
+                      <option value="gemini_search">Google Search（Gemini 内置）</option>
                     </select>
                     <div class="model-picker config-static-picker" data-picker="webSearchProvider">
                       <div class="model-picker-row">

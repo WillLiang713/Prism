@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from urllib.parse import quote
 
 from runtime_paths import TOOLS_JSON_PATH
 
@@ -12,6 +13,7 @@ class ProviderConfig:
     DEFAULT_URLS = {
         "openai": "https://api.openai.com/v1/chat/completions",
         "anthropic": "https://api.anthropic.com/v1/messages",
+        "gemini": "https://generativelanguage.googleapis.com/v1beta",
     }
 
     @staticmethod
@@ -28,19 +30,44 @@ class ProviderConfig:
     def get_provider_mode(provider: str) -> str:
         """判断提供商模式"""
         provider = provider.strip().lower()
-        return "anthropic" if provider == "anthropic" else "openai"
+        if provider == "gemini":
+            return "gemini"
+        if provider == "anthropic":
+            return "anthropic"
+        return "openai"
 
     @staticmethod
-    def get_api_url(provider: str, api_url: str | None, provider_mode: str) -> str:
+    def get_api_url(
+        provider: str,
+        api_url: str | None,
+        provider_mode: str,
+        model: str | None = None,
+        *,
+        stream: bool = True,
+    ) -> str:
         """获取API地址，自动拼接v1路径"""
         url = ProviderConfig.normalize_api_url(api_url)
 
         if not url:
             if provider == "custom":
                 raise ValueError("选择'自定义'时必须填写 API 地址")
-            return ProviderConfig.DEFAULT_URLS.get(
-                provider_mode, ProviderConfig.DEFAULT_URLS["openai"]
-            )
+            if provider_mode == "gemini":
+                url = ProviderConfig.DEFAULT_URLS["gemini"]
+            else:
+                return ProviderConfig.DEFAULT_URLS.get(
+                    provider_mode, ProviderConfig.DEFAULT_URLS["openai"]
+                )
+
+        if provider_mode == "gemini":
+            if not model:
+                raise ValueError("Gemini 请求必须提供模型名称")
+            base_url = ProviderConfig._normalize_gemini_base_url(url)
+            method = "streamGenerateContent" if stream else "generateContent"
+            encoded_model = quote(str(model).strip().removeprefix("models/"), safe="")
+            final_url = f"{base_url}/models/{encoded_model}:{method}"
+            if stream:
+                final_url = f"{final_url}?alt=sse"
+            return final_url
 
         # 移除末尾的斜杠
         url = url.rstrip("/")
@@ -65,11 +92,41 @@ class ProviderConfig:
         return url
 
     @staticmethod
+    def _normalize_gemini_base_url(url: str) -> str:
+        normalized = ProviderConfig.normalize_api_url(url).rstrip("/")
+        lowered = normalized.lower()
+
+        model_marker = "/models/"
+        if model_marker in lowered:
+            model_index = lowered.find(model_marker)
+            normalized = normalized[:model_index]
+            lowered = normalized.lower()
+
+        for suffix in (":streamgeneratecontent", ":generatecontent", ":counttokens"):
+            if lowered.endswith(suffix):
+                normalized = normalized[: -len(suffix)]
+                lowered = normalized.lower()
+
+        if lowered.endswith("/models"):
+            normalized = normalized[: -len("/models")]
+            lowered = normalized.lower()
+
+        if "?" in normalized:
+            normalized = normalized.split("?", 1)[0]
+
+        if not lowered.endswith("/v1beta") and not lowered.endswith("/v1"):
+            normalized = f"{normalized}/v1beta"
+
+        return normalized
+
+    @staticmethod
     def build_headers(api_key: str, provider_mode: str) -> dict[str, str]:
         """构建请求头"""
         headers = {"Content-Type": "application/json"}
 
-        if provider_mode == "anthropic":
+        if provider_mode == "gemini":
+            headers["x-goog-api-key"] = api_key
+        elif provider_mode == "anthropic":
             headers["x-api-key"] = api_key
             headers["anthropic-version"] = "2023-06-01"
         else:
@@ -157,12 +214,22 @@ class MessageBuilder:
             user_content = MessageBuilder._build_user_content(
                 turn.prompt, turn.images, provider_mode
             )
-            messages.append({"role": "user", "content": user_content})
+            if provider_mode == "gemini":
+                messages.append({"role": "user", "parts": user_content})
+            else:
+                messages.append({"role": "user", "content": user_content})
 
             # 构建助手消息
             assistant_content = model_data.get("content")
             if assistant_content:
-                messages.append({"role": "assistant", "content": assistant_content})
+                if provider_mode == "gemini":
+                    messages.append(
+                        {"role": "model", "parts": [{"text": assistant_content}]}
+                    )
+                else:
+                    messages.append(
+                        {"role": "assistant", "content": assistant_content}
+                    )
 
         return messages
 
@@ -172,6 +239,9 @@ class MessageBuilder:
     ) -> str | list[dict]:
         """构建用户消息内容(支持多模态)"""
         has_images = images and len(images) > 0
+
+        if provider_mode == "gemini":
+            return MessageBuilder._build_gemini_user_content(prompt, images)
 
         if not has_images:
             return prompt
@@ -206,16 +276,44 @@ class MessageBuilder:
                     )
 
             return content
-        else:
-            # OpenAI格式
-            content = []
-            if prompt:
-                content.append({"type": "text", "text": prompt})
 
-            for img in images:
-                content.append({"type": "image_url", "image_url": {"url": img.dataUrl}})
+        # OpenAI格式
+        content = []
+        if prompt:
+            content.append({"type": "text", "text": prompt})
 
-            return content
+        for img in images:
+            content.append({"type": "image_url", "image_url": {"url": img.dataUrl}})
+
+        return content
+
+    @staticmethod
+    def _build_gemini_user_content(
+        prompt: str, images: list[ImageContent]
+    ) -> list[dict]:
+        content: list[dict] = []
+
+        if prompt:
+            content.append({"text": prompt})
+
+        for img in images or []:
+            parts = str(img.dataUrl or "").split(",", 1)
+            if len(parts) != 2:
+                continue
+            header, base64_data = parts
+            mime_type = "image/png"
+            if ":" in header and ";" in header:
+                mime_type = header.split(":", 1)[1].split(";", 1)[0]
+            content.append(
+                {
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": base64_data,
+                    }
+                }
+            )
+
+        return content
 
     @staticmethod
     def build_request_body(
@@ -225,6 +323,10 @@ class MessageBuilder:
         history_messages: list[dict],
     ) -> dict:
         """构建请求体"""
+        if provider_mode == "gemini":
+            return MessageBuilder._build_gemini_body(
+                config, current_user_content, history_messages
+            )
         if provider_mode == "anthropic":
             return MessageBuilder._build_anthropic_body(
                 config, current_user_content, history_messages
@@ -317,6 +419,49 @@ class MessageBuilder:
         return body
 
     @staticmethod
+    def _build_gemini_body(
+        config: ChatRequest,
+        user_content: list[dict],
+        history_messages: list[dict],
+    ) -> dict:
+        body: dict = {
+            "contents": [*history_messages, {"role": "user", "parts": user_content}],
+        }
+
+        now = datetime.now()
+        system_text = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
+        if system_text:
+            body["system_instruction"] = {"parts": [{"text": system_text}]}
+
+        tools = MessageBuilder._build_gemini_tools(config)
+        if tools:
+            body["tools"] = tools
+
+        has_custom_function_tools = any(
+            isinstance(tool, dict) and isinstance(tool.get("function_declarations"), list)
+            for tool in tools
+        )
+        if config.enableTools and has_custom_function_tools:
+            body["tool_config"] = {
+                "function_calling_config": {
+                    "mode": "auto",
+                }
+            }
+
+        thinking_budget = MessageBuilder._map_reasoning_effort_to_gemini_budget(
+            config.reasoningEffort
+        )
+        if thinking_budget is not None:
+            body["generationConfig"] = {
+                "thinkingConfig": {
+                    "thinkingBudget": thinking_budget,
+                    "includeThoughts": True,
+                }
+            }
+
+        return body
+
+    @staticmethod
     def _load_selected_tools(config: ChatRequest) -> list[dict]:
         if not config.enableTools:
             return []
@@ -339,6 +484,27 @@ class MessageBuilder:
             ]
 
         return all_tools
+
+    @staticmethod
+    def _build_gemini_tools(config: ChatRequest) -> list[dict]:
+        tools: list[dict] = []
+
+        if config.enableGoogleSearch:
+            tools.append({"google_search": {}})
+
+        if config.enableCodeExecution:
+            tools.append({"code_execution": {}})
+
+        # Gemini 当前原生工具与 function calling 不能在这个 REST 工作流里混用，
+        # 因此开启原生工具时，不再附带自定义函数工具。
+        if not tools:
+            selected_tools = MessageBuilder._load_selected_tools(config)
+            if selected_tools:
+                converted = MessageBuilder._convert_tools_to_gemini(selected_tools)
+                if converted:
+                    tools.extend(converted)
+
+        return tools
 
     @staticmethod
     def _convert_tools_to_anthropic(tools: list[dict]) -> list[dict]:
@@ -369,3 +535,51 @@ class MessageBuilder:
             )
 
         return anthropic_tools
+
+    @staticmethod
+    def _convert_tools_to_gemini(tools: list[dict]) -> list[dict]:
+        function_declarations = []
+
+        for tool in tools:
+            if not isinstance(tool, dict):
+                continue
+
+            func = tool.get("function")
+            if not isinstance(func, dict):
+                continue
+
+            name = str(func.get("name") or "").strip()
+            if not name:
+                continue
+
+            parameters = func.get("parameters")
+            if not isinstance(parameters, dict):
+                parameters = {"type": "object", "properties": {}}
+
+            function_declarations.append(
+                {
+                    "name": name,
+                    "description": str(func.get("description") or "").strip(),
+                    "parameters": parameters,
+                }
+            )
+
+        if not function_declarations:
+            return []
+
+        return [{"function_declarations": function_declarations}]
+
+    @staticmethod
+    def _map_reasoning_effort_to_gemini_budget(reasoning_effort: str | None) -> int | None:
+        effort = str(reasoning_effort or "").strip().lower()
+        budget_map = {
+            "none": 0,
+            "minimal": 512,
+            "low": 1024,
+            "medium": 2048,
+            "high": 4096,
+            "xhigh": 8192,
+        }
+        if effort not in budget_map:
+            return 2048
+        return budget_map[effort]

@@ -239,6 +239,9 @@ export function normalizeBaseUrlForModels(config) {
   const providerMode = getProviderMode(config);
   let url = (config?.apiUrl || "").trim();
   if (!url) {
+    if (providerMode === "gemini") {
+      return "https://generativelanguage.googleapis.com/v1beta";
+    }
     return providerMode === "anthropic"
       ? "https://api.anthropic.com/v1"
       : "https://api.openai.com/v1";
@@ -254,7 +257,21 @@ export function normalizeBaseUrlForModels(config) {
     const v1Index = pathLower.indexOf("/v1");
     let basePath = "";
 
-    if (v1Index >= 0) {
+    if (providerMode === "gemini") {
+      const modelsIndex = pathLower.indexOf("/models/");
+      if (modelsIndex >= 0) {
+        basePath = path.slice(0, modelsIndex);
+      } else if (pathLower.endsWith("/models")) {
+        basePath = path.slice(0, -"/models".length);
+      } else if (pathLower.includes(":generatecontent")) {
+        basePath = path.split(":", 1)[0];
+        if (basePath.toLowerCase().includes("/models/")) {
+          basePath = basePath.slice(0, basePath.toLowerCase().indexOf("/models/"));
+        }
+      } else {
+        basePath = path;
+      }
+    } else if (v1Index >= 0) {
       basePath = path.slice(0, v1Index + 3);
     } else if (pathLower.endsWith("/chat/completions")) {
       basePath = path.slice(0, -"/chat/completions".length);
@@ -267,8 +284,14 @@ export function normalizeBaseUrlForModels(config) {
     }
 
     if (!basePath) {
-      basePath = "/v1";
-    } else if (!basePath.toLowerCase().endsWith("/v1")) {
+      basePath = providerMode === "gemini" ? "/v1beta" : "/v1";
+    } else if (
+      providerMode === "gemini" &&
+      !basePath.toLowerCase().endsWith("/v1beta") &&
+      !basePath.toLowerCase().endsWith("/v1")
+    ) {
+      basePath = `${basePath}/v1beta`;
+    } else if (providerMode !== "gemini" && !basePath.toLowerCase().endsWith("/v1")) {
       basePath = `${basePath}/v1`;
     }
 

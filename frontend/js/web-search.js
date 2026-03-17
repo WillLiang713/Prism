@@ -631,7 +631,10 @@ export function normalizeTavilySearchDepth(value) {
 }
 
 export function normalizeWebSearchProvider(value) {
-  return String(value || "").toLowerCase() === "exa" ? "exa" : "tavily";
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "exa") return "exa";
+  if (normalized === "gemini_search") return "gemini_search";
+  return "tavily";
 }
 
 export function normalizeExaSearchType(value) {
@@ -659,7 +662,13 @@ export function updateConfigStatusStrip() {
   const hasApiKey = !!(elements.apiKey?.value || "").trim();
   const hasApiUrl = !!(elements.apiUrl?.value || "").trim();
   const modelName = (elements.model?.value || "").trim();
-  const provider = elements.provider?.value === "anthropic" ? "Anthropic" : "OpenAI";
+  const providerValue = elements.provider?.value || "openai";
+  const provider =
+    providerValue === "anthropic"
+      ? "Anthropic"
+      : providerValue === "gemini"
+      ? "Gemini"
+      : "OpenAI";
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
     ? `模型：${provider} · ${modelName}`
@@ -676,25 +685,53 @@ export function updateConfigStatusStrip() {
   const webText =
     webProvider === "exa"
       ? `联网：Exa · ${exaType} · ${maxResults} 条`
+      : webProvider === "gemini_search"
+      ? `联网：Gemini Google Search`
       : `联网：Tavily · ${depth} · ${maxResults} 条`;
   setStatusPillState(elements.webStatusPill, true, webText);
 }
 
 export function updateWebSearchProviderUi() {
-  const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
+  const modelProvider = elements.provider?.value || "openai";
+  let provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
+  const isGemini = modelProvider === "gemini";
+  const supportsGeminiSearchOption = isGemini;
+
+  const geminiOption = elements.webSearchProvider?.querySelector(
+    'option[value="gemini_search"]'
+  );
+  if (geminiOption) {
+    geminiOption.hidden = !supportsGeminiSearchOption;
+    geminiOption.disabled = !supportsGeminiSearchOption;
+  }
+
+  if (!supportsGeminiSearchOption && provider === "gemini_search") {
+    provider = "tavily";
+    if (elements.webSearchProvider) {
+      elements.webSearchProvider.value = "tavily";
+    }
+  }
+
   const isExa = provider === "exa";
+  const isGeminiSearch = provider === "gemini_search";
 
   if (elements.tavilyApiKeyGroup) {
-    elements.tavilyApiKeyGroup.style.display = isExa ? "none" : "";
+    elements.tavilyApiKeyGroup.style.display = isExa || isGeminiSearch ? "none" : "";
   }
   if (elements.tavilySearchDepthGroup) {
-    elements.tavilySearchDepthGroup.style.display = isExa ? "none" : "";
+    elements.tavilySearchDepthGroup.style.display = isExa || isGeminiSearch ? "none" : "";
   }
   if (elements.exaApiKeyGroup) {
     elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
   }
   if (elements.exaSearchTypeGroup) {
     elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
+  }
+  if (elements.codeExecutionSwitch) {
+    elements.codeExecutionSwitch.style.display = isGemini ? "" : "none";
+  }
+  if (!isGemini && elements.enableCodeExecution) {
+    elements.enableCodeExecution.checked = false;
   }
   updateConfigStatusStrip();
 }

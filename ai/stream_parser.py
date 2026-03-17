@@ -197,6 +197,106 @@ class StreamParser:
 
         return result
 
+    @staticmethod
+    def parse_gemini_chunk(chunk: dict) -> dict:
+        """解析 Gemini 流式响应块"""
+        result = {
+            "thinking": "",
+            "content": "",
+            "tokens": None,
+            "tool_calls": None,
+            "grounding_metadata": None,
+            "code_execution": None,
+            "model_parts": [],
+        }
+
+        candidates = chunk.get("candidates")
+        if isinstance(candidates, list) and candidates:
+            candidate = candidates[0] if isinstance(candidates[0], dict) else {}
+            content = candidate.get("content")
+            if isinstance(content, dict):
+                parts = content.get("parts")
+                if isinstance(parts, list):
+                    result["model_parts"] = [
+                        part for part in parts if isinstance(part, dict)
+                    ]
+
+                    tool_calls = []
+                    code_events = []
+                    for index, part in enumerate(result["model_parts"]):
+                        text = str(part.get("text") or "")
+                        if text:
+                            if part.get("thought") is True:
+                                result["thinking"] += text
+                            else:
+                                result["content"] += text
+
+                        function_call = part.get("functionCall")
+                        if isinstance(function_call, dict):
+                            arguments = function_call.get("args")
+                            if arguments is None:
+                                arguments = {}
+                            tool_call = {
+                                "index": index,
+                                "id": str(function_call.get("id") or ""),
+                                "function": {
+                                    "name": str(function_call.get("name") or ""),
+                                    "arguments": json.dumps(
+                                        arguments, ensure_ascii=False
+                                    ),
+                                },
+                            }
+                            signature = part.get("thoughtSignature")
+                            if signature:
+                                tool_call["thought_signature"] = signature
+                            tool_calls.append(tool_call)
+
+                        executable_code = part.get("executableCode")
+                        if isinstance(executable_code, dict):
+                            code_events.append(
+                                {
+                                    "kind": "code",
+                                    "language": str(
+                                        executable_code.get("language") or ""
+                                    ),
+                                    "code": str(executable_code.get("code") or ""),
+                                }
+                            )
+
+                        execution_result = part.get("codeExecutionResult")
+                        if isinstance(execution_result, dict):
+                            code_events.append(
+                                {
+                                    "kind": "result",
+                                    "outcome": str(
+                                        execution_result.get("outcome") or ""
+                                    ),
+                                    "output": str(
+                                        execution_result.get("output") or ""
+                                    ),
+                                }
+                            )
+
+                    if tool_calls:
+                        result["tool_calls"] = tool_calls
+                    if code_events:
+                        result["code_execution"] = code_events
+
+            grounding_metadata = candidate.get("groundingMetadata")
+            if isinstance(grounding_metadata, dict):
+                result["grounding_metadata"] = grounding_metadata
+
+        usage = chunk.get("usageMetadata")
+        if isinstance(usage, dict):
+            result["tokens"] = (
+                usage.get("totalTokenCount")
+                or usage.get("candidatesTokenCount")
+                or usage.get("thoughtsTokenCount")
+                or 0
+            )
+
+        return result
+
 
 class ToolCallsAccumulator:
     """累积流式 tool_calls 片段，合并为完整调用信息。"""
@@ -214,17 +314,36 @@ class ToolCallsAccumulator:
         for tool_call in tool_calls:
             idx = tool_call.get("index", 0)
             if idx not in self._buffer:
-                self._buffer[idx] = {"id": "", "name": "", "arguments": ""}
+                self._buffer[idx] = {
+                    "id": "",
+                    "name": "",
+                    "arguments": "",
+                    "thought_signature": "",
+                }
 
             if "id" in tool_call:
                 self._buffer[idx]["id"] = tool_call["id"]
+            if "thought_signature" in tool_call and tool_call["thought_signature"]:
+                self._buffer[idx]["thought_signature"] = tool_call["thought_signature"]
 
             if "function" in tool_call:
                 func = tool_call["function"]
                 if "name" in func and func["name"] is not None:
-                    self._buffer[idx]["name"] += func["name"]
+                    incoming_name = str(func["name"])
+                    if self._buffer[idx]["name"] == incoming_name:
+                        pass
+                    elif self._buffer[idx]["name"]:
+                        self._buffer[idx]["name"] += func["name"]
+                    else:
+                        self._buffer[idx]["name"] = func["name"]
                 if "arguments" in func and func["arguments"] is not None:
-                    self._buffer[idx]["arguments"] += func["arguments"]
+                    incoming_arguments = str(func["arguments"])
+                    if self._buffer[idx]["arguments"] == incoming_arguments:
+                        pass
+                    elif self._buffer[idx]["arguments"]:
+                        self._buffer[idx]["arguments"] += func["arguments"]
+                    else:
+                        self._buffer[idx]["arguments"] = func["arguments"]
 
     def valid_calls(self) -> dict[int, dict[str, str]]:
         return {
@@ -269,6 +388,8 @@ async def parse_sse_stream(response: httpx.Response, provider_mode: str) -> Asyn
                     anthropic_content_blocks,
                     anthropic_tool_use_state,
                 )
+            elif provider_mode == "gemini":
+                yield StreamParser.parse_gemini_chunk(chunk_json)
             else:
                 yield StreamParser.parse_openai_chunk(chunk_json)
 
@@ -377,5 +498,63 @@ def build_web_search_event(
         "query": str((search_result.get("query") or args.get("query") or "")).strip(),
         "answer": str(search_result.get("answer") or "").strip(),
         "totalResults": len(source_items),
+        "results": preview_results,
+    }
+
+
+def extract_sources_from_grounding_metadata(
+    grounding_metadata: dict[str, Any],
+) -> list[dict[str, str]]:
+    chunks = grounding_metadata.get("groundingChunks")
+    if not isinstance(chunks, list):
+        return []
+
+    sources = []
+    seen_urls = set()
+    for item in chunks:
+        if not isinstance(item, dict):
+            continue
+        web = item.get("web")
+        if not isinstance(web, dict):
+            continue
+        url = str(web.get("uri") or "").strip()
+        title = str(web.get("title") or "").strip()
+        if not url or url in seen_urls:
+            continue
+        seen_urls.add(url)
+        sources.append({"title": title, "url": url})
+
+    return sources
+
+
+def build_web_search_event_from_grounding(
+    grounding_metadata: dict[str, Any], current_round: int
+) -> dict[str, Any] | None:
+    queries = grounding_metadata.get("webSearchQueries")
+    query = ""
+    if isinstance(queries, list):
+        query = " | ".join(str(item).strip() for item in queries if str(item).strip())
+
+    sources = extract_sources_from_grounding_metadata(grounding_metadata)
+    if not query and not sources:
+        return None
+
+    preview_results = []
+    for source in sources[:8]:
+        preview_results.append(
+            {
+                "title": str(source.get("title") or "").strip(),
+                "url": str(source.get("url") or "").strip(),
+                "content": "",
+            }
+        )
+
+    return {
+        "status": "ready",
+        "round": current_round,
+        "name": "google_search",
+        "query": query,
+        "answer": "",
+        "totalResults": len(sources),
         "results": preview_results,
     }

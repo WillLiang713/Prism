@@ -162,6 +162,8 @@ export const elements = {
 
   // 联网搜索
   enableWebSearch: document.getElementById("enableWebSearch"),
+  enableCodeExecution: document.getElementById("enableCodeExecution"),
+  codeExecutionSwitch: document.getElementById("codeExecutionSwitch"),
   webSearchProvider: document.getElementById("webSearchProvider"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
   exaApiKey: document.getElementById("exaApiKey"),
@@ -250,6 +252,7 @@ export function isDesktopBackendAvailable() {
 
 export function getProviderMode(config) {
   const provider = config?.provider || "openai";
+  if (provider === "gemini") return "gemini";
   return provider === "anthropic" ? "anthropic" : "openai";
 }
 

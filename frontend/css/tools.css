@@ -169,3 +169,101 @@
 .tool-call-item.error {
   background: transparent;
 }
+
+/* ---------- Code execution section ---------- */
+.code-execution-section {
+  margin: 0 0 12px;
+  display: none;
+}
+
+.code-execution-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.code-execution-header-text {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--message-label-font-size);
+  font-weight: var(--message-label-font-weight);
+  color: var(--message-label-color);
+  letter-spacing: var(--message-label-letter-spacing);
+  line-height: var(--message-label-line-height);
+}
+
+.code-execution-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+
+.code-execution-section.ce-expanded .code-execution-detail {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.code-execution-list {
+  margin: 0;
+  padding: 4px 0 6px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.code-execution-item {
+  padding: 10px 0;
+}
+
+.code-execution-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.code-execution-title {
+  color: var(--panel-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.code-execution-status {
+  font-size: 11px;
+  color: var(--panel-text-secondary);
+}
+
+.code-execution-status.success {
+  color: #4fa17d;
+}
+
+.code-execution-status.error {
+  color: #d36f6f;
+}
+
+.code-execution-block,
+.code-execution-output {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code-execution-block code {
+  display: block;
+  font-size: 12px;
+}
+
+.code-execution-output {
+  color: var(--panel-text-secondary);
+  font-size: 11.5px;
+  line-height: 1.5;
+}

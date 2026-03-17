@@ -1,10 +1,12 @@
 import re
+from datetime import datetime
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ai import ProviderConfig
+from ai.providers import MessageBuilder
 
 
 router = APIRouter(prefix="/api")
@@ -104,8 +106,15 @@ async def generate_topic_title(payload: GenerateTitleRequest):
             + "\n".join(conversation_summary)
         )
 
-        provider_mode = "anthropic" if payload.provider == "anthropic" else "openai"
-        api_url = ProviderConfig.get_api_url(payload.provider, payload.apiUrl, provider_mode)
+        provider_mode = ProviderConfig.get_provider_mode(payload.provider)
+        api_url = ProviderConfig.get_api_url(
+            payload.provider,
+            payload.apiUrl,
+            provider_mode,
+            payload.model,
+            stream=False,
+        )
+        headers = ProviderConfig.build_headers(payload.apiKey, provider_mode)
 
         if provider_mode == "anthropic":
             request_body = {
@@ -115,10 +124,21 @@ async def generate_topic_title(payload: GenerateTitleRequest):
                 "system": system_prompt,
                 "temperature": 0.7,
             }
-            headers = {
-                "x-api-key": payload.apiKey,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
+            headers["content-type"] = "application/json"
+        elif provider_mode == "gemini":
+            now = datetime.now()
+            rendered_system_prompt = MessageBuilder._render_system_prompt_template(
+                system_prompt, now
+            )
+            request_body = {
+                "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+                "system_instruction": {
+                    "parts": [{"text": rendered_system_prompt}],
+                },
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 50,
+                },
             }
         else:
             request_body = {
@@ -129,10 +149,6 @@ async def generate_topic_title(payload: GenerateTitleRequest):
                     {"role": "user", "content": user_prompt},
                 ],
                 "temperature": 0.7,
-            }
-            headers = {
-                "Authorization": f"Bearer {payload.apiKey}",
-                "Content-Type": "application/json",
             }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -149,6 +165,17 @@ async def generate_topic_title(payload: GenerateTitleRequest):
         data = resp.json()
         if provider_mode == "anthropic":
             title = data.get("content", [{}])[0].get("text", "").strip()
+        elif provider_mode == "gemini":
+            title_parts = (
+                data.get("candidates", [{}])[0]
+                .get("content", {})
+                .get("parts", [])
+            )
+            texts = []
+            for part in title_parts:
+                if isinstance(part, dict) and part.get("text") and not part.get("thought"):
+                    texts.append(str(part.get("text") or ""))
+            title = "".join(texts).strip()
         else:
             title = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
 
@@ -160,4 +187,3 @@ async def generate_topic_title(payload: GenerateTitleRequest):
     except Exception as e:
         print(f"生成标题错误: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail=f"生成标题失败: {str(e)}")
-
