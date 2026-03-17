@@ -60,13 +60,13 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-width: none;
-  margin: 0;
+  max-width: var(--turn-max-width);
+  margin: 0 auto;
 }
 
 .user-bubble-wrap {
   align-self: flex-end;
-  max-width: min(800px, 85%);
+  max-width: min(var(--turn-max-width), 85%);
   position: relative;
   animation: fade-in 0.4s ease-out;
 }
