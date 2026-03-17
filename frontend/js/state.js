@@ -118,6 +118,9 @@ export const state = {
     activeTopicId: null,
     saveTimer: null,
     isCreatingTopic: false,
+    editingTurnId: null,
+    editDraftByTurnId: new Map(),
+    turnIdsWithoutAnimation: new Set(),
     generatingTitleTopicIds: new Set(), // 正在生成标题的话题ID集合
     runningControllers: new Map(), // topicId -> AbortController
     turnUiById: new Map(), // turnId -> 当前可见的卡片UI引用

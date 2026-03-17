@@ -65,6 +65,26 @@ function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = ""
   return previousLabel || "思考中";
 }
 
+function createMainModelState(config) {
+  return {
+    provider: config.provider,
+    model: config.model,
+    displayName: resolveModelDisplayName(config.model, config.customModelName),
+    thinking: "",
+    thinkingLabel: "思考中",
+    thinkingComplete: false,
+    toolEvents: [],
+    webSearchEvents: [],
+    sources: [],
+    content: "",
+    tokens: null,
+    timeCostSec: null,
+    status: "loading",
+    thinkingCollapsed: true,
+    toolCallsExpanded: false,
+  };
+}
+
 export async function sendPrompt() {
   if (!isDesktopBackendAvailable()) {
     return;
@@ -120,21 +140,7 @@ export async function sendPrompt() {
     models: {},
   };
 
-  turn.models.main = {
-    provider: config.provider,
-    model: config.model,
-    displayName: resolveModelDisplayName(config.model, config.customModelName),
-    thinking: "",
-    thinkingLabel: "思考中",
-    thinkingComplete: false,
-    toolEvents: [],
-    webSearchEvents: [],
-    content: "",
-    tokens: null,
-    timeCostSec: null,
-    status: "loading",
-    thinkingCollapsed: true,
-  };
+  turn.models.main = createMainModelState(config);
 
   topic.turns = Array.isArray(topic.turns) ? topic.turns : [];
   topic.turns.push(turn);
@@ -142,7 +148,7 @@ export async function sendPrompt() {
 
   scheduleSaveChat();
 
-  const createdEls = createTurnElement(turn);
+  const createdEls = createTurnElement(turn, topic.id);
   elements.chatMessages.appendChild(createdEls.el);
   if (createdEls.cards?.main) {
     state.chat.turnUiById.set(turn.id, createdEls.cards.main);
@@ -185,6 +191,97 @@ export function stopGeneration(topicId = state.chat.activeTopicId) {
   }
   renderTopicList();
   return true;
+}
+
+export async function regenerateTurn(turn, options = {}) {
+  if (!isDesktopBackendAvailable() || !turn?.id) {
+    return false;
+  }
+
+  const shouldScrollToBottom = options?.scrollToBottom === true;
+
+  const topic = state.chat.topics.find((item) =>
+    Array.isArray(item?.turns) && item.turns.some((entry) => entry.id === turn.id)
+  );
+  if (!topic || isTopicRunning(topic.id)) {
+    return false;
+  }
+
+  const config = getConfig();
+  const webSearchConfig = getWebSearchConfig();
+
+  if (!config.apiKey || !config.model) {
+    await showAlert("请先配置模型", {
+      title: "缺少配置",
+    });
+    return false;
+  }
+
+  turn.models.main = createMainModelState(config);
+  turn.webSearch = null;
+  topic.updatedAt = Date.now();
+  scheduleSaveChat();
+  renderTopicList();
+
+  const turnEl = elements.chatMessages?.querySelector(
+    `.turn[data-turn-id="${turn.id}"]`
+  );
+  let ui = null;
+  if (turnEl) {
+    const createdEls = createTurnElement(turn, topic.id);
+    turnEl.replaceWith(createdEls.el);
+    if (createdEls.cards?.main) {
+      state.chat.turnUiById.set(turn.id, createdEls.cards.main);
+      ui = createdEls.cards.main;
+    }
+  } else if (topic.id === state.chat.activeTopicId) {
+    renderChatMessages();
+    ui = state.chat.turnUiById.get(turn.id) || null;
+  }
+
+  const activeTurnEl = elements.chatMessages?.querySelector(
+    `.turn[data-turn-id="${turn.id}"]`
+  );
+
+  if (shouldScrollToBottom) {
+    state.autoScroll = true;
+    scrollToBottom(elements.chatMessages, false);
+  } else {
+    state.autoScroll = false;
+    activeTurnEl?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }
+
+  await callModel(
+    turn.prompt,
+    config,
+    topic.id,
+    turn,
+    ui,
+    Date.now(),
+    webSearchConfig
+  );
+
+  scheduleSaveChat();
+  return true;
+}
+
+export async function submitTurnEdit(turn, nextPrompt) {
+  if (!turn?.id) return false;
+
+  const normalizedPrompt = String(nextPrompt || "").trim();
+  const hasImages = Array.isArray(turn.images) && turn.images.length > 0;
+  if (!normalizedPrompt && !hasImages) {
+    await showAlert("请输入内容或保留图片后再重新发送", {
+      title: "无法重新发送",
+    });
+    return false;
+  }
+
+  turn.prompt = normalizedPrompt;
+  return regenerateTurn(turn, { scrollToBottom: false });
 }
 
 export async function callModel(

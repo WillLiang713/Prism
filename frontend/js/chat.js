@@ -10,6 +10,130 @@ import { estimateTokensFromText } from './state.js';
 
 let _stopGeneration = () => {};
 export function setStopGeneration(fn) { _stopGeneration = fn; }
+let _regenerateTurn = async () => {};
+export function setRegenerateTurn(fn) { _regenerateTurn = fn; }
+let _submitTurnEdit = async () => false;
+export function setSubmitTurnEdit(fn) { _submitTurnEdit = fn; }
+
+function syncTopicActionButtons(topicId) {
+  if (!topicId || topicId !== state.chat.activeTopicId || !elements.chatMessages) {
+    return;
+  }
+  const disableRegenerate = isTopicRunning(topicId);
+  const buttons = elements.chatMessages.querySelectorAll(".regenerate-btn");
+  buttons.forEach((button) => {
+    const isLoading = button.dataset.status === "loading";
+    if (button.dataset.topicId !== topicId) return;
+    button.disabled = disableRegenerate || isLoading;
+  });
+  const editButtons = elements.chatMessages.querySelectorAll(
+    ".user-edit-trigger"
+  );
+  editButtons.forEach((button) => {
+    if (button.dataset.topicId !== topicId) return;
+    button.disabled = disableRegenerate;
+  });
+  const submitButtons = elements.chatMessages.querySelectorAll(".user-edit-submit");
+  submitButtons.forEach((button) => {
+    if (button.dataset.topicId !== topicId) return;
+    const panel = button.closest(".user-edit-panel");
+    const input = panel?.querySelector(".user-edit-input");
+    const hasImages = button.dataset.hasImages === "1";
+    const isEmpty = !String(input?.value || "").trim() && !hasImages;
+    button.disabled = disableRegenerate || isEmpty;
+  });
+}
+
+function getTurnEditDraft(turn) {
+  if (!turn?.id) return "";
+  if (state.chat.editDraftByTurnId.has(turn.id)) {
+    return state.chat.editDraftByTurnId.get(turn.id);
+  }
+  return String(turn.prompt || "");
+}
+
+function clearTurnEditState(turnId = state.chat.editingTurnId) {
+  if (!turnId) return;
+  if (state.chat.editingTurnId === turnId) {
+    state.chat.editingTurnId = null;
+  }
+  state.chat.editDraftByTurnId.delete(turnId);
+}
+
+function resizeTurnEditor(editorEl) {
+  if (!editorEl) return;
+  const maxHeight = 240;
+  editorEl.style.height = "0px";
+  const nextHeight = Math.min(editorEl.scrollHeight, maxHeight);
+  editorEl.style.height = `${nextHeight}px`;
+  editorEl.style.overflowY = editorEl.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+
+function focusTurnEditor(turnId) {
+  if (!turnId) return;
+  requestAnimationFrame(() => {
+    const editor = elements.chatMessages?.querySelector(
+      `.user-edit-input[data-turn-id="${turnId}"]`
+    );
+    if (!(editor instanceof HTMLTextAreaElement)) return;
+    resizeTurnEditor(editor);
+    editor.focus();
+    const len = editor.value.length;
+    editor.setSelectionRange(len, len);
+  });
+}
+
+function startEditingTurn(turn) {
+  if (!turn?.id || isTopicRunning(state.chat.activeTopicId)) return;
+  state.chat.editingTurnId = turn.id;
+  state.chat.editDraftByTurnId.set(turn.id, String(turn.prompt || ""));
+  renderChatMessages();
+  focusTurnEditor(turn.id);
+}
+
+function cancelEditingTurn(turnId = state.chat.editingTurnId) {
+  if (turnId) {
+    state.chat.turnIdsWithoutAnimation.add(turnId);
+  }
+  clearTurnEditState(turnId);
+  renderChatMessages();
+}
+
+async function handleSubmitTurnEdit(turn) {
+  if (!turn?.id || isTopicRunning(state.chat.activeTopicId)) return false;
+  const draft = getTurnEditDraft(turn);
+  clearTurnEditState(turn.id);
+  const ok = await _submitTurnEdit(turn, draft);
+  if (!ok) {
+    state.chat.editingTurnId = turn.id;
+    state.chat.editDraftByTurnId.set(turn.id, draft);
+    renderChatMessages();
+    focusTurnEditor(turn.id);
+    return false;
+  }
+  return true;
+}
+
+function createIconActionButton({
+  className = "",
+  title = "",
+  ariaLabel = "",
+  path = "",
+}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  if (title) button.title = title;
+  if (ariaLabel) button.setAttribute("aria-label", ariaLabel);
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.classList.add("icon");
+  svg.innerHTML = path;
+  button.appendChild(svg);
+  return button;
+}
 
 function setSourcesPanelExpanded(panelEl, buttonEl, expanded) {
   if (!panelEl || !buttonEl) return;
@@ -93,6 +217,7 @@ export function markTopicRunning(topicId, controller) {
   if (topicId === state.chat.activeTopicId) {
     syncSendButtonModeByActiveTopic();
   }
+  syncTopicActionButtons(topicId);
   renderTopicList();
 }
 
@@ -104,6 +229,7 @@ export function unmarkTopicRunning(topicId, controller) {
   if (topicId === state.chat.activeTopicId) {
     syncSendButtonModeByActiveTopic();
   }
+  syncTopicActionButtons(topicId);
   renderTopicList();
 }
 
@@ -225,6 +351,14 @@ export function createTopic(forceCreate = false) {
 
 export function deleteTopic(topicId) {
   _stopGeneration(topicId);
+  const topic = state.chat.topics.find((item) => item.id === topicId) || null;
+  if (topic && state.chat.editingTurnId) {
+    const editingTurnExists = Array.isArray(topic.turns) &&
+      topic.turns.some((turn) => turn.id === state.chat.editingTurnId);
+    if (editingTurnExists) {
+      clearTurnEditState(state.chat.editingTurnId);
+    }
+  }
   const before = state.chat.topics.length;
   state.chat.topics = state.chat.topics.filter((t) => t.id !== topicId);
   if (!state.chat.topics.length) {
@@ -378,32 +512,146 @@ export function renderChatMessages() {
   }
 
   for (const turn of topic.turns) {
-    const { el, cards } = createTurnElement(turn);
+    const { el, cards } = createTurnElement(turn, topic.id);
     if (cards?.main) {
       state.chat.turnUiById.set(turn.id, cards.main);
     }
     elements.chatMessages.appendChild(el);
   }
+  syncTopicActionButtons(topic.id);
   updateScrollToBottomButton();
 }
 
-export function createTurnElement(turn) {
+export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
   const turnEl = document.createElement("div");
   turnEl.className = "turn";
   turnEl.dataset.turnId = turn.id;
+  if (topicId) {
+    turnEl.dataset.topicId = topicId;
+  }
 
   const hasUserImages = Array.isArray(turn.images) && turn.images.length > 0;
   const hasUserText =
     typeof turn.prompt === "string" && turn.prompt.trim().length > 0;
   const hasUserContent = hasUserImages || hasUserText;
+  const isEditing = state.chat.editingTurnId === turn.id;
+  const disableTurnAnimation = state.chat.turnIdsWithoutAnimation.has(turn.id);
   let userWrap = null;
 
   if (hasUserContent) {
     userWrap = document.createElement("div");
-    userWrap.className = "user-bubble-wrap";
+    userWrap.className = `user-bubble-wrap${isEditing ? " is-editing" : ""}${
+      disableTurnAnimation ? " no-animate" : ""
+    }`;
+    if (topicId) {
+      userWrap.dataset.topicId = topicId;
+    }
+
+    const userActions = document.createElement("div");
+    userActions.className = "user-message-actions";
+
+    if (hasUserText) {
+      const userCopyBtn = createCopyButton(() => turn.prompt || "", {
+        label: "复制",
+        icon: true,
+      });
+      userCopyBtn.classList.add("user-copy-btn");
+      userActions.appendChild(userCopyBtn);
+    }
+
+    const userEditBtn = createIconActionButton({
+      className: "message-copy-btn copy-icon-btn user-edit-trigger",
+      title: "编辑并重新发送",
+      ariaLabel: "编辑并重新发送",
+      path: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>',
+    });
+    userEditBtn.dataset.topicId = topicId || "";
+    userEditBtn.disabled = isTopicRunning(topicId);
+    userEditBtn.addEventListener("click", () => {
+      if (userEditBtn.disabled) return;
+      startEditingTurn(turn);
+    });
+    userActions.appendChild(userEditBtn);
 
     const userBubble = document.createElement("div");
     userBubble.className = "user-bubble";
+
+    if (isEditing) {
+      const editPanel = document.createElement("div");
+      editPanel.className = "user-edit-panel";
+
+      const editHead = document.createElement("div");
+      editHead.className = "user-edit-head";
+
+      const editTitle = document.createElement("div");
+      editTitle.className = "user-edit-title";
+      editTitle.textContent = "编辑消息";
+
+      editHead.appendChild(editTitle);
+      editPanel.appendChild(editHead);
+
+      const editTextarea = document.createElement("textarea");
+      editTextarea.className = "user-edit-input";
+      editTextarea.dataset.turnId = turn.id;
+      editTextarea.rows = 1;
+      editTextarea.placeholder = "在这里修改这条消息";
+      editTextarea.value = getTurnEditDraft(turn);
+      editTextarea.addEventListener("input", () => {
+        state.chat.editDraftByTurnId.set(turn.id, editTextarea.value);
+        resizeTurnEditor(editTextarea);
+        submitBtn.disabled =
+          isTopicRunning(topicId) ||
+          (!String(editTextarea.value || "").trim() && !hasUserImages);
+      });
+      editTextarea.addEventListener("keydown", async (event) => {
+        if (event.key !== "Enter" || event.shiftKey) return;
+        event.preventDefault();
+        if (submitBtn.disabled) return;
+        await handleSubmitTurnEdit(turn);
+      });
+      editPanel.appendChild(editTextarea);
+
+      if (hasUserImages) {
+        const imageHint = document.createElement("div");
+        imageHint.className = "user-edit-hint";
+        imageHint.textContent = "当前图片会一并保留";
+        editPanel.appendChild(imageHint);
+      }
+
+      const editActions = document.createElement("div");
+      editActions.className = "user-edit-actions";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "user-edit-btn secondary user-edit-cancel";
+      cancelBtn.textContent = "取消";
+      cancelBtn.addEventListener("click", () => {
+        cancelEditingTurn(turn.id);
+      });
+
+      const submitBtn = document.createElement("button");
+      submitBtn.type = "button";
+      submitBtn.className = "user-edit-btn primary user-edit-submit";
+      submitBtn.textContent = "重新发送";
+      submitBtn.dataset.topicId = topicId || "";
+      submitBtn.dataset.hasImages = hasUserImages ? "1" : "0";
+      submitBtn.disabled =
+        isTopicRunning(topicId) ||
+        (!String(editTextarea.value || "").trim() && !hasUserImages);
+      submitBtn.addEventListener("click", async () => {
+        if (submitBtn.disabled) return;
+        await handleSubmitTurnEdit(turn);
+      });
+
+      editActions.appendChild(cancelBtn);
+      editActions.appendChild(submitBtn);
+      editPanel.appendChild(editActions);
+      userWrap.appendChild(editPanel);
+
+      requestAnimationFrame(() => {
+        resizeTurnEditor(editTextarea);
+      });
+    }
 
     // 如果有图片，先显示图片
     if (hasUserImages) {
@@ -434,16 +682,12 @@ export function createTurnElement(turn) {
       userBubble.appendChild(textContent);
     }
 
-    if (hasUserText) {
-      const userCopyBtn = createCopyButton(() => turn.prompt || "", {
-        label: "复制",
-        icon: true,
-      });
-      userCopyBtn.classList.add("user-copy-btn");
-      userWrap.appendChild(userCopyBtn);
-    }
-
     userWrap.appendChild(userBubble);
+    userWrap.appendChild(userActions);
+  }
+
+  if (disableTurnAnimation) {
+    state.chat.turnIdsWithoutAnimation.delete(turn.id);
   }
 
   let webSearchEl = null;
@@ -459,7 +703,7 @@ export function createTurnElement(turn) {
   // 只渲染 A 侧模型卡片（兼容旧数据）
   const cards = {};
   if (turn.models.main) {
-    const aCard = createAssistantCard(turn);
+    const aCard = createAssistantCard(turn, topicId);
     assistants.appendChild(aCard.el);
     cards.main = aCard;
   }
@@ -471,7 +715,7 @@ export function createTurnElement(turn) {
   return { el: turnEl, cards, webSearchEl };
 }
 
-export function createAssistantCard(turn) {
+export function createAssistantCard(turn, topicId = state.chat.activeTopicId) {
   const side = "main";
   const modelDisplaySnapshot = (turn?.models?.main?.displayName || "").trim();
   const modelSnapshot = turn?.models?.main?.model || "";
@@ -493,6 +737,9 @@ export function createAssistantCard(turn) {
 
   const message = document.createElement("div");
   message.className = "assistant-message";
+  if (topicId) {
+    message.dataset.topicId = topicId;
+  }
 
   // 头部：模型名称 + 状态
   const header = document.createElement("div");
@@ -678,7 +925,28 @@ export function createAssistantCard(turn) {
     className: "action-btn copy-btn message-copy-btn",
   });
 
+  const regenerateBtn = document.createElement("button");
+  regenerateBtn.type = "button";
+  regenerateBtn.className = "action-btn regenerate-btn";
+  regenerateBtn.title = "重新生成";
+  regenerateBtn.setAttribute("aria-label", "重新生成");
+  regenerateBtn.dataset.topicId = topicId || "";
+  regenerateBtn.dataset.status = statusSnapshot;
+  regenerateBtn.innerHTML = `
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <polyline points="23 4 23 10 17 10"></polyline>
+      <polyline points="1 20 1 14 7 14"></polyline>
+      <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+    </svg>
+  `;
+  regenerateBtn.addEventListener("click", async () => {
+    if (regenerateBtn.disabled) return;
+    await _regenerateTurn(turn);
+  });
+  regenerateBtn.disabled = statusSnapshot === "loading" || isTopicRunning(topicId);
+
   actions.appendChild(copyBtn);
+  actions.appendChild(regenerateBtn);
 
   footer.appendChild(metaInfo);
   footer.appendChild(sourcesToggleBtn);
@@ -728,6 +996,7 @@ export function createAssistantCard(turn) {
     timeEl,
     speedEl,
     copyBtn,
+    regenerateBtn,
     sourcesStatusEl: sourcesStatus,
     sourcesToggleBtnEl: sourcesToggleBtn,
     sourcesSectionEl: sourcesPanel,
@@ -787,6 +1056,9 @@ export async function clearActiveTopicMessages() {
   if (!confirmed) return;
   if (isTopicRunning(topic.id)) _stopGeneration(topic.id);
 
+  for (const turn of topic.turns) {
+    clearTurnEditState(turn?.id);
+  }
   topic.turns = [];
   topic.updatedAt = Date.now();
   scheduleSaveChat();

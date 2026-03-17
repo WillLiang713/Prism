@@ -126,6 +126,58 @@
     padding: 14px 12px 12px;
   }
 
+  /* 移动端下显式重置联网面板布局，避免桌面网格/area 规则在部分 WebView 中叠层 */
+  #configModal .web-config-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  #configModal .web-config-main,
+  #configModal .web-config-side {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+    align-content: normal;
+    grid-auto-rows: auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  #configModal .web-config-main .form-group,
+  #configModal .web-config-side .form-group {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  #configModal #webSearchProviderGroup,
+  #configModal #webSearchMaxResultsGroup,
+  #configModal #tavilyApiKeyGroup,
+  #configModal #tavilySearchDepthGroup,
+  #configModal #exaApiKeyGroup,
+  #configModal #exaSearchTypeGroup {
+    grid-area: auto;
+  }
+
+  #configModal .config-tab-panel,
+  #configModal .global-config,
+  #configModal .web-config-layout .password-input-wrapper,
+  #configModal .web-config-layout .model-picker,
+  #configModal .web-config-layout .config-static-picker,
+  #configModal .web-config-layout .model-picker-row,
+  #configModal .web-config-layout .input-compact,
+  #configModal .web-config-layout .form-group > input[type="number"] {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
   #configModal .web-config-main,
   #configModal .web-config-side,
   #configModal .config-section-model .model-config-main,
