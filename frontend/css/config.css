@@ -253,22 +253,18 @@
 
 .config-tab.is-active,
 .config-tab[aria-selected="true"] {
-  border-color: var(--border-accent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04)),
-    rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
-  font-weight: 700;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 8px 18px rgba(0, 0, 0, 0.18);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .config-tab.is-active:hover,
 .config-tab[aria-selected="true"]:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.16);
   color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .config-tab:focus-visible {
@@ -516,7 +512,7 @@
 }
 
 .shortcut-help-inline-body .shortcut-help-table th {
-  background: rgba(17, 17, 17, 0.92);
+  background: var(--surface-solid);
 }
 
 .toggle-btn {

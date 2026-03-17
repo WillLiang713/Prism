@@ -15,8 +15,11 @@
   gap: 6px;
   max-width: 100%;
   min-width: 0;
-  animation: fade-in 0.4s ease-out;
   padding: 0 4px;
+}
+
+.assistant-message.no-animate {
+  animation: none;
 }
 
 .assistant-message-header {

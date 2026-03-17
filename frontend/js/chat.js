@@ -36,8 +36,8 @@ function syncTopicActionButtons(topicId) {
   const submitButtons = elements.chatMessages.querySelectorAll(".user-edit-submit");
   submitButtons.forEach((button) => {
     if (button.dataset.topicId !== topicId) return;
-    const panel = button.closest(".user-edit-panel");
-    const input = panel?.querySelector(".user-edit-input");
+    const wrap = button.closest(".user-bubble-wrap");
+    const input = wrap?.querySelector(".user-edit-input");
     const hasImages = button.dataset.hasImages === "1";
     const isEmpty = !String(input?.value || "").trim() && !hasImages;
     button.disabled = disableRegenerate || isEmpty;
@@ -60,13 +60,21 @@ function clearTurnEditState(turnId = state.chat.editingTurnId) {
   state.chat.editDraftByTurnId.delete(turnId);
 }
 
+function markActiveTopicTurnsWithoutAnimation() {
+  const topic = getActiveTopic();
+  if (!topic || !Array.isArray(topic.turns)) return;
+  topic.turns.forEach((turn) => {
+    if (turn?.id) state.chat.turnIdsWithoutAnimation.add(turn.id);
+  });
+}
+
 function resizeTurnEditor(editorEl) {
   if (!editorEl) return;
-  const maxHeight = 240;
-  editorEl.style.height = "0px";
-  const nextHeight = Math.min(editorEl.scrollHeight, maxHeight);
-  editorEl.style.height = `${nextHeight}px`;
-  editorEl.style.overflowY = editorEl.scrollHeight > maxHeight ? "auto" : "hidden";
+  const fixedHeight = 72;
+  editorEl.style.height = `${fixedHeight}px`;
+  const hasOverflow = editorEl.scrollHeight > fixedHeight;
+  editorEl.style.overflowY = hasOverflow ? "auto" : "hidden";
+  editorEl.classList.toggle("scrollbar-active", hasOverflow);
 }
 
 function focusTurnEditor(turnId) {
@@ -85,6 +93,7 @@ function focusTurnEditor(turnId) {
 
 function startEditingTurn(turn) {
   if (!turn?.id || isTopicRunning(state.chat.activeTopicId)) return;
+  markActiveTopicTurnsWithoutAnimation();
   state.chat.editingTurnId = turn.id;
   state.chat.editDraftByTurnId.set(turn.id, String(turn.prompt || ""));
   renderChatMessages();
@@ -92,9 +101,7 @@ function startEditingTurn(turn) {
 }
 
 function cancelEditingTurn(turnId = state.chat.editingTurnId) {
-  if (turnId) {
-    state.chat.turnIdsWithoutAnimation.add(turnId);
-  }
+  markActiveTopicTurnsWithoutAnimation();
   clearTurnEditState(turnId);
   renderChatMessages();
 }
@@ -573,22 +580,9 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
     });
     userActions.appendChild(userEditBtn);
 
-    const userBubble = document.createElement("div");
-    userBubble.className = "user-bubble";
-
     if (isEditing) {
       const editPanel = document.createElement("div");
       editPanel.className = "user-edit-panel";
-
-      const editHead = document.createElement("div");
-      editHead.className = "user-edit-head";
-
-      const editTitle = document.createElement("div");
-      editTitle.className = "user-edit-title";
-      editTitle.textContent = "编辑消息";
-
-      editHead.appendChild(editTitle);
-      editPanel.appendChild(editHead);
 
       const editTextarea = document.createElement("textarea");
       editTextarea.className = "user-edit-input";
@@ -611,11 +605,14 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       });
       editPanel.appendChild(editTextarea);
 
+      const editFooter = document.createElement("div");
+      editFooter.className = "user-edit-footer";
+
       if (hasUserImages) {
         const imageHint = document.createElement("div");
         imageHint.className = "user-edit-hint";
         imageHint.textContent = "当前图片会一并保留";
-        editPanel.appendChild(imageHint);
+        editFooter.appendChild(imageHint);
       }
 
       const editActions = document.createElement("div");
@@ -645,45 +642,49 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
       editActions.appendChild(cancelBtn);
       editActions.appendChild(submitBtn);
-      editPanel.appendChild(editActions);
+      editFooter.appendChild(editActions);
       userWrap.appendChild(editPanel);
+      userWrap.appendChild(editFooter);
 
       requestAnimationFrame(() => {
         resizeTurnEditor(editTextarea);
       });
-    }
+    } else {
+      const userBubble = document.createElement("div");
+      userBubble.className = "user-bubble";
 
-    // 如果有图片，先显示图片
-    if (hasUserImages) {
-      const imagesContainer = document.createElement("div");
-      imagesContainer.className = "user-images";
+      // 如果有图片，先显示图片
+      if (hasUserImages) {
+        const imagesContainer = document.createElement("div");
+        imagesContainer.className = "user-images";
 
-      for (const image of turn.images) {
-        const imgWrapper = document.createElement("div");
-        imgWrapper.className = "user-image-item";
+        for (const image of turn.images) {
+          const imgWrapper = document.createElement("div");
+          imgWrapper.className = "user-image-item";
 
-        const img = document.createElement("img");
-        img.src = image.dataUrl;
-        img.alt = image.name || "用户上传的图片";
-        img.loading = "lazy";
+          const img = document.createElement("img");
+          img.src = image.dataUrl;
+          img.alt = image.name || "用户上传的图片";
+          img.loading = "lazy";
 
-        imgWrapper.appendChild(img);
-        imagesContainer.appendChild(imgWrapper);
+          imgWrapper.appendChild(img);
+          imagesContainer.appendChild(imgWrapper);
+        }
+
+        userBubble.appendChild(imagesContainer);
       }
 
-      userBubble.appendChild(imagesContainer);
-    }
+      // 显示文本消息
+      if (hasUserText) {
+        const textContent = document.createElement("div");
+        textContent.className = "user-text";
+        textContent.textContent = turn.prompt;
+        userBubble.appendChild(textContent);
+      }
 
-    // 显示文本消息
-    if (hasUserText) {
-      const textContent = document.createElement("div");
-      textContent.className = "user-text";
-      textContent.textContent = turn.prompt;
-      userBubble.appendChild(textContent);
+      userWrap.appendChild(userBubble);
+      userWrap.appendChild(userActions);
     }
-
-    userWrap.appendChild(userBubble);
-    userWrap.appendChild(userActions);
   }
 
   if (disableTurnAnimation) {
@@ -703,7 +704,7 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
   // 只渲染 A 侧模型卡片（兼容旧数据）
   const cards = {};
   if (turn.models.main) {
-    const aCard = createAssistantCard(turn, topicId);
+    const aCard = createAssistantCard(turn, topicId, disableTurnAnimation);
     assistants.appendChild(aCard.el);
     cards.main = aCard;
   }
@@ -715,7 +716,11 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
   return { el: turnEl, cards, webSearchEl };
 }
 
-export function createAssistantCard(turn, topicId = state.chat.activeTopicId) {
+export function createAssistantCard(
+  turn,
+  topicId = state.chat.activeTopicId,
+  disableAnimation = false
+) {
   const side = "main";
   const modelDisplaySnapshot = (turn?.models?.main?.displayName || "").trim();
   const modelSnapshot = turn?.models?.main?.model || "";
@@ -736,7 +741,7 @@ export function createAssistantCard(turn, topicId = state.chat.activeTopicId) {
   const statusSnapshot = turn?.models?.main?.status || "ready";
 
   const message = document.createElement("div");
-  message.className = "assistant-message";
+  message.className = `assistant-message${disableAnimation ? " no-animate" : ""}`;
   if (topicId) {
     message.dataset.topicId = topicId;
   }

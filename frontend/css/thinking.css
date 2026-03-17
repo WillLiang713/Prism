@@ -3,8 +3,8 @@
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 12px 0;
-  margin-bottom: 16px;
+  padding: 10px 0;
+  margin-bottom: 12px;
   transition: all 0.2s ease;
 }
 
@@ -14,7 +14,7 @@
   color: var(--message-label-color);
   line-height: var(--message-label-line-height);
   letter-spacing: var(--message-label-letter-spacing);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -66,7 +66,7 @@
   animation: shimmer 3.5s linear infinite;
 }
 
-.thinking-section.collapsed { padding: 8px 0; }
+.thinking-section.collapsed { padding: 6px 0; }
 .thinking-section.collapsed .thinking-header { margin-bottom: 0; }
 .thinking-section.collapsed .thinking-content { display: none; }
 .thinking-section:not(.collapsed) .thinking-header-arrow { transform: rotate(180deg); }

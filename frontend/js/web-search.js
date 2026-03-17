@@ -509,13 +509,6 @@ export function renderSourcesStatus(statusEl, sources) {
     chip.textContent = host;
     statusEl.appendChild(chip);
   });
-
-  if (hosts.length > visibleHosts.length) {
-    const more = document.createElement("span");
-    more.className = "sources-status-more";
-    more.textContent = `+${hosts.length - visibleHosts.length}`;
-    statusEl.appendChild(more);
-  }
 }
 
 export function renderSourcesToggle(buttonEl, sources) {

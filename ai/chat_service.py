@@ -383,6 +383,7 @@ class AIService:
                                 if parsed.get("tokens") is not None:
                                     yield f"data: {json.dumps({'type': 'tokens', 'data': parsed['tokens']})}\n\n"
 
+
                             # 检查是否达到最大轮数限制
                             if current_round >= max_rounds and tool_calls_buffer:
                                 yield f"data: {json.dumps({'type': 'error', 'data': f'已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具'})}\n\n"
