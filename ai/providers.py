@@ -352,9 +352,6 @@ class MessageBuilder:
         history_messages: list[dict],
     ) -> dict:
         """构建 OpenAI Responses API 请求体"""
-        if config.images:
-            raise ValueError("Responses 模式第一阶段暂不支持图片输入")
-
         now = datetime.now()
         instructions = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
 
@@ -451,7 +448,7 @@ class MessageBuilder:
         if not isinstance(content, list):
             return None
 
-        response_content: list[dict[str, str]] = []
+        response_content: list[dict[str, object]] = []
         for item in content:
             if not isinstance(item, dict):
                 continue
@@ -462,6 +459,25 @@ class MessageBuilder:
                     response_content.append(
                         {"type": text_item_type, "text": text}
                     )
+            elif role == "user" and item_type in {"image_url", "input_image"}:
+                image_value = item.get("image_url")
+                image_url = ""
+                detail = ""
+
+                if isinstance(image_value, dict):
+                    image_url = str(image_value.get("url") or "").strip()
+                    detail = str(image_value.get("detail") or "").strip()
+                else:
+                    image_url = str(image_value or "").strip()
+
+                if image_url:
+                    image_item: dict[str, object] = {
+                        "type": "input_image",
+                        "image_url": image_url,
+                    }
+                    if detail:
+                        image_item["detail"] = detail
+                    response_content.append(image_item)
             elif role == "assistant" and item_type == "refusal":
                 refusal = str(item.get("refusal") or item.get("text") or "").strip()
                 if refusal:

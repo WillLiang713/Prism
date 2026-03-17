@@ -128,7 +128,7 @@ export function updateProviderUi() {
         "Responses 目前只支持 OpenAI；Anthropic 请继续使用 Chat Completions。";
     } else if (endpointMode === "responses") {
       endpointHintEl.textContent =
-        "Responses 会请求 /v1/responses，并在联网时改用 OpenAI 内置网页搜索。";
+        "Responses 会请求 /v1/responses，支持图片输入；联网时可改用 OpenAI 内置网页搜索。";
     } else {
       endpointHintEl.textContent =
         "默认使用 Chat Completions；更稳妥，也会继续走本地工具链路。";
