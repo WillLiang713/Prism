@@ -26,6 +26,8 @@
 .sidebar-section {
   --sidebar-section-inline-padding: 10px;
   --topic-list-align-offset: 8px;
+  --sidebar-control-icon-size: 16px;
+  --sidebar-control-icon-stroke-width: 1.9;
   padding: 12px var(--sidebar-section-inline-padding);
   display: flex;
   flex-direction: column;
@@ -80,9 +82,15 @@
 }
 
 .sidebar-collapsed .topic-new-icon {
-  font-size: 15px;
-  font-weight: 600;
   color: currentColor;
+}
+
+.topic-new-icon,
+.sidebar-toggle-handle svg,
+.sidebar-expand-btn svg {
+  width: var(--sidebar-control-icon-size);
+  height: var(--sidebar-control-icon-size);
+  stroke-width: var(--sidebar-control-icon-stroke-width);
 }
 
 .sidebar-collapsed .sidebar-top-bar .topic-new-btn:hover {
@@ -131,13 +139,6 @@
 .sidebar-toggle-handle:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--accent-glow);
-}
-
-.sidebar-toggle-handle svg,
-.sidebar-expand-btn svg {
-  width: 16px;
-  height: 16px;
-  stroke-width: 1.9;
 }
 
 .sidebar-collapsed .sidebar-toggle-handle {
