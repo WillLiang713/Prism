@@ -113,3 +113,13 @@ body:not(.is-desktop-runtime) .chat-panel {
   max-width: none;
   margin: 0;
 }
+
+body:not(.is-desktop-runtime) .chat-side,
+body:not(.is-desktop-runtime) .chat-main {
+  background: var(--bg-chat);
+  border-radius: 0;
+  border-width: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

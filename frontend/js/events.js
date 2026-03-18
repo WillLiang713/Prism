@@ -315,6 +315,7 @@ export function bindEvents() {
 
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
+  elements.mobileExpandSidebarBtn?.addEventListener("click", toggleSidebar);
 }
 
 export function isNewTopicShortcut(e) {

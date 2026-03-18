@@ -30,7 +30,7 @@
       document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
         var href = link.getAttribute("href");
         if (href && !href.startsWith("http")) {
-          link.setAttribute("href", href + "?v=1773909124");
+          link.setAttribute("href", href + "?v=1773914940");
         }
       });
     </script>
@@ -116,6 +116,24 @@
           <main class="chat-main conversation-panel">
             <div class="conversation-shell">
               <div class="chat-header" id="desktopTitlebar">
+                <button
+                  class="mobile-sidebar-expand-btn no-drag"
+                  id="mobileExpandSidebarBtn"
+                  aria-label="展开侧栏"
+                >
+                  <svg
+                    viewBox="0 0 20 20"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M7.5 4.5L13 10l-5.5 5.5"></path>
+                  </svg>
+                </button>
                 <div class="header-brand desktop-drag-region" aria-label="模型信息" data-tauri-drag-region>
                   <div class="brand-meta">
                     <span class="brand-model" id="headerModelInfo">

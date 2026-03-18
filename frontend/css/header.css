@@ -11,6 +11,10 @@
   isolation: isolate;
 }
 
+.mobile-sidebar-expand-btn {
+  display: none;
+}
+
 .is-desktop-runtime *[data-tauri-drag-region] {
   app-region: drag;
 }
@@ -180,6 +184,10 @@
   background: transparent;
   max-width: none;
   margin: 0;
+}
+
+.is-desktop-runtime .mobile-sidebar-expand-btn {
+  display: none !important;
 }
 
 .is-desktop-runtime .chat-header {

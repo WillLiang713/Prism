@@ -167,6 +167,7 @@ export const elements = {
   shortcutHelpList: document.getElementById("shortcutHelpList"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),
+  mobileExpandSidebarBtn: document.getElementById("mobileExpandSidebarBtn"),
 
   // 联网搜索
   enableWebSearch: document.getElementById("enableWebSearch"),
