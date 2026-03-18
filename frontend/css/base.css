@@ -53,6 +53,9 @@ body {
   --border: rgba(255, 255, 255, 0.05);
   --border-strong: rgba(255, 255, 255, 0.09);
   --border-accent: rgba(255, 255, 255, 0.16);
+  --editable-panel-border: var(--border-strong);
+  --editable-panel-border-hover: rgba(255, 255, 255, 0.12);
+  --editable-panel-border-focus: var(--border-accent);
 
   /* Text */
   --text: #e4e4e4;

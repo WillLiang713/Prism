@@ -17,7 +17,7 @@
 .composer-box {
   position: relative;
   background: transparent;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--editable-panel-border);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: border-color 0.24s ease, box-shadow 0.24s ease,
@@ -61,12 +61,12 @@
 }
 
 .composer-box:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--editable-panel-border-hover);
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
 }
 
 .composer-box:focus-within {
-  border-color: var(--border-accent);
+  border-color: var(--editable-panel-border-focus);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
