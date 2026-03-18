@@ -1,6 +1,7 @@
 import { state, elements, STORAGE_KEYS } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
+import { syncDesktopPreferences } from './desktop.js';
 import { updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
@@ -48,6 +49,22 @@ export function bindEvents() {
     } catch (e) {
       console.error("保存联网搜索开关失败:", e);
     }
+  });
+
+  elements.closeToTrayOnClose?.addEventListener("change", () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.config);
+      const config = raw ? JSON.parse(raw) : {};
+      config.desktop = config.desktop || {};
+      config.desktop.closeToTrayOnClose =
+        !!elements.closeToTrayOnClose?.checked;
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+    } catch (error) {
+      console.error("保存关闭到托盘设置失败:", error);
+    }
+    void syncDesktopPreferences({
+      closeToTray: !!elements.closeToTrayOnClose?.checked,
+    });
   });
 
   elements.webSearchProvider?.addEventListener("change", () => {

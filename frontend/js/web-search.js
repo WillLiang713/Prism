@@ -471,18 +471,6 @@ function getSourceItems(sources) {
   return Array.isArray(sources) ? sources.filter((item) => item?.url) : [];
 }
 
-function getUniqueSourceHosts(items) {
-  const hosts = [];
-  const seen = new Set();
-  items.forEach((item) => {
-    const hostname = getSourceHostname(item.url);
-    if (!hostname || seen.has(hostname)) return;
-    seen.add(hostname);
-    hosts.push(hostname);
-  });
-  return hosts;
-}
-
 export function renderSourcesStatus(statusEl, sources) {
   if (!statusEl) return;
   const items = getSourceItems(sources);
@@ -492,9 +480,6 @@ export function renderSourcesStatus(statusEl, sources) {
     return;
   }
 
-  const hosts = getUniqueSourceHosts(items);
-  const visibleHosts = hosts.slice(0, 3);
-
   statusEl.hidden = false;
   statusEl.innerHTML = "";
 
@@ -502,13 +487,6 @@ export function renderSourcesStatus(statusEl, sources) {
   text.className = "sources-status-text";
   text.textContent = `已核对 ${items.length} 个来源`;
   statusEl.appendChild(text);
-
-  visibleHosts.forEach((host) => {
-    const chip = document.createElement("span");
-    chip.className = "sources-status-chip";
-    chip.textContent = host;
-    statusEl.appendChild(chip);
-  });
 }
 
 export function renderSourcesToggle(buttonEl, sources) {
@@ -542,11 +520,6 @@ export function renderSources(sectionEl, sources) {
   }
 
   sectionEl.innerHTML = "";
-
-  const title = document.createElement("div");
-  title.className = "sources-title";
-  title.textContent = `来源 · ${items.length}`;
-  sectionEl.appendChild(title);
 
   const list = document.createElement("div");
   list.className = "sources-list";

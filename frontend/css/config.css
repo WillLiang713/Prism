@@ -83,7 +83,7 @@
 #configModal .config-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px 24px 18px;
+  padding: 20px 28px 18px;
   background: var(--surface-solid);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -474,6 +474,46 @@
 
 #exaSearchTypeGroup {
   grid-area: exaType;
+}
+
+#desktopCloseToTrayGroup {
+  display: none;
+  margin-bottom: 0;
+}
+
+#configPanelGeneral .global-config {
+  min-height: 0;
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+body.is-desktop-runtime #desktopCloseToTrayGroup {
+  display: flex;
+}
+
+#desktopCloseToTrayGroup .toolbar-switch {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 0;
+  justify-content: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+#desktopCloseToTrayGroup .toolbar-switch .switch-track {
+  display: inline-block;
+}
+
+#desktopCloseToTrayGroup .toolbar-switch:hover {
+  border: none;
+  background: transparent;
+}
+
+#desktopCloseToTrayGroup .toolbar-switch:focus-within {
+  box-shadow: none;
 }
 
 .web-config-tips {

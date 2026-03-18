@@ -3689,15 +3689,6 @@ body {
   margin: 16px 0 4px;
 }
 
-.sources-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .sources-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

@@ -165,32 +165,12 @@
   line-height: var(--message-label-line-height);
 }
 
-.sources-status-chip,
-.sources-status-more {
-  font-size: 12px;
-  line-height: 1.2;
-  color: var(--text-dim);
-}
-
-.sources-status-more {
-  color: var(--text-muted);
-}
-
 .sources-section {
   margin: 10px 0 4px;
 }
 
 .sources-panel {
   padding: 8px 0 0;
-}
-
-.sources-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
 }
 
 .sources-list {

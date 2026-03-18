@@ -332,6 +332,17 @@
             <button
               type="button"
               class="config-tab"
+              id="configTabGeneral"
+              data-tab="general"
+              role="tab"
+              aria-selected="false"
+              aria-controls="configPanelGeneral"
+            >
+              常规
+            </button>
+            <button
+              type="button"
+              class="config-tab"
               id="configTabWeb"
               data-tab="web"
               role="tab"
@@ -473,6 +484,27 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+            </section>
+            <section
+              class="config-tab-panel"
+              id="configPanelGeneral"
+              data-panel="general"
+              role="tabpanel"
+              aria-labelledby="configTabGeneral"
+              hidden
+            >
+            <div class="global-config">
+              <div class="form-group" id="desktopCloseToTrayGroup">
+                <label class="toolbar-switch" for="closeToTrayOnClose">
+                  <input
+                    type="checkbox"
+                    id="closeToTrayOnClose"
+                  />
+                  <span class="switch-track" aria-hidden="true"></span>
+                  <span class="switch-text">关闭窗口时最小化到托盘</span>
+                </label>
               </div>
             </div>
             </section>
