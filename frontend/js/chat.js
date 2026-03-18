@@ -14,11 +14,24 @@ let _regenerateTurn = async () => {};
 export function setRegenerateTurn(fn) { _regenerateTurn = fn; }
 let _submitTurnEdit = async () => false;
 export function setSubmitTurnEdit(fn) { _submitTurnEdit = fn; }
+let topicDeleteHoverSuppressTimer = null;
 
 export function setEmptyThreadState(isEmpty) {
   const chatThread = document.querySelector(".chat-thread");
   if (!chatThread) return;
   chatThread.classList.toggle("is-empty", isEmpty);
+}
+
+function suppressTopicDeleteHover(durationMs = 180) {
+  if (!elements.topicList) return;
+  elements.topicList.classList.add("suppress-delete-hover");
+  if (topicDeleteHoverSuppressTimer) {
+    window.clearTimeout(topicDeleteHoverSuppressTimer);
+  }
+  topicDeleteHoverSuppressTimer = window.setTimeout(() => {
+    elements.topicList?.classList.remove("suppress-delete-hover");
+    topicDeleteHoverSuppressTimer = null;
+  }, durationMs);
 }
 
 function createEmptyChatState() {
@@ -468,17 +481,22 @@ export function renderTopicList() {
     const item = document.createElement("div");
     const isGeneratingTitle = state.chat.generatingTitleTopicIds.has(topic.id);
     const isGenerating = isTopicRunning(topic.id);
+    const topicTitle = (topic.title || "未命名话题").trim() || "未命名话题";
     item.className = `topic-item${
       topic.id === state.chat.activeTopicId ? " active" : ""
     }${isGeneratingTitle ? " generating-title" : ""}${
       isGenerating ? " running" : ""
     }`;
     item.dataset.topicId = topic.id;
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    item.setAttribute("aria-label", `切换到话题：${topicTitle}`);
+    item.title = topicTitle;
 
     const title = document.createElement("div");
     title.className = "topic-title";
-    title.textContent = topic.title || "未命名话题";
-    title.title = topic.title || "未命名话题";
+    title.textContent = topicTitle;
+    title.title = topicTitle;
 
     const meta = document.createElement("div");
     meta.className = "topic-meta";
@@ -491,6 +509,11 @@ export function renderTopicList() {
     const footer = document.createElement("div");
     footer.className = "topic-footer";
     footer.appendChild(meta);
+
+    const content = document.createElement("div");
+    content.className = "topic-content";
+    content.appendChild(title);
+    content.appendChild(footer);
 
     if (!hideDeleteForOnlyNewTopic) {
       const deleteBtn = document.createElement("button");
@@ -510,16 +533,23 @@ export function renderTopicList() {
       footer.appendChild(deleteBtn);
     }
 
-    item.appendChild(title);
-    item.appendChild(footer);
+    item.appendChild(content);
 
-    item.addEventListener("click", () => {
+    const activateTopic = () => {
       const isAlreadyActive = topic.id === state.chat.activeTopicId;
       collapseSidebarForMobile();
       if (isAlreadyActive) return;
 
+      suppressTopicDeleteHover();
       setActiveTopic(topic.id);
       renderAll();
+    };
+
+    item.addEventListener("click", activateTopic);
+    item.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      activateTopic();
     });
 
     elements.topicList.appendChild(item);
@@ -584,15 +614,6 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
     const userActions = document.createElement("div");
     userActions.className = "user-message-actions";
 
-    if (hasUserText) {
-      const userCopyBtn = createCopyButton(() => turn.prompt || "", {
-        label: "复制",
-        icon: true,
-      });
-      userCopyBtn.classList.add("user-copy-btn");
-      userActions.appendChild(userCopyBtn);
-    }
-
     const userEditBtn = createIconActionButton({
       className: "message-copy-btn copy-icon-btn user-edit-trigger",
       title: "编辑并重新发送",
@@ -606,6 +627,29 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       startEditingTurn(turn);
     });
     userActions.appendChild(userEditBtn);
+
+    const userRegenerateBtn = createIconActionButton({
+      className: "message-copy-btn copy-icon-btn regenerate-btn user-regenerate-btn",
+      title: "重新生成",
+      ariaLabel: "重新生成",
+      path: '<polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>',
+    });
+    userRegenerateBtn.dataset.topicId = topicId || "";
+    userRegenerateBtn.disabled = isTopicRunning(topicId);
+    userRegenerateBtn.addEventListener("click", async () => {
+      if (userRegenerateBtn.disabled) return;
+      await _regenerateTurn(turn);
+    });
+    userActions.appendChild(userRegenerateBtn);
+
+    if (hasUserText) {
+      const userCopyBtn = createCopyButton(() => turn.prompt || "", {
+        label: "复制",
+        icon: true,
+      });
+      userCopyBtn.classList.add("user-copy-btn");
+      userActions.appendChild(userCopyBtn);
+    }
 
     if (isEditing) {
       const editPanel = document.createElement("div");

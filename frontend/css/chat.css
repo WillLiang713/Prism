@@ -6,14 +6,14 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
-  background: var(--bg-chat);
+  background: transparent;
 }
 
 .chat-messages-wrapper {
   position: relative;
+  display: flex;
   flex: 1;
   min-height: 0;
-  display: flex;
   flex-direction: column;
 }
 
@@ -39,7 +39,8 @@
 
 .empty-chat-state {
   width: 100%;
-  max-width: var(--turn-max-width);
+  max-width: var(--conversation-content-max-width);
+  margin: 0 auto;
   padding: 0 4px;
   text-align: center;
 }
@@ -103,6 +104,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  position: relative;
 }
 
 .user-bubble-wrap.is-editing {
@@ -118,6 +120,29 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+  min-height: 26px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .user-message-actions {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-2px);
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease,
+      visibility 0s linear 0.16s;
+  }
+
+  .user-bubble-wrap:hover .user-message-actions,
+  .user-bubble-wrap:focus-within .user-message-actions {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
 }
 
 .user-bubble {

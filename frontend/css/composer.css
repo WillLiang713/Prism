@@ -4,12 +4,13 @@
   background: transparent;
   display: flex;
   justify-content: center;
+  position: relative;
 }
 
 .composer-wrapper {
   position: relative;
   width: 100%;
-  max-width: var(--turn-max-width);
+  max-width: var(--composer-max-width);
   transition: max-width 0.3s ease;
 }
 
@@ -402,7 +403,7 @@
   overflow: visible !important;
 }
 
-.chat-thread:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
+.chat-main:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
   opacity: 0;
   pointer-events: none;
 }

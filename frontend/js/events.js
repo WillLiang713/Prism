@@ -150,6 +150,13 @@ export function bindEvents() {
     await requestDeleteTopic();
   });
 
+  // 收起/展开话题栏快捷键：Ctrl+B
+  document.addEventListener("keydown", (e) => {
+    if (!isToggleSidebarShortcut(e)) return;
+    e.preventDefault();
+    toggleSidebar();
+  });
+
   // 打开快捷键页：Shift+/
   document.addEventListener("keydown", (e) => {
     if (!isShortcutHelpShortcut(e)) return;
@@ -313,7 +320,7 @@ export function bindEvents() {
 export function isNewTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
 
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasShift = !!e.shiftKey;
@@ -334,11 +341,19 @@ export function isEditableKeyboardTarget(target) {
   );
 }
 
+function isPromptInputTarget(target) {
+  return !!elements.promptInput && target === elements.promptInput;
+}
+
+function shouldBlockGlobalShortcutForTarget(target) {
+  return isEditableKeyboardTarget(target) && !isPromptInputTarget(target);
+}
+
 export function isShortcutHelpShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   const key = (e.key || "").toLowerCase();
   return e.shiftKey && (key === "?" || key === "/");
@@ -348,7 +363,7 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasShift = !!e.shiftKey;
@@ -356,4 +371,17 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (e.metaKey || e.altKey) return false;
   if (!e.ctrlKey) return false;
   return key === "backspace" && hasShift;
+}
+
+export function isToggleSidebarShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (elements.configModal?.classList.contains("open")) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
+
+  const key = (e.key || "").toLowerCase();
+
+  if (e.metaKey || e.altKey || e.shiftKey) return false;
+  if (!e.ctrlKey) return false;
+  return key === "b";
 }

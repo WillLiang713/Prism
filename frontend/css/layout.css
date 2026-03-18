@@ -17,33 +17,88 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
 }
 
 .chat-panel {
-  background: var(--surface);
-  border: none;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: var(--sidebar-panel-width) minmax(0, 1fr);
+  gap: 0;
   height: 100%;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   flex: 1;
   width: 100%;
   max-width: var(--app-shell-max-width);
   margin: 0 auto;
-  transition: border-radius 0.3s ease, box-shadow 0.3s ease;
+  transition: grid-template-columns var(--sidebar-motion-duration) var(--sidebar-motion-ease);
+}
+
+.sidebar-collapsed .chat-panel {
+  grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
+}
+
+.topics-panel,
+.conversation-panel {
+  background: var(--bg-chat);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  contain: paint;
+}
+
+.topics-panel {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-right-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.topics-panel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.conversation-panel {
+  min-width: 0;
+  overflow: hidden;
+  border-left-width: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .chat-main {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.conversation-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.chat-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
 }
@@ -64,6 +119,4 @@ body:not(.is-desktop-runtime) .chat-layout {
 body:not(.is-desktop-runtime) .chat-panel {
   max-width: none;
   margin: 0;
-  border-radius: 0;
-  box-shadow: none;
 }

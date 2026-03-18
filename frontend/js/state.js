@@ -14,17 +14,22 @@ export const SHORTCUTS = [
   {
     action: "新建话题",
     keys: ["Ctrl", "Shift", "O"],
-    note: "仅在非输入状态下生效",
+    note: "聊天输入框聚焦时也可用",
   },
   {
     action: "打开快捷键页",
     keys: ["Shift", "?"],
-    note: "仅在非输入状态下生效，会打开配置中心",
+    note: "聊天输入框聚焦时也可用，会打开配置中心",
   },
   {
     action: "删除当前话题",
     keys: ["Ctrl", "Shift", "Backspace"],
-    note: "仅在非输入状态下生效，会弹出确认",
+    note: "聊天输入框聚焦时也可用，会弹出确认",
+  },
+  {
+    action: "收起或展开话题栏",
+    keys: ["Ctrl", "B"],
+    note: "聊天输入框聚焦时也可用",
   },
   {
     action: "发送消息",
