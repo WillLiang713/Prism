@@ -262,10 +262,45 @@ export function bindEvents() {
   // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）
   let promptImeComposing = false;
   let promptImeEndAt = 0;
+  let promptImeDeferredSendTimer = 0;
   const PROMPT_IME_GUARD_MS = 120;
+
+  function clearPromptImeDeferredSend() {
+    if (!promptImeDeferredSendTimer) return;
+    window.clearTimeout(promptImeDeferredSendTimer);
+    promptImeDeferredSendTimer = 0;
+  }
+
+  function schedulePromptSendAfterImeGuard() {
+    clearPromptImeDeferredSend();
+
+    const queuedPromptValue = elements.promptInput.value;
+    const queuedImageCount = state.images.selectedImages?.length || 0;
+    const remainingGuardMs = Math.max(
+      0,
+      PROMPT_IME_GUARD_MS - (Date.now() - promptImeEndAt)
+    );
+
+    promptImeDeferredSendTimer = window.setTimeout(() => {
+      promptImeDeferredSendTimer = 0;
+
+      if (document.activeElement !== elements.promptInput) return;
+      if (elements.promptInput.readOnly) return;
+      if (promptImeComposing) return;
+      if (isMobileLayout()) return;
+      if (isTopicRunning(state.chat.activeTopicId)) return;
+      if (elements.promptInput.value !== queuedPromptValue) return;
+
+      const currentImageCount = state.images.selectedImages?.length || 0;
+      if (currentImageCount !== queuedImageCount) return;
+
+      void sendPrompt();
+    }, remainingGuardMs + 10);
+  }
 
   elements.promptInput.addEventListener("compositionstart", () => {
     promptImeComposing = true;
+    clearPromptImeDeferredSend();
   });
 
   elements.promptInput.addEventListener("compositionend", () => {
@@ -278,20 +313,31 @@ export function bindEvents() {
     if (e.shiftKey) return;
     if (elements.promptInput.readOnly) return;
 
-    const isImeGuarded =
-      e.isComposing ||
-      promptImeComposing ||
-      e.keyCode === 229 ||
-      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
-    if (isImeGuarded) return;
-
     if (isMobileLayout()) return;
 
+    const isActiveImeEvent =
+      e.isComposing ||
+      promptImeComposing ||
+      e.keyCode === 229;
+    if (isActiveImeEvent) return;
+
+    const isWithinImeGuard =
+      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
+    if (isWithinImeGuard) {
+      e.preventDefault();
+      schedulePromptSendAfterImeGuard();
+      return;
+    }
+
     e.preventDefault();
-    if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
+    if (!isTopicRunning(state.chat.activeTopicId)) void sendPrompt();
   });
 
-  elements.promptInput.addEventListener("input", autoGrowPromptInput);
+  elements.promptInput.addEventListener("input", () => {
+    clearPromptImeDeferredSend();
+    autoGrowPromptInput();
+  });
+  elements.promptInput.addEventListener("blur", clearPromptImeDeferredSend);
 
   // 图片上传按钮点击事件
   elements.imageUploadBtn?.addEventListener(PRESS_START_EVENT, (e) => {

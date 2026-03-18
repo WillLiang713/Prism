@@ -47,6 +47,21 @@
   color: var(--message-label-color);
 }
 
+.assistant-message.loading .assistant-model-name,
+.assistant-message.streaming .assistant-model-name {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.20) 0%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.20) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
+}
+
 .assistant-message.loading .assistant-message-content,
 .assistant-message.loading .assistant-message-footer {
   display: none;
