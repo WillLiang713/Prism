@@ -26,11 +26,17 @@
     <link rel="stylesheet" href="css/content.css" />
     <link rel="stylesheet" href="css/responsive.css" />
     <script>
-      // 破坏 WebView2 对 CSS 文件的缓存，确保每次构建加载最新样式
+      // 样式版本号优先使用构建脚本替换后的 __BUILD__，开发态则自动生成，
+      // 同时避免对已带 ?v= 的链接重复追加版本参数。
+      var PRISM_STYLE_BUILD_ID = "__BUILD__";
+      if (!PRISM_STYLE_BUILD_ID || PRISM_STYLE_BUILD_ID === "__BUILD__") {
+        PRISM_STYLE_BUILD_ID = String(Date.now());
+      }
       document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
         var href = link.getAttribute("href");
-        if (href && !href.startsWith("http")) {
-          link.setAttribute("href", href + "?v=1773914940");
+        if (href && !href.startsWith("http") && href.indexOf("?v=") === -1) {
+          var separator = href.indexOf("?") === -1 ? "?" : "&";
+          link.setAttribute("href", href + separator + "v=" + PRISM_STYLE_BUILD_ID);
         }
       });
     </script>

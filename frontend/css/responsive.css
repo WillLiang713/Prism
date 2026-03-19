@@ -38,17 +38,18 @@
 
   .web-config-layout {
     grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
-    grid-template-areas:
-      "provider results"
-      "serviceKey serviceOption";
     column-gap: 28px;
     row-gap: 18px;
     align-items: start;
   }
 
-  .web-config-main,
-  .web-config-side {
-    display: contents;
+  #configModal #webSearchProviderGroup,
+  #configModal #webSearchMaxResultsGroup,
+  #configModal #tavilyApiKeyGroup,
+  #configModal #tavilySearchDepthGroup,
+  #configModal #exaApiKeyGroup,
+  #configModal #exaSearchTypeGroup {
+    grid-area: auto;
   }
 
   .config-section-model .model-config-main .form-group:last-child {
