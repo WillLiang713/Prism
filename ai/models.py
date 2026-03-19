@@ -39,9 +39,9 @@ class ChatRequest(BaseModel):
     # 推理与工具
     reasoningEffort: str = "medium"
     enableTools: bool = False  # 是否启用工具调用
-    maxToolRounds: int = Field(
-        default=50, ge=1, le=200
-    )  # 最大工具调用轮数（实际不再限制）
+    maxToolRounds: int | None = Field(
+        default=None, ge=1
+    )  # 最大工具调用轮数；留空表示不限制
     selectedTools: list[str] = []  # 选中的工具名称列表
 
     # 联网相关

@@ -145,6 +145,16 @@ class AIService:
         )
 
     @staticmethod
+    def _resolve_max_tool_rounds(value: Any) -> int | None:
+        if value is None:
+            return None
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError):
+            return None
+        return normalized if normalized >= 1 else None
+
+    @staticmethod
     async def execute_tool(
         tool_name: str, arguments: dict, runtime_context: dict[str, Any] | None = None
     ) -> str:
@@ -248,13 +258,15 @@ class AIService:
 
                     # 流结束后，如果有工具调用，执行并多轮请求 AI
                     current_round = 0
-                    max_rounds = min(request.maxToolRounds, 200)
+                    max_rounds = AIService._resolve_max_tool_rounds(
+                        request.maxToolRounds
+                    )
                     messages_with_tools = body["messages"].copy()
 
                     while (
                         tool_calls_buffer
                         and request.enableTools
-                        and current_round < max_rounds
+                        and (max_rounds is None or current_round < max_rounds)
                     ):
                         current_round += 1
                         resolved_max_results = (
@@ -549,8 +561,12 @@ class AIService:
                                     yield AIService._sse_chunk("tokens", parsed["tokens"])
 
 
-                            # 检查是否达到最大轮数限制
-                            if current_round >= max_rounds and tool_calls_buffer:
+                            # 检查是否达到最大轮数限制（若配置了上限）
+                            if (
+                                max_rounds is not None
+                                and current_round >= max_rounds
+                                and tool_calls_buffer
+                            ):
                                 yield AIService._sse_chunk(
                                     "error",
                                     f"已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具",
@@ -627,7 +643,7 @@ class AIService:
             search_rounds: dict[str, int] = {}
             next_search_round = 1
             current_round = 0
-            max_rounds = min(request.maxToolRounds, 200)
+            max_rounds = AIService._resolve_max_tool_rounds(request.maxToolRounds)
             current_body: dict[str, Any] = dict(body)
             accumulated_input_items = AIService._clone_responses_input_items(
                 current_body.get("input")
@@ -746,7 +762,7 @@ class AIService:
                         break
 
                     current_round += 1
-                    if current_round > max_rounds:
+                    if max_rounds is not None and current_round > max_rounds:
                         yield AIService._sse_chunk(
                             "error",
                             f"已达到最大工具调用轮数限制 ({max_rounds}轮)，停止继续调用工具",
