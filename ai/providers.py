@@ -424,6 +424,34 @@ class MessageBuilder:
         return body
 
     @staticmethod
+    def build_responses_manual_followup_body(
+        config: ChatRequest,
+        input_items: list[dict[str, object]],
+        tools: list[dict[str, object]] | None = None,
+    ) -> dict[str, object]:
+        body: dict[str, object] = {
+            "model": config.model,
+            "input": input_items,
+            "stream": True,
+        }
+
+        if config.reasoningEffort and config.reasoningEffort != "none":
+            body["reasoning"] = {"effort": config.reasoningEffort}
+
+        now = datetime.now()
+        instructions = MessageBuilder._resolve_system_prompt(config.systemPrompt, now)
+        if instructions:
+            body["instructions"] = instructions
+
+        if tools:
+            body["tools"] = tools
+
+        if config.enableBuiltinWebSearch:
+            body["include"] = ["web_search_call.action.sources"]
+
+        return body
+
+    @staticmethod
     def _convert_message_to_responses_input(
         message: dict[str, object],
     ) -> dict[str, object] | None:

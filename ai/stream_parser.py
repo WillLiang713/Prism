@@ -518,11 +518,15 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
         "call_id": "",
         "response_id": "",
         "function_calls": None,
+        "response_output_items": None,
     }
 
     event_type = str(chunk.get("type") or "").strip()
+    response_id = str(chunk.get("response_id") or "").strip()
+    if response_id:
+        result["response_id"] = response_id
     response_payload = chunk.get("response")
-    if isinstance(response_payload, dict):
+    if isinstance(response_payload, dict) and not result["response_id"]:
         result["response_id"] = str(response_payload.get("id") or "")
 
     if event_type == "response.output_text.delta":
@@ -534,6 +538,24 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
         "response.reasoning_text.delta",
     }:
         result["thinking"] = str(chunk.get("delta") or "")
+        return result
+
+    if event_type == "response.function_call_arguments.done":
+        call_id = str(chunk.get("call_id") or "").strip()
+        item_id = str(chunk.get("item_id") or chunk.get("id") or "").strip()
+        function_name = str(chunk.get("name") or "").strip()
+        arguments = str(chunk.get("arguments") or "")
+        if call_id:
+            result["call_id"] = call_id
+        if call_id or item_id:
+            result["function_calls"] = [
+                {
+                    "id": item_id,
+                    "call_id": call_id,
+                    "name": function_name,
+                    "arguments": arguments,
+                }
+            ]
         return result
 
     if event_type == "response.output_item.added":
@@ -616,8 +638,10 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
     if event_type == "response.completed":
         response = chunk.get("response")
         if isinstance(response, dict):
-            collected_sources: list[dict[str, str]] = []
             output_items = response.get("output")
+            if isinstance(output_items, list):
+                result["response_output_items"] = output_items
+            collected_sources: list[dict[str, str]] = []
             if isinstance(output_items, list):
                 for item in output_items:
                     if not isinstance(item, dict):

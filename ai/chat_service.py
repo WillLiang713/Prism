@@ -113,6 +113,38 @@ class AIService:
         return merged
 
     @staticmethod
+    def _clone_responses_input_items(items: Any) -> list[dict[str, object]]:
+        if not isinstance(items, list):
+            return []
+
+        cloned: list[dict[str, object]] = []
+        for item in items:
+            if isinstance(item, dict):
+                cloned.append(json.loads(json.dumps(item, ensure_ascii=False)))
+        return cloned
+
+    @staticmethod
+    def _build_responses_manual_followup_items(
+        accumulated_input_items: list[dict[str, object]],
+        response_output_items: list[dict[str, Any]] | None,
+        tool_outputs: list[dict[str, object]],
+    ) -> list[dict[str, object]]:
+        merged_items = AIService._clone_responses_input_items(accumulated_input_items)
+        merged_items.extend(AIService._clone_responses_input_items(response_output_items))
+        merged_items.extend(AIService._clone_responses_input_items(tool_outputs))
+        return merged_items
+
+    @staticmethod
+    def _is_missing_tool_call_error(error_text: str) -> bool:
+        normalized = str(error_text or "").strip().lower()
+        if not normalized:
+            return False
+        return (
+            "no tool call found for function call output" in normalized
+            or "no tool call found for function_call_output" in normalized
+        )
+
+    @staticmethod
     async def execute_tool(
         tool_name: str, arguments: dict, runtime_context: dict[str, Any] | None = None
     ) -> str:
@@ -597,11 +629,16 @@ class AIService:
             current_round = 0
             max_rounds = min(request.maxToolRounds, 200)
             current_body: dict[str, Any] = dict(body)
+            accumulated_input_items = AIService._clone_responses_input_items(
+                current_body.get("input")
+            )
+            pending_manual_followup_items: list[dict[str, object]] | None = None
 
             async with httpx.AsyncClient(timeout=90.0) as client:
                 while True:
                     response_id = ""
                     pending_function_calls: dict[str, dict[str, Any]] = {}
+                    response_output_items: list[dict[str, Any]] = []
 
                     async with client.stream(
                         method="POST",
@@ -610,9 +647,24 @@ class AIService:
                         json=current_body,
                     ) as response:
                         if response.status_code >= 400:
+                            error_text = await AIService._format_http_error(response)
+                            if (
+                                pending_manual_followup_items
+                                and "previous_response_id" in current_body
+                                and AIService._is_missing_tool_call_error(error_text)
+                            ):
+                                current_body = (
+                                    MessageBuilder.build_responses_manual_followup_body(
+                                        request,
+                                        pending_manual_followup_items,
+                                        responses_tools,
+                                    )
+                                )
+                                pending_manual_followup_items = None
+                                continue
                             yield AIService._sse_chunk(
                                 "error",
-                                await AIService._format_http_error(response),
+                                error_text,
                             )
                             return
 
@@ -623,6 +675,9 @@ class AIService:
 
                             if parsed.get("response_id"):
                                 response_id = str(parsed["response_id"]).strip()
+
+                            if isinstance(parsed.get("response_output_items"), list):
+                                response_output_items = list(parsed["response_output_items"])
 
                             if parsed.get("thinking"):
                                 yield AIService._sse_chunk("thinking", parsed["thinking"])
@@ -838,17 +893,40 @@ class AIService:
                         return
 
                     if not response_id:
-                        yield AIService._sse_chunk(
-                            "error",
-                            "响应缺少 response_id，无法继续提交工具结果",
+                        pending_manual_followup_items = (
+                            AIService._build_responses_manual_followup_items(
+                                accumulated_input_items,
+                                response_output_items,
+                                tool_outputs,
+                            )
                         )
-                        return
+                        current_body = MessageBuilder.build_responses_manual_followup_body(
+                            request,
+                            pending_manual_followup_items,
+                            responses_tools,
+                        )
+                        accumulated_input_items = (
+                            AIService._clone_responses_input_items(
+                                pending_manual_followup_items
+                            )
+                        )
+                        continue
 
+                    pending_manual_followup_items = (
+                        AIService._build_responses_manual_followup_items(
+                            accumulated_input_items,
+                            response_output_items,
+                            tool_outputs,
+                        )
+                    )
                     current_body = MessageBuilder.build_responses_followup_body(
                         request,
                         response_id,
                         tool_outputs,
                         responses_tools,
+                    )
+                    accumulated_input_items = AIService._clone_responses_input_items(
+                        pending_manual_followup_items
                     )
 
         except Exception as e:
