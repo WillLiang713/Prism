@@ -26,8 +26,8 @@ class ChatRequest(BaseModel):
 
     # 提供商配置
     provider: str = Field(default="openai")
-    apiKey: str
-    model: str
+    apiKey: str | None = None
+    model: str | None = None
     apiUrl: str | None = None
 
     # 消息内容

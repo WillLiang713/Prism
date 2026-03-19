@@ -3,6 +3,8 @@ from typing import Any, AsyncIterator
 
 import httpx
 
+from config import get_web_model_defaults
+
 from .models import ChatRequest
 from .providers import MessageBuilder, ProviderConfig
 from .stream_parser import (
@@ -37,6 +39,28 @@ class AIService:
         elif isinstance(error_payload, str) and error_payload.strip():
             return error_payload.strip()
         return ""
+
+    @staticmethod
+    def _copy_request_with_defaults(request: ChatRequest) -> ChatRequest:
+        defaults = get_web_model_defaults()
+        provider = str(request.provider or defaults["provider"] or "openai").strip()
+        endpoint_mode = str(
+            request.endpointMode or defaults["endpointMode"] or "chat_completions"
+        ).strip()
+        api_key = str(request.apiKey or defaults["apiKey"] or "").strip()
+        api_url = str(request.apiUrl or defaults["apiUrl"] or "").strip() or None
+        model = str(request.model or defaults["model"] or "").strip() or None
+
+        update = {
+            "provider": provider,
+            "endpointMode": endpoint_mode,
+            "apiKey": api_key or None,
+            "apiUrl": api_url,
+            "model": model,
+        }
+        if hasattr(request, "model_copy"):
+            return request.model_copy(update=update)
+        return request.copy(update=update)
 
     @staticmethod
     async def _format_http_error(response: httpx.Response, context: str = "") -> str:
@@ -117,6 +141,14 @@ class AIService:
             SSE格式的流式响应
         """
         try:
+            request = AIService._copy_request_with_defaults(request)
+            if not request.apiKey:
+                yield AIService._sse_chunk("error", "缺少 API Key：请在配置中填写，或在服务端设置 PRISM_WEB_DEFAULT_API_KEY")
+                return
+            if not request.model:
+                yield AIService._sse_chunk("error", "缺少模型 ID：请在配置中填写，或在服务端设置 PRISM_WEB_DEFAULT_MODEL")
+                return
+
             # 确定提供商模式
             provider_mode = ProviderConfig.get_provider_mode(request.provider)
 
@@ -500,6 +532,14 @@ class AIService:
     async def responses_stream(request: ChatRequest) -> AsyncIterator[str]:
         """OpenAI Responses API 流式接口。"""
         try:
+            request = AIService._copy_request_with_defaults(request)
+            if not request.apiKey:
+                yield AIService._sse_chunk("error", "缺少 API Key：请在配置中填写，或在服务端设置 PRISM_WEB_DEFAULT_API_KEY")
+                return
+            if not request.model:
+                yield AIService._sse_chunk("error", "缺少模型 ID：请在配置中填写，或在服务端设置 PRISM_WEB_DEFAULT_MODEL")
+                return
+
             provider_mode = ProviderConfig.get_provider_mode(request.provider)
             if provider_mode != "openai":
                 yield AIService._sse_chunk(

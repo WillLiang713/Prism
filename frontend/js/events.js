@@ -16,6 +16,11 @@ import {
   endMobileNativePickerSession,
 } from './layout.js';
 
+const PRESS_START_EVENT =
+  typeof window !== "undefined" && "PointerEvent" in window
+    ? "pointerdown"
+    : "mousedown";
+
 export function bindEvents() {
   initScrollbarAutoHide();
 

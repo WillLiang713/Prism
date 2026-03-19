@@ -1,4 +1,4 @@
-import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl } from './state.js';
+import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl, hasWebRuntimeDefaultApiKey } from './state.js';
 import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPickers } from './dropdown.js';
 
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
@@ -24,7 +24,7 @@ export function setModelHint(side, text) {
 
 export function updateModelHint(side) {
   const config = _getConfigFromForm(side || "main");
-  const apiKey = (config.apiKey || "").trim();
+  const hasApiKey = !!((config.apiKey || "").trim() || hasWebRuntimeDefaultApiKey());
   const apiUrl = (config.apiUrl || "").trim();
 
   if (isDesktopRuntime() && !state.runtime.backendReady) {
@@ -32,7 +32,7 @@ export function updateModelHint(side) {
     return;
   }
 
-  if (!apiKey) {
+  if (!hasApiKey) {
     setModelHint(
       side || "main",
       "先填写 API Key、API 地址，再拉取模型列表"

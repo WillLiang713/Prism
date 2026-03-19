@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS } from './state.js';
+import { state, elements, STORAGE_KEYS, hasWebRuntimeDefaultApiKey, resolveWebRuntimeModelValue } from './state.js';
 import { showAlert, showConfirm, syncBodyScrollLock } from './dialog.js';
 import { syncAllConfigSelectPickers, closeAllConfigSelectPickers } from './dropdown.js';
 import { closeModelDropdown, scheduleFetchModels, updateModelHint } from './models.js';
@@ -6,21 +6,81 @@ import { renderMarkdownToElement } from './markdown.js';
 import { getCurrentWebSearchToolMode, isWebSearchEnabled, normalizeEndpointMode, normalizeWebSearchProvider, normalizeTavilySearchDepth, normalizeExaSearchType, setWebSearchEnabled, setWebSearchToolMode, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 
+function getEffectiveProviderValue() {
+  return resolveWebRuntimeModelValue("provider", elements.provider?.value || "") || "openai";
+}
+
+function getEffectiveEndpointModeValue() {
+  return normalizeEndpointMode(
+    resolveWebRuntimeModelValue("endpointMode", elements.endpointMode?.value)
+  );
+}
+
+function getEffectiveApiUrlValue() {
+  return resolveWebRuntimeModelValue("apiUrl", elements.apiUrl?.value || "");
+}
+
+function getEffectiveModelValue() {
+  return resolveWebRuntimeModelValue("model", elements.model?.value || "");
+}
+
+function hasEffectiveApiKeyValue() {
+  return !!((elements.apiKey?.value || "").trim() || hasWebRuntimeDefaultApiKey());
+}
+
+function syncApiKeyPlaceholder() {
+  if (!elements.apiKey) return;
+  elements.apiKey.placeholder = hasWebRuntimeDefaultApiKey()
+    ? "留空则使用服务器默认 Key"
+    : "输入API密钥";
+}
+
+function applyWebRuntimeModelDefaults(options = {}) {
+  const forceProvider = options.forceProvider === true;
+  const forceEndpointMode = options.forceEndpointMode === true;
+  const provider = resolveWebRuntimeModelValue("provider");
+  const endpointMode = resolveWebRuntimeModelValue("endpointMode");
+  const apiUrl = resolveWebRuntimeModelValue("apiUrl");
+  const model = resolveWebRuntimeModelValue("model");
+
+  if (
+    provider &&
+    elements.provider &&
+    (forceProvider || !(elements.provider.value || "").trim())
+  ) {
+    elements.provider.value = provider;
+  }
+  if (
+    endpointMode &&
+    elements.endpointMode &&
+    (forceEndpointMode || !(elements.endpointMode.value || "").trim())
+  ) {
+    elements.endpointMode.value = normalizeEndpointMode(endpointMode);
+  }
+  if (apiUrl && elements.apiUrl && !(elements.apiUrl.value || "").trim()) {
+    elements.apiUrl.value = apiUrl;
+  }
+  if (model && elements.model && !(elements.model.value || "").trim()) {
+    elements.model.value = model;
+  }
+  syncApiKeyPlaceholder();
+}
+
 export function getConfigFromForm(side) {
   // 如果是标题模型，从主配置中获取
   if (side === "Title") {
     return {
-      provider: elements.provider?.value || "openai",
+      provider: getEffectiveProviderValue(),
       apiKey: elements.apiKey?.value || "",
-      apiUrl: elements.apiUrl?.value || "",
+      apiUrl: getEffectiveApiUrlValue(),
     };
   }
 
   return {
-    provider: elements.provider?.value || "openai",
-    endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
+    provider: getEffectiveProviderValue(),
+    endpointMode: getEffectiveEndpointModeValue(),
     apiKey: elements.apiKey?.value || "",
-    apiUrl: elements.apiUrl?.value || "",
+    apiUrl: getEffectiveApiUrlValue(),
   };
 }
 
@@ -108,8 +168,8 @@ export function syncRoleSettingPreview(preferPreview = true) {
 }
 
 export function updateProviderUi() {
-  const provider = elements.provider?.value || "openai";
-  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
+  const provider = getEffectiveProviderValue();
+  const endpointMode = getEffectiveEndpointModeValue();
   const hintEl = elements.providerHint;
   const endpointHintEl = elements.endpointModeHint;
 
@@ -137,6 +197,7 @@ export function updateProviderUi() {
   }
 
   updateApiUrlPlaceholder();
+  syncApiKeyPlaceholder();
   updateModelHint();
   updateWebSearchProviderUi();
 }
@@ -146,8 +207,8 @@ export function updateApiUrlPlaceholder() {
   const urlInput = elements.apiUrl;
   if (!providerEl || !urlInput) return;
 
-  const provider = providerEl.value;
-  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
+  const provider = getEffectiveProviderValue();
+  const endpointMode = getEffectiveEndpointModeValue();
   const placeholders = {
     openai:
       endpointMode === "responses"
@@ -163,7 +224,7 @@ export function resolveModelDisplayName(modelId) {
 }
 
 export function updateModelNames() {
-  const modelId = elements.model?.value || "";
+  const modelId = getEffectiveModelValue();
   const displayName = resolveModelDisplayName(modelId);
 
   // 更新模型名称（未配置时不显示任何内容）
@@ -180,22 +241,22 @@ export function getConfig(side) {
   // 标题生成配置：始终跟随主模型
   if (side === "Title") {
     return {
-      provider: elements.provider?.value || "openai",
-      endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
+      provider: getEffectiveProviderValue(),
+      endpointMode: getEffectiveEndpointModeValue(),
       apiKey: elements.apiKey?.value || "",
-      model: elements.model?.value || "",
-      apiUrl: elements.apiUrl?.value || "",
+      model: getEffectiveModelValue(),
+      apiUrl: getEffectiveApiUrlValue(),
       systemPrompt: "", // 标题生成不需要系统提示词
       reasoningEffort: "none",
     };
   }
 
   return {
-    provider: elements.provider?.value || "openai",
-    endpointMode: normalizeEndpointMode(elements.endpointMode?.value),
+    provider: getEffectiveProviderValue(),
+    endpointMode: getEffectiveEndpointModeValue(),
     apiKey: elements.apiKey?.value || "",
-    model: elements.model?.value || "",
-    apiUrl: elements.apiUrl?.value || "",
+    model: getEffectiveModelValue(),
+    apiUrl: getEffectiveApiUrlValue(),
     // 角色设定：发送给后端作为系统提示词
     systemPrompt: elements.roleSetting?.value || "",
     reasoningEffort: elements.reasoningEffortDropdown?.querySelector("button.active")?.dataset.value || "medium",
@@ -233,10 +294,12 @@ export async function saveConfig() {
   const apiKey = (elements.apiKey?.value || "").trim();
   const apiUrl = (elements.apiUrl?.value || "").trim();
   const model = (elements.model?.value || "").trim();
+  const effectiveApiUrl = getEffectiveApiUrlValue();
+  const effectiveModel = getEffectiveModelValue();
 
-  if (!apiKey || !apiUrl || !model) {
+  if (!hasEffectiveApiKeyValue() || !effectiveApiUrl || !effectiveModel) {
     setActiveConfigTab("model");
-    await showAlert("请先完成模型必填项：API Key、API 地址、模型。", {
+    await showAlert("请先完成模型必填项：API Key、API 地址、模型；也可以使用服务端 Web 默认值。", {
       title: "缺少必填项",
     });
     return;
@@ -360,9 +423,19 @@ export function loadConfig() {
         elements.roleSetting.value =
           modelConfig.systemPrompt || modelConfig.roleSetting || "";
     }
-    if (elements.endpointMode && !modelConfig) {
-      elements.endpointMode.value = normalizeEndpointMode(config.endpointMode);
+    if (elements.endpointMode) {
+      const endpointValue = modelConfig
+        ? config.endpointMode || modelConfig.endpointMode
+        : config.endpointMode;
+      if (endpointValue) {
+        elements.endpointMode.value = normalizeEndpointMode(endpointValue);
+      }
     }
+    applyWebRuntimeModelDefaults({
+      forceProvider: !modelConfig?.provider,
+      forceEndpointMode:
+        !config.endpointMode && !modelConfig?.endpointMode,
+    });
     setWebSearchEnabled(pendingWebSearchEnabled, { persist: false });
     setWebSearchToolMode(pendingWebSearchToolMode || "tavily", { persist: false });
     syncRoleSettingPreview(true);
@@ -375,7 +448,6 @@ export function loadConfig() {
   void syncDesktopPreferences({
     closeToTray: !!elements.closeToTrayOnClose?.checked,
   });
-  updateProviderUi();
   updateWebSearchProviderUi();
   updateConfigStatusStrip();
 }
@@ -414,6 +486,10 @@ export async function clearConfig() {
     elements.reasoningEffortValue.textContent = "中";
   }
   syncRoleSettingPreview(false);
+  applyWebRuntimeModelDefaults({
+    forceProvider: true,
+    forceEndpointMode: true,
+  });
 
   syncAllConfigSelectPickers();
   updateProviderUi();

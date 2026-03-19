@@ -4,6 +4,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from config import get_web_model_defaults
 from ai import ProviderConfig
 
 
@@ -12,8 +13,8 @@ router = APIRouter(prefix="/api")
 
 class GenerateTitleRequest(BaseModel):
     provider: str = Field(default="openai")
-    apiKey: str
-    model: str
+    apiKey: str | None = None
+    model: str | None = None
     apiUrl: str | None = None
     messages: list[dict[str, str]]
 
@@ -86,6 +87,17 @@ def _normalize_generated_title(raw_title: str, messages: list[dict[str, str]]) -
 @router.post("/topics/generate-title")
 async def generate_topic_title(payload: GenerateTitleRequest):
     try:
+        defaults = get_web_model_defaults()
+        provider = str(payload.provider or defaults["provider"] or "openai").strip()
+        api_key = str(payload.apiKey or defaults["apiKey"] or "").strip()
+        model = str(payload.model or defaults["model"] or "").strip()
+        api_url = str(payload.apiUrl or defaults["apiUrl"] or "").strip() or None
+
+        if not api_key:
+            raise HTTPException(status_code=400, detail="缺少 API Key")
+        if not model:
+            raise HTTPException(status_code=400, detail="缺少模型 ID")
+
         system_prompt = (
             "你是话题标题生成助手。请基于对话语义生成4-12字的中文名词短语标题。"
             "禁止复述用户原句，禁止输出解释，禁止使用“这个对话”“标题是”等表述。"
@@ -104,25 +116,25 @@ async def generate_topic_title(payload: GenerateTitleRequest):
             + "\n".join(conversation_summary)
         )
 
-        provider_mode = "anthropic" if payload.provider == "anthropic" else "openai"
-        api_url = ProviderConfig.get_api_url(payload.provider, payload.apiUrl, provider_mode)
+        provider_mode = "anthropic" if provider == "anthropic" else "openai"
+        api_url = ProviderConfig.get_api_url(provider, api_url, provider_mode)
 
         if provider_mode == "anthropic":
             request_body = {
-                "model": payload.model,
+                "model": model,
                 "max_tokens": 50,
                 "messages": [{"role": "user", "content": user_prompt}],
                 "system": system_prompt,
                 "temperature": 0.7,
             }
             headers = {
-                "x-api-key": payload.apiKey,
+                "x-api-key": api_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
             }
         else:
             request_body = {
-                "model": payload.model,
+                "model": model,
                 "max_tokens": 50,
                 "messages": [
                     {"role": "system", "content": system_prompt},
@@ -131,7 +143,7 @@ async def generate_topic_title(payload: GenerateTitleRequest):
                 "temperature": 0.7,
             }
             headers = {
-                "Authorization": f"Bearer {payload.apiKey}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             }
 
@@ -160,4 +172,3 @@ async def generate_topic_title(payload: GenerateTitleRequest):
     except Exception as e:
         print(f"生成标题错误: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail=f"生成标题失败: {str(e)}")
-

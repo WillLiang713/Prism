@@ -1,4 +1,4 @@
-import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText } from './state.js';
+import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText, hasWebRuntimeDefaultApiKey, resolveWebRuntimeModelValue } from './state.js';
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
@@ -85,6 +85,14 @@ function createMainModelState(config) {
   };
 }
 
+function hasEffectiveApiKey(config) {
+  return !!((config?.apiKey || "").trim() || hasWebRuntimeDefaultApiKey());
+}
+
+function hasEffectiveModel(config) {
+  return !!resolveWebRuntimeModelValue("model", config?.model || "");
+}
+
 export async function sendPrompt() {
   if (!isDesktopBackendAvailable()) {
     return;
@@ -104,7 +112,7 @@ export async function sendPrompt() {
   const config = getConfig();
   const webSearchConfig = getWebSearchConfig();
 
-  if (!config.apiKey || !config.model) {
+  if (!hasEffectiveApiKey(config) || !hasEffectiveModel(config)) {
     await showAlert("请先配置模型", {
       title: "缺少配置",
     });
@@ -217,7 +225,7 @@ export async function regenerateTurn(turn, options = {}) {
   const config = getConfig();
   const webSearchConfig = getWebSearchConfig();
 
-  if (!config.apiKey || !config.model) {
+  if (!hasEffectiveApiKey(config) || !hasEffectiveModel(config)) {
     await showAlert("请先配置模型", {
       title: "缺少配置",
     });
@@ -683,7 +691,7 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
     model: resolveAutoTitleModel(topic, titleConfig),
   };
 
-  if (!resolvedTitleConfig.apiKey || !resolvedTitleConfig.model) {
+  if (!hasEffectiveApiKey(resolvedTitleConfig) || !hasEffectiveModel(resolvedTitleConfig)) {
     console.warn("标题生成配置不完整，无法生成标题");
     return;
   }
@@ -720,7 +728,7 @@ export async function generateTopicTitle(topicId, config) {
   };
 
   // 检查模型配置
-  if (!normalizedConfig.apiKey || !normalizedConfig.model) {
+  if (!hasEffectiveApiKey(normalizedConfig) || !hasEffectiveModel(normalizedConfig)) {
     throw new Error("标题生成配置不完整（需要 API Key 和模型名称）");
   }
 

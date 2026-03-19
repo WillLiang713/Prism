@@ -51,6 +51,27 @@ export function resolveRuntimeConfig() {
   const apiBase = (queryApiBase || injectedApiBase || "").replace(/\/+$/, "");
   const platform =
     runtime.platform || (apiBase ? "desktop" : "web");
+  const rawWebDefaults =
+    platform === "web" && runtime.webDefaults && typeof runtime.webDefaults === "object"
+      ? runtime.webDefaults
+      : {};
+  const webDefaults = {
+    provider:
+      String(rawWebDefaults.provider || "").trim().toLowerCase() === "anthropic"
+        ? "anthropic"
+        : String(rawWebDefaults.provider || "").trim()
+        ? "openai"
+        : "",
+    endpointMode:
+      String(rawWebDefaults.endpointMode || "").trim().toLowerCase() === "responses"
+        ? "responses"
+        : String(rawWebDefaults.endpointMode || "").trim()
+        ? "chat_completions"
+        : "",
+    apiUrl: String(rawWebDefaults.apiUrl || "").trim(),
+    model: String(rawWebDefaults.model || "").trim(),
+    hasApiKey: rawWebDefaults.hasApiKey === true,
+  };
 
   return {
     platform,
@@ -58,6 +79,7 @@ export function resolveRuntimeConfig() {
     backendManagedByDesktop:
       runtime.backendManagedByDesktop === true || platform === "desktop",
     startupError: String(runtime.startupError || "").trim(),
+    webDefaults,
   };
 }
 
@@ -74,6 +96,23 @@ export function buildApiUrl(path) {
 
 export function isDesktopRuntime() {
   return PRISM_RUNTIME.platform === "desktop";
+}
+
+export function getWebRuntimeModelDefaults() {
+  return PRISM_RUNTIME.platform === "web"
+    ? PRISM_RUNTIME.webDefaults || {}
+    : {};
+}
+
+export function resolveWebRuntimeModelValue(key, rawValue = "") {
+  const raw = String(rawValue || "").trim();
+  if (raw) return raw;
+  const defaults = getWebRuntimeModelDefaults();
+  return String(defaults?.[key] || "").trim();
+}
+
+export function hasWebRuntimeDefaultApiKey() {
+  return getWebRuntimeModelDefaults().hasApiKey === true;
 }
 
 export function delay(ms) {

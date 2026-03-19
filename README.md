@@ -160,6 +160,34 @@ You can also provide search keys through environment variables:
 - `TAVILY_API_KEY`
 - `EXA_API_KEY`
 
+For Web deployments, you can also provide default model configuration through environment variables. When these values are set, the corresponding fields in the frontend config panel may be left blank and the backend will fall back to the server-side `.env` values.
+
+Available variables:
+
+- `PRISM_WEB_DEFAULT_PROVIDER`: default provider, `openai` or `anthropic`
+- `PRISM_WEB_DEFAULT_API_URL`: default API URL
+- `PRISM_WEB_DEFAULT_API_KEY`: default API key
+- `PRISM_WEB_DEFAULT_ENDPOINT_MODE`: default endpoint mode, `chat_completions` or `responses`
+- `PRISM_WEB_DEFAULT_MODEL`: default model ID, for example `gpt-4.1`, `gpt-4.1-mini`, or `deepseek-chat`
+
+Notes:
+
+- These `PRISM_WEB_DEFAULT_*` variables only apply to Web mode. The desktop app ignores them.
+- For security reasons, the default API key is not injected into the browser as plaintext. If the field is blank, the backend applies the fallback server-side.
+- If you use `responses`, the default provider should currently be `openai`.
+- When the provider is `openai` and the endpoint mode switches to `responses`, `builtin` becomes available as a web-search option.
+- Whether web search is enabled, and whether `builtin` is selected, is still controlled manually by the user. The frontend does not auto-switch the current web-search mode.
+
+Example (OpenAI Responses):
+
+```env
+PRISM_WEB_DEFAULT_PROVIDER=openai
+PRISM_WEB_DEFAULT_API_URL=https://api.openai.com/v1/responses
+PRISM_WEB_DEFAULT_API_KEY=sk-xxx
+PRISM_WEB_DEFAULT_ENDPOINT_MODE=responses
+PRISM_WEB_DEFAULT_MODEL=gpt-4.1
+```
+
 ## Environment Variables
 
 | Name | Purpose | Default |
@@ -167,6 +195,11 @@ You can also provide search keys through environment variables:
 | `PRISM_PORT` | Public port used by the local server or Docker mapping | `3000` |
 | `TAVILY_API_KEY` | Optional Tavily API key for web search | empty |
 | `EXA_API_KEY` | Optional Exa API key for web search | empty |
+| `PRISM_WEB_DEFAULT_PROVIDER` | Optional default provider for Web mode, `openai` / `anthropic` | empty |
+| `PRISM_WEB_DEFAULT_API_URL` | Optional default API URL for Web mode | empty |
+| `PRISM_WEB_DEFAULT_API_KEY` | Optional default API key for Web mode | empty |
+| `PRISM_WEB_DEFAULT_ENDPOINT_MODE` | Optional default endpoint mode for Web mode, `chat_completions` / `responses` | empty |
+| `PRISM_WEB_DEFAULT_MODEL` | Optional default model ID for Web mode | empty |
 | `PRISM_DESKTOP_API_BASE` | Optional desktop backend base URL for development | built-in desktop default |
 
 ## Tech Stack

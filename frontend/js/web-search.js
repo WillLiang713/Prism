@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime } from './state.js';
+import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, hasWebRuntimeDefaultApiKey, resolveWebRuntimeModelValue } from './state.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "模型内置",
@@ -906,13 +906,15 @@ export function setStatusPillState(el, isReady, text) {
 }
 
 export function updateConfigStatusStrip() {
-  const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
+  const endpointMode = normalizeEndpointMode(
+    resolveWebRuntimeModelValue("endpointMode", elements.endpointMode?.value)
+  );
   const toolMode = getCurrentWebSearchToolMode();
   const webSearchEnabled = isWebSearchEnabled();
-  const hasApiKey = !!(elements.apiKey?.value || "").trim();
-  const hasApiUrl = !!(elements.apiUrl?.value || "").trim();
-  const modelName = (elements.model?.value || "").trim();
-  const provider = elements.provider?.value === "anthropic" ? "Anthropic" : "OpenAI";
+  const hasApiKey = !!((elements.apiKey?.value || "").trim() || hasWebRuntimeDefaultApiKey());
+  const hasApiUrl = !!resolveWebRuntimeModelValue("apiUrl", elements.apiUrl?.value || "");
+  const modelName = resolveWebRuntimeModelValue("model", elements.model?.value || "");
+  const provider = resolveWebRuntimeModelValue("provider", elements.provider?.value || "") === "anthropic" ? "Anthropic" : "OpenAI";
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
     ? `模型：${provider} · ${endpointMode === "responses" ? "Responses" : "Chat"} · ${modelName}`

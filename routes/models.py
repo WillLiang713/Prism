@@ -4,6 +4,8 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from config import get_web_model_defaults
+
 
 router = APIRouter(prefix="/api")
 
@@ -62,12 +64,16 @@ def build_models_base_url(raw_url: str, provider_mode: str) -> str:
 
 @router.post("/models/list")
 async def list_models(payload: ModelListRequest):
-    provider = (payload.provider or "openai").strip().lower()
+    defaults = get_web_model_defaults()
+    provider = (payload.provider or defaults["provider"] or "openai").strip().lower()
     provider_mode = "anthropic" if provider == "anthropic" else "openai"
 
-    base = build_models_base_url(payload.apiUrl or "", provider_mode)
+    base = build_models_base_url(
+        str(payload.apiUrl or defaults["apiUrl"] or ""),
+        provider_mode,
+    )
     url = f"{base}/models"
-    api_key = (payload.apiKey or "").strip()
+    api_key = str(payload.apiKey or defaults["apiKey"] or "").strip()
     headers: dict[str, str] = {"anthropic-version": "2023-06-01"} if provider_mode == "anthropic" else {}
     if api_key:
         if provider_mode == "anthropic":
@@ -120,4 +126,3 @@ async def list_models(payload: ModelListRequest):
         raise HTTPException(status_code=502, detail="获取到的模型列表为空或格式不支持")
 
     return {"models": model_ids}
-
