@@ -547,6 +547,10 @@
   line-height: 1.4;
 }
 
+#endpointModeHint.is-warning {
+  color: #f1b56a;
+}
+
 .password-input-wrapper {
   position: relative;
 }
@@ -1011,6 +1015,18 @@
 
 .model-dropdown-item:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.model-dropdown-item:disabled,
+.model-dropdown-item.is-disabled {
+  cursor: not-allowed;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.model-dropdown-item:disabled:hover,
+.model-dropdown-item.is-disabled:hover {
+  background: transparent;
 }
 
 /* Radio group */

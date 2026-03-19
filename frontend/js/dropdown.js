@@ -19,13 +19,6 @@ export function getConfigSelectPickerDefs() {
       dropdown: elements.providerPickerDropdown,
     },
     {
-      key: "endpointMode",
-      select: elements.endpointMode,
-      input: elements.endpointModePickerInput,
-      btn: elements.endpointModePickerBtn,
-      dropdown: elements.endpointModePickerDropdown,
-    },
-    {
       key: "webSearchProvider",
       select: elements.webSearchProvider,
       input: elements.webSearchProviderPickerInput,
@@ -220,12 +213,19 @@ export function renderConfigSelectPicker(key) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "model-dropdown-item";
+    if (opt.disabled) {
+      btn.classList.add("is-disabled");
+      btn.disabled = true;
+      btn.setAttribute("aria-disabled", "true");
+    }
     btn.dataset.value = opt.value;
     btn.textContent = (opt.textContent || opt.value || "").trim();
     btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
-    btn.addEventListener("click", () =>
-      applyConfigSelectPickerValue(key, opt.value)
-    );
+    if (!opt.disabled) {
+      btn.addEventListener("click", () =>
+        applyConfigSelectPickerValue(key, opt.value)
+      );
+    }
     picker.dropdown.appendChild(btn);
   }
 }

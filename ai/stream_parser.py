@@ -521,7 +521,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
     }
 
     event_type = str(chunk.get("type") or "").strip()
-
     response_payload = chunk.get("response")
     if isinstance(response_payload, dict):
         result["response_id"] = str(response_payload.get("id") or "")

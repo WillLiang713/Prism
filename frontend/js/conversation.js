@@ -700,14 +700,12 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
     const title = await generateTopicTitle(topic.id, resolvedTitleConfig);
     const nextTitle = (title || "").trim() || fallbackTopicTitleFromTurns(topic);
     topic.title = nextTitle;
-    topic.updatedAt = Date.now();
     scheduleSaveChat();
     renderTopicList();
   } catch (error) {
     console.warn("自动生成标题失败:", error.message);
     if (topic.title.startsWith("新话题")) {
       topic.title = fallbackTopicTitleFromTurns(topic);
-      topic.updatedAt = Date.now();
       scheduleSaveChat();
       renderTopicList();
     }

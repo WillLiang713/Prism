@@ -397,8 +397,9 @@
                     <div class="form-group">
                       <label for="providerPickerInput">API 提供商</label>
                       <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
-                        <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic</option>
+                        <option value="openai_chat">OpenAI Chat Completions</option>
+                        <option value="openai_responses">OpenAI Responses</option>
+                        <option value="anthropic">Anthropic Messages</option>
                       </select>
                       <div class="model-picker config-static-picker" data-picker="provider">
                         <div class="model-picker-row">
@@ -421,38 +422,6 @@
                           id="providerPickerDropdown"
                           hidden
                         ></div>
-                      </div>
-                    </div>
-                    <div class="form-group">
-                      <label for="endpointModePickerInput">接口模式</label>
-                      <select id="endpointMode" class="config-native-select" aria-hidden="true" tabindex="-1">
-                        <option value="chat_completions">Chat Completions</option>
-                        <option value="responses">Responses</option>
-                      </select>
-                      <div class="model-picker config-static-picker" data-picker="endpointMode">
-                        <div class="model-picker-row">
-                          <input
-                            type="text"
-                            id="endpointModePickerInput"
-                            placeholder="选择接口模式"
-                            readonly
-                          />
-                          <button
-                            type="button"
-                            class="model-picker-btn"
-                            id="endpointModePickerBtn"
-                            aria-label="打开接口模式列表"
-                            aria-expanded="false"
-                          ></button>
-                        </div>
-                        <div
-                          class="model-dropdown"
-                          id="endpointModePickerDropdown"
-                          hidden
-                        ></div>
-                      </div>
-                      <div class="form-hint" id="endpointModeHint">
-                        默认使用 Chat Completions；Responses 适合 OpenAI 官方新接口。
                       </div>
                     </div>
                     <div class="form-group">

@@ -43,6 +43,45 @@ export const SHORTCUTS = [
   },
 ];
 
+export const PROVIDER_SELECTIONS = {
+  openai_chat: {
+    provider: "openai",
+    endpointMode: "chat_completions",
+    label: "OpenAI Chat Completions",
+  },
+  openai_responses: {
+    provider: "openai",
+    endpointMode: "responses",
+    label: "OpenAI Responses",
+  },
+  anthropic: {
+    provider: "anthropic",
+    endpointMode: "chat_completions",
+    label: "Anthropic Messages",
+  },
+};
+
+export function normalizeProviderSelection(value, endpointMode = "chat_completions") {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  if (normalizedValue === "openai_responses") return "openai_responses";
+  if (normalizedValue === "anthropic") return "anthropic";
+  if (normalizedValue === "openai_chat") return "openai_chat";
+  if (normalizedValue === "openai") {
+    return String(endpointMode || "").trim().toLowerCase() === "responses"
+      ? "openai_responses"
+      : "openai_chat";
+  }
+  return "openai_chat";
+}
+
+export function resolveProviderSelection(value, endpointMode = "chat_completions") {
+  const selection = normalizeProviderSelection(value, endpointMode);
+  return {
+    selection,
+    ...(PROVIDER_SELECTIONS[selection] || PROVIDER_SELECTIONS.openai_chat),
+  };
+}
+
 export function resolveRuntimeConfig() {
   const runtime = window.__PRISM_RUNTIME__ || {};
   const params = new URLSearchParams(window.location.search);
@@ -55,19 +94,14 @@ export function resolveRuntimeConfig() {
     platform === "web" && runtime.webDefaults && typeof runtime.webDefaults === "object"
       ? runtime.webDefaults
       : {};
+  const resolvedWebDefaultProvider = resolveProviderSelection(
+    rawWebDefaults.provider,
+    rawWebDefaults.endpointMode
+  );
   const webDefaults = {
-    provider:
-      String(rawWebDefaults.provider || "").trim().toLowerCase() === "anthropic"
-        ? "anthropic"
-        : String(rawWebDefaults.provider || "").trim()
-        ? "openai"
-        : "",
-    endpointMode:
-      String(rawWebDefaults.endpointMode || "").trim().toLowerCase() === "responses"
-        ? "responses"
-        : String(rawWebDefaults.endpointMode || "").trim()
-        ? "chat_completions"
-        : "",
+    provider: resolvedWebDefaultProvider.provider,
+    endpointMode: resolvedWebDefaultProvider.endpointMode,
+    providerSelection: resolvedWebDefaultProvider.selection,
     apiUrl: String(rawWebDefaults.apiUrl || "").trim(),
     model: String(rawWebDefaults.model || "").trim(),
     hasApiKey: rawWebDefaults.hasApiKey === true,
@@ -275,10 +309,6 @@ export const elements = {
   providerPickerBtn: document.getElementById("providerPickerBtn"),
   providerPickerDropdown: document.getElementById("providerPickerDropdown"),
   providerHint: document.getElementById("providerHint"),
-  endpointMode: document.getElementById("endpointMode"),
-  endpointModePickerInput: document.getElementById("endpointModePickerInput"),
-  endpointModePickerBtn: document.getElementById("endpointModePickerBtn"),
-  endpointModePickerDropdown: document.getElementById("endpointModePickerDropdown"),
   endpointModeHint: document.getElementById("endpointModeHint"),
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),

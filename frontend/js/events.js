@@ -1,7 +1,7 @@
 import { state, elements, STORAGE_KEYS } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
-import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
@@ -182,13 +182,8 @@ export function bindEvents() {
 
   // 监听提供商变化，更新API地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
-    updateProviderUi();
-    updateModelHint();
-    updateConfigStatusStrip();
-    scheduleFetchModels("main", 0);
-  });
-
-  elements.endpointMode?.addEventListener("change", () => {
+    setWebSearchEnabled(false);
+    closeWebSearchToolSelector();
     updateProviderUi();
     updateModelHint();
     updateConfigStatusStrip();

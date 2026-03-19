@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, hasWebRuntimeDefaultApiKey, resolveWebRuntimeModelValue } from './state.js';
+import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, hasWebRuntimeDefaultApiKey, resolveProviderSelection, resolveWebRuntimeModelValue } from './state.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "模型内置",
@@ -707,12 +707,17 @@ export function normalizeEndpointMode(value) {
 }
 
 export function canUseBuiltinWebSearch(configLike = {}) {
-  const endpointMode = normalizeEndpointMode(
-    configLike.endpointMode ?? elements.endpointMode?.value
+  const providerConfig = resolveProviderSelection(
+    configLike.providerSelection ??
+      configLike.provider ??
+      elements.provider?.value ??
+      resolveWebRuntimeModelValue("provider"),
+    configLike.endpointMode ?? resolveWebRuntimeModelValue("endpointMode")
   );
-  const provider = String(
-    configLike.provider ?? elements.provider?.value ?? "openai"
-  ).toLowerCase();
+  const endpointMode = normalizeEndpointMode(
+    configLike.endpointMode ?? providerConfig.endpointMode
+  );
+  const provider = String(providerConfig.provider || "openai").toLowerCase();
   return endpointMode === "responses" && provider === "openai";
 }
 
@@ -783,6 +788,18 @@ export function getAvailableWebSearchToolModes() {
 
 export function persistWebSearchToolMode(mode) {
   persistWebSearchConfigPatch({ toolMode: mode });
+}
+
+function disableBuiltinWebSearchWhenUnavailable(options = {}) {
+  if (state.webSearch?.toolMode !== "builtin") return false;
+  if (canUseBuiltinWebSearch()) return false;
+
+  state.webSearch.enabled = false;
+  if (options.persist === true) {
+    persistWebSearchConfigPatch({ enabled: false });
+  }
+  closeWebSearchToolSelector();
+  return true;
 }
 
 export function setWebSearchEnabled(enabled, options = {}) {
@@ -906,18 +923,18 @@ export function setStatusPillState(el, isReady, text) {
 }
 
 export function updateConfigStatusStrip() {
-  const endpointMode = normalizeEndpointMode(
-    resolveWebRuntimeModelValue("endpointMode", elements.endpointMode?.value)
+  const providerConfig = resolveProviderSelection(
+    elements.provider?.value || resolveWebRuntimeModelValue("provider"),
+    resolveWebRuntimeModelValue("endpointMode")
   );
   const toolMode = getCurrentWebSearchToolMode();
   const webSearchEnabled = isWebSearchEnabled();
   const hasApiKey = !!((elements.apiKey?.value || "").trim() || hasWebRuntimeDefaultApiKey());
   const hasApiUrl = !!resolveWebRuntimeModelValue("apiUrl", elements.apiUrl?.value || "");
   const modelName = resolveWebRuntimeModelValue("model", elements.model?.value || "");
-  const provider = resolveWebRuntimeModelValue("provider", elements.provider?.value || "") === "anthropic" ? "Anthropic" : "OpenAI";
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
-    ? `模型：${provider} · ${endpointMode === "responses" ? "Responses" : "Chat"} · ${modelName}`
+    ? `模型：${providerConfig.label} · ${modelName}`
     : "模型：待完成（需 Key + 地址 + 模型）";
   setStatusPillState(elements.modelStatusPill, modelReady, modelText);
 
@@ -939,6 +956,7 @@ export function updateConfigStatusStrip() {
 }
 
 export function updateWebSearchProviderUi() {
+  disableBuiltinWebSearchWhenUnavailable();
   state.webSearch.toolMode = getCurrentWebSearchToolMode();
   state.webSearch.enabled = isWebSearchEnabled();
   const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
