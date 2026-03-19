@@ -9,7 +9,12 @@ import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scr
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning, requestDeleteTopic } from './chat.js';
 import { addImages } from './images.js';
-import { toggleSidebar, isMobileLayout } from './layout.js';
+import {
+  toggleSidebar,
+  isMobileLayout,
+  beginMobileNativePickerSession,
+  endMobileNativePickerSession,
+} from './layout.js';
 
 export function bindEvents() {
   initScrollbarAutoHide();
@@ -263,12 +268,43 @@ export function bindEvents() {
   let promptImeComposing = false;
   let promptImeEndAt = 0;
   let promptImeDeferredSendTimer = 0;
+  let imagePickerReturnCleanup = null;
   const PROMPT_IME_GUARD_MS = 120;
 
   function clearPromptImeDeferredSend() {
     if (!promptImeDeferredSendTimer) return;
     window.clearTimeout(promptImeDeferredSendTimer);
     promptImeDeferredSendTimer = 0;
+  }
+
+  function clearImagePickerReturnHooks() {
+    imagePickerReturnCleanup?.();
+    imagePickerReturnCleanup = null;
+  }
+
+  function finishMobileImagePickerSession(delayMs = 120) {
+    clearImagePickerReturnHooks();
+    endMobileNativePickerSession(delayMs);
+  }
+
+  function bindMobileImagePickerReturnHooks() {
+    clearImagePickerReturnHooks();
+
+    const handleWindowFocus = () => {
+      finishMobileImagePickerSession(120);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      finishMobileImagePickerSession(120);
+    };
+
+    window.addEventListener("focus", handleWindowFocus, { once: true });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    imagePickerReturnCleanup = () => {
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }
 
   function schedulePromptSendAfterImeGuard() {
@@ -342,8 +378,17 @@ export function bindEvents() {
   // 图片上传按钮点击事件
   elements.imageUploadBtn?.addEventListener(PRESS_START_EVENT, (e) => {
     e.preventDefault(); // 阻止按钮获得焦点，避免触发输入框容器的选中效果
+    if (!isMobileLayout()) return;
+
+    clearPromptImeDeferredSend();
+    beginMobileNativePickerSession();
+    elements.promptInput?.blur();
   });
   elements.imageUploadBtn?.addEventListener("click", () => {
+    if (isMobileLayout()) {
+      beginMobileNativePickerSession();
+      bindMobileImagePickerReturnHooks();
+    }
     elements.imageInput?.click();
   });
 
@@ -355,6 +400,10 @@ export function bindEvents() {
     }
     // 清空input，允许重复选择同一文件
     e.target.value = "";
+    finishMobileImagePickerSession(60);
+  });
+  elements.imageInput?.addEventListener("cancel", () => {
+    finishMobileImagePickerSession(60);
   });
 
   // 粘贴图片事件
@@ -379,6 +428,7 @@ export function bindEvents() {
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.mobileExpandSidebarBtn?.addEventListener("click", toggleSidebar);
+
 }
 
 export function isNewTopicShortcut(e) {

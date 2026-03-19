@@ -113,10 +113,10 @@ export function updateProviderUi() {
   if (hintEl) {
     if (provider === "openai") {
       hintEl.textContent =
-        "OpenAI 兼容接口，请填写 API 地址";
+        "OpenAI 接口，请填写 API 地址";
     } else if (provider === "anthropic") {
       hintEl.textContent =
-        "Anthropic 兼容接口，请填写 API 地址";
+        "Anthropic 接口，请填写 API 地址";
     }
   }
 
@@ -131,8 +131,8 @@ export function updateApiUrlPlaceholder() {
 
   const provider = providerEl.value;
   const placeholders = {
-    openai: "https://api.openai.com/v1/chat/completions",
-    anthropic: "https://api.anthropic.com/v1/messages",
+    openai: "https://api.openai.com",
+    anthropic: "https://api.anthropic.com",
   };
   urlInput.placeholder = placeholders[provider] || "";
 }

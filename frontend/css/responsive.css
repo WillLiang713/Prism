@@ -67,12 +67,17 @@
   /* 配置弹窗在移动端使用全屏面板 */
   #configModal {
     padding: 0;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
   }
 
   #configModal .modal-content {
+    flex: 1 1 auto;
     width: 100vw;
     height: var(--mobile-visible-height, 100dvh);
     max-height: var(--mobile-visible-height, 100dvh);
+    max-width: none;
   }
 
   #configModal .config-panel {
@@ -124,6 +129,18 @@
 
   #configModal .config-content {
     padding: 14px 12px 12px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: auto;
+  }
+
+  /* Prevent iOS focus zoom/jump on config form controls */
+  #configModal .form-group input[type="text"],
+  #configModal .form-group input[type="password"],
+  #configModal .form-group input[type="number"],
+  #configModal .form-group select,
+  #configModal .form-group textarea,
+  #configModal .model-picker-row input[type="text"] {
+    font-size: 16px;
   }
 
   /* 移动端下显式重置联网面板布局，避免桌面网格/area 规则在部分 WebView 中叠层 */

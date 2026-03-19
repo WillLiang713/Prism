@@ -381,8 +381,8 @@
                     <div class="form-group">
                       <label for="providerPickerInput">API 提供商</label>
                       <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
-                        <option value="openai">OpenAI 兼容</option>
-                        <option value="anthropic">Anthropic 兼容</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
                       </select>
                       <div class="model-picker config-static-picker" data-picker="provider">
                         <div class="model-picker-row">
@@ -414,7 +414,7 @@
                           <input
                             type="text"
                             id="model"
-                            placeholder="例如: gpt-5"
+                            placeholder="输入模型ID"
                             autocomplete="off"
                             autocorrect="off"
                             autocapitalize="off"
@@ -435,7 +435,6 @@
                         ></div>
                       </div>
                       <div class="form-hint" id="modelHint">
-                        填模型ID；支持自动获取和手动输入
                       </div>
                     </div>
                     <div class="required-credentials-grid">
@@ -458,7 +457,7 @@
                       <input
                         type="text"
                         id="apiUrl"
-                        placeholder="https://api.example.com/v1/chat/completions"
+                        placeholder="https://api.openai.com"
                         required
                       />
                       </div>
