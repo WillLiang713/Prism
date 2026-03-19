@@ -193,8 +193,6 @@ export const elements = {
   exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
   exaSearchTypeGroup: document.getElementById("exaSearchTypeGroup"),
   tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
-  closeToTrayOnClose: document.getElementById("closeToTrayOnClose"),
-  desktopCloseToTrayGroup: document.getElementById("desktopCloseToTrayGroup"),
 
   // 初始问候语
 

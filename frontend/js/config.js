@@ -197,12 +197,6 @@ export function getWebSearchConfig() {
   };
 }
 
-function getDesktopConfig() {
-  return {
-    closeToTrayOnClose: !!elements.closeToTrayOnClose?.checked,
-  };
-}
-
 export async function saveConfig() {
   const provider = elements.provider?.value || "openai";
   const apiKey = (elements.apiKey?.value || "").trim();
@@ -237,7 +231,6 @@ export async function saveConfig() {
       enabled: true,
       model: "",
     },
-    desktop: getDesktopConfig(),
     model: {
       provider,
       apiKey,
@@ -250,7 +243,7 @@ export async function saveConfig() {
 
   localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
   await syncDesktopPreferences({
-    closeToTray: config.desktop?.closeToTrayOnClose === true,
+    closeToTray: true,
   });
   updateConfigStatusStrip();
   await showAlert("配置已保存", {
@@ -294,10 +287,6 @@ export function loadConfig() {
       elements.webSearchProvider.value = "tavily";
       if (elements.exaSearchType) elements.exaSearchType.value = "auto";
     }
-    if (elements.closeToTrayOnClose) {
-      elements.closeToTrayOnClose.checked =
-        config.desktop?.closeToTrayOnClose === true;
-    }
     // 加载思考强度配置
     if (config.reasoningEffort && elements.reasoningEffortDropdown) {
       elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => {
@@ -339,7 +328,7 @@ export function loadConfig() {
 
   syncAllConfigSelectPickers();
   void syncDesktopPreferences({
-    closeToTray: !!elements.closeToTrayOnClose?.checked,
+    closeToTray: true,
   });
   updateWebSearchProviderUi();
   updateConfigStatusStrip();
@@ -363,8 +352,6 @@ export async function clearConfig() {
   if (elements.exaSearchType) elements.exaSearchType.value = "auto";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
-  if (elements.closeToTrayOnClose) elements.closeToTrayOnClose.checked = false;
-
   elements.provider.value = "openai";
   elements.apiKey.value = "";
   elements.model.value = "";
@@ -384,7 +371,7 @@ export async function clearConfig() {
   updateWebSearchProviderUi();
   updateModelNames();
   updateConfigStatusStrip();
-  await syncDesktopPreferences({ closeToTray: false });
+  await syncDesktopPreferences({ closeToTray: true });
   await showAlert("配置已清除", {
     title: "操作完成",
   });
