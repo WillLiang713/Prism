@@ -462,7 +462,7 @@ def build_responses_web_search_event(
         "callId": str(item.get("id") or "").strip(),
         "status": "ready",
         "round": current_round,
-        "name": "web_search_preview",
+        "name": "web_search",
         "query": _extract_web_search_query(item),
         "answer": str(item.get("summary") or "").strip(),
         "totalResults": len(preview_results),
@@ -498,7 +498,7 @@ def build_web_search_event_from_sources(
     return {
         "status": "ready",
         "round": current_round,
-        "name": "web_search_preview",
+        "name": "web_search",
         "query": "",
         "answer": "",
         "totalResults": len(preview_results),
@@ -566,7 +566,7 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
             result["tool"] = {
                 "callId": result["call_id"],
                 "status": "start",
-                "name": "web_search_preview",
+                "name": "web_search",
             }
             if query:
                 result["tool"]["arguments"] = {"query": query}
@@ -597,7 +597,7 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
             result["tool"] = {
                 "callId": result["call_id"],
                 "status": tool_status,
-                "name": "web_search_preview",
+                "name": "web_search",
                 "resultSummary": (
                     str(item.get("error") or "").strip()
                     if tool_status == "error"
