@@ -3,23 +3,17 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  overflow-y: scroll;
-  margin-right: calc(
-    -1 * (
-      var(--sidebar-section-inline-padding, 0px) +
-      var(--topic-list-align-offset, 0px)
-    )
-  );
-  padding-right: 0;
+  overflow-y: auto;
+  margin-right: 0;
+  padding-right: 2px;
   flex: 1;
   min-height: 0;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   opacity: 1;
   visibility: visible;
   transition: scrollbar-color 0.3s ease;
-  contain: paint;
 }
 
 .sidebar-collapsed .topic-list {
@@ -195,6 +189,7 @@
 .topic-meta {
   font-size: 11px;
   color: var(--text-muted);
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
