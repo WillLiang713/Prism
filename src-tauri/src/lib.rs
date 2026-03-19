@@ -28,9 +28,16 @@ struct DesktopPreferencesState(Mutex<DesktopPreferences>);
 #[derive(Default)]
 struct ExitIntentState(Mutex<bool>);
 
-#[derive(Default)]
 struct DesktopPreferences {
     close_to_tray: bool,
+}
+
+impl Default for DesktopPreferences {
+    fn default() -> Self {
+        Self {
+            close_to_tray: true,
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -184,9 +191,9 @@ fn request_exit(app: &tauri::AppHandle) {
 }
 
 fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
-    let show_item = MenuItem::with_id(app, TRAY_MENU_SHOW_ID, "显示 Prism", true, None::<&str>)
+    let show_item = MenuItem::with_id(app, TRAY_MENU_SHOW_ID, "显示窗口", true, None::<&str>)
         .map_err(|error| format!("创建托盘菜单失败: {error}"))?;
-    let quit_item = MenuItem::with_id(app, TRAY_MENU_QUIT_ID, "退出 Prism", true, None::<&str>)
+    let quit_item = MenuItem::with_id(app, TRAY_MENU_QUIT_ID, "退出", true, None::<&str>)
         .map_err(|error| format!("创建托盘菜单失败: {error}"))?;
     let menu = Menu::with_items(app, &[&show_item, &quit_item])
         .map_err(|error| format!("创建托盘菜单失败: {error}"))?;

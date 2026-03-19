@@ -472,7 +472,6 @@ export async function clearConfig() {
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
   if (elements.closeToTrayOnClose) elements.closeToTrayOnClose.checked = false;
-
   elements.provider.value = "openai";
   if (elements.endpointMode) elements.endpointMode.value = "chat_completions";
   elements.apiKey.value = "";

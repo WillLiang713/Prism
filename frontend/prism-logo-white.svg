@@ -3,7 +3,6 @@
   <desc id="prism-logo-white-desc">A minimalist monochrome white Prism logo for dark backgrounds.</desc>
 
   <g transform="translate(6 8)">
-    <path d="M2 40H26" fill="none" stroke="#6A6A6A" stroke-linecap="round" stroke-width="5.5" />
     <path d="M26 14L58 40L26 66Z" fill="#FFFFFF" />
     <path d="M58 40L80 28" fill="none" stroke="#666666" stroke-linecap="round" stroke-width="4.5" />
     <path d="M58 40L80 52" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-width="4.5" />

@@ -89,7 +89,7 @@ export async function initDesktopWindowShell() {
   }
 
   await syncDesktopPreferences({
-    closeToTray: elements.closeToTrayOnClose?.checked === true,
+    closeToTray: true,
   });
 
   bindDesktopTitlebarControls(appWindow);
