@@ -2,7 +2,7 @@
 
 ## 背景
 
-Prism 目前支持 OpenAI 兼容和 Anthropic 兼容两种提供商。用户希望新增 Google Gemini 作为第三个提供商，包括：
+Prism 目前支持 OpenAI 和 Anthropic 两种提供商。用户希望新增 Google Gemini 作为第三个提供商，包括：
 1. Gemini API 的端点适配（消息格式、流式响应、认证方式等）
 2. 现有工具（Tavily/Exa 搜索、获取时间）通过 Gemini 的 function calling 格式正常工作
 3. Gemini 内置工具支持（Google Search 联网搜索、Code Execution 代码执行）

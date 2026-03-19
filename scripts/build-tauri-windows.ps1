@@ -15,7 +15,12 @@ function Remove-BuildArtifact {
 
   if (Test-Path $Path) {
     Write-Host "Removing build artifact: $Path"
-    Remove-Item -Path $Path -Recurse -Force
+    # 使用 robocopy 空目录的方式清空内容，避免 Remove-Item -Recurse 在深层目录上失败
+    $emptyDir = Join-Path $env:TEMP "prism_empty_$(Get-Random)"
+    New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
+    robocopy $emptyDir $Path /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    Remove-Item -Path $emptyDir -Force
+    Remove-Item -Path $Path -Force
   }
 }
 

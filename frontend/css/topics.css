@@ -4,13 +4,32 @@
   flex-direction: column;
   gap: 4px;
   overflow-y: scroll;
-  /* Reserve the same visual lane as the sidebar toggle so cards align with the new-topic button. */
-  padding-right: calc(4px + var(--topic-list-align-offset, 0px));
+  margin-right: calc(
+    -1 * (
+      var(--sidebar-section-inline-padding, 0px) +
+      var(--topic-list-align-offset, 0px)
+    )
+  );
+  padding-right: 0;
   flex: 1;
   min-height: 0;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  opacity: 1;
+  visibility: visible;
+  transition: scrollbar-color 0.3s ease;
+  contain: paint;
+}
+
+.sidebar-collapsed .topic-list {
+  gap: 8px;
+  margin-right: 0;
+  padding-right: 0;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transition: scrollbar-color 0.3s ease;
 }
 
@@ -37,11 +56,16 @@
   background: transparent;
   padding: 7px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 0;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2px;
@@ -51,8 +75,8 @@
 }
 
 .topic-new-btn:hover {
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-accent);
   color: var(--text);
 }
 
@@ -60,10 +84,19 @@
   transform: scale(0.98);
 }
 
+.topic-new-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
 .topic-new-icon {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
+  width: var(--topic-new-icon-size, 20px);
+  height: var(--topic-new-icon-size, 20px);
+  flex: 0 0 var(--topic-new-icon-size, 20px);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   color: var(--text-muted);
 }
 
@@ -72,17 +105,25 @@
 }
 
 .topic-new-text {
-  font-weight: 500;
+  display: none;
 }
 
 .topic-item {
   position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   border: none;
   border-radius: 10px;
   background: transparent;
   padding: 10px 12px 10px 18px;
   cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.topic-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.2);
+  outline-offset: 2px;
 }
 
 .topic-item:hover {
@@ -100,6 +141,37 @@
 
 .topic-item.running .topic-meta {
   color: var(--text-muted);
+}
+
+.topic-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.topic-item:hover .topic-badge,
+.topic-item.active .topic-badge {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.topic-item.running .topic-badge {
+  color: #fff4e8;
+  background: rgba(249, 115, 22, 0.16);
+}
+
+.topic-content {
+  min-width: 0;
+  flex: 1;
 }
 
 .topic-title {
@@ -149,13 +221,18 @@
   justify-content: center;
 }
 
-.topic-item:hover .topic-delete-btn,
-.topic-item:focus-within .topic-delete-btn,
-.topic-item.active .topic-delete-btn {
+.topic-item:hover .topic-delete-btn {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+.topic-list.suppress-delete-hover .topic-delete-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(2px) !important;
 }
 
 .topic-delete-btn:hover {
@@ -171,6 +248,28 @@
 .topic-delete-btn:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.2);
   outline-offset: 2px;
+}
+
+.sidebar-collapsed .topic-item {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+.sidebar-collapsed .topic-content,
+.sidebar-collapsed .topic-delete-btn {
+  display: none !important;
+}
+
+.sidebar-collapsed .topic-badge {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+  border-radius: 11px;
 }
 
 /* Generating title shimmer */

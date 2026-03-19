@@ -4,6 +4,28 @@ import { updateModelHint, scheduleFetchModels } from './models.js';
 
 let promptLayoutSyncToken = 0;
 const PROMPT_PLACEHOLDER = "随便聊点什么吧";
+const DESKTOP_PREFERENCES_COMMAND = "update_desktop_preferences";
+
+function getTauriInvoke() {
+  return window.__TAURI__?.core?.invoke || window.__TAURI_INTERNALS__?.invoke || null;
+}
+
+export async function syncDesktopPreferences(options = {}) {
+  if (!isDesktopRuntime()) return;
+
+  const invoke = getTauriInvoke();
+  if (typeof invoke !== "function") return;
+
+  try {
+    await invoke(DESKTOP_PREFERENCES_COMMAND, {
+      payload: {
+        closeToTray: options.closeToTray === true,
+      },
+    });
+  } catch (error) {
+    console.error("同步桌面关闭行为失败:", error);
+  }
+}
 
 function schedulePromptLayoutSync() {
   if (!elements.promptInput) return;
@@ -65,6 +87,10 @@ export async function initDesktopWindowShell() {
     console.warn("Desktop window bridge unavailable");
     return;
   }
+
+  await syncDesktopPreferences({
+    closeToTray: elements.closeToTrayOnClose?.checked === true,
+  });
 
   bindDesktopTitlebarControls(appWindow);
   await syncDesktopWindowState();

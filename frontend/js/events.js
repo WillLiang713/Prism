@@ -1,14 +1,20 @@
-import { state, elements } from './state.js';
+import { state, elements, STORAGE_KEYS } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
 import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning, requestDeleteTopic } from './chat.js';
 import { addImages } from './images.js';
-import { toggleSidebar, isMobileLayout } from './layout.js';
+import {
+  toggleSidebar,
+  isMobileLayout,
+  beginMobileNativePickerSession,
+  endMobileNativePickerSession,
+} from './layout.js';
 
 export function bindEvents() {
   initScrollbarAutoHide();
@@ -16,11 +22,21 @@ export function bindEvents() {
   elements.saveConfig.addEventListener("click", saveConfig);
   elements.clearConfig.addEventListener("click", clearConfig);
 
-  const PRESS_START_EVENT =
-    typeof window !== "undefined" && "PointerEvent" in window
-      ? "pointerdown"
-      : "mousedown";
-
+  elements.closeToTrayOnClose?.addEventListener("change", () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.config);
+      const config = raw ? JSON.parse(raw) : {};
+      config.desktop = config.desktop || {};
+      config.desktop.closeToTrayOnClose =
+        !!elements.closeToTrayOnClose?.checked;
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+    } catch (error) {
+      console.error("保存关闭到托盘设置失败:", error);
+    }
+    void syncDesktopPreferences({
+      closeToTray: !!elements.closeToTrayOnClose?.checked,
+    });
+  });
   elements.webSearchProvider?.addEventListener("change", () => {
     const currentMode = getCurrentWebSearchToolMode();
     if (currentMode !== "builtin") {
@@ -39,7 +55,6 @@ export function bindEvents() {
   elements.exaSearchType?.addEventListener("change", updateConfigStatusStrip);
   elements.tavilyMaxResults?.addEventListener("input", updateConfigStatusStrip);
   elements.tavilySearchDepth?.addEventListener("change", updateConfigStatusStrip);
-
 
   // 思考强度下拉选择器
   elements.reasoningEffortSelector?.addEventListener("click", (e) => {
@@ -133,6 +148,13 @@ export function bindEvents() {
     await requestDeleteTopic();
   });
 
+  // 收起/展开话题栏快捷键：Ctrl+B
+  document.addEventListener("keydown", (e) => {
+    if (!isToggleSidebarShortcut(e)) return;
+    e.preventDefault();
+    toggleSidebar();
+  });
+
   // 打开快捷键页：Shift+/
   document.addEventListener("keydown", (e) => {
     if (!isShortcutHelpShortcut(e)) return;
@@ -223,10 +245,76 @@ export function bindEvents() {
   // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）
   let promptImeComposing = false;
   let promptImeEndAt = 0;
+  let promptImeDeferredSendTimer = 0;
+  let imagePickerReturnCleanup = null;
   const PROMPT_IME_GUARD_MS = 120;
+
+  function clearPromptImeDeferredSend() {
+    if (!promptImeDeferredSendTimer) return;
+    window.clearTimeout(promptImeDeferredSendTimer);
+    promptImeDeferredSendTimer = 0;
+  }
+
+  function clearImagePickerReturnHooks() {
+    imagePickerReturnCleanup?.();
+    imagePickerReturnCleanup = null;
+  }
+
+  function finishMobileImagePickerSession(delayMs = 120) {
+    clearImagePickerReturnHooks();
+    endMobileNativePickerSession(delayMs);
+  }
+
+  function bindMobileImagePickerReturnHooks() {
+    clearImagePickerReturnHooks();
+
+    const handleWindowFocus = () => {
+      finishMobileImagePickerSession(120);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      finishMobileImagePickerSession(120);
+    };
+
+    window.addEventListener("focus", handleWindowFocus, { once: true });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    imagePickerReturnCleanup = () => {
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }
+
+  function schedulePromptSendAfterImeGuard() {
+    clearPromptImeDeferredSend();
+
+    const queuedPromptValue = elements.promptInput.value;
+    const queuedImageCount = state.images.selectedImages?.length || 0;
+    const remainingGuardMs = Math.max(
+      0,
+      PROMPT_IME_GUARD_MS - (Date.now() - promptImeEndAt)
+    );
+
+    promptImeDeferredSendTimer = window.setTimeout(() => {
+      promptImeDeferredSendTimer = 0;
+
+      if (document.activeElement !== elements.promptInput) return;
+      if (elements.promptInput.readOnly) return;
+      if (promptImeComposing) return;
+      if (isMobileLayout()) return;
+      if (isTopicRunning(state.chat.activeTopicId)) return;
+      if (elements.promptInput.value !== queuedPromptValue) return;
+
+      const currentImageCount = state.images.selectedImages?.length || 0;
+      if (currentImageCount !== queuedImageCount) return;
+
+      void sendPrompt();
+    }, remainingGuardMs + 10);
+  }
 
   elements.promptInput.addEventListener("compositionstart", () => {
     promptImeComposing = true;
+    clearPromptImeDeferredSend();
   });
 
   elements.promptInput.addEventListener("compositionend", () => {
@@ -239,26 +327,46 @@ export function bindEvents() {
     if (e.shiftKey) return;
     if (elements.promptInput.readOnly) return;
 
-    const isImeGuarded =
-      e.isComposing ||
-      promptImeComposing ||
-      e.keyCode === 229 ||
-      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
-    if (isImeGuarded) return;
-
     if (isMobileLayout()) return;
 
+    const isActiveImeEvent =
+      e.isComposing ||
+      promptImeComposing ||
+      e.keyCode === 229;
+    if (isActiveImeEvent) return;
+
+    const isWithinImeGuard =
+      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
+    if (isWithinImeGuard) {
+      e.preventDefault();
+      schedulePromptSendAfterImeGuard();
+      return;
+    }
+
     e.preventDefault();
-    if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
+    if (!isTopicRunning(state.chat.activeTopicId)) void sendPrompt();
   });
 
-  elements.promptInput.addEventListener("input", autoGrowPromptInput);
+  elements.promptInput.addEventListener("input", () => {
+    clearPromptImeDeferredSend();
+    autoGrowPromptInput();
+  });
+  elements.promptInput.addEventListener("blur", clearPromptImeDeferredSend);
 
   // 图片上传按钮点击事件
   elements.imageUploadBtn?.addEventListener(PRESS_START_EVENT, (e) => {
     e.preventDefault(); // 阻止按钮获得焦点，避免触发输入框容器的选中效果
+    if (!isMobileLayout()) return;
+
+    clearPromptImeDeferredSend();
+    beginMobileNativePickerSession();
+    elements.promptInput?.blur();
   });
   elements.imageUploadBtn?.addEventListener("click", () => {
+    if (isMobileLayout()) {
+      beginMobileNativePickerSession();
+      bindMobileImagePickerReturnHooks();
+    }
     elements.imageInput?.click();
   });
 
@@ -270,6 +378,10 @@ export function bindEvents() {
     }
     // 清空input，允许重复选择同一文件
     e.target.value = "";
+    finishMobileImagePickerSession(60);
+  });
+  elements.imageInput?.addEventListener("cancel", () => {
+    finishMobileImagePickerSession(60);
   });
 
   // 粘贴图片事件
@@ -293,12 +405,14 @@ export function bindEvents() {
 
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
+  elements.mobileExpandSidebarBtn?.addEventListener("click", toggleSidebar);
+
 }
 
 export function isNewTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
 
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasShift = !!e.shiftKey;
@@ -319,11 +433,19 @@ export function isEditableKeyboardTarget(target) {
   );
 }
 
+function isPromptInputTarget(target) {
+  return !!elements.promptInput && target === elements.promptInput;
+}
+
+function shouldBlockGlobalShortcutForTarget(target) {
+  return isEditableKeyboardTarget(target) && !isPromptInputTarget(target);
+}
+
 export function isShortcutHelpShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   const key = (e.key || "").toLowerCase();
   return e.shiftKey && (key === "?" || key === "/");
@@ -333,7 +455,7 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasShift = !!e.shiftKey;
@@ -341,4 +463,17 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (e.metaKey || e.altKey) return false;
   if (!e.ctrlKey) return false;
   return key === "backspace" && hasShift;
+}
+
+export function isToggleSidebarShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (elements.configModal?.classList.contains("open")) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
+
+  const key = (e.key || "").toLowerCase();
+
+  if (e.metaKey || e.altKey || e.shiftKey) return false;
+  if (!e.ctrlKey) return false;
+  return key === "b";
 }

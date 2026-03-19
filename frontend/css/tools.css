@@ -1,7 +1,7 @@
 /* ---------- Tool calls section ---------- */
 /* -- Tool calls: collapsible search card -- */
 .tool-calls-section {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   padding: 0;
   border-radius: 0;
   background: transparent;
@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 0;
+  padding: 7px 0;
   cursor: pointer;
   user-select: none;
   transition: background 0.15s;
@@ -80,11 +80,11 @@
 
 .tool-calls-list {
   margin: 0;
-  padding: 4px 0 6px;
+  padding: 2px 0 4px;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   border-top: none;
 }
 
@@ -95,7 +95,7 @@
 .tool-call-item {
   font-size: 12px;
   line-height: 1.5;
-  padding: 10px 0;
+  padding: 8px 0;
   border: none;
   border-radius: 0;
   background: transparent;

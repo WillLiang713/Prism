@@ -5,6 +5,8 @@ let mobileViewportFrame = 0;
 let lastVisibleHeight = 0;
 let lastViewportOffsetTop = 0;
 let lastKeyboardInset = 0;
+let mobileNativePickerActive = false;
+let mobileNativePickerReleaseTimer = 0;
 
 export function isMobileLayout() {
   return (
@@ -14,11 +16,49 @@ export function isMobileLayout() {
   );
 }
 
+function clearMobileNativePickerReleaseTimer() {
+  if (!mobileNativePickerReleaseTimer) return;
+  window.clearTimeout(mobileNativePickerReleaseTimer);
+  mobileNativePickerReleaseTimer = 0;
+}
+
+function isMobileNativePickerSessionActive() {
+  return isMobileLayout() && mobileNativePickerActive;
+}
+
+export function beginMobileNativePickerSession() {
+  if (!isMobileLayout()) return;
+  clearMobileNativePickerReleaseTimer();
+  mobileNativePickerActive = true;
+}
+
+export function endMobileNativePickerSession(delayMs = 0) {
+  clearMobileNativePickerReleaseTimer();
+
+  if (!isMobileLayout()) {
+    mobileNativePickerActive = false;
+    return;
+  }
+
+  if (delayMs > 0) {
+    mobileNativePickerReleaseTimer = window.setTimeout(() => {
+      mobileNativePickerReleaseTimer = 0;
+      mobileNativePickerActive = false;
+      scheduleMobileViewportSync();
+    }, delayMs);
+    return;
+  }
+
+  mobileNativePickerActive = false;
+  scheduleMobileViewportSync();
+}
+
 function syncMobileViewportVars() {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   const root = document.documentElement;
   const viewport = window.visualViewport;
+  const previousKeyboardInset = lastKeyboardInset;
   const visibleHeight = Math.round(viewport?.height || window.innerHeight || 0);
   const viewportOffsetTop = Math.round(viewport?.offsetTop || 0);
   const keyboardInset = viewport
@@ -38,11 +78,16 @@ function syncMobileViewportVars() {
   lastViewportOffsetTop = viewportOffsetTop;
   lastKeyboardInset = keyboardInset;
 
-  return hasViewportChanged;
+  return {
+    hasViewportChanged,
+    keyboardInset,
+    previousKeyboardInset,
+  };
 }
 
 function keepPromptVisible() {
   if (!isMobileLayout()) return;
+  if (isMobileNativePickerSessionActive()) return;
   if (document.activeElement !== elements.promptInput) return;
 
   requestAnimationFrame(() => {
@@ -61,8 +106,21 @@ function scheduleMobileViewportSync(forceKeepPromptVisible = false) {
 
   mobileViewportFrame = requestAnimationFrame(() => {
     mobileViewportFrame = 0;
-    const hasViewportChanged = syncMobileViewportVars();
-    if (forceKeepPromptVisible || hasViewportChanged) {
+    const viewportState = syncMobileViewportVars();
+    if (!viewportState) return;
+
+    const {
+      hasViewportChanged,
+      keyboardInset,
+      previousKeyboardInset,
+    } = viewportState;
+    const isKeyboardOpening =
+      keyboardInset > 0 && keyboardInset > previousKeyboardInset;
+
+    if (
+      !isMobileNativePickerSessionActive() &&
+      (forceKeepPromptVisible || (hasViewportChanged && isKeyboardOpening))
+    ) {
       keepPromptVisible();
     }
   });
@@ -87,11 +145,13 @@ function bindMobileViewport() {
   });
 
   elements.promptInput?.addEventListener("focus", () => {
+    if (isMobileNativePickerSessionActive()) return;
     scheduleMobileViewportSync(true);
     window.setTimeout(() => scheduleMobileViewportSync(true), 180);
   });
 
   elements.promptInput?.addEventListener("blur", () => {
+    if (isMobileNativePickerSessionActive()) return;
     window.setTimeout(scheduleMobileViewportSync, 120);
   });
 }

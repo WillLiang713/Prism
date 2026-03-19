@@ -150,47 +150,27 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 0 0 12px;
-  padding: 8px 0;
+  margin: 0 0 10px;
+  padding: 6px 0;
   min-height: 18px;
 }
 
 .sources-status-text {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  letter-spacing: 0;
-  line-height: 1.2;
-}
-
-.sources-status-chip,
-.sources-status-more {
-  font-size: 12px;
-  line-height: 1.2;
-  color: var(--text-dim);
-}
-
-.sources-status-more {
-  color: var(--text-muted);
+  font-size: var(--message-label-font-size);
+  font-weight: var(--message-label-font-weight);
+  color: var(--message-label-color);
+  letter-spacing: var(--message-label-letter-spacing);
+  line-height: var(--message-label-line-height);
 }
 
 .sources-section {
-  margin: 8px 0 4px;
+  margin: 10px 0 4px;
 }
 
 .sources-panel {
-  padding: 10px 0 0;
-}
-
-.sources-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dim);
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  padding: 8px 0 0;
 }
 
 .sources-list {

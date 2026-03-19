@@ -484,6 +484,7 @@ class AIService:
                                 if parsed.get("tokens") is not None:
                                     yield AIService._sse_chunk("tokens", parsed["tokens"])
 
+
                             # 检查是否达到最大轮数限制
                             if current_round >= max_rounds and tool_calls_buffer:
                                 yield AIService._sse_chunk(

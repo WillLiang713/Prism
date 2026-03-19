@@ -15,8 +15,11 @@
   gap: 6px;
   max-width: 100%;
   min-width: 0;
-  animation: fade-in 0.4s ease-out;
   padding: 0 4px;
+}
+
+.assistant-message.no-animate {
+  animation: none;
 }
 
 .assistant-message-header {
@@ -42,6 +45,21 @@
 
 .assistant-message .assistant-model-name {
   color: var(--message-label-color);
+}
+
+.assistant-message.loading .assistant-model-name,
+.assistant-message.streaming .assistant-model-name {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.20) 0%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.20) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
 }
 
 .assistant-message.loading .assistant-message-content,
@@ -189,6 +207,26 @@
 }
 
 .assistant-message-footer .message-copy-btn:disabled {
+  opacity: 0.5;
+}
+
+.assistant-message-footer .regenerate-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--text-muted);
+}
+
+.assistant-message-footer .regenerate-btn:hover:not(:disabled) {
+  border-color: var(--border-accent);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.assistant-message-footer .regenerate-btn:disabled {
   opacity: 0.5;
 }
 

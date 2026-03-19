@@ -4,6 +4,7 @@ import { syncAllConfigSelectPickers, closeAllConfigSelectPickers } from './dropd
 import { closeModelDropdown, scheduleFetchModels, updateModelHint } from './models.js';
 import { renderMarkdownToElement } from './markdown.js';
 import { getCurrentWebSearchToolMode, isWebSearchEnabled, normalizeEndpointMode, normalizeWebSearchProvider, normalizeTavilySearchDepth, normalizeExaSearchType, setWebSearchEnabled, setWebSearchToolMode, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { syncDesktopPreferences } from './desktop.js';
 
 export function getConfigFromForm(side) {
   // 如果是标题模型，从主配置中获取
@@ -220,6 +221,12 @@ export function getWebSearchConfig() {
   };
 }
 
+function getDesktopConfig() {
+  return {
+    closeToTrayOnClose: !!elements.closeToTrayOnClose?.checked,
+  };
+}
+
 export async function saveConfig() {
   const provider = elements.provider?.value || "openai";
   const endpointMode = normalizeEndpointMode(elements.endpointMode?.value);
@@ -256,6 +263,7 @@ export async function saveConfig() {
       model: "",
     },
     endpointMode,
+    desktop: getDesktopConfig(),
     model: {
       provider,
       endpointMode,
@@ -267,6 +275,9 @@ export async function saveConfig() {
   };
 
   localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+  await syncDesktopPreferences({
+    closeToTray: config.desktop?.closeToTrayOnClose === true,
+  });
   updateConfigStatusStrip();
   await showAlert("配置已保存", {
     title: "保存成功",
@@ -308,6 +319,10 @@ export function loadConfig() {
       elements.webSearchProvider.value = "tavily";
       pendingWebSearchToolMode = "tavily";
       if (elements.exaSearchType) elements.exaSearchType.value = "auto";
+    }
+    if (elements.closeToTrayOnClose) {
+      elements.closeToTrayOnClose.checked =
+        config.desktop?.closeToTrayOnClose === true;
     }
     // 加载思考强度配置
     if (config.reasoningEffort && elements.reasoningEffortDropdown) {
@@ -357,6 +372,10 @@ export function loadConfig() {
 
   syncAllConfigSelectPickers();
   updateProviderUi();
+  void syncDesktopPreferences({
+    closeToTray: !!elements.closeToTrayOnClose?.checked,
+  });
+  updateProviderUi();
   updateWebSearchProviderUi();
   updateConfigStatusStrip();
 }
@@ -380,6 +399,7 @@ export async function clearConfig() {
   if (elements.exaSearchType) elements.exaSearchType.value = "auto";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
+  if (elements.closeToTrayOnClose) elements.closeToTrayOnClose.checked = false;
 
   elements.provider.value = "openai";
   if (elements.endpointMode) elements.endpointMode.value = "chat_completions";
@@ -400,6 +420,7 @@ export async function clearConfig() {
   updateWebSearchProviderUi();
   updateModelNames();
   updateConfigStatusStrip();
+  await syncDesktopPreferences({ closeToTray: false });
   await showAlert("配置已清除", {
     title: "操作完成",
   });

@@ -3,8 +3,8 @@
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 12px 0;
-  margin-bottom: 16px;
+  padding: 10px 0;
+  margin-bottom: 12px;
   transition: all 0.2s ease;
 }
 
@@ -14,7 +14,7 @@
   color: var(--message-label-color);
   line-height: var(--message-label-line-height);
   letter-spacing: var(--message-label-letter-spacing);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -51,22 +51,7 @@
   white-space: nowrap;
 }
 
-.assistant-message.loading .thinking-summary:not(.is-complete),
-.assistant-message.streaming .thinking-summary:not(.is-complete) {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.20) 0%,
-    var(--accent-strong) 50%,
-    rgba(255, 255, 255, 0.20) 100%
-  );
-  background-size: 200% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 3.5s linear infinite;
-}
-
-.thinking-section.collapsed { padding: 8px 0; }
+.thinking-section.collapsed { padding: 6px 0; }
 .thinking-section.collapsed .thinking-header { margin-bottom: 0; }
 .thinking-section.collapsed .thinking-content { display: none; }
 .thinking-section:not(.collapsed) .thinking-header-arrow { transform: rotate(180deg); }

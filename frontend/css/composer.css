@@ -1,23 +1,23 @@
 /* ---------- Composer (Input Area) ---------- */
 .chat-composer {
-  padding: 14px 20px 22px;
+  padding: 14px var(--chat-gutter) 22px;
   background: transparent;
   display: flex;
   justify-content: center;
+  position: relative;
 }
 
 .composer-wrapper {
   position: relative;
-  max-width: none;
   width: 100%;
-  margin: 0;
+  max-width: var(--composer-max-width);
   transition: max-width 0.3s ease;
 }
 
 .composer-box {
   position: relative;
   background: transparent;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--editable-panel-border);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: border-color 0.24s ease, box-shadow 0.24s ease,
@@ -61,20 +61,17 @@
 }
 
 .composer-box:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--editable-panel-border-hover);
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
 }
 
 .composer-box:focus-within {
-  border-color: transparent;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 0 0 3px rgba(255, 255, 255, 0.035),
-    0 10px 28px rgba(0, 0, 0, 0.36);
+  border-color: var(--editable-panel-border-focus);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .composer-box:focus-within::before {
-  opacity: 0.98;
+  opacity: 0;
 }
 
 .composer-box:focus-within::after {
@@ -99,7 +96,7 @@
   padding: 14px 16px;
   border: none;
   border-radius: 0;
-  font-size: 15px;
+  font-size: var(--chat-font-size);
   line-height: 1.6;
   font-family: inherit;
   resize: none;
@@ -434,6 +431,7 @@
 .reasoning-effort-selector.open .reasoning-effort-dropdown {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .reasoning-effort-selector.open .reasoning-effort-current {
@@ -451,7 +449,7 @@
   overflow: visible !important;
 }
 
-.chat-thread:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
+.chat-main:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
   opacity: 0;
   pointer-events: none;
 }
