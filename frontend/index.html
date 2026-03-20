@@ -612,6 +612,46 @@
                       <div class="form-hint" id="modelHint">
                       </div>
                     </div>
+                    <div class="form-group">
+                      <label for="titleGenerationModel">话题生成模型</label>
+                      <div class="model-picker" data-side="title">
+                        <div class="model-picker-row">
+                          <div class="model-picker-input-wrap">
+                            <input
+                              type="text"
+                              id="titleGenerationModel"
+                              placeholder="留空则跟随主模型"
+                              autocomplete="off"
+                              autocorrect="off"
+                              autocapitalize="off"
+                              spellcheck="false"
+                            />
+                            <button
+                              type="button"
+                              class="model-input-clear-btn"
+                              id="clearTitleGenerationModelBtn"
+                              aria-label="清空话题生成模型"
+                              title="清空并跟随主模型"
+                            ></button>
+                          </div>
+                          <button
+                            type="button"
+                            class="model-picker-btn"
+                            id="modelDropdownBtnTitle"
+                            aria-label="打开话题生成模型列表"
+                            aria-expanded="false"
+                          ></button>
+                        </div>
+                        <div
+                          class="model-dropdown"
+                          id="modelDropdownTitle"
+                          hidden
+                        ></div>
+                      </div>
+                      <div class="form-hint">
+                        留空时回退到当前主模型
+                      </div>
+                    </div>
                   </div>
                   <div class="model-config-side">
                     <div class="form-group">

@@ -20,8 +20,10 @@ export function setConfigFns(fns) {
 }
 
 export function setModelHint(side, text) {
-  if (side === "Title") return;
-  const el = elements.modelHint;
+  const el =
+    side === "Title"
+      ? elements.titleGenerationModelHint
+      : elements.modelHint;
   if (!el) return;
   el.textContent = text || "";
 }
@@ -64,14 +66,18 @@ export function updateModelHint(side) {
   ) {
     setModelHint(
       resolvedSide,
-      `已获取 ${slot.models.length} 个模型ID，可下拉选或手动输入`
+      resolvedSide === "Title"
+        ? `已获取 ${slot.models.length} 个模型ID，可下拉选或手动输入`
+        : `已获取 ${slot.models.length} 个模型ID，可下拉选或手动输入`
     );
     return;
   }
 
   setModelHint(
     resolvedSide,
-    "填模型ID；可下拉选或手动输入"
+    resolvedSide === "Title"
+      ? "可独立指定；也可留空跟随主模型"
+      : "填模型ID；可下拉选或手动输入"
   );
 }
 
@@ -195,12 +201,13 @@ export function renderModelDropdown(side, filterText = null) {
         side === "Title"
           ? elements.titleGenerationModel
           : elements.model;
-      if (input) input.value = id;
+      if (input) {
+        input.value = id;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       if (side !== "Title") _updateModelNames();
       closeModelDropdown(side);
-      if (side !== "Title") {
-        void _autoSaveManagedServiceDraft();
-      }
+      void _autoSaveManagedServiceDraft();
     });
     dropdownEl.appendChild(btn);
   }
@@ -249,6 +256,7 @@ export function openModelDropdown(side) {
 export function toggleModelDropdown(side) {
   if (isModelDropdownOpen(side)) closeModelDropdown(side);
   else {
+    closeModelDropdown(side === "Title" ? "main" : "Title");
     closeAllConfigSelectPickers();
     openModelDropdown(side);
   }
@@ -263,7 +271,15 @@ export function updateModelDropdownFilter(side) {
   const nextQuery = inputEl.value || "";
   setModelDropdownQuery(side, nextQuery);
 
+  if (side === "Title" && !nextQuery.trim()) {
+    closeModelDropdown(side);
+    return;
+  }
+
   if (!isModelDropdownOpen(side)) {
+    if (side === "Title") {
+      return;
+    }
     const models = getCachedModelIds(side);
     if (models.length) {
       resetModelDropdownLimit(side);

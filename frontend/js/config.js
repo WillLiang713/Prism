@@ -100,6 +100,7 @@ function createServiceTemplate(name = "") {
       endpointMode: providerDefaults.endpointMode,
       apiKey: "",
       model: "",
+      titleModel: "",
       apiUrl: "",
       systemPrompt: "",
     },
@@ -130,6 +131,7 @@ function normalizeService(service, index = 0) {
       endpointMode: providerConfig.endpointMode,
       apiKey: String(service?.model?.apiKey || ""),
       model: String(service?.model?.model || ""),
+      titleModel: String(service?.model?.titleModel || ""),
       apiUrl: String(service?.model?.apiUrl || ""),
       systemPrompt: String(
         service?.model?.systemPrompt || service?.model?.roleSetting || ""
@@ -163,6 +165,7 @@ function migrateLegacyConfig(rawConfig = {}) {
         endpointMode: providerConfig.endpointMode,
         apiKey: legacyModelConfig.apiKey || "",
         model: legacyModelConfig.model || resolveWebRuntimeModelValue("model"),
+        titleModel: legacyModelConfig.titleModel || rawConfig.titleModel || "",
         apiUrl: legacyModelConfig.apiUrl || resolveWebRuntimeModelValue("apiUrl"),
         systemPrompt:
           legacyModelConfig.systemPrompt || legacyModelConfig.roleSetting || "",
@@ -445,6 +448,14 @@ function getActiveServiceModelStoreValue(service) {
   return String(service?.model?.model || "");
 }
 
+function getActiveServiceTitleModelFormValue() {
+  return String(elements.titleGenerationModel?.value || "");
+}
+
+function getActiveServiceTitleModelStoreValue(service) {
+  return String(service?.model?.titleModel || "");
+}
+
 function getActiveRoleSettingFormValue() {
   return String(elements.roleSetting?.value || "");
 }
@@ -467,7 +478,8 @@ function hasUnsavedActiveRoleSettingChanges() {
   if (!activeService) return false;
   return (
     getActiveRoleSettingFormValue() !== getServiceRoleSettingStoreValue(activeService) ||
-    getActiveServiceModelFormValue() !== getActiveServiceModelStoreValue(activeService)
+    getActiveServiceModelFormValue() !== getActiveServiceModelStoreValue(activeService) ||
+    getActiveServiceTitleModelFormValue() !== getActiveServiceTitleModelStoreValue(activeService)
   );
 }
 
@@ -499,12 +511,18 @@ function applyActiveRoleSettingToForm(service) {
   if (elements.model) {
     elements.model.value = service.model?.model || "";
   }
+  if (elements.titleGenerationModel) {
+    elements.titleGenerationModel.value = service.model?.titleModel || "";
+  }
   if (elements.roleSetting) {
     elements.roleSetting.value = service.model?.systemPrompt || "";
   }
   syncRoleSettingPreview(true);
   syncCurrentServiceOptions();
   updateModelHint("main");
+  updateModelHint("Title");
+  scheduleFetchModels("main", 0);
+  scheduleFetchModels("Title", 0);
 }
 
 function readManagedServiceConnectionFromForm(existingService = null) {
@@ -522,6 +540,7 @@ function readManagedServiceConnectionFromForm(existingService = null) {
         endpointMode: providerConfig.endpointMode,
         apiKey: String(elements.apiKey?.value || ""),
         model: String(base.model?.model || ""),
+        titleModel: String(base.model?.titleModel || ""),
         apiUrl: String(elements.apiUrl?.value || ""),
         systemPrompt: String(base.model?.systemPrompt || ""),
       },
@@ -540,6 +559,7 @@ function applyRoleSettingToService(service) {
     model: {
       ...cloneValue(service.model || {}),
       model: getActiveServiceModelFormValue(),
+      titleModel: getActiveServiceTitleModelFormValue(),
       systemPrompt: getActiveRoleSettingFormValue(),
     },
   });
@@ -873,6 +893,7 @@ export function setActiveConfigTab(tabName = "services") {
     panel.hidden = !active;
   });
   closeModelDropdown("main");
+  closeModelDropdown("Title");
   closeAllConfigSelectPickers();
 
   if (elements.configContent) {
@@ -889,9 +910,11 @@ export function openConfigModal(tabName = "services") {
   elements.configModal.setAttribute("aria-hidden", "false");
   syncBodyScrollLock();
   updateModelHint();
+  updateModelHint("Title");
   syncRoleSettingPreview(true);
   updateConfigStatusStrip();
   scheduleFetchModels("main", 0);
+  scheduleFetchModels("Title", 0);
 }
 
 export function closeConfigModal() {
@@ -1011,13 +1034,22 @@ export function getConfig(side) {
     elements.currentService?.value === state.activeServiceId
       ? String(elements.roleSetting?.value || activeService?.model?.systemPrompt || "")
       : String(activeService?.model?.systemPrompt || "");
+  const liveTitleModelValue =
+    elements.configModal?.classList.contains("open") &&
+    elements.currentService?.value === state.activeServiceId
+      ? String(
+          elements.titleGenerationModel
+            ? elements.titleGenerationModel.value
+            : activeService?.model?.titleModel || ""
+        )
+      : String(activeService?.model?.titleModel || "");
 
   if (side === "Title") {
     return {
       provider: providerConfig.provider,
       endpointMode: providerConfig.endpointMode,
       apiKey: activeService?.model?.apiKey || "",
-      model: liveModelValue,
+      model: liveTitleModelValue,
       apiUrl: resolveWebRuntimeModelValue("apiUrl", activeService?.model?.apiUrl || ""),
       systemPrompt: "",
       reasoningEffort: "none",
@@ -1335,6 +1367,7 @@ export async function deleteService() {
     updateModelNames();
     updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
   }
   renderServiceManagementUi();
 }

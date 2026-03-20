@@ -787,6 +787,9 @@ export async function generateTopicTitle(topicId, config) {
 }
 
 export function resolveAutoTitleModel(topic, config) {
+  const explicitTitleModel = (config?.model || "").trim();
+  if (explicitTitleModel) return explicitTitleModel;
+
   const mainInputModel = (elements.model?.value || "").trim();
   if (mainInputModel) return mainInputModel;
 

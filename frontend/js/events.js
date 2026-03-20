@@ -218,23 +218,29 @@ export function bindEvents() {
     closeWebSearchToolSelector();
     updateProviderUi();
     updateModelHint();
+    updateModelHint("Title");
     updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
     void autoSaveManagedServiceDraft();
   });
 
   elements.apiKey?.addEventListener("input", () => {
     updateModelHint();
+    updateModelHint("Title");
     updateConfigStatusStrip();
     scheduleFetchModels("main", 400);
+    scheduleFetchModels("Title", 400);
   });
   elements.apiKey?.addEventListener("blur", () => {
     void autoSaveManagedServiceDraft();
   });
   elements.apiUrl?.addEventListener("input", () => {
     updateModelHint();
+    updateModelHint("Title");
     updateConfigStatusStrip();
     scheduleFetchModels("main", 500);
+    scheduleFetchModels("Title", 500);
   });
   elements.apiUrl?.addEventListener("blur", () => {
     void autoSaveManagedServiceDraft();
@@ -275,12 +281,41 @@ export function bindEvents() {
   elements.modelDropdownBtn?.addEventListener("click", () =>
     toggleModelDropdown("main")
   );
+  elements.titleGenerationModel?.addEventListener("input", () => {
+    updateConfigStatusStrip();
+    updateModelDropdownFilter("Title");
+  });
+  elements.titleGenerationModel?.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      const activeEl = document.activeElement;
+      const keepDropdownOpen =
+        activeEl instanceof HTMLElement &&
+        (activeEl.closest(".model-picker") || activeEl.closest(".model-dropdown"));
+      if (!keepDropdownOpen) {
+        closeModelDropdown("Title");
+      }
+      void autoSaveManagedServiceDraft();
+    }, 0);
+  });
+
+  elements.modelDropdownBtnTitle?.addEventListener("click", () =>
+    toggleModelDropdown("Title")
+  );
+  elements.clearTitleGenerationModelBtn?.addEventListener("click", () => {
+    if (!elements.titleGenerationModel) return;
+    elements.titleGenerationModel.value = "";
+    elements.titleGenerationModel.dispatchEvent(new Event("input", { bubbles: true }));
+    closeModelDropdown("Title");
+    elements.titleGenerationModel.focus();
+    void autoSaveManagedServiceDraft();
+  });
 
   document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;
     if (!(t instanceof Node)) return;
     if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
     closeModelDropdown("main");
+    closeModelDropdown("Title");
     closeAllConfigSelectPickers();
   });
   document.addEventListener("focusin", (e) => {
@@ -288,6 +323,7 @@ export function bindEvents() {
     if (!(t instanceof HTMLElement)) return;
     if (t.closest(".model-picker") || t.closest(".model-dropdown")) return;
     closeModelDropdown("main");
+    closeModelDropdown("Title");
   });
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
   window.addEventListener("resize", repositionOpenFloatingDropdowns);

@@ -336,6 +336,11 @@ export const elements = {
   modelHint: document.getElementById("modelHint"),
   modelDropdown: document.getElementById("modelDropdown"),
   modelDropdownBtn: document.getElementById("modelDropdownBtn"),
+  titleGenerationModel: document.getElementById("titleGenerationModel"),
+  titleGenerationModelHint: document.getElementById("titleGenerationModelHint"),
+  modelDropdownTitle: document.getElementById("modelDropdownTitle"),
+  modelDropdownBtnTitle: document.getElementById("modelDropdownBtnTitle"),
+  clearTitleGenerationModelBtn: document.getElementById("clearTitleGenerationModelBtn"),
   webSearchProviderPickerInput: document.getElementById(
     "webSearchProviderPickerInput"
   ),
