@@ -226,6 +226,9 @@ export const state = {
   },
   autoScroll: true, // 是否自动跟随滚动
   isSidebarCollapsed: false,
+  services: [],
+  activeServiceId: null,
+  serviceManagerSelectedId: null,
 };
 
 export const floatingDropdownOrigins = new WeakMap();
@@ -246,6 +249,7 @@ export const elements = {
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),
   mobileExpandSidebarBtn: document.getElementById("mobileExpandSidebarBtn"),
+  sidebarScrim: document.getElementById("sidebarScrim"),
 
   // 联网搜索
   webSearchControl: document.getElementById("webSearchControl"),
@@ -304,6 +308,20 @@ export const elements = {
   windowCloseBtn: document.getElementById("windowCloseBtn"),
 
   // 模型配置
+  currentService: document.getElementById("currentService"),
+  currentServicePickerInput: document.getElementById("currentServicePickerInput"),
+  currentServicePickerBtn: document.getElementById("currentServicePickerBtn"),
+  currentServicePickerDropdown: document.getElementById("currentServicePickerDropdown"),
+  serviceList: document.getElementById("serviceList"),
+  serviceNameInput: document.getElementById("serviceNameInput"),
+  serviceSummary: document.getElementById("serviceSummary"),
+  serviceConnectivityBadge: document.getElementById("serviceConnectivityBadge"),
+  serviceConnectivityMessage: document.getElementById("serviceConnectivityMessage"),
+  serviceConnectivityTime: document.getElementById("serviceConnectivityTime"),
+  createServiceBtn: document.getElementById("createServiceBtn"),
+  duplicateServiceBtn: document.getElementById("duplicateServiceBtn"),
+  deleteServiceBtn: document.getElementById("deleteServiceBtn"),
+  testServiceConnectionBtn: document.getElementById("testServiceConnectionBtn"),
   provider: document.getElementById("provider"),
   providerPickerInput: document.getElementById("providerPickerInput"),
   providerPickerBtn: document.getElementById("providerPickerBtn"),

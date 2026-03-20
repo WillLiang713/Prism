@@ -4,6 +4,7 @@ import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPicker
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
 let _updateModelNames = () => {};
 let _getConfigFromForm = () => ({});
+let _autoSaveManagedServiceDraft = async () => false;
 
 const PRESS_START_EVENT =
   typeof window !== "undefined" && "PointerEvent" in window
@@ -13,6 +14,9 @@ const PRESS_START_EVENT =
 export function setConfigFns(fns) {
   if (fns.updateModelNames) _updateModelNames = fns.updateModelNames;
   if (fns.getConfigFromForm) _getConfigFromForm = fns.getConfigFromForm;
+  if (fns.autoSaveManagedServiceDraft) {
+    _autoSaveManagedServiceDraft = fns.autoSaveManagedServiceDraft;
+  }
 }
 
 export function setModelHint(side, text) {
@@ -23,18 +27,20 @@ export function setModelHint(side, text) {
 }
 
 export function updateModelHint(side) {
-  const config = _getConfigFromForm(side || "main");
+  const resolvedSide = side || "main";
+  const slot = state.modelFetch[resolvedSide];
+  const config = _getConfigFromForm(resolvedSide);
   const hasApiKey = !!((config.apiKey || "").trim() || hasWebRuntimeDefaultApiKey());
   const apiUrl = (config.apiUrl || "").trim();
 
   if (isDesktopRuntime() && !state.runtime.backendReady) {
-    setModelHint(side || "main", "");
+    setModelHint(resolvedSide, "");
     return;
   }
 
   if (!hasApiKey) {
     setModelHint(
-      side || "main",
+      resolvedSide,
       "先填写 API Key、API 地址，再拉取模型列表"
     );
     return;
@@ -42,14 +48,29 @@ export function updateModelHint(side) {
 
   if (!apiUrl) {
     setModelHint(
-      side || "main",
+      resolvedSide,
       "先填写 API 地址，再拉取模型列表"
     );
     return;
   }
 
+  const base = normalizeBaseUrlForModels(config);
+  const providerMode = getProviderMode(config);
+  const fetchKey = `${providerMode}|${base}|k`;
+  if (
+    Array.isArray(slot?.models) &&
+    slot.models.length &&
+    slot.lastKey === fetchKey
+  ) {
+    setModelHint(
+      resolvedSide,
+      `已获取 ${slot.models.length} 个模型ID，可下拉选或手动输入`
+    );
+    return;
+  }
+
   setModelHint(
-    side || "main",
+    resolvedSide,
     "填模型ID；可下拉选或手动输入"
   );
 }
@@ -69,6 +90,26 @@ export function resetModelDropdownLimit(side) {
   const slot = state.modelFetch[side];
   if (!slot) return;
   slot.dropdownLimit = 120;
+}
+
+export function resetModelFetchState(side, options = {}) {
+  const slot = state.modelFetch[side];
+  if (!slot) return;
+  if (slot.timer) {
+    clearTimeout(slot.timer);
+    slot.timer = null;
+  }
+  slot.datalistFillToken += 1;
+  slot.inFlight = false;
+  slot.lastKey = "";
+  slot.lastFetchedAt = 0;
+  slot.models = [];
+  slot.dropdownQuery = null;
+  slot.pendingAfterReady = false;
+  slot.dropdownLimit = 120;
+  if (options.closeDropdown !== false) {
+    closeModelDropdown(side);
+  }
 }
 
 export function increaseModelDropdownLimit(side, delta = 200) {
@@ -157,6 +198,9 @@ export function renderModelDropdown(side, filterText = null) {
       if (input) input.value = id;
       if (side !== "Title") _updateModelNames();
       closeModelDropdown(side);
+      if (side !== "Title") {
+        void _autoSaveManagedServiceDraft();
+      }
     });
     dropdownEl.appendChild(btn);
   }
@@ -359,9 +403,13 @@ export async function fetchAndUpdateModels(side) {
   const now = Date.now();
   if (slot.lastKey === fetchKey && now - slot.lastFetchedAt < 60_000) return;
 
+  const requestToken = slot.datalistFillToken;
   slot.inFlight = true;
   try {
     const ids = await fetchModelsOnce(config);
+    if (slot.datalistFillToken !== requestToken) {
+      return;
+    }
     slot.models = ids;
     if (side !== "Title") {
       setModelHint(
@@ -380,6 +428,9 @@ export async function fetchAndUpdateModels(side) {
     slot.lastKey = fetchKey;
     slot.lastFetchedAt = now;
   } catch (e) {
+    if (slot.datalistFillToken !== requestToken) {
+      return;
+    }
     console.warn(`模型列表获取失败:`, e?.message || e);
     slot.models = [];
     closeModelDropdown(side);
@@ -387,6 +438,8 @@ export async function fetchAndUpdateModels(side) {
       setModelHint(side, "自动获取失败，请手动输入模型ID");
     }
   } finally {
-    slot.inFlight = false;
+    if (slot.datalistFillToken === requestToken) {
+      slot.inFlight = false;
+    }
   }
 }

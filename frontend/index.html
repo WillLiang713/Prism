@@ -118,6 +118,14 @@
               </div>
             </div>
           </aside>
+          <button
+            class="sidebar-scrim"
+            id="sidebarScrim"
+            type="button"
+            aria-label="关闭侧栏"
+            aria-hidden="true"
+            tabindex="-1"
+          ></button>
 
           <main class="chat-main conversation-panel">
             <div class="conversation-shell">
@@ -354,10 +362,21 @@
             <button
               type="button"
               class="config-tab is-active"
+              id="configTabServices"
+              data-tab="services"
+              role="tab"
+              aria-selected="true"
+              aria-controls="configPanelServices"
+            >
+              服务
+            </button>
+            <button
+              type="button"
+              class="config-tab"
               id="configTabModel"
               data-tab="model"
               role="tab"
-              aria-selected="true"
+              aria-selected="false"
               aria-controls="configPanelModel"
             >
               模型
@@ -390,42 +409,175 @@
           <div class="config-content" id="configContent">
             <section
               class="config-tab-panel is-active"
+              id="configPanelServices"
+              data-panel="services"
+              role="tabpanel"
+              aria-labelledby="configTabServices"
+            >
+            <div class="global-config service-config">
+              <div class="service-config-layout">
+                <div class="service-list-panel">
+                  <div class="service-toolbar" aria-label="服务操作">
+                    <button type="button" class="btn btn-secondary btn-settings" id="createServiceBtn" title="新建" aria-label="新建">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                      </svg>
+                      <span class="sr-only">新建</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-settings" id="duplicateServiceBtn" title="复制" aria-label="复制">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+                        <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                      </svg>
+                      <span class="sr-only">复制</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-settings" id="deleteServiceBtn" title="删除" aria-label="删除">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 7h16"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                        <path d="M6 7l1 11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-11"></path>
+                        <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                      </svg>
+                      <span class="sr-only">删除</span>
+                    </button>
+                  </div>
+                  <div class="service-list" id="serviceList" aria-label="服务列表"></div>
+                </div>
+                <div class="service-detail-panel">
+                  <div class="form-group">
+                    <label for="serviceNameInput">服务名称</label>
+                    <input
+                      type="text"
+                      id="serviceNameInput"
+                      placeholder="输入服务名称"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div class="service-detail-form">
+                    <div class="service-detail-main">
+                      <div class="form-group">
+                        <label for="providerPickerInput">接口类型</label>
+                        <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
+                          <option value="openai_chat">OpenAI Chat Completions</option>
+                          <option value="openai_responses">OpenAI Responses</option>
+                          <option value="anthropic">Anthropic Messages</option>
+                        </select>
+                        <div class="model-picker config-static-picker" data-picker="provider">
+                          <div class="model-picker-row">
+                            <input
+                              type="text"
+                              id="providerPickerInput"
+                              placeholder="选择接口类型"
+                              readonly
+                            />
+                            <button
+                              type="button"
+                              class="model-picker-btn"
+                              id="providerPickerBtn"
+                              aria-label="打开接口类型列表"
+                              aria-expanded="false"
+                            ></button>
+                          </div>
+                          <div
+                            class="model-dropdown"
+                            id="providerPickerDropdown"
+                            hidden
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                      <div class="required-credentials-grid">
+                        <div class="form-group">
+                          <label for="apiKey">API 密钥</label>
+                          <div class="password-input-wrapper">
+                            <input
+                              type="password"
+                              id="apiKey"
+                              placeholder="输入API密钥"
+                            />
+                            <button type="button" class="password-toggle-btn" data-target="apiKey" title="显示/隐藏密钥">
+                              <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label for="apiUrl">API 地址</label>
+                          <input
+                            type="text"
+                            id="apiUrl"
+                            placeholder="https://api.openai.com"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="service-connectivity-card">
+                    <div class="service-connectivity-header">
+                      <div>
+                        <div class="service-connectivity-title">连通性测试</div>
+                      </div>
+                      <span
+                        class="service-connectivity-badge"
+                        id="serviceConnectivityBadge"
+                        data-status="idle"
+                      >
+                        未测试
+                      </span>
+                    </div>
+                    <div class="service-connectivity-message" id="serviceConnectivityMessage">
+                      选择一条服务后可执行测试。
+                    </div>
+                    <div class="service-connectivity-time" id="serviceConnectivityTime"></div>
+                    <div class="service-connectivity-actions">
+                      <button type="button" class="btn btn-secondary btn-small" id="testServiceConnectionBtn">
+                        测试连通性
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </section>
+            <section
+              class="config-tab-panel"
               id="configPanelModel"
               data-panel="model"
               role="tabpanel"
               aria-labelledby="configTabModel"
+              hidden
             >
             <div class="config-row">
               <!-- AI模型配置 -->
-              <div class="config-section config-section-model">
+              <div class="config-section config-section-model model-role-config">
                 <div class="model-config-layout">
                   <div class="model-config-main">
                     <div class="form-group">
-                      <label for="providerPickerInput">API 提供商</label>
-                      <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
-                        <option value="openai_chat">OpenAI Chat Completions</option>
-                        <option value="openai_responses">OpenAI Responses</option>
-                        <option value="anthropic">Anthropic Messages</option>
+                      <label for="currentServicePickerInput">当前服务</label>
+                      <select id="currentService" class="config-native-select" aria-hidden="true" tabindex="-1">
                       </select>
-                      <div class="model-picker config-static-picker" data-picker="provider">
+                      <div class="model-picker config-static-picker" data-picker="currentService">
                         <div class="model-picker-row">
                           <input
                             type="text"
-                            id="providerPickerInput"
-                            placeholder="选择提供商"
+                            id="currentServicePickerInput"
+                            placeholder="选择当前服务"
                             readonly
                           />
                           <button
                             type="button"
                             class="model-picker-btn"
-                            id="providerPickerBtn"
-                            aria-label="打开提供商列表"
+                            id="currentServicePickerBtn"
+                            aria-label="打开当前服务列表"
                             aria-expanded="false"
                           ></button>
                         </div>
                         <div
                           class="model-dropdown"
-                          id="providerPickerDropdown"
+                          id="currentServicePickerDropdown"
                           hidden
                         ></div>
                       </div>
@@ -458,31 +610,6 @@
                         ></div>
                       </div>
                       <div class="form-hint" id="modelHint">
-                      </div>
-                    </div>
-                    <div class="required-credentials-grid">
-                      <div class="form-group">
-                      <label for="apiKey">API 密钥</label>
-                      <div class="password-input-wrapper">
-                      <input
-                        type="password"
-                        id="apiKey"
-                        placeholder="输入API密钥"
-                      />
-                      <button type="button" class="password-toggle-btn" data-target="apiKey" title="显示/隐藏密钥">
-                        <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                      </button>
-                      </div>
-                      </div>
-                      <div class="form-group">
-                      <label for="apiUrl">API 地址</label>
-                      <input
-                        type="text"
-                        id="apiUrl"
-                        placeholder="https://api.openai.com"
-                        required
-                      />
                       </div>
                     </div>
                   </div>

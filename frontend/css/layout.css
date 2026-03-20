@@ -35,6 +35,10 @@
   transition: grid-template-columns var(--sidebar-motion-duration) var(--sidebar-motion-ease);
 }
 
+.sidebar-scrim {
+  display: none;
+}
+
 .sidebar-collapsed .chat-panel {
   grid-template-columns: var(--sidebar-collapsed-width) minmax(0, 1fr);
 }

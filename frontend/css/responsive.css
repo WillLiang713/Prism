@@ -14,6 +14,17 @@
     min-height: calc(var(--app-shell-height) - 220px);
   }
 
+  #configModal #configPanelServices,
+  #configModal #configPanelServices .service-config,
+  #configModal #configPanelServices .service-config-layout {
+    min-height: 0;
+    height: 100%;
+  }
+
+  #configModal #configPanelServices .service-config-layout {
+    overflow: hidden;
+  }
+
   #configModal .config-section,
   #configModal .global-config,
   #configModal .config-section-model .model-config-layout,
@@ -28,6 +39,11 @@
   .config-section-model .model-config-layout {
     grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
     gap: 40px;
+  }
+
+  .model-role-config .model-config-layout {
+    grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+    gap: 28px;
   }
 
   .required-credentials-grid {
@@ -60,6 +76,18 @@
     grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
     gap: 18px;
     align-items: start;
+  }
+
+  .service-config-layout {
+    grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 22px;
+    align-items: stretch;
+  }
+
+  #configModal .service-list-panel,
+  #configModal .service-detail-panel {
+    max-height: 100%;
   }
 }
 
@@ -198,8 +226,23 @@
   #configModal .web-config-main,
   #configModal .web-config-side,
   #configModal .config-section-model .model-config-main,
-  #configModal .config-section-model .model-config-side {
+  #configModal .config-section-model .model-config-side,
+  #configModal .service-list-panel,
+  #configModal .service-detail-panel {
     padding: 10px;
+  }
+
+  .service-config-layout {
+    gap: 14px;
+  }
+
+  .service-toolbar {
+    gap: 6px;
+  }
+
+  .service-toolbar .btn {
+    flex: 0 0 auto;
+    padding: 0;
   }
 
   .container {
@@ -297,6 +340,35 @@
     -webkit-backdrop-filter: none;
     overflow: hidden;
     transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .sidebar-scrim {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: min(82vw, 300px);
+    border: 0;
+    margin: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 80;
+    appearance: none;
+  }
+
+  .chat-layout:not(.sidebar-collapsed) .sidebar-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sidebar-scrim:focus-visible {
+    outline: none;
   }
 
   .sidebar-section {
@@ -434,6 +506,33 @@
 
   .scroll-to-bottom-btn {
     bottom: calc(100% + 8px);
+  }
+}
+
+@media (min-width: 901px) and (max-height: 760px) {
+  #configModal #configPanelServices,
+  #configModal #configPanelServices .service-config,
+  #configModal #configPanelServices .service-config-layout,
+  #configModal #configPanelServices .service-list-panel,
+  #configModal #configPanelServices .service-detail-panel {
+    height: auto;
+    max-height: none;
+  }
+
+  #configModal #configPanelServices .service-config-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 14px;
+    overflow: visible;
+  }
+
+  #configModal #configPanelServices .service-list-panel,
+  #configModal #configPanelServices .service-detail-panel {
+    padding: 12px;
+  }
+
+  #configModal #configPanelServices .service-list {
+    max-height: 136px;
   }
 }
 

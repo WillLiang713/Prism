@@ -11,14 +11,14 @@ import { setSendButtonMode, autoGrowPromptInput, startHeaderClock, setConversati
 import { initLayout } from './js/layout.js';
 import { initDesktopWindowShell, syncDesktopBackendUi, beginDesktopBackendBootstrap } from './js/desktop.js';
 import { closeModelDropdown, setConfigFns } from './js/models.js';
-import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm } from './js/config.js';
+import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm, autoSaveManagedServiceDraft } from './js/config.js';
 import { updateConfigStatusStrip } from './js/web-search.js';
 import { initChat, renderAll, getActiveTopic, isTopicRunning, setStopGeneration, setRegenerateTurn, setSubmitTurnEdit } from './js/chat.js';
 import { sendPrompt, stopGeneration, regenerateTurn, submitTurnEdit } from './js/conversation.js';
 
 // ---- 连接模块间的延迟绑定 ----
 setCloseModelDropdown(closeModelDropdown);
-setConfigFns({ updateModelNames, getConfigFromForm });
+setConfigFns({ updateModelNames, getConfigFromForm, autoSaveManagedServiceDraft });
 setConversationFns(sendPrompt, stopGeneration);
 setChatFns(getActiveTopic, isTopicRunning);
 setStopGeneration(stopGeneration);

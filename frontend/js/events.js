@@ -1,6 +1,23 @@
 import { state, elements, STORAGE_KEYS } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
-import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
+import {
+  openConfigModal,
+  closeConfigModal,
+  updateProviderUi,
+  updateModelNames,
+  saveConfig,
+  clearConfig,
+  setActiveConfigTab,
+  syncRoleSettingPreview,
+  showRoleSettingPreview,
+  showRoleSettingEditor,
+  handleCurrentServiceChange,
+  createService,
+  duplicateService,
+  deleteService,
+  testSelectedServiceConnection,
+  autoSaveManagedServiceDraft,
+} from './config.js';
 import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
@@ -70,14 +87,6 @@ export function bindEvents() {
       btn.classList.add("active");
       elements.reasoningEffortValue.textContent = btn.dataset.label;
       elements.reasoningEffortSelector.classList.remove("open");
-      try {
-        const raw = localStorage.getItem(STORAGE_KEYS.config);
-        const config = raw ? JSON.parse(raw) : {};
-        config.reasoningEffort = btn.dataset.value;
-        localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-      } catch (e) {
-        console.error("保存思考强度失败:", e);
-      }
       return;
     }
     // 点击触发器，切换展开
@@ -98,6 +107,29 @@ export function bindEvents() {
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
+  elements.currentService?.addEventListener("change", () => {
+    void handleCurrentServiceChange(elements.currentService.value);
+  });
+  elements.createServiceBtn?.addEventListener("click", () => {
+    void createService();
+  });
+  elements.duplicateServiceBtn?.addEventListener("click", () => {
+    void duplicateService();
+  });
+  elements.deleteServiceBtn?.addEventListener("click", () => {
+    void deleteService();
+  });
+  elements.testServiceConnectionBtn?.addEventListener("click", () => {
+    void testSelectedServiceConnection();
+  });
+  elements.serviceNameInput?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    void autoSaveManagedServiceDraft();
+  });
+  elements.serviceNameInput?.addEventListener("blur", () => {
+    void autoSaveManagedServiceDraft();
+  });
   elements.configTabs?.addEventListener("click", (e) => {
     const tabBtn = e.target?.closest?.(".config-tab[data-tab]");
     if (!tabBtn) return;
@@ -180,7 +212,7 @@ export function bindEvents() {
     });
   });
 
-  // 监听提供商变化，更新API地址提示 + 自动获取模型列表
+  // 监听接口类型变化，更新 API 地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
     setWebSearchEnabled(false);
     closeWebSearchToolSelector();
@@ -188,6 +220,7 @@ export function bindEvents() {
     updateModelHint();
     updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
+    void autoSaveManagedServiceDraft();
   });
 
   elements.apiKey?.addEventListener("input", () => {
@@ -195,10 +228,16 @@ export function bindEvents() {
     updateConfigStatusStrip();
     scheduleFetchModels("main", 400);
   });
+  elements.apiKey?.addEventListener("blur", () => {
+    void autoSaveManagedServiceDraft();
+  });
   elements.apiUrl?.addEventListener("input", () => {
     updateModelHint();
     updateConfigStatusStrip();
     scheduleFetchModels("main", 500);
+  });
+  elements.apiUrl?.addEventListener("blur", () => {
+    void autoSaveManagedServiceDraft();
   });
 
   elements.roleSetting?.addEventListener("blur", () => {
@@ -220,17 +259,22 @@ export function bindEvents() {
     updateConfigStatusStrip();
     updateModelDropdownFilter("main");
   });
+  elements.model?.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      const activeEl = document.activeElement;
+      const keepDropdownOpen =
+        activeEl instanceof HTMLElement &&
+        (activeEl.closest(".model-picker") || activeEl.closest(".model-dropdown"));
+      if (!keepDropdownOpen) {
+        closeModelDropdown("main");
+      }
+      void autoSaveManagedServiceDraft();
+    }, 0);
+  });
 
   elements.modelDropdownBtn?.addEventListener("click", () =>
     toggleModelDropdown("main")
   );
-  elements.model?.addEventListener("focus", () => {
-    const models = getCachedModelIds("main");
-    if (models.length) {
-      closeAllConfigSelectPickers();
-      openModelDropdown("main");
-    }
-  });
 
   document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;
@@ -238,6 +282,12 @@ export function bindEvents() {
     if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
     closeModelDropdown("main");
     closeAllConfigSelectPickers();
+  });
+  document.addEventListener("focusin", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (t.closest(".model-picker") || t.closest(".model-dropdown")) return;
+    closeModelDropdown("main");
   });
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
   window.addEventListener("resize", repositionOpenFloatingDropdowns);
@@ -406,6 +456,10 @@ export function bindEvents() {
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.mobileExpandSidebarBtn?.addEventListener("click", toggleSidebar);
+  elements.sidebarScrim?.addEventListener("click", () => {
+    if (!isMobileLayout() || state.isSidebarCollapsed) return;
+    toggleSidebar();
+  });
 
 }
 
