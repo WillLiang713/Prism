@@ -41,8 +41,8 @@ const PRESS_START_EVENT =
 export function bindEvents() {
   initScrollbarAutoHide();
 
-  elements.saveConfig.addEventListener("click", saveConfig);
-  elements.clearConfig.addEventListener("click", clearConfig);
+  elements.saveConfig?.addEventListener("click", saveConfig);
+  elements.clearConfig?.addEventListener("click", clearConfig);
 
   elements.closeToTrayOnClose?.addEventListener("change", () => {
     try {
