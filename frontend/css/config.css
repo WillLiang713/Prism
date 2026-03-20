@@ -523,6 +523,10 @@
   gap: 10px;
 }
 
+.service-connectivity-header {
+  min-height: 28px;
+}
+
 .service-list-title {
   min-width: 0;
   font-size: 14px;
