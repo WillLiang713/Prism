@@ -4,7 +4,6 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from config import get_web_model_defaults
 from ai import ProviderConfig
 
 
@@ -87,11 +86,10 @@ def _normalize_generated_title(raw_title: str, messages: list[dict[str, str]]) -
 @router.post("/topics/generate-title")
 async def generate_topic_title(payload: GenerateTitleRequest):
     try:
-        defaults = get_web_model_defaults()
-        provider = str(payload.provider or defaults["provider"] or "openai").strip()
-        api_key = str(payload.apiKey or defaults["apiKey"] or "").strip()
-        model = str(payload.model or defaults["model"] or "").strip()
-        api_url = str(payload.apiUrl or defaults["apiUrl"] or "").strip() or None
+        provider = str(payload.provider or "openai").strip()
+        api_key = str(payload.apiKey or "").strip()
+        model = str(payload.model or "").strip()
+        api_url = str(payload.apiUrl or "").strip() or None
 
         if not api_key:
             raise HTTPException(status_code=400, detail="缺少 API Key")

@@ -2,9 +2,7 @@ import {
   state,
   elements,
   STORAGE_KEYS,
-  hasWebRuntimeDefaultApiKey,
   resolveProviderSelection,
-  resolveWebRuntimeModelValue,
   createId,
   formatTime,
 } from './state.js';
@@ -36,7 +34,7 @@ import {
 import { syncDesktopPreferences } from './desktop.js';
 
 const CONFIG_STORE_VERSION = 2;
-const DEFAULT_SERVICE_NAME = "默认服务";
+const LEGACY_DEFAULT_SERVICE_NAME = "默认服务";
 const UNNAMED_SERVICE_LABEL = "未命名服务";
 const DEFAULT_REASONING_EFFORT = "medium";
 
@@ -82,10 +80,7 @@ function normalizeConnectivityState(raw) {
 }
 
 function getRuntimeProviderDefaults() {
-  return resolveProviderSelection(
-    resolveWebRuntimeModelValue("provider"),
-    resolveWebRuntimeModelValue("endpointMode")
-  );
+  return resolveProviderSelection();
 }
 
 function createServiceTemplate(name = "") {
@@ -109,6 +104,44 @@ function createServiceTemplate(name = "") {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function createConfigStoreShape(rawConfig = {}, overrides = {}) {
+  return {
+    version: CONFIG_STORE_VERSION,
+    activeServiceId:
+      overrides.activeServiceId === undefined ? null : overrides.activeServiceId,
+    services: Array.isArray(overrides.services) ? overrides.services : [],
+    webSearch:
+      rawConfig.webSearch && typeof rawConfig.webSearch === "object"
+        ? cloneValue(rawConfig.webSearch)
+        : {},
+    desktop:
+      rawConfig.desktop && typeof rawConfig.desktop === "object"
+        ? cloneValue(rawConfig.desktop)
+        : {},
+  };
+}
+
+function hasLegacyServiceConfig(rawConfig = {}) {
+  const legacyModelConfig = rawConfig.model || rawConfig.A || {};
+  const candidates = [
+    legacyModelConfig.providerSelection,
+    legacyModelConfig.provider,
+    rawConfig.providerSelection,
+    rawConfig.provider,
+    legacyModelConfig.endpointMode,
+    rawConfig.endpointMode,
+    legacyModelConfig.apiKey,
+    legacyModelConfig.model,
+    legacyModelConfig.titleModel,
+    rawConfig.titleModel,
+    legacyModelConfig.apiUrl,
+    legacyModelConfig.systemPrompt,
+    legacyModelConfig.roleSetting,
+    rawConfig.reasoningEffort,
+  ];
+  return candidates.some((value) => String(value || "").trim() !== "");
 }
 
 function normalizeReasoningEffortValue(value) {
@@ -147,6 +180,10 @@ function normalizeService(service, index = 0) {
 }
 
 function migrateLegacyConfig(rawConfig = {}) {
+  if (!hasLegacyServiceConfig(rawConfig)) {
+    return createConfigStoreShape(rawConfig);
+  }
+
   const legacyModelConfig = rawConfig.model || rawConfig.A || {};
   const providerConfig = resolveProviderSelection(
     legacyModelConfig.providerSelection ||
@@ -158,15 +195,15 @@ function migrateLegacyConfig(rawConfig = {}) {
   const migratedService = normalizeService(
     {
       id: createId(),
-      name: DEFAULT_SERVICE_NAME,
+      name: "",
       model: {
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
         apiKey: legacyModelConfig.apiKey || "",
-        model: legacyModelConfig.model || resolveWebRuntimeModelValue("model"),
+        model: legacyModelConfig.model || "",
         titleModel: legacyModelConfig.titleModel || rawConfig.titleModel || "",
-        apiUrl: legacyModelConfig.apiUrl || resolveWebRuntimeModelValue("apiUrl"),
+        apiUrl: legacyModelConfig.apiUrl || "",
         systemPrompt:
           legacyModelConfig.systemPrompt || legacyModelConfig.roleSetting || "",
       },
@@ -178,47 +215,24 @@ function migrateLegacyConfig(rawConfig = {}) {
     },
     0
   );
-  return {
-    version: CONFIG_STORE_VERSION,
+  return createConfigStoreShape(rawConfig, {
     activeServiceId: migratedService.id,
     services: [migratedService],
-    webSearch:
-      rawConfig.webSearch && typeof rawConfig.webSearch === "object"
-        ? cloneValue(rawConfig.webSearch)
-        : {},
-    desktop:
-      rawConfig.desktop && typeof rawConfig.desktop === "object"
-        ? cloneValue(rawConfig.desktop)
-        : {},
-  };
+  });
 }
 
 function normalizeConfigStore(rawConfig = {}) {
   if (Array.isArray(rawConfig?.services)) {
-    const services = rawConfig.services.map((service, index) =>
-      normalizeService(service, index)
-    );
-    if (!services.length) {
-      services.push(createServiceTemplate());
-    }
-    const activeExists = services.some(
-      (service) => service.id === rawConfig.activeServiceId
-    );
-    return {
-      version: CONFIG_STORE_VERSION,
-      activeServiceId: activeExists
-        ? rawConfig.activeServiceId
-        : services[0].id,
+    const services = rawConfig.services
+      .map((service, index) => normalizeService(service, index))
+      .filter((service) => !isEffectivelyEmptyService(service));
+    const activeExists =
+      rawConfig.activeServiceId &&
+      services.some((service) => service.id === rawConfig.activeServiceId);
+    return createConfigStoreShape(rawConfig, {
+      activeServiceId: activeExists ? rawConfig.activeServiceId : services[0]?.id || null,
       services,
-      webSearch:
-        rawConfig.webSearch && typeof rawConfig.webSearch === "object"
-          ? cloneValue(rawConfig.webSearch)
-          : {},
-      desktop:
-        rawConfig.desktop && typeof rawConfig.desktop === "object"
-          ? cloneValue(rawConfig.desktop)
-          : {},
-    };
+    });
   }
   return migrateLegacyConfig(rawConfig);
 }
@@ -313,19 +327,11 @@ function setReasoningEffortValue(value) {
 }
 
 function getEffectiveProviderSelectionValue() {
-  const runtimeDefaults = getRuntimeProviderDefaults();
-  return resolveProviderSelection(
-    elements.provider?.value || runtimeDefaults.selection,
-    runtimeDefaults.endpointMode
-  ).selection;
+  return resolveProviderSelection(elements.provider?.value).selection;
 }
 
 function getEffectiveProviderConfig() {
-  const runtimeDefaults = getRuntimeProviderDefaults();
-  return resolveProviderSelection(
-    getEffectiveProviderSelectionValue(),
-    runtimeDefaults.endpointMode
-  );
+  return resolveProviderSelection(getEffectiveProviderSelectionValue());
 }
 
 function getEffectiveProviderValue() {
@@ -337,11 +343,11 @@ function getEffectiveEndpointModeValue() {
 }
 
 function getEffectiveApiUrlValue() {
-  return resolveWebRuntimeModelValue("apiUrl", elements.apiUrl?.value || "");
+  return String(elements.apiUrl?.value || "").trim();
 }
 
 function getEffectiveModelValue() {
-  return resolveWebRuntimeModelValue("model", elements.model?.value || "");
+  return String(elements.model?.value || "").trim();
 }
 
 function getActiveServiceModelRequestConfig() {
@@ -365,19 +371,28 @@ function getActiveServiceModelRequestConfig() {
     provider: providerConfig.provider,
     endpointMode: providerConfig.endpointMode,
     apiKey: activeService?.model?.apiKey || "",
-    apiUrl: resolveWebRuntimeModelValue("apiUrl", activeService?.model?.apiUrl || ""),
+    apiUrl: String(activeService?.model?.apiUrl || "").trim(),
   };
 }
 
+function isEffectivelyEmptyService(service) {
+  return (
+    String(service?.name || "").trim() === LEGACY_DEFAULT_SERVICE_NAME &&
+    String(service?.model?.apiKey || "").trim() === "" &&
+    String(service?.model?.model || "").trim() === "" &&
+    String(service?.model?.titleModel || "").trim() === "" &&
+    String(service?.model?.apiUrl || "").trim() === "" &&
+    String(service?.model?.systemPrompt || "").trim() === ""
+  );
+}
+
 function hasEffectiveApiKeyValue() {
-  return !!((elements.apiKey?.value || "").trim() || hasWebRuntimeDefaultApiKey());
+  return !!String(elements.apiKey?.value || "").trim();
 }
 
 function syncApiKeyPlaceholder() {
   if (!elements.apiKey) return;
-  elements.apiKey.placeholder = hasWebRuntimeDefaultApiKey()
-    ? "留空则使用服务器默认 Key"
-    : "输入API密钥";
+  elements.apiKey.placeholder = "输入API密钥";
 }
 
 function getServiceById(serviceId) {
@@ -419,6 +434,30 @@ function syncCurrentServiceOptions() {
     select.value = state.activeServiceId;
   }
   syncConfigSelectPicker("currentService");
+}
+
+function setServiceFormDisabled(disabled) {
+  const controls = [
+    elements.currentService,
+    elements.currentServicePickerInput,
+    elements.currentServicePickerBtn,
+    elements.serviceNameInput,
+    elements.provider,
+    elements.providerPickerInput,
+    elements.providerPickerBtn,
+    elements.apiKey,
+    elements.apiUrl,
+    elements.model,
+    elements.modelDropdownBtn,
+    elements.titleGenerationModel,
+    elements.modelDropdownBtnTitle,
+    elements.clearTitleGenerationModelBtn,
+    elements.roleSetting,
+  ];
+  controls.forEach((control) => {
+    if (!control) return;
+    control.disabled = !!disabled;
+  });
 }
 
 function getManagedServiceConnectionFormSnapshot() {
@@ -525,6 +564,42 @@ function applyActiveRoleSettingToForm(service) {
   scheduleFetchModels("Title", 0);
 }
 
+function applyEmptyServiceStateToForm() {
+  const providerDefaults = getRuntimeProviderDefaults();
+
+  resetModelFetchState("main");
+  resetModelFetchState("Title");
+
+  if (elements.serviceNameInput) {
+    elements.serviceNameInput.value = "";
+  }
+  if (elements.provider) {
+    elements.provider.value = providerDefaults.selection;
+  }
+  if (elements.apiKey) {
+    elements.apiKey.value = "";
+  }
+  if (elements.apiUrl) {
+    elements.apiUrl.value = "";
+  }
+  if (elements.model) {
+    elements.model.value = "";
+  }
+  if (elements.titleGenerationModel) {
+    elements.titleGenerationModel.value = "";
+  }
+  if (elements.roleSetting) {
+    elements.roleSetting.value = "";
+  }
+
+  syncCurrentServiceOptions();
+  syncConfigSelectPicker("provider");
+  syncRoleSettingPreview(false);
+  updateProviderUi();
+  updateModelHint("main");
+  updateModelHint("Title");
+}
+
 function readManagedServiceConnectionFromForm(existingService = null) {
   const base = existingService ? cloneValue(existingService) : createServiceTemplate();
   const providerConfig = getEffectiveProviderConfig();
@@ -618,8 +693,6 @@ function renderServiceSummary(service) {
   );
   const apiKeyHint = (service.model?.apiKey || "").trim()
     ? "已配置密钥"
-    : hasWebRuntimeDefaultApiKey()
-    ? "使用服务端默认 Key"
     : "未配置密钥";
   const rows = [
     ["接口类型", providerConfig.label],
@@ -667,14 +740,16 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
 function syncServiceDetailPanel(options = {}) {
   const { preserveConnectionForm = false } = options;
   const service = getManagedService();
+  setServiceFormDisabled(!service);
   if (elements.serviceNameInput) {
     elements.serviceNameInput.value = service?.name || "";
-    elements.serviceNameInput.disabled = !service;
   }
   if (service && !preserveConnectionForm) {
     resetModelFetchState("main");
     applyManagedServiceConnectionToForm(service);
     scheduleFetchModels("main", 0);
+  } else if (!service && !preserveConnectionForm) {
+    applyEmptyServiceStateToForm();
   }
   renderServiceSummary(service);
   renderServiceConnectivityState(service?.connectivity, !!service);
@@ -682,7 +757,7 @@ function syncServiceDetailPanel(options = {}) {
     elements.duplicateServiceBtn.disabled = !service;
   }
   if (elements.deleteServiceBtn) {
-    elements.deleteServiceBtn.disabled = state.services.length <= 1 || !service;
+    elements.deleteServiceBtn.disabled = !service;
   }
   if (elements.testServiceConnectionBtn) {
     elements.testServiceConnectionBtn.disabled = !service;
@@ -692,6 +767,13 @@ function syncServiceDetailPanel(options = {}) {
 function renderServiceList() {
   if (!elements.serviceList) return;
   elements.serviceList.innerHTML = "";
+  if (!state.services.length) {
+    const empty = document.createElement("div");
+    empty.className = "model-dropdown-empty";
+    empty.textContent = "暂无服务，点击上方“新建”开始配置。";
+    elements.serviceList.appendChild(empty);
+    return;
+  }
   const fragment = document.createDocumentFragment();
   state.services.forEach((service) => {
     const item = document.createElement("button");
@@ -776,18 +858,18 @@ async function persistCurrentServiceForm(options = {}) {
   const { showFeedback = false, closeAfterSave = false } = options;
   const managedService = getManagedService();
   const activeService = getActiveService();
-  if (!managedService || !activeService) return false;
-
-  state.services = state.services.map((service) => {
-    let nextService = service;
-    if (service.id === managedService.id) {
-      nextService = readManagedServiceConnectionFromForm(service);
-    }
-    if (service.id === activeService.id) {
-      nextService = applyRoleSettingToService(nextService);
-    }
-    return nextService;
-  });
+  if (managedService && activeService) {
+    state.services = state.services.map((service) => {
+      let nextService = service;
+      if (service.id === managedService.id) {
+        nextService = readManagedServiceConnectionFromForm(service);
+      }
+      if (service.id === activeService.id) {
+        nextService = applyRoleSettingToService(nextService);
+      }
+      return nextService;
+    });
+  }
 
   persistState({
     activeServiceId: state.activeServiceId,
@@ -807,7 +889,11 @@ async function persistCurrentServiceForm(options = {}) {
   renderServiceManagementUi({
     preserveConnectionForm: true,
   });
-  applyActiveRoleSettingToForm(getActiveService());
+  if (managedService && activeService) {
+    applyActiveRoleSettingToForm(getActiveService());
+  } else {
+    applyEmptyServiceStateToForm();
+  }
   updateModelNames();
   updateConfigStatusStrip();
   await syncDesktopPreferences({
@@ -1008,7 +1094,7 @@ export function updateModelNames() {
     elements.configModal?.classList.contains("open") &&
     elements.currentService?.value === state.activeServiceId
       ? getEffectiveModelValue()
-      : resolveWebRuntimeModelValue("model", activeService?.model?.model || "");
+      : String(activeService?.model?.model || "").trim();
   const modelId = liveModelValue;
   const displayName = resolveModelDisplayName(modelId);
   elements.modelName.textContent = displayName || "";
@@ -1028,7 +1114,7 @@ export function getConfig(side) {
     elements.configModal?.classList.contains("open") &&
     elements.currentService?.value === state.activeServiceId
       ? getEffectiveModelValue()
-      : resolveWebRuntimeModelValue("model", activeService?.model?.model || "");
+      : String(activeService?.model?.model || "").trim();
   const liveRoleSetting =
     elements.configModal?.classList.contains("open") &&
     elements.currentService?.value === state.activeServiceId
@@ -1050,7 +1136,7 @@ export function getConfig(side) {
       endpointMode: providerConfig.endpointMode,
       apiKey: activeService?.model?.apiKey || "",
       model: liveTitleModelValue,
-      apiUrl: resolveWebRuntimeModelValue("apiUrl", activeService?.model?.apiUrl || ""),
+      apiUrl: String(activeService?.model?.apiUrl || "").trim(),
       systemPrompt: "",
       reasoningEffort: "none",
     };
@@ -1061,7 +1147,7 @@ export function getConfig(side) {
     endpointMode: providerConfig.endpointMode,
     apiKey: activeService?.model?.apiKey || "",
     model: liveModelValue,
-    apiUrl: resolveWebRuntimeModelValue("apiUrl", activeService?.model?.apiUrl || ""),
+    apiUrl: String(activeService?.model?.apiUrl || "").trim(),
     systemPrompt: liveRoleSetting,
     reasoningEffort: getReasoningEffortValue(),
   };
@@ -1151,8 +1237,12 @@ export function loadConfig() {
         store.desktop?.closeToTrayOnClose === true;
     }
 
-    applyManagedServiceConnectionToForm(getManagedService());
-    applyActiveRoleSettingToForm(getActiveService());
+    if (getManagedService() && getActiveService()) {
+      applyManagedServiceConnectionToForm(getManagedService());
+      applyActiveRoleSettingToForm(getActiveService());
+    } else {
+      applyEmptyServiceStateToForm();
+    }
     setWebSearchEnabled(pendingWebSearchEnabled, { persist: false });
     setWebSearchToolMode(pendingWebSearchToolMode || "tavily", {
       persist: false,
@@ -1180,10 +1270,10 @@ export async function clearConfig() {
   });
   if (!confirmed) return;
 
-  const defaultService = createServiceTemplate(DEFAULT_SERVICE_NAME);
-  state.services = [defaultService];
-  state.activeServiceId = defaultService.id;
-  state.serviceManagerSelectedId = defaultService.id;
+  state.services = [];
+  state.activeServiceId = null;
+  state.serviceManagerSelectedId = null;
+  applyEmptyServiceStateToForm();
 
   setWebSearchEnabled(false, { persist: false });
   if (elements.webSearchProvider) elements.webSearchProvider.value = "tavily";
@@ -1195,8 +1285,6 @@ export async function clearConfig() {
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
   if (elements.closeToTrayOnClose) elements.closeToTrayOnClose.checked = false;
 
-  applyManagedServiceConnectionToForm(defaultService);
-  applyActiveRoleSettingToForm(defaultService);
   persistState({
     services: state.services,
     activeServiceId: state.activeServiceId,
@@ -1320,12 +1408,6 @@ export async function duplicateService() {
 export async function deleteService() {
   const service = getManagedService();
   if (!service) return;
-  if (state.services.length <= 1) {
-    await showAlert("至少需要保留一条服务。", {
-      title: "无法删除",
-    });
-    return;
-  }
   const confirmed = await showConfirm(`确定要删除服务「${getServiceDisplayName(service)}」吗？`, {
     title: "删除服务",
     okText: "删除",
@@ -1361,15 +1443,16 @@ export async function deleteService() {
     services: state.services,
     activeServiceId: state.activeServiceId,
   });
+  renderServiceManagementUi();
   if (fallbackService) {
-    renderServiceManagementUi();
     applyActiveRoleSettingToForm(getActiveService() || fallbackService);
-    updateModelNames();
-    updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
     scheduleFetchModels("Title", 0);
+  } else {
+    applyEmptyServiceStateToForm();
   }
-  renderServiceManagementUi();
+  updateModelNames();
+  updateConfigStatusStrip();
 }
 
 function updateServiceConnectivity(serviceId, payload) {

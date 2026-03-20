@@ -88,24 +88,7 @@ export function resolveRuntimeConfig() {
   const queryApiBase = (params.get("apiBase") || "").trim();
   const injectedApiBase = String(runtime.apiBase || "").trim();
   const apiBase = (queryApiBase || injectedApiBase || "").replace(/\/+$/, "");
-  const platform =
-    runtime.platform || (apiBase ? "desktop" : "web");
-  const rawWebDefaults =
-    platform === "web" && runtime.webDefaults && typeof runtime.webDefaults === "object"
-      ? runtime.webDefaults
-      : {};
-  const resolvedWebDefaultProvider = resolveProviderSelection(
-    rawWebDefaults.provider,
-    rawWebDefaults.endpointMode
-  );
-  const webDefaults = {
-    provider: resolvedWebDefaultProvider.provider,
-    endpointMode: resolvedWebDefaultProvider.endpointMode,
-    providerSelection: resolvedWebDefaultProvider.selection,
-    apiUrl: String(rawWebDefaults.apiUrl || "").trim(),
-    model: String(rawWebDefaults.model || "").trim(),
-    hasApiKey: rawWebDefaults.hasApiKey === true,
-  };
+  const platform = runtime.platform || (apiBase ? "desktop" : "web");
 
   return {
     platform,
@@ -113,7 +96,6 @@ export function resolveRuntimeConfig() {
     backendManagedByDesktop:
       runtime.backendManagedByDesktop === true || platform === "desktop",
     startupError: String(runtime.startupError || "").trim(),
-    webDefaults,
   };
 }
 
@@ -130,23 +112,6 @@ export function buildApiUrl(path) {
 
 export function isDesktopRuntime() {
   return PRISM_RUNTIME.platform === "desktop";
-}
-
-export function getWebRuntimeModelDefaults() {
-  return PRISM_RUNTIME.platform === "web"
-    ? PRISM_RUNTIME.webDefaults || {}
-    : {};
-}
-
-export function resolveWebRuntimeModelValue(key, rawValue = "") {
-  const raw = String(rawValue || "").trim();
-  if (raw) return raw;
-  const defaults = getWebRuntimeModelDefaults();
-  return String(defaults?.[key] || "").trim();
-}
-
-export function hasWebRuntimeDefaultApiKey() {
-  return getWebRuntimeModelDefaults().hasApiKey === true;
 }
 
 export function delay(ms) {

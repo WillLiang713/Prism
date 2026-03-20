@@ -1,4 +1,4 @@
-import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl, hasWebRuntimeDefaultApiKey } from './state.js';
+import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl } from './state.js';
 import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPickers } from './dropdown.js';
 
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
@@ -32,7 +32,7 @@ export function updateModelHint(side) {
   const resolvedSide = side || "main";
   const slot = state.modelFetch[resolvedSide];
   const config = _getConfigFromForm(resolvedSide);
-  const hasApiKey = !!((config.apiKey || "").trim() || hasWebRuntimeDefaultApiKey());
+  const hasApiKey = !!String(config.apiKey || "").trim();
   const apiUrl = (config.apiUrl || "").trim();
 
   if (isDesktopRuntime() && !state.runtime.backendReady) {

@@ -161,33 +161,11 @@ Windows 打包版后端日志默认写入：
 - `TAVILY_API_KEY`
 - `EXA_API_KEY`
 
-如果你是部署 Web 版，也可以通过环境变量给模型配置提供默认值。这样前端配置面板里对应项可以留空，后端会自动回退到服务端 `.env` 中的值。
-
-可用变量：
-
-- `PRISM_WEB_DEFAULT_PROVIDER`：默认提供商，填 `openai` 或 `anthropic`
-- `PRISM_WEB_DEFAULT_API_URL`：默认 API 地址
-- `PRISM_WEB_DEFAULT_API_KEY`：默认 API Key
-- `PRISM_WEB_DEFAULT_ENDPOINT_MODE`：默认端点类型，填 `chat_completions` 或 `responses`
-- `PRISM_WEB_DEFAULT_MODEL`：默认模型 ID，例如 `gpt-4.1`、`gpt-4.1-mini`、`deepseek-chat`
-
 说明：
 
-- 这组 `PRISM_WEB_DEFAULT_*` 只在 Web 模式下生效，桌面端会忽略
-- 出于安全考虑，默认 `API Key` 不会明文注入到浏览器页面；前端留空时由后端自动兜底使用
 - 如果你使用 `responses`，当前默认提供商应设为 `openai`
 - 当提供商为 `openai` 且端点类型切到 `responses` 时，“模型内置”会出现在联网方式可选项里
 - 是否开启联网、以及是否选择“模型内置”，都由用户手动决定，前端不会自动切换当前联网方式
-
-示例（OpenAI Responses）：
-
-```env
-PRISM_WEB_DEFAULT_PROVIDER=openai
-PRISM_WEB_DEFAULT_API_URL=https://api.openai.com/v1/responses
-PRISM_WEB_DEFAULT_API_KEY=sk-xxx
-PRISM_WEB_DEFAULT_ENDPOINT_MODE=responses
-PRISM_WEB_DEFAULT_MODEL=gpt-4.1
-```
 
 ## 环境变量
 
@@ -196,11 +174,6 @@ PRISM_WEB_DEFAULT_MODEL=gpt-4.1
 | `PRISM_PORT` | 本地服务或 Docker 对外暴露端口 | `3000` |
 | `TAVILY_API_KEY` | Tavily 联网搜索 Key，可选 | 空 |
 | `EXA_API_KEY` | Exa 联网搜索 Key，可选 | 空 |
-| `PRISM_WEB_DEFAULT_PROVIDER` | Web 端默认提供商，可选，`openai` / `anthropic` | 空 |
-| `PRISM_WEB_DEFAULT_API_URL` | Web 端默认 API 地址，可选 | 空 |
-| `PRISM_WEB_DEFAULT_API_KEY` | Web 端默认 API Key，可选 | 空 |
-| `PRISM_WEB_DEFAULT_ENDPOINT_MODE` | Web 端默认端点类型，可选，`chat_completions` / `responses` | 空 |
-| `PRISM_WEB_DEFAULT_MODEL` | Web 端默认模型 ID，可选 | 空 |
 | `PRISM_DESKTOP_API_BASE` | 桌面开发态后端地址，可选 | 桌面内置默认值 |
 
 ## 技术栈

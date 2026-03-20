@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, hasWebRuntimeDefaultApiKey, resolveProviderSelection, resolveWebRuntimeModelValue } from './state.js';
+import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection } from './state.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "模型内置",
@@ -710,9 +710,8 @@ export function canUseBuiltinWebSearch(configLike = {}) {
   const providerConfig = resolveProviderSelection(
     configLike.providerSelection ??
       configLike.provider ??
-      elements.provider?.value ??
-      resolveWebRuntimeModelValue("provider"),
-    configLike.endpointMode ?? resolveWebRuntimeModelValue("endpointMode")
+      elements.provider?.value,
+    configLike.endpointMode
   );
   const endpointMode = normalizeEndpointMode(
     configLike.endpointMode ?? providerConfig.endpointMode
@@ -924,14 +923,13 @@ export function setStatusPillState(el, isReady, text) {
 
 export function updateConfigStatusStrip() {
   const providerConfig = resolveProviderSelection(
-    elements.provider?.value || resolveWebRuntimeModelValue("provider"),
-    resolveWebRuntimeModelValue("endpointMode")
+    elements.provider?.value
   );
   const toolMode = getCurrentWebSearchToolMode();
   const webSearchEnabled = isWebSearchEnabled();
-  const hasApiKey = !!((elements.apiKey?.value || "").trim() || hasWebRuntimeDefaultApiKey());
-  const hasApiUrl = !!resolveWebRuntimeModelValue("apiUrl", elements.apiUrl?.value || "");
-  const modelName = resolveWebRuntimeModelValue("model", elements.model?.value || "");
+  const hasApiKey = !!String(elements.apiKey?.value || "").trim();
+  const hasApiUrl = !!String(elements.apiUrl?.value || "").trim();
+  const modelName = String(elements.model?.value || "").trim();
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
     ? `模型：${providerConfig.label} · ${modelName}`

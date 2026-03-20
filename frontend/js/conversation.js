@@ -1,4 +1,4 @@
-import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText, hasWebRuntimeDefaultApiKey, resolveWebRuntimeModelValue } from './state.js';
+import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText } from './state.js';
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
@@ -86,11 +86,11 @@ function createMainModelState(config) {
 }
 
 function hasEffectiveApiKey(config) {
-  return !!((config?.apiKey || "").trim() || hasWebRuntimeDefaultApiKey());
+  return !!String(config?.apiKey || "").trim();
 }
 
 function hasEffectiveModel(config) {
-  return !!resolveWebRuntimeModelValue("model", config?.model || "");
+  return !!String(config?.model || "").trim();
 }
 
 export async function sendPrompt() {
