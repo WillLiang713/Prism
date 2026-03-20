@@ -484,6 +484,9 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   text-align: left;
   color: var(--text-muted);
   cursor: pointer;
@@ -529,8 +532,9 @@
 
 .service-list-title {
   min-width: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.5;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -552,7 +556,6 @@
 
 .service-list-meta,
 .service-list-submeta,
-.service-list-footer-text,
 .service-connectivity-subtitle,
 .service-connectivity-message,
 .service-connectivity-time,
@@ -565,18 +568,13 @@
 .service-connectivity-subtitle,
 .service-connectivity-message,
 .service-connectivity-time {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
 .service-list-meta,
 .service-list-submeta {
-  margin-top: 6px;
   word-break: break-word;
-}
-
-.service-list-footer {
-  margin-top: 10px;
 }
 
 .service-connectivity-badge {

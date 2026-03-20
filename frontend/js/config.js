@@ -879,21 +879,13 @@ function renderServiceList() {
 
     const subMeta = document.createElement("div");
     subMeta.className = "service-list-submeta";
-    subMeta.textContent = service.model?.apiUrl || "未填写 API 地址";
-
-    const footer = document.createElement("div");
-    footer.className = "service-list-footer";
-
-    const modelMeta = document.createElement("span");
-    modelMeta.className = "service-list-footer-text";
-    modelMeta.textContent = service.model?.model || "未填写模型";
-
-    footer.appendChild(modelMeta);
+    subMeta.textContent = String(service.model?.apiUrl || "").trim();
 
     item.appendChild(head);
     item.appendChild(meta);
-    item.appendChild(subMeta);
-    item.appendChild(footer);
+    if (subMeta.textContent) {
+      item.appendChild(subMeta);
+    }
     fragment.appendChild(item);
   });
   elements.serviceList.appendChild(fragment);
@@ -1136,19 +1128,9 @@ export function updateProviderUi() {
 }
 
 export function updateApiUrlPlaceholder() {
-  const providerEl = elements.provider;
   const urlInput = elements.apiUrl;
-  if (!providerEl || !urlInput) return;
-
-  const { provider, endpointMode } = getEffectiveProviderConfig();
-  const placeholders = {
-    openai:
-      endpointMode === "responses"
-        ? "https://api.openai.com/v1/responses"
-        : "https://api.openai.com/v1/chat/completions",
-    anthropic: "https://api.anthropic.com/v1/messages",
-  };
-  urlInput.placeholder = placeholders[provider] || "";
+  if (!urlInput) return;
+  urlInput.placeholder = "输入API地址";
 }
 
 export function resolveModelDisplayName(modelId) {
