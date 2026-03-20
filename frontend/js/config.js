@@ -81,17 +81,19 @@ function normalizeConnectivityState(raw) {
     status === "testing" || status === "success" || status === "error"
       ? status
       : "idle";
+  const message = String(raw?.message || "");
+  const testedAt = Number(raw?.testedAt) || 0;
   const nextConnectivity = createConnectivityState(
     normalizedStatus,
-    raw?.message || "",
-    raw?.testedAt || 0
+    message,
+    testedAt
   );
   if (
     isTerminalConnectivityStatus(nextConnectivity.status) &&
     nextConnectivity.testedAt > 0 &&
     Date.now() - nextConnectivity.testedAt >= CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS
   ) {
-    return createConnectivityState();
+    return createConnectivityState("idle", message, testedAt);
   }
   return nextConnectivity;
 }
@@ -116,7 +118,7 @@ function scheduleServiceConnectivityAutoHide(serviceId, connectivity) {
 
   const timerId = window.setTimeout(() => {
     serviceConnectivityHideTimers.delete(serviceId);
-    updateServiceConnectivity(serviceId, createConnectivityState());
+    updateServiceConnectivity(serviceId, { status: "idle" });
   }, CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS);
 
   serviceConnectivityHideTimers.set(serviceId, timerId);
@@ -129,7 +131,10 @@ function scheduleTransientConnectivityAutoHide(serviceId, connectivity) {
 
   transientConnectivityHideTimer = window.setTimeout(() => {
     transientConnectivityHideTimer = 0;
-    renderServiceConnectivityState(createConnectivityState(), true);
+    renderServiceConnectivityState(
+      createConnectivityState("idle", nextConnectivity.message, nextConnectivity.testedAt),
+      true
+    );
   }, CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS);
 }
 
@@ -768,21 +773,21 @@ function renderServiceSummary(service) {
 }
 
 function renderServiceConnectivityState(connectivity, hasService = true) {
-  const nextConnectivity = connectivity || createConnectivityState();
+  const nextConnectivity = hasService
+    ? connectivity || createConnectivityState()
+    : createConnectivityState();
   const normalizedStatus = String(nextConnectivity.status || "idle").toLowerCase();
-  const shouldShowStatus =
+  const shouldShowBadge =
     normalizedStatus === "testing" ||
     normalizedStatus === "success" ||
     normalizedStatus === "error";
-  const messageText = shouldShowStatus
-    ? String(nextConnectivity.message || "").trim()
-    : "";
+  const messageText = String(nextConnectivity.message || "").trim();
   const timeText = nextConnectivity.testedAt
     ? `最近测试：${formatTime(nextConnectivity.testedAt)}`
     : "";
 
   if (elements.serviceConnectivityBadge) {
-    elements.serviceConnectivityBadge.hidden = !shouldShowStatus;
+    elements.serviceConnectivityBadge.hidden = !shouldShowBadge;
     elements.serviceConnectivityBadge.textContent = getConnectivityLabel(
       nextConnectivity.status
     );
@@ -1238,14 +1243,6 @@ function getDesktopConfig() {
   return {
     closeToTrayOnClose: !!elements.closeToTrayOnClose?.checked,
   };
-}
-
-export async function saveConfig() {
-  const saved = await persistCurrentServiceForm({
-    showFeedback: true,
-    closeAfterSave: true,
-  });
-  if (!saved) return;
 }
 
 export function loadConfig() {

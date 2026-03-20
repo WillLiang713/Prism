@@ -201,7 +201,6 @@ export const floatingDropdownAnchors = new WeakMap();
 
 export const elements = {
   // 配置相关
-  saveConfig: document.getElementById("saveConfig"),
   clearConfig: document.getElementById("clearConfig"),
   configModal: document.getElementById("configModal"),
   configTabs: document.getElementById("configTabs"),

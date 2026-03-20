@@ -5,7 +5,6 @@ import {
   closeConfigModal,
   updateProviderUi,
   updateModelNames,
-  saveConfig,
   clearConfig,
   setActiveConfigTab,
   syncRoleSettingPreview,
@@ -40,8 +39,10 @@ const PRESS_START_EVENT =
 
 export function bindEvents() {
   initScrollbarAutoHide();
+  const autoSaveConfigDraft = () => {
+    void autoSaveManagedServiceDraft();
+  };
 
-  elements.saveConfig?.addEventListener("click", saveConfig);
   elements.clearConfig?.addEventListener("click", clearConfig);
 
   elements.closeToTrayOnClose?.addEventListener("change", () => {
@@ -58,6 +59,7 @@ export function bindEvents() {
     void syncDesktopPreferences({
       closeToTray: !!elements.closeToTrayOnClose?.checked,
     });
+    autoSaveConfigDraft();
   });
   elements.webSearchProvider?.addEventListener("change", () => {
     const currentMode = getCurrentWebSearchToolMode();
@@ -68,15 +70,26 @@ export function bindEvents() {
     }
     updateWebSearchProviderUi();
     updateConfigStatusStrip();
+    autoSaveConfigDraft();
   });
   elements.webSearchToolCurrent?.addEventListener("click", () => {
     toggleWebSearchToolSelector();
   });
   elements.tavilyApiKey?.addEventListener("input", updateConfigStatusStrip);
+  elements.tavilyApiKey?.addEventListener("blur", autoSaveConfigDraft);
   elements.exaApiKey?.addEventListener("input", updateConfigStatusStrip);
-  elements.exaSearchType?.addEventListener("change", updateConfigStatusStrip);
+  elements.exaApiKey?.addEventListener("blur", autoSaveConfigDraft);
+  elements.exaSearchType?.addEventListener("change", () => {
+    updateConfigStatusStrip();
+    autoSaveConfigDraft();
+  });
   elements.tavilyMaxResults?.addEventListener("input", updateConfigStatusStrip);
-  elements.tavilySearchDepth?.addEventListener("change", updateConfigStatusStrip);
+  elements.tavilyMaxResults?.addEventListener("blur", autoSaveConfigDraft);
+  elements.tavilyMaxResults?.addEventListener("change", autoSaveConfigDraft);
+  elements.tavilySearchDepth?.addEventListener("change", () => {
+    updateConfigStatusStrip();
+    autoSaveConfigDraft();
+  });
 
   // 思考强度下拉选择器
   elements.reasoningEffortSelector?.addEventListener("click", (e) => {
@@ -87,6 +100,7 @@ export function bindEvents() {
       btn.classList.add("active");
       elements.reasoningEffortValue.textContent = btn.dataset.label;
       elements.reasoningEffortSelector.classList.remove("open");
+      autoSaveConfigDraft();
       return;
     }
     // 点击触发器，切换展开
@@ -125,11 +139,9 @@ export function bindEvents() {
   elements.serviceNameInput?.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    void autoSaveManagedServiceDraft();
+    autoSaveConfigDraft();
   });
-  elements.serviceNameInput?.addEventListener("blur", () => {
-    void autoSaveManagedServiceDraft();
-  });
+  elements.serviceNameInput?.addEventListener("blur", autoSaveConfigDraft);
   elements.configTabs?.addEventListener("click", (e) => {
     const tabBtn = e.target?.closest?.(".config-tab[data-tab]");
     if (!tabBtn) return;
@@ -222,7 +234,7 @@ export function bindEvents() {
     updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
     scheduleFetchModels("Title", 0);
-    void autoSaveManagedServiceDraft();
+    autoSaveConfigDraft();
   });
 
   elements.apiKey?.addEventListener("input", () => {
@@ -232,9 +244,7 @@ export function bindEvents() {
     scheduleFetchModels("main", 400);
     scheduleFetchModels("Title", 400);
   });
-  elements.apiKey?.addEventListener("blur", () => {
-    void autoSaveManagedServiceDraft();
-  });
+  elements.apiKey?.addEventListener("blur", autoSaveConfigDraft);
   elements.apiUrl?.addEventListener("input", () => {
     updateModelHint();
     updateModelHint("Title");
@@ -242,12 +252,11 @@ export function bindEvents() {
     scheduleFetchModels("main", 500);
     scheduleFetchModels("Title", 500);
   });
-  elements.apiUrl?.addEventListener("blur", () => {
-    void autoSaveManagedServiceDraft();
-  });
+  elements.apiUrl?.addEventListener("blur", autoSaveConfigDraft);
 
   elements.roleSetting?.addEventListener("blur", () => {
     showRoleSettingPreview();
+    autoSaveConfigDraft();
   });
   elements.roleSettingPreview?.addEventListener("click", () => {
     showRoleSettingEditor(true);
@@ -274,7 +283,7 @@ export function bindEvents() {
       if (!keepDropdownOpen) {
         closeModelDropdown("main");
       }
-      void autoSaveManagedServiceDraft();
+      autoSaveConfigDraft();
     }, 0);
   });
 
@@ -294,7 +303,7 @@ export function bindEvents() {
       if (!keepDropdownOpen) {
         closeModelDropdown("Title");
       }
-      void autoSaveManagedServiceDraft();
+      autoSaveConfigDraft();
     }, 0);
   });
 
@@ -307,7 +316,7 @@ export function bindEvents() {
     elements.titleGenerationModel.dispatchEvent(new Event("input", { bubbles: true }));
     closeModelDropdown("Title");
     elements.titleGenerationModel.focus();
-    void autoSaveManagedServiceDraft();
+    autoSaveConfigDraft();
   });
 
   document.addEventListener(PRESS_START_EVENT, (e) => {

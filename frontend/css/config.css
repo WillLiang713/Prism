@@ -908,32 +908,31 @@
   position: relative;
 }
 
-.password-input-wrapper input {
-  padding-right: 40px;
-}
-
-.password-toggle-btn {
+.key-input-wrapper .password-toggle-btn {
   position: absolute;
-  right: 8px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-dim);
   transition: color 0.2s ease;
   border-radius: 4px;
+  z-index: 1;
 }
 
-.password-toggle-btn:hover {
+.key-input-wrapper .password-toggle-btn:hover {
   color: var(--text);
 }
 
-.password-toggle-btn .eye-icon {
+.key-input-wrapper .password-toggle-btn .eye-icon {
   width: 18px;
   height: 18px;
 }
@@ -952,6 +951,11 @@
   transition: border-color 0.2s, box-shadow 0.2s;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
+}
+
+.key-input-wrapper input[type="text"],
+.key-input-wrapper input[type="password"] {
+  padding-right: 52px;
 }
 
 .form-group textarea {
