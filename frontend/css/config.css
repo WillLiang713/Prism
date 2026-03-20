@@ -1275,7 +1275,7 @@
 
 .model-picker[data-side="title"] .model-picker-input-wrap input[type="text"] {
   width: 100%;
-  padding-right: 34px;
+  padding-right: 38px;
 }
 
 .model-input-clear-btn {
@@ -1283,7 +1283,7 @@
   -webkit-appearance: none;
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: calc((38px - 20px) / 2);
   transform: translateY(-50%);
   width: 20px;
   height: 20px;

@@ -37,6 +37,10 @@ const CONFIG_STORE_VERSION = 2;
 const LEGACY_DEFAULT_SERVICE_NAME = "默认服务";
 const UNNAMED_SERVICE_LABEL = "未命名服务";
 const DEFAULT_REASONING_EFFORT = "medium";
+const CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS = 3000;
+
+const serviceConnectivityHideTimers = new Map();
+let transientConnectivityHideTimer = 0;
 
 function cloneValue(value) {
   if (typeof structuredClone === "function") {
@@ -66,17 +70,67 @@ function createConnectivityState(status = "idle", message = "", testedAt = 0) {
   };
 }
 
+function isTerminalConnectivityStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+  return normalized === "success" || normalized === "error";
+}
+
 function normalizeConnectivityState(raw) {
   const status = String(raw?.status || "").toLowerCase();
   const normalizedStatus =
     status === "testing" || status === "success" || status === "error"
       ? status
       : "idle";
-  return createConnectivityState(
+  const nextConnectivity = createConnectivityState(
     normalizedStatus,
     raw?.message || "",
     raw?.testedAt || 0
   );
+  if (
+    isTerminalConnectivityStatus(nextConnectivity.status) &&
+    nextConnectivity.testedAt > 0 &&
+    Date.now() - nextConnectivity.testedAt >= CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS
+  ) {
+    return createConnectivityState();
+  }
+  return nextConnectivity;
+}
+
+function clearServiceConnectivityHideTimer(serviceId) {
+  const timerId = serviceConnectivityHideTimers.get(serviceId);
+  if (!timerId) return;
+  clearTimeout(timerId);
+  serviceConnectivityHideTimers.delete(serviceId);
+}
+
+function clearTransientConnectivityHideTimer() {
+  if (!transientConnectivityHideTimer) return;
+  clearTimeout(transientConnectivityHideTimer);
+  transientConnectivityHideTimer = 0;
+}
+
+function scheduleServiceConnectivityAutoHide(serviceId, connectivity) {
+  clearServiceConnectivityHideTimer(serviceId);
+  const nextConnectivity = normalizeConnectivityState(connectivity);
+  if (!isTerminalConnectivityStatus(nextConnectivity.status)) return;
+
+  const timerId = window.setTimeout(() => {
+    serviceConnectivityHideTimers.delete(serviceId);
+    updateServiceConnectivity(serviceId, createConnectivityState());
+  }, CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS);
+
+  serviceConnectivityHideTimers.set(serviceId, timerId);
+}
+
+function scheduleTransientConnectivityAutoHide(serviceId, connectivity) {
+  clearTransientConnectivityHideTimer();
+  const nextConnectivity = normalizeConnectivityState(connectivity);
+  if (!isTerminalConnectivityStatus(nextConnectivity.status)) return;
+
+  transientConnectivityHideTimer = window.setTimeout(() => {
+    transientConnectivityHideTimer = 0;
+    renderServiceConnectivityState(createConnectivityState(), true);
+  }, CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS);
 }
 
 function getRuntimeProviderDefaults() {
@@ -715,8 +769,20 @@ function renderServiceSummary(service) {
 
 function renderServiceConnectivityState(connectivity, hasService = true) {
   const nextConnectivity = connectivity || createConnectivityState();
+  const normalizedStatus = String(nextConnectivity.status || "idle").toLowerCase();
+  const shouldShowStatus =
+    normalizedStatus === "testing" ||
+    normalizedStatus === "success" ||
+    normalizedStatus === "error";
+  const messageText = shouldShowStatus
+    ? String(nextConnectivity.message || "").trim()
+    : "";
+  const timeText = nextConnectivity.testedAt
+    ? `最近测试：${formatTime(nextConnectivity.testedAt)}`
+    : "";
+
   if (elements.serviceConnectivityBadge) {
-    elements.serviceConnectivityBadge.hidden = false;
+    elements.serviceConnectivityBadge.hidden = !shouldShowStatus;
     elements.serviceConnectivityBadge.textContent = getConnectivityLabel(
       nextConnectivity.status
     );
@@ -724,16 +790,12 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
       nextConnectivity.status || "idle";
   }
   if (elements.serviceConnectivityMessage) {
-    elements.serviceConnectivityMessage.textContent =
-      nextConnectivity.message ||
-      (hasService
-        ? "使用保存的服务配置发起模型列表拉取测试。"
-        : "选择一条服务后可执行测试。");
+    elements.serviceConnectivityMessage.hidden = !messageText;
+    elements.serviceConnectivityMessage.textContent = messageText;
   }
   if (elements.serviceConnectivityTime) {
-    elements.serviceConnectivityTime.textContent = nextConnectivity.testedAt
-      ? `最近测试：${formatTime(nextConnectivity.testedAt)}`
-      : "";
+    elements.serviceConnectivityTime.hidden = !timeText;
+    elements.serviceConnectivityTime.textContent = timeText;
   }
 }
 
@@ -1458,19 +1520,21 @@ export async function deleteService() {
 function updateServiceConnectivity(serviceId, payload) {
   const current = getServiceById(serviceId);
   if (!current) return;
+  const nextConnectivity = {
+    ...createConnectivityState(),
+    ...(current.connectivity || {}),
+    ...payload,
+  };
   replaceService({
     ...current,
-    connectivity: {
-      ...createConnectivityState(),
-      ...(current.connectivity || {}),
-      ...payload,
-    },
+    connectivity: nextConnectivity,
   });
   persistState({
     services: state.services,
     activeServiceId: state.activeServiceId,
   });
   renderServiceManagementUi();
+  scheduleServiceConnectivityAutoHide(serviceId, nextConnectivity);
 }
 
 export async function testSelectedServiceConnection() {
@@ -1482,10 +1546,13 @@ export async function testSelectedServiceConnection() {
     : service;
 
   if (hasDraftChanges) {
-    renderServiceConnectivityState(
-      createConnectivityState("testing", "正在尝试拉取模型列表…", 0),
-      true
+    const transientTestingState = createConnectivityState(
+      "testing",
+      "正在尝试拉取模型列表…",
+      0
     );
+    clearTransientConnectivityHideTimer();
+    renderServiceConnectivityState(transientTestingState, true);
   } else {
     updateServiceConnectivity(service.id, {
       status: "testing",
@@ -1496,14 +1563,13 @@ export async function testSelectedServiceConnection() {
   try {
     const ids = await fetchModelsOnce(draftService.model);
     if (hasDraftChanges) {
-      renderServiceConnectivityState(
-        createConnectivityState(
-          "success",
-          `成功拉取 ${ids.length} 个模型。`,
-          Date.now()
-        ),
-        true
+      const transientSuccessState = createConnectivityState(
+        "success",
+        `成功拉取 ${ids.length} 个模型。`,
+        Date.now()
       );
+      renderServiceConnectivityState(transientSuccessState, true);
+      scheduleTransientConnectivityAutoHide(service.id, transientSuccessState);
     } else {
       updateServiceConnectivity(service.id, {
         status: "success",
@@ -1513,14 +1579,13 @@ export async function testSelectedServiceConnection() {
     }
   } catch (error) {
     if (hasDraftChanges) {
-      renderServiceConnectivityState(
-        createConnectivityState(
-          "error",
-          error?.message || "测试失败",
-          Date.now()
-        ),
-        true
+      const transientErrorState = createConnectivityState(
+        "error",
+        error?.message || "测试失败",
+        Date.now()
       );
+      renderServiceConnectivityState(transientErrorState, true);
+      scheduleTransientConnectivityAutoHide(service.id, transientErrorState);
     } else {
       updateServiceConnectivity(service.id, {
         status: "error",
