@@ -15,7 +15,70 @@ function Remove-BuildArtifact {
 
   if (Test-Path $Path) {
     Write-Host "Removing build artifact: $Path"
-    Remove-Item -Path $Path -Recurse -Force
+    # 使用 robocopy 空目录的方式清空内容，避免 Remove-Item -Recurse 在深层目录上失败
+    $emptyDir = Join-Path $env:TEMP "prism_empty_$(Get-Random)"
+    New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
+    robocopy $emptyDir $Path /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    Remove-Item -Path $emptyDir -Force
+    Remove-Item -Path $Path -Force
+  }
+}
+
+function Write-Utf8NoBom {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+    [Parameter(Mandatory = $true)]
+    [string]$Content
+  )
+
+  [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Get-PackageVersion {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PackageJsonPath
+  )
+
+  $packageJson = Get-Content $PackageJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  $version = [string]$packageJson.version
+  if (-not $version) {
+    throw "Version field was not found in package.json."
+  }
+
+  return $version.Trim()
+}
+
+function Sync-VersionField {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+    [Parameter(Mandatory = $true)]
+    [string]$Pattern,
+    [Parameter(Mandatory = $true)]
+    [string]$Replacement,
+    [Parameter(Mandatory = $true)]
+    [string]$Version,
+    [Parameter(Mandatory = $true)]
+    [string]$Description
+  )
+
+  $content = Get-Content $Path -Raw -Encoding UTF8
+  if (-not [System.Text.RegularExpressions.Regex]::IsMatch($content, $Pattern, [System.Text.RegularExpressions.RegexOptions]::Multiline)) {
+    throw "Failed to find $Description in $Path."
+  }
+
+  $updated = [System.Text.RegularExpressions.Regex]::Replace(
+    $content,
+    $Pattern,
+    $Replacement,
+    [System.Text.RegularExpressions.RegexOptions]::Multiline
+  )
+
+  if ($updated -ne $content) {
+    Write-Host "Syncing $Description to $Version"
+    Write-Utf8NoBom -Path $Path -Content $updated
   }
 }
 
@@ -63,6 +126,24 @@ $sidecarTarget = Join-Path $sidecarDir "prism-backend-x86_64-pc-windows-msvc.exe
 $pyInstallerBuildDir = Join-Path $projectRoot "build"
 $pyInstallerDistDir = Join-Path $projectRoot "dist"
 $tauriTargetDir = Join-Path $projectRoot "src-tauri\target"
+$packageJsonPath = Join-Path $projectRoot "package.json"
+$tauriConfigPath = Join-Path $projectRoot "src-tauri\tauri.conf.json"
+$cargoTomlPath = Join-Path $projectRoot "src-tauri\Cargo.toml"
+$buildVersion = Get-PackageVersion -PackageJsonPath $packageJsonPath
+
+Sync-VersionField `
+  -Path $tauriConfigPath `
+  -Pattern '"version"\s*:\s*"[^"]+"' `
+  -Replacement ('"version": "{0}"' -f $buildVersion) `
+  -Version $buildVersion `
+  -Description "Tauri app version"
+
+Sync-VersionField `
+  -Path $cargoTomlPath `
+  -Pattern '^version\s*=\s*"[^"]+"(\r?)$' `
+  -Replacement ('version = "' + $buildVersion + '"$1') `
+  -Version $buildVersion `
+  -Description "Cargo package version"
 
 if (-not (Test-Path $sidecarDir)) {
   New-Item -ItemType Directory -Path $sidecarDir | Out-Null
@@ -108,12 +189,12 @@ $indexHtml = Join-Path $projectRoot "frontend\index.html"
 $buildStamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $originalContent = Get-Content $indexHtml -Raw -Encoding UTF8
 $stampedContent = $originalContent -replace '__BUILD__', $buildStamp
-[System.IO.File]::WriteAllText($indexHtml, $stampedContent, [System.Text.UTF8Encoding]::new($false))
+Write-Utf8NoBom -Path $indexHtml -Content $stampedContent
 
 npm install
 try {
   npm run tauri:build
 } finally {
   # 构建完成后恢复 index.html 中的占位符，避免污染源文件
-  [System.IO.File]::WriteAllText($indexHtml, $originalContent, [System.Text.UTF8Encoding]::new($false))
+  Write-Utf8NoBom -Path $indexHtml -Content $originalContent
 }

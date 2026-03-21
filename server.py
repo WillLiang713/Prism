@@ -15,6 +15,7 @@ from desktop_logging import init_desktop_release_logging
 from routes.chat import router as chat_router
 from routes.models import router as models_router
 from routes.proxy import router as proxy_router
+from routes.responses import router as responses_router
 from routes.search import router as search_router
 from routes.static import router as static_router
 from routes.tools import router as tools_router
@@ -49,6 +50,7 @@ app.include_router(search_router)
 app.include_router(models_router)
 app.include_router(topics_router)
 app.include_router(chat_router)
+app.include_router(responses_router)
 app.include_router(proxy_router)
 
 

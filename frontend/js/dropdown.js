@@ -12,6 +12,13 @@ const PRESS_START_EVENT =
 export function getConfigSelectPickerDefs() {
   return [
     {
+      key: "currentService",
+      select: elements.currentService,
+      input: elements.currentServicePickerInput,
+      btn: elements.currentServicePickerBtn,
+      dropdown: elements.currentServicePickerDropdown,
+    },
+    {
       key: "provider",
       select: elements.provider,
       input: elements.providerPickerInput,
@@ -82,14 +89,23 @@ export function positionFloatingDropdown(dropdownEl) {
   const rect = anchorEl.getBoundingClientRect();
   const viewportPadding = 12;
   const gap = 6;
+  const configuredMinWidth = Math.max(
+    220,
+    parseInt(dropdownEl.dataset.floatingMinWidth || "", 10) || 220
+  );
   const width = Math.min(
-    Math.max(220, Math.round(rect.width)),
+    Math.max(configuredMinWidth, Math.round(rect.width)),
     Math.max(220, window.innerWidth - viewportPadding * 2)
   );
   const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
   const maxHeight = Math.max(140, Math.min(320, Math.round(spaceBelow)));
+  const alignMode = dropdownEl.dataset.floatingAlign || "start";
+  const desiredLeft =
+    alignMode === "center"
+      ? Math.round(rect.left + rect.width / 2 - width / 2)
+      : Math.round(rect.left);
   const left = Math.min(
-    Math.max(viewportPadding, Math.round(rect.left)),
+    Math.max(viewportPadding, desiredLeft),
     Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
   );
   const top = Math.round(rect.bottom + gap);
@@ -100,11 +116,14 @@ export function positionFloatingDropdown(dropdownEl) {
   dropdownEl.style.maxHeight = `${maxHeight}px`;
 }
 
-export function openFloatingDropdown(dropdownEl, anchorEl) {
+export function openFloatingDropdown(dropdownEl, anchorEl, options = {}) {
   if (!(dropdownEl instanceof HTMLElement) || !(anchorEl instanceof HTMLElement))
     return;
   rememberDropdownOrigin(dropdownEl);
-  const host = elements.configModal || document.body;
+  const host =
+    options.host instanceof HTMLElement
+      ? options.host
+      : elements.configModal || document.body;
   if (dropdownEl.parentElement !== host) {
     host.appendChild(dropdownEl);
   }
@@ -129,6 +148,8 @@ export function closeFloatingDropdown(dropdownEl) {
 export function repositionOpenFloatingDropdowns() {
   const dropdowns = [
     elements.modelDropdown,
+    elements.modelDropdownTitle,
+    elements.headerModelDropdown,
     ...getConfigSelectPickerDefs().map((item) => item.dropdown),
   ];
   for (const dropdownEl of dropdowns) {
@@ -213,12 +234,19 @@ export function renderConfigSelectPicker(key) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "model-dropdown-item";
+    if (opt.disabled) {
+      btn.classList.add("is-disabled");
+      btn.disabled = true;
+      btn.setAttribute("aria-disabled", "true");
+    }
     btn.dataset.value = opt.value;
     btn.textContent = (opt.textContent || opt.value || "").trim();
     btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
-    btn.addEventListener("click", () =>
-      applyConfigSelectPickerValue(key, opt.value)
-    );
+    if (!opt.disabled) {
+      btn.addEventListener("click", () =>
+        applyConfigSelectPickerValue(key, opt.value)
+      );
+    }
     picker.dropdown.appendChild(btn);
   }
 }

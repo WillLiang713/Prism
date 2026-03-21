@@ -212,5 +212,15 @@ export function applyStatus(statusEl, status) {
       btn.style.opacity = isLoading ? "0.5" : "";
       btn.style.cursor = isLoading ? "not-allowed" : "";
     });
+
+    const regenerateBtn = message.querySelector(
+      ".message-actions .action-btn.regenerate-btn"
+    );
+    if (regenerateBtn) {
+      regenerateBtn.dataset.status = status;
+      regenerateBtn.disabled = isLoading;
+      regenerateBtn.style.opacity = isLoading ? "0.5" : "";
+      regenerateBtn.style.cursor = isLoading ? "not-allowed" : "";
+    }
   }
 }

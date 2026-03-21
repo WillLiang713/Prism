@@ -53,6 +53,9 @@ body {
   --border: rgba(255, 255, 255, 0.05);
   --border-strong: rgba(255, 255, 255, 0.09);
   --border-accent: rgba(255, 255, 255, 0.16);
+  --editable-panel-border: var(--border-strong);
+  --editable-panel-border-hover: rgba(255, 255, 255, 0.12);
+  --editable-panel-border-focus: var(--border-accent);
 
   /* Text */
   --text: #e4e4e4;
@@ -104,11 +107,20 @@ body {
   --app-shell-side-padding: 12px;
   --app-shell-offset: 3vh;
   --app-shell-height: 94vh;
+  --app-panel-gap: 0px;
+  --sidebar-panel-width: 252px;
+  --sidebar-collapsed-width: 68px;
+  --sidebar-motion-duration: 420ms;
+  --sidebar-motion-fade-duration: 300ms;
+  --sidebar-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --mobile-visible-height: 100vh;
   --mobile-viewport-offset-top: 0px;
   --mobile-keyboard-inset: 0px;
   --content-max-width: 960px;
-  --turn-max-width: 820px;
+  --conversation-content-max-width: 900px;
+  --turn-max-width: var(--conversation-content-max-width);
+  --composer-max-width: var(--conversation-content-max-width);
+  --chat-gutter: 24px;
   --chat-font-size: 14px;
   --message-label-font-size: 12px;
   --message-label-font-weight: 600;
@@ -125,4 +137,22 @@ body {
   line-height: 1.6;
   overflow: hidden;
   letter-spacing: 0.2px;
+}
+
+/* ---------- Responsive gutter ---------- */
+@media (max-width: 1280px) {
+  :root {
+    --app-panel-gap: 0px;
+    --sidebar-panel-width: 232px;
+  }
+}
+
+@media (max-width: 1100px) {
+  :root { --chat-gutter: 16px; }
+}
+@media (max-width: 900px) {
+  :root {
+    --app-panel-gap: 0px;
+    --chat-gutter: 12px;
+  }
 }

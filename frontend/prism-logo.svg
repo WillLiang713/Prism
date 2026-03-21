@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="prism-logo-title prism-logo-desc">
+  <title id="prism-logo-title">Prism logo</title>
+  <desc id="prism-logo-desc">A minimalist monochrome tech logo featuring a prism splitting a beam of light beside the word Prism.</desc>
+
+  <g transform="translate(6 8)">
+    <path d="M26 14L58 40L26 66Z" fill="#0B0B0B" />
+    <path d="M58 40L80 30" fill="none" stroke="#B5B5B5" stroke-linecap="round" stroke-width="4.5" />
+    <path d="M58 40L80 50" fill="none" stroke="#0B0B0B" stroke-linecap="round" stroke-width="4.5" />
+  </g>
+
+  <g transform="translate(102 0)">
+    <text x="0" y="58" fill="#0B0B0B" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="5">PRISM</text>
+    <path d="M2 69H164" fill="none" stroke="#D1D1D1" stroke-linecap="round" stroke-width="2.2" />
+    <text x="2" y="84" fill="#727272" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10.5" font-weight="600" letter-spacing="3.2">LIGHTWEIGHT AI CLIENT</text>
+  </g>
+</svg>

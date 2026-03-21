@@ -14,17 +14,22 @@ export const SHORTCUTS = [
   {
     action: "新建话题",
     keys: ["Ctrl", "Shift", "O"],
-    note: "仅在非输入状态下生效",
+    note: "聊天输入框聚焦时也可用",
   },
   {
     action: "打开快捷键页",
     keys: ["Shift", "?"],
-    note: "仅在非输入状态下生效，会打开配置中心",
+    note: "聊天输入框聚焦时也可用，会打开配置中心",
   },
   {
     action: "删除当前话题",
     keys: ["Ctrl", "Shift", "Backspace"],
-    note: "仅在非输入状态下生效，会弹出确认",
+    note: "聊天输入框聚焦时也可用，会弹出确认",
+  },
+  {
+    action: "收起或展开话题栏",
+    keys: ["Ctrl", "B"],
+    note: "聊天输入框聚焦时也可用",
   },
   {
     action: "发送消息",
@@ -38,14 +43,76 @@ export const SHORTCUTS = [
   },
 ];
 
+export const PROVIDER_SELECTIONS = {
+  openai_chat: {
+    provider: "openai",
+    endpointMode: "chat_completions",
+    label: "OpenAI Chat Completions",
+  },
+  openai_responses: {
+    provider: "openai",
+    endpointMode: "responses",
+    label: "OpenAI Responses",
+  },
+  anthropic: {
+    provider: "anthropic",
+    endpointMode: "chat_completions",
+    label: "Anthropic Messages",
+  },
+  gemini: {
+    provider: "gemini",
+    endpointMode: "chat_completions",
+    label: "Google Gemini",
+  },
+};
+
+export function normalizeProviderSelection(value, endpointMode = "chat_completions") {
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  if (normalizedValue === "openai_responses") return "openai_responses";
+  if (normalizedValue === "anthropic") return "anthropic";
+  if (normalizedValue === "gemini") return "gemini";
+  if (normalizedValue === "openai_chat") return "openai_chat";
+  if (normalizedValue === "openai") {
+    return String(endpointMode || "").trim().toLowerCase() === "responses"
+      ? "openai_responses"
+      : "openai_chat";
+  }
+  return "openai_chat";
+}
+
+export function resolveProviderSelection(value, endpointMode = "chat_completions") {
+  const selection = normalizeProviderSelection(value, endpointMode);
+  return {
+    selection,
+    ...(PROVIDER_SELECTIONS[selection] || PROVIDER_SELECTIONS.openai_chat),
+  };
+}
+
+export function supportsCodeExecution(value, endpointMode = "chat_completions") {
+  const providerConfig =
+    value && typeof value === "object"
+      ? resolveProviderSelection(
+          value.providerSelection ?? value.provider,
+          value.endpointMode ?? endpointMode
+        )
+      : resolveProviderSelection(value, endpointMode);
+
+  return (
+    providerConfig.provider === "gemini" ||
+    (
+      providerConfig.provider === "openai" &&
+      providerConfig.endpointMode === "responses"
+    )
+  );
+}
+
 export function resolveRuntimeConfig() {
   const runtime = window.__PRISM_RUNTIME__ || {};
   const params = new URLSearchParams(window.location.search);
   const queryApiBase = (params.get("apiBase") || "").trim();
   const injectedApiBase = String(runtime.apiBase || "").trim();
   const apiBase = (queryApiBase || injectedApiBase || "").replace(/\/+$/, "");
-  const platform =
-    runtime.platform || (apiBase ? "desktop" : "web");
+  const platform = runtime.platform || (apiBase ? "desktop" : "web");
 
   return {
     platform,
@@ -118,12 +185,20 @@ export const state = {
     activeTopicId: null,
     saveTimer: null,
     isCreatingTopic: false,
+    editingTurnId: null,
+    editDraftByTurnId: new Map(),
+    turnIdsWithoutAnimation: new Set(),
     generatingTitleTopicIds: new Set(), // 正在生成标题的话题ID集合
     runningControllers: new Map(), // topicId -> AbortController
     turnUiById: new Map(), // turnId -> 当前可见的卡片UI引用
   },
   images: {
     selectedImages: [], // 存储当前选择的图片 { id, dataUrl, name, size }
+  },
+  webSearch: {
+    enabled: false,
+    toolMode: "tavily",
+    selectorOpen: false,
   },
   dialog: {
     resolver: null,
@@ -140,6 +215,10 @@ export const state = {
   },
   autoScroll: true, // 是否自动跟随滚动
   isSidebarCollapsed: false,
+  services: [],
+  activeServiceId: null,
+  serviceManagerSelectedId: null,
+  headerModelFetchSlots: new Map(),
 };
 
 export const floatingDropdownOrigins = new WeakMap();
@@ -147,7 +226,6 @@ export const floatingDropdownAnchors = new WeakMap();
 
 export const elements = {
   // 配置相关
-  saveConfig: document.getElementById("saveConfig"),
   clearConfig: document.getElementById("clearConfig"),
   configModal: document.getElementById("configModal"),
   configTabs: document.getElementById("configTabs"),
@@ -159,12 +237,19 @@ export const elements = {
   shortcutHelpList: document.getElementById("shortcutHelpList"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),
+  mobileExpandSidebarBtn: document.getElementById("mobileExpandSidebarBtn"),
+  sidebarScrim: document.getElementById("sidebarScrim"),
 
   // 联网搜索
-  enableWebSearch: document.getElementById("enableWebSearch"),
+  webSearchControl: document.getElementById("webSearchControl"),
+  webSearchSwitchText: document.getElementById("webSearchSwitchText"),
+  webSearchToolCurrent: document.getElementById("webSearchToolCurrent"),
+  webSearchToolValue: document.getElementById("webSearchToolValue"),
+  webSearchToolDropdown: document.getElementById("webSearchToolDropdown"),
   enableCodeExecution: document.getElementById("enableCodeExecution"),
   codeExecutionSwitch: document.getElementById("codeExecutionSwitch"),
   webSearchProvider: document.getElementById("webSearchProvider"),
+  webSearchProviderGroup: document.getElementById("webSearchProviderGroup"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
   exaApiKey: document.getElementById("exaApiKey"),
   exaSearchType: document.getElementById("exaSearchType"),
@@ -186,6 +271,9 @@ export const elements = {
   exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
   exaSearchTypeGroup: document.getElementById("exaSearchTypeGroup"),
   tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
+  webSearchMaxResultsGroup: document.getElementById("webSearchMaxResultsGroup"),
+  closeToTrayOnClose: document.getElementById("closeToTrayOnClose"),
+  desktopCloseToTrayGroup: document.getElementById("desktopCloseToTrayGroup"),
 
   // 初始问候语
 
@@ -211,20 +299,39 @@ export const elements = {
   windowCloseBtn: document.getElementById("windowCloseBtn"),
 
   // 模型配置
+  currentService: document.getElementById("currentService"),
+  currentServicePickerInput: document.getElementById("currentServicePickerInput"),
+  currentServicePickerBtn: document.getElementById("currentServicePickerBtn"),
+  currentServicePickerDropdown: document.getElementById("currentServicePickerDropdown"),
+  serviceList: document.getElementById("serviceList"),
+  serviceNameInput: document.getElementById("serviceNameInput"),
+  serviceSummary: document.getElementById("serviceSummary"),
+  serviceConnectivityBadge: document.getElementById("serviceConnectivityBadge"),
+  serviceConnectivityMessage: document.getElementById("serviceConnectivityMessage"),
+  serviceConnectivityTime: document.getElementById("serviceConnectivityTime"),
+  createServiceBtn: document.getElementById("createServiceBtn"),
+  duplicateServiceBtn: document.getElementById("duplicateServiceBtn"),
+  deleteServiceBtn: document.getElementById("deleteServiceBtn"),
+  testServiceConnectionBtn: document.getElementById("testServiceConnectionBtn"),
   provider: document.getElementById("provider"),
   providerPickerInput: document.getElementById("providerPickerInput"),
   providerPickerBtn: document.getElementById("providerPickerBtn"),
   providerPickerDropdown: document.getElementById("providerPickerDropdown"),
   providerHint: document.getElementById("providerHint"),
+  endpointModeHint: document.getElementById("endpointModeHint"),
   apiKey: document.getElementById("apiKey"),
   model: document.getElementById("model"),
-  modelCustomName: document.getElementById("modelCustomName"),
   apiUrl: document.getElementById("apiUrl"),
   roleSetting: document.getElementById("roleSetting"),
   roleSettingPreview: document.getElementById("roleSettingPreview"),
   modelHint: document.getElementById("modelHint"),
   modelDropdown: document.getElementById("modelDropdown"),
   modelDropdownBtn: document.getElementById("modelDropdownBtn"),
+  titleGenerationModel: document.getElementById("titleGenerationModel"),
+  titleGenerationModelHint: document.getElementById("titleGenerationModelHint"),
+  modelDropdownTitle: document.getElementById("modelDropdownTitle"),
+  modelDropdownBtnTitle: document.getElementById("modelDropdownBtnTitle"),
+  clearTitleGenerationModelBtn: document.getElementById("clearTitleGenerationModelBtn"),
   webSearchProviderPickerInput: document.getElementById(
     "webSearchProviderPickerInput"
   ),
@@ -234,6 +341,9 @@ export const elements = {
   ),
 
   // 头部状态
+  headerModelInfo: document.getElementById("headerModelInfo"),
+  headerModelTrigger: document.getElementById("headerModelTrigger"),
+  headerModelDropdown: document.getElementById("headerModelDropdown"),
   modelName: document.getElementById("modelName"),
   headerSessionInfo: document.getElementById("headerSessionInfo"),
 

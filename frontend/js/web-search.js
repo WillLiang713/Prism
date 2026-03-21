@@ -1,4 +1,105 @@
-import { state, elements, truncateText, buildApiUrl, isDesktopRuntime } from './state.js';
+import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection, supportsCodeExecution } from './state.js';
+import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
+
+const WEB_SEARCH_TOOL_MODE_LABELS = {
+  builtin: "Web Search",
+  tavily: "Tavily",
+  exa: "Exa",
+};
+
+const TOOL_EVENT_DISPLAY_NAMES = {
+  web_search: "Web Search",
+  web_search_preview: "Web Search",
+  gemini_search: "Google Search",
+  tavily_search: "Tavily Search",
+  exa_search: "Exa Search",
+  get_current_time: "当前时间",
+};
+
+const WEB_SEARCH_DISABLED_LABEL = "关闭联网";
+const WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH = 108;
+
+function mountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  rememberDropdownOrigin(dropdownEl);
+  if (dropdownEl.parentElement !== document.body) {
+    document.body.appendChild(dropdownEl);
+  }
+  dropdownEl.classList.add("is-floating-open");
+}
+
+function unmountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  dropdownEl.classList.remove("is-floating-open");
+  restoreDropdownOrigin(dropdownEl);
+}
+
+function clearWebSearchToolDropdownPosition(dropdownEl = elements.webSearchToolDropdown) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  dropdownEl.style.position = "";
+  dropdownEl.style.left = "";
+  dropdownEl.style.top = "";
+  dropdownEl.style.right = "";
+  dropdownEl.style.bottom = "";
+  dropdownEl.style.width = "";
+  dropdownEl.style.minWidth = "";
+  dropdownEl.style.maxWidth = "";
+}
+
+export function positionWebSearchToolSelector() {
+  const dropdownEl = elements.webSearchToolDropdown;
+  const buttonEl = elements.webSearchToolCurrent;
+  if (!(dropdownEl instanceof HTMLElement) || !(buttonEl instanceof HTMLElement)) return;
+  if (!state.webSearch.selectorOpen) {
+    clearWebSearchToolDropdownPosition(dropdownEl);
+    return;
+  }
+
+  const rect = buttonEl.getBoundingClientRect();
+  const viewportPadding = 12;
+  const gap = 8;
+  const maxWidth = Math.max(180, window.innerWidth - viewportPadding * 2);
+
+  dropdownEl.style.position = "fixed";
+  dropdownEl.style.left = "0px";
+  dropdownEl.style.top = "0px";
+  dropdownEl.style.right = "auto";
+  dropdownEl.style.bottom = "auto";
+  dropdownEl.style.width = "";
+  dropdownEl.style.minWidth = `${Math.max(
+    WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH,
+    Math.round(rect.width)
+  )}px`;
+  dropdownEl.style.maxWidth = `${maxWidth}px`;
+
+  const width = Math.min(
+    Math.max(
+      dropdownEl.offsetWidth,
+      Math.round(rect.width),
+      WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH
+    ),
+    maxWidth
+  );
+  const height = dropdownEl.offsetHeight;
+  const unclampedLeft = rect.left + rect.width / 2 - width / 2;
+  const left = Math.min(
+    Math.max(viewportPadding, Math.round(unclampedLeft)),
+    Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
+  );
+  let top = Math.round(rect.top - gap - height);
+  if (top < viewportPadding) {
+    top = Math.round(
+      Math.min(
+        window.innerHeight - viewportPadding - height,
+        rect.bottom + gap
+      )
+    );
+  }
+
+  dropdownEl.style.left = `${left}px`;
+  dropdownEl.style.top = `${top}px`;
+  dropdownEl.style.width = `${width}px`;
+}
 
 export function renderWebSearchSection(container, webSearch, options = {}) {
   if (!container) return;
@@ -141,11 +242,23 @@ export function formatToolEventDisplay(event) {
     };
   }
 
-  const name = (event.name || "未知工具").trim();
+  const rawName = (event.name || "未知工具").trim();
+  const name = TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName;
   const status = event.status || "info";
   const rawArgs = event.arguments;
-  const args = rawArgs && typeof rawArgs === "object"
-    ? JSON.stringify(rawArgs, null, 0)
+  const normalizedArgs = rawArgs && typeof rawArgs === "object"
+    ? Object.fromEntries(
+        Object.entries(rawArgs).filter(([, value]) => {
+          if (value == null) return false;
+          if (typeof value === "string") return value.trim() !== "";
+          return true;
+        })
+      )
+    : rawArgs;
+  const args = normalizedArgs && typeof normalizedArgs === "object"
+    ? Object.keys(normalizedArgs).length > 0
+      ? JSON.stringify(normalizedArgs, null, 0)
+      : ""
     : typeof rawArgs === "string"
     ? rawArgs
     : "";
@@ -182,8 +295,73 @@ function normalizeToolEventRound(value) {
   return Number.isFinite(round) ? round : null;
 }
 
+function getToolEventIdentity(event, fallbackIndex = 0) {
+  if (!event || typeof event !== "object") {
+    return `unknown:${fallbackIndex}`;
+  }
+
+  const callId = String(event.callId || "").trim();
+  if (callId) return `call:${callId}`;
+
+  const name = String(event.name || "").trim();
+  const round = normalizeToolEventRound(event.round);
+  if (name && round !== null) return `round:${round}|name:${name}`;
+
+  return `unknown:${fallbackIndex}`;
+}
+
+function mergeToolEventState(previousEvent, nextEvent) {
+  const previous = previousEvent && typeof previousEvent === "object"
+    ? previousEvent
+    : {};
+  const next = nextEvent && typeof nextEvent === "object" ? nextEvent : {};
+
+  return {
+    ...previous,
+    ...next,
+    callId: String(next.callId || previous.callId || "").trim(),
+    arguments: next.arguments ?? previous.arguments,
+    resultSummary: next.resultSummary || previous.resultSummary || "",
+    error: next.error || previous.error || "",
+    webSearch: next.webSearch || previous.webSearch || null,
+  };
+}
+
+function compactToolEvents(events) {
+  const items = Array.isArray(events) ? events : [];
+  const compacted = [];
+  const indexByIdentity = new Map();
+
+  items.forEach((event, index) => {
+    if (!event || typeof event !== "object") return;
+
+    const identity = getToolEventIdentity(event, index);
+    const existingIndex = indexByIdentity.get(identity);
+
+    if (existingIndex === undefined) {
+      indexByIdentity.set(identity, compacted.length);
+      compacted.push({ ...event });
+      return;
+    }
+
+    compacted[existingIndex] = mergeToolEventState(
+      compacted[existingIndex],
+      event
+    );
+  });
+
+  return compacted;
+}
+
 function isSameToolCall(event, webSearchEvent) {
   if (!event || !webSearchEvent) return false;
+
+  const eventCallId = String(event.callId || "").trim();
+  const searchCallId = String(webSearchEvent.callId || "").trim();
+  if (eventCallId && searchCallId) {
+    return eventCallId === searchCallId;
+  }
+
   const eventName = String(event.name || "").trim();
   const searchName = String(webSearchEvent.name || "").trim();
   if (!eventName || !searchName || eventName !== searchName) return false;
@@ -195,9 +373,11 @@ function isSameToolCall(event, webSearchEvent) {
 
 function createNormalizedWebSearchEvent(webSearchEvent) {
   if (!webSearchEvent || typeof webSearchEvent !== "object") return null;
+  const rawName = String(webSearchEvent.name || "").trim();
   return {
     ...webSearchEvent,
-    name: String(webSearchEvent.name || "联网搜索").trim() || "联网搜索",
+    callId: String(webSearchEvent.callId || "").trim(),
+    name: TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName || "Web Search",
     query: String(webSearchEvent.query || "").trim(),
     answer: String(webSearchEvent.answer || "").trim(),
     results: Array.isArray(webSearchEvent.results) ? webSearchEvent.results : [],
@@ -231,12 +411,13 @@ export function attachWebSearchToToolEvents(toolEvents, webSearchEvent) {
   }
 
   items.push({
+    callId: String(normalized.callId || "").trim(),
     status: normalized.status === "error" ? "error" : "success",
     round: normalized.round,
     name: normalized.name,
     resultSummary: normalized.query
       ? `查询：${truncateText(normalized.query, 80)}`
-      : "联网搜索",
+      : "Web Search",
     webSearch: normalized,
     synthetic: true,
   });
@@ -254,7 +435,7 @@ export function mergeToolEventsWithWebSearch(toolEvents, webSearchEvents) {
   searches.forEach((event) => {
     attachWebSearchToToolEvents(merged, event);
   });
-  return merged;
+  return compactToolEvents(merged);
 }
 
 function renderToolEventWebSearch(container, webSearchEvent) {
@@ -290,7 +471,7 @@ function renderToolEventWebSearch(container, webSearchEvent) {
 
 export function renderToolEvents(sectionEl, listEl, events) {
   if (!sectionEl || !listEl) return;
-  const items = Array.isArray(events) ? events : [];
+  const items = compactToolEvents(events);
 
   if (!items.length) {
     sectionEl.style.display = "none";
@@ -471,18 +652,6 @@ function getSourceItems(sources) {
   return Array.isArray(sources) ? sources.filter((item) => item?.url) : [];
 }
 
-function getUniqueSourceHosts(items) {
-  const hosts = [];
-  const seen = new Set();
-  items.forEach((item) => {
-    const hostname = getSourceHostname(item.url);
-    if (!hostname || seen.has(hostname)) return;
-    seen.add(hostname);
-    hosts.push(hostname);
-  });
-  return hosts;
-}
-
 export function renderSourcesStatus(statusEl, sources) {
   if (!statusEl) return;
   const items = getSourceItems(sources);
@@ -492,9 +661,6 @@ export function renderSourcesStatus(statusEl, sources) {
     return;
   }
 
-  const hosts = getUniqueSourceHosts(items);
-  const visibleHosts = hosts.slice(0, 3);
-
   statusEl.hidden = false;
   statusEl.innerHTML = "";
 
@@ -502,20 +668,6 @@ export function renderSourcesStatus(statusEl, sources) {
   text.className = "sources-status-text";
   text.textContent = `已核对 ${items.length} 个来源`;
   statusEl.appendChild(text);
-
-  visibleHosts.forEach((host) => {
-    const chip = document.createElement("span");
-    chip.className = "sources-status-chip";
-    chip.textContent = host;
-    statusEl.appendChild(chip);
-  });
-
-  if (hosts.length > visibleHosts.length) {
-    const more = document.createElement("span");
-    more.className = "sources-status-more";
-    more.textContent = `+${hosts.length - visibleHosts.length}`;
-    statusEl.appendChild(more);
-  }
 }
 
 export function renderSourcesToggle(buttonEl, sources) {
@@ -549,11 +701,6 @@ export function renderSources(sectionEl, sources) {
   }
 
   sectionEl.innerHTML = "";
-
-  const title = document.createElement("div");
-  title.className = "sources-title";
-  title.textContent = `来源 · ${items.length}`;
-  sectionEl.appendChild(title);
 
   const list = document.createElement("div");
   list.className = "sources-list";
@@ -633,7 +780,6 @@ export function normalizeTavilySearchDepth(value) {
 export function normalizeWebSearchProvider(value) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "exa") return "exa";
-  if (normalized === "gemini_search") return "gemini_search";
   return "tavily";
 }
 
@@ -651,6 +797,235 @@ export function normalizeExaSearchType(value) {
   return allowed.has(normalized) ? normalized : "auto";
 }
 
+export function normalizeEndpointMode(value) {
+  return String(value || "").toLowerCase() === "responses"
+    ? "responses"
+    : "chat_completions";
+}
+
+export function canUseBuiltinWebSearch(configLike = {}) {
+  const providerConfig = resolveProviderSelection(
+    configLike.providerSelection ??
+      configLike.provider ??
+      elements.provider?.value,
+    configLike.endpointMode
+  );
+  const endpointMode = normalizeEndpointMode(
+    configLike.endpointMode ?? providerConfig.endpointMode
+  );
+  const provider = String(providerConfig.provider || "openai").toLowerCase();
+  return endpointMode === "responses" && provider === "openai";
+}
+
+export function normalizeWebSearchToolMode(
+  value,
+  supportsBuiltin = canUseBuiltinWebSearch(),
+  fallbackProvider = normalizeWebSearchProvider(elements.webSearchProvider?.value)
+) {
+  const normalized = String(value || "").toLowerCase();
+  if (normalized === "builtin" && supportsBuiltin) return "builtin";
+  if (normalized === "exa") return "exa";
+  if (normalized === "tavily") return "tavily";
+  return fallbackProvider === "exa" ? "exa" : "tavily";
+}
+
+export function isWebSearchEnabled() {
+  return state.webSearch?.enabled === true;
+}
+
+function persistWebSearchConfigPatch(patch) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.config);
+    const config = raw ? JSON.parse(raw) : {};
+    config.webSearch = {
+      ...(config.webSearch || {}),
+      ...patch,
+    };
+    localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
+  } catch (error) {
+    console.error("保存联网配置失败:", error);
+  }
+}
+
+export function getCurrentWebSearchToolMode() {
+  return normalizeWebSearchToolMode(
+    state.webSearch?.toolMode,
+    canUseBuiltinWebSearch(),
+    normalizeWebSearchProvider(elements.webSearchProvider?.value)
+  );
+}
+
+export function getWebSearchToolModeLabel(mode) {
+  return WEB_SEARCH_TOOL_MODE_LABELS[
+    normalizeWebSearchToolMode(mode, true, "tavily")
+  ] || "Tavily";
+}
+
+export function getAvailableWebSearchToolModes() {
+  const supportsBuiltin = canUseBuiltinWebSearch();
+  const items = [
+    {
+      value: "off",
+      label: WEB_SEARCH_DISABLED_LABEL,
+    },
+  ];
+  if (supportsBuiltin) {
+    items.push({
+      value: "builtin",
+      label: WEB_SEARCH_TOOL_MODE_LABELS.builtin,
+    });
+  }
+  items.push(
+    { value: "tavily", label: WEB_SEARCH_TOOL_MODE_LABELS.tavily },
+    { value: "exa", label: WEB_SEARCH_TOOL_MODE_LABELS.exa }
+  );
+  return items;
+}
+
+export function persistWebSearchToolMode(mode) {
+  persistWebSearchConfigPatch({ toolMode: mode });
+}
+
+function disableBuiltinWebSearchWhenUnavailable(options = {}) {
+  if (state.webSearch?.toolMode !== "builtin") return false;
+  if (canUseBuiltinWebSearch()) return false;
+
+  state.webSearch.enabled = false;
+  if (options.persist === true) {
+    persistWebSearchConfigPatch({ enabled: false });
+  }
+  closeWebSearchToolSelector();
+  return true;
+}
+
+export function setWebSearchEnabled(enabled, options = {}) {
+  state.webSearch.enabled = enabled === true;
+  if (options.persist !== false) {
+    persistWebSearchConfigPatch({ enabled: state.webSearch.enabled });
+  }
+  renderWebSearchToolSelector();
+  updateWebSearchProviderUi();
+  return state.webSearch.enabled;
+}
+
+export function setWebSearchToolMode(mode, options = {}) {
+  const supportsBuiltin = canUseBuiltinWebSearch();
+  const normalized = normalizeWebSearchToolMode(
+    mode,
+    supportsBuiltin,
+    normalizeWebSearchProvider(elements.webSearchProvider?.value)
+  );
+  state.webSearch.toolMode = normalized;
+
+  if (
+    normalized === "tavily" ||
+    normalized === "exa"
+  ) {
+    if (elements.webSearchProvider) {
+      elements.webSearchProvider.value = normalized;
+    }
+  }
+
+  if (options.persist !== false) {
+    persistWebSearchToolMode(normalized);
+  }
+
+  renderWebSearchToolSelector();
+  updateWebSearchProviderUi();
+  return normalized;
+}
+
+export function applyWebSearchSelection(selection, options = {}) {
+  const normalizedSelection = String(selection || "").toLowerCase();
+  if (normalizedSelection === "off") {
+    if (options.persist !== false) {
+      persistWebSearchConfigPatch({ enabled: false });
+    }
+    state.webSearch.enabled = false;
+    closeWebSearchToolSelector();
+    renderWebSearchToolSelector();
+    updateWebSearchProviderUi();
+    return "off";
+  }
+
+  const nextMode = setWebSearchToolMode(selection, { persist: false });
+  state.webSearch.enabled = true;
+  if (options.persist !== false) {
+    persistWebSearchConfigPatch({
+      enabled: true,
+      toolMode: nextMode,
+    });
+  }
+  closeWebSearchToolSelector();
+  renderWebSearchToolSelector();
+  updateWebSearchProviderUi();
+  return nextMode;
+}
+
+export function closeWebSearchToolSelector() {
+  state.webSearch.selectorOpen = false;
+  elements.webSearchControl?.classList.remove("is-open");
+  elements.webSearchToolCurrent?.setAttribute("aria-expanded", "false");
+  clearWebSearchToolDropdownPosition();
+  unmountWebSearchToolDropdown();
+}
+
+export function renderWebSearchToolSelector() {
+  const currentEl = elements.webSearchToolValue;
+  const dropdownEl = elements.webSearchToolDropdown;
+  const buttonEl = elements.webSearchToolCurrent;
+  if (!currentEl || !dropdownEl || !buttonEl) return;
+
+  const toolMode = getCurrentWebSearchToolMode();
+  const enabled = isWebSearchEnabled();
+  const options = getAvailableWebSearchToolModes();
+  currentEl.hidden = false;
+  currentEl.textContent = enabled ? getWebSearchToolModeLabel(toolMode) : "关";
+  dropdownEl.innerHTML = "";
+  buttonEl.classList.toggle("is-active", enabled);
+  elements.webSearchControl?.classList.toggle("is-active", enabled);
+  if (elements.webSearchSwitchText) {
+    elements.webSearchSwitchText.textContent = "联网";
+  }
+
+  options.forEach((option) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.value = option.value;
+    btn.textContent = option.label;
+    const isActive = option.value === "off" ? !enabled : enabled && option.value === toolMode;
+    btn.classList.toggle("active", isActive);
+    btn.addEventListener("click", () => {
+      applyWebSearchSelection(option.value);
+    });
+    dropdownEl.appendChild(btn);
+  });
+
+  elements.webSearchControl?.classList.toggle("is-open", !!state.webSearch.selectorOpen);
+  buttonEl.setAttribute(
+    "aria-expanded",
+    state.webSearch.selectorOpen ? "true" : "false"
+  );
+  if (state.webSearch.selectorOpen) {
+    mountWebSearchToolDropdown(dropdownEl);
+    positionWebSearchToolSelector();
+    window.requestAnimationFrame(() => {
+      positionWebSearchToolSelector();
+    });
+  } else {
+    clearWebSearchToolDropdownPosition(dropdownEl);
+    unmountWebSearchToolDropdown(dropdownEl);
+  }
+}
+
+export function toggleWebSearchToolSelector() {
+  if (!elements.webSearchToolCurrent) {
+    return;
+  }
+  state.webSearch.selectorOpen = !state.webSearch.selectorOpen;
+  renderWebSearchToolSelector();
+}
+
 export function setStatusPillState(el, isReady, text) {
   if (!el) return;
   el.textContent = text || "";
@@ -659,19 +1034,17 @@ export function setStatusPillState(el, isReady, text) {
 }
 
 export function updateConfigStatusStrip() {
-  const hasApiKey = !!(elements.apiKey?.value || "").trim();
-  const hasApiUrl = !!(elements.apiUrl?.value || "").trim();
-  const modelName = (elements.model?.value || "").trim();
-  const providerValue = elements.provider?.value || "openai";
-  const provider =
-    providerValue === "anthropic"
-      ? "Anthropic"
-      : providerValue === "gemini"
-      ? "Gemini"
-      : "OpenAI";
+  const providerConfig = resolveProviderSelection(
+    elements.provider?.value
+  );
+  const toolMode = getCurrentWebSearchToolMode();
+  const webSearchEnabled = isWebSearchEnabled();
+  const hasApiKey = !!String(elements.apiKey?.value || "").trim();
+  const hasApiUrl = !!String(elements.apiUrl?.value || "").trim();
+  const modelName = String(elements.model?.value || "").trim();
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
-    ? `模型：${provider} · ${modelName}`
+    ? `模型：${providerConfig.label} · ${modelName}`
     : "模型：待完成（需 Key + 地址 + 模型）";
   setStatusPillState(elements.modelStatusPill, modelReady, modelText);
 
@@ -682,44 +1055,39 @@ export function updateConfigStatusStrip() {
   );
   const depth = normalizeTavilySearchDepth(elements.tavilySearchDepth?.value);
   const exaType = normalizeExaSearchType(elements.exaSearchType?.value);
-  const webText =
-    webProvider === "exa"
+  const webText = !webSearchEnabled
+    ? "联网：关闭"
+    : toolMode === "builtin"
+      ? "联网：Web Search"
+      : toolMode === "exa"
       ? `联网：Exa · ${exaType} · ${maxResults} 条`
-      : webProvider === "gemini_search"
-      ? `联网：Gemini Google Search`
       : `联网：Tavily · ${depth} · ${maxResults} 条`;
   setStatusPillState(elements.webStatusPill, true, webText);
 }
 
 export function updateWebSearchProviderUi() {
-  const modelProvider = elements.provider?.value || "openai";
+  const providerConfig = resolveProviderSelection(elements.provider?.value);
+  const canUseCodeExecution = supportsCodeExecution(providerConfig);
+  disableBuiltinWebSearchWhenUnavailable();
+  state.webSearch.toolMode = getCurrentWebSearchToolMode();
+  const toolMode = state.webSearch.toolMode;
+  state.webSearch.enabled = isWebSearchEnabled();
   let provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
-  const isGemini = modelProvider === "gemini";
-  const supportsGeminiSearchOption = isGemini;
-
-  const geminiOption = elements.webSearchProvider?.querySelector(
-    'option[value="gemini_search"]'
-  );
-  if (geminiOption) {
-    geminiOption.hidden = !supportsGeminiSearchOption;
-    geminiOption.disabled = !supportsGeminiSearchOption;
-  }
-
-  if (!supportsGeminiSearchOption && provider === "gemini_search") {
-    provider = "tavily";
-    if (elements.webSearchProvider) {
-      elements.webSearchProvider.value = "tavily";
-    }
-  }
-
   const isExa = provider === "exa";
-  const isGeminiSearch = provider === "gemini_search";
+  const usesExternalSearch = toolMode === "tavily" || toolMode === "exa";
 
+  renderWebSearchToolSelector();
+  if (elements.webSearchProviderGroup) {
+    elements.webSearchProviderGroup.style.display = "";
+  }
+  if (elements.webSearchMaxResultsGroup) {
+    elements.webSearchMaxResultsGroup.style.display = usesExternalSearch ? "" : "none";
+  }
   if (elements.tavilyApiKeyGroup) {
-    elements.tavilyApiKeyGroup.style.display = isExa || isGeminiSearch ? "none" : "";
+    elements.tavilyApiKeyGroup.style.display = isExa ? "none" : "";
   }
   if (elements.tavilySearchDepthGroup) {
-    elements.tavilySearchDepthGroup.style.display = isExa || isGeminiSearch ? "none" : "";
+    elements.tavilySearchDepthGroup.style.display = isExa ? "none" : "";
   }
   if (elements.exaApiKeyGroup) {
     elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
@@ -728,9 +1096,9 @@ export function updateWebSearchProviderUi() {
     elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
   }
   if (elements.codeExecutionSwitch) {
-    elements.codeExecutionSwitch.style.display = isGemini ? "" : "none";
+    elements.codeExecutionSwitch.style.display = canUseCodeExecution ? "" : "none";
   }
-  if (!isGemini && elements.enableCodeExecution) {
+  if (!canUseCodeExecution && elements.enableCodeExecution) {
     elements.enableCodeExecution.checked = false;
   }
   updateConfigStatusStrip();

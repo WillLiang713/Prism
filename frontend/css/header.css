@@ -3,13 +3,16 @@
   position: relative;
   min-height: 60px;
   padding: 12px 18px;
-  background: var(--bg-chat);
+  background: transparent;
   border-bottom: none;
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  column-gap: 12px;
-  backdrop-filter: blur(12px);
+  gap: 12px;
+  isolation: isolate;
+}
+
+.mobile-sidebar-expand-btn {
+  display: none;
 }
 
 .is-desktop-runtime *[data-tauri-drag-region] {
@@ -21,15 +24,19 @@
 }
 
 .header-brand {
-  grid-column: 2;
-  justify-self: center;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  width: min(100%, 680px);
+  width: min(calc(100% - 220px), 680px);
+  max-width: 100%;
   padding: 0;
   gap: 10px;
+  z-index: 0;
 }
 
 .desktop-drag-region {
@@ -82,9 +89,135 @@
   line-height: 1.2;
 }
 
+.brand-model-trigger {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 5px 12px;
+  margin: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease, transform 0.14s ease;
+}
+
+.brand-model-trigger:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.brand-model-trigger:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 4px rgba(255, 255, 255, 0.03);
+}
+
+.brand-model-caret {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0.78;
+  transition: transform 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+.brand-model-trigger:hover .brand-model-caret,
+.brand-model-trigger.open .brand-model-caret {
+  color: var(--text);
+  opacity: 1;
+}
+
+.brand-model-trigger.open .brand-model-caret {
+  transform: rotate(180deg);
+}
+
+.header-model-dropdown {
+  min-width: 560px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+}
+
+.header-model-group {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header-model-group + .header-model-group {
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: none;
+}
+
+.header-model-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px 6px;
+}
+
+.header-model-group-title {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-model-group-meta {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.header-model-group.is-active-service .header-model-group-title {
+  color: var(--accent);
+}
+
+.header-model-group.is-active-service {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.header-model-group-empty {
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.header-model-dropdown .model-dropdown-item {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .header-model-dropdown {
+    min-width: min(92vw, 560px);
+    grid-template-columns: 1fr;
+  }
+}
+
 .brand-model-id {
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.25;
   display: inline-block;
@@ -93,6 +226,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
+  letter-spacing: 0;
 }
 
 .brand-mark {
@@ -109,12 +243,12 @@
 }
 
 .chat-actions {
-  grid-column: 3;
-  justify-self: end;
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  z-index: 1;
+  margin-left: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .desktop-window-controls {
@@ -174,26 +308,26 @@
 }
 
 .is-desktop-runtime .chat-panel {
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: transparent;
   max-width: none;
   margin: 0;
+}
+
+.is-desktop-runtime .mobile-sidebar-expand-btn {
+  display: none !important;
 }
 
 .is-desktop-runtime .chat-header {
   min-height: 46px;
   padding: 8px 10px 8px 12px;
-  background: var(--surface-solid);
+  background: transparent;
   border-bottom: none;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .is-desktop-runtime .header-brand {
-  justify-self: center;
-  width: min(100%, 720px);
+  width: min(calc(100% - 244px), 720px);
   gap: 0;
   pointer-events: auto;
 }
@@ -208,11 +342,15 @@
   opacity: 0.92;
 }
 
+.is-desktop-runtime .brand-model-trigger {
+  min-height: 26px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
 .is-desktop-runtime .chat-actions {
   gap: 8px;
   margin-right: -2px;
-  position: relative;
-  z-index: 2;
 }
 
 .is-desktop-runtime .desktop-window-controls {
@@ -224,8 +362,10 @@
 }
 
 .is-desktop-runtime .desktop-window-btn {
-  width: 38px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -253,20 +393,22 @@
   height: 100%;
 }
 
-.is-desktop-runtime .chat-main {
-  background: var(--surface-solid);
+.is-desktop-runtime .chat-main,
+.is-desktop-runtime .chat-side {
+  background: var(--bg-chat);
 }
 
-.is-desktop-runtime .chat-side {
-  border-right: none;
+.is-desktop-runtime .chat-side,
+.is-desktop-runtime .chat-main {
+  border-radius: 0;
+  border-width: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .is-desktop-runtime .chat-composer {
   padding-bottom: 12px;
-}
-
-.is-window-maximized .chat-panel {
-  border-radius: 0;
 }
 
 .is-window-maximized .container {

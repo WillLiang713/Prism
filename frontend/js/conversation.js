@@ -1,10 +1,10 @@
-import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText } from './state.js';
+import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText, supportsCodeExecution } from './state.js';
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
 import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
-import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, renderCodeExecutionEvents } from './chat.js';
+import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, renderCodeExecutionEvents, setEmptyThreadState } from './chat.js';
 import { clearImages } from './images.js';
 
 function stripMarkdownForThinkingSummary(text) {
@@ -18,10 +18,46 @@ function stripMarkdownForThinkingSummary(text) {
     .trim();
 }
 
+function normalizeThinkingText(thinkingText) {
+  return String(thinkingText || "")
+    .replace(/\r/g, "")
+    .replace(/\*\*\*\*/g, "**\n\n**")
+    .replace(/____/g, "__\n\n__");
+}
+
+function isStandaloneThinkingChunk(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) return false;
+  return (
+    /^\*\*[^*]+\*\*$/.test(trimmed) ||
+    /^__[^_]+__$/.test(trimmed) ||
+    /^#{1,6}\s+.+$/.test(trimmed)
+  );
+}
+
+function appendThinkingChunk(existingText, nextChunk) {
+  const prev = String(existingText || "");
+  const next = String(nextChunk || "");
+  if (!prev) return next;
+  if (!next) return prev;
+  if (/[\s\n]$/.test(prev) || /^[\s\n]/.test(next)) return prev + next;
+  if (isStandaloneThinkingChunk(prev) && isStandaloneThinkingChunk(next)) {
+    return `${prev}\n\n${next}`;
+  }
+  if (
+    (prev.endsWith("**") && next.startsWith("**")) ||
+    (prev.endsWith("__") && next.startsWith("__"))
+  ) {
+    return `${prev}\n\n${next}`;
+  }
+  return prev + next;
+}
+
 function extractThinkingSummary(thinkingText) {
-  const raw = String(thinkingText || "").replace(/\r/g, "").trim();
+  const normalizedText = normalizeThinkingText(thinkingText);
+  const raw = normalizedText.trim();
   if (!raw) return "";
-  const hasTrailingNewline = /\n\s*$/.test(String(thinkingText || "").replace(/\r/g, ""));
+  const hasTrailingNewline = /\n\s*$/.test(normalizedText);
 
   const lines = raw
     .split("\n")
@@ -65,6 +101,34 @@ function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = ""
   return previousLabel || "思考中";
 }
 
+function createMainModelState(config) {
+  return {
+    provider: config.provider,
+    model: config.model,
+    displayName: resolveModelDisplayName(config.model, config.customModelName),
+    thinking: "",
+    thinkingLabel: "思考中",
+    thinkingComplete: false,
+    toolEvents: [],
+    webSearchEvents: [],
+    sources: [],
+    content: "",
+    tokens: null,
+    timeCostSec: null,
+    status: "loading",
+    thinkingCollapsed: true,
+    toolCallsExpanded: false,
+  };
+}
+
+function hasEffectiveApiKey(config) {
+  return !!String(config?.apiKey || "").trim();
+}
+
+function hasEffectiveModel(config) {
+  return !!String(config?.model || "").trim();
+}
+
 export async function sendPrompt() {
   if (!isDesktopBackendAvailable()) {
     return;
@@ -84,7 +148,7 @@ export async function sendPrompt() {
   const config = getConfig();
   const webSearchConfig = getWebSearchConfig();
 
-  if (!config.apiKey || !config.model) {
+  if (!hasEffectiveApiKey(config) || !hasEffectiveModel(config)) {
     await showAlert("请先配置模型", {
       title: "缺少配置",
     });
@@ -120,22 +184,7 @@ export async function sendPrompt() {
     models: {},
   };
 
-  turn.models.main = {
-    provider: config.provider,
-    model: config.model,
-    displayName: resolveModelDisplayName(config.model, config.customModelName),
-    thinking: "",
-    thinkingLabel: "思考中",
-    thinkingComplete: false,
-    toolEvents: [],
-    webSearchEvents: [],
-    codeExecutions: [],
-    content: "",
-    tokens: null,
-    timeCostSec: null,
-    status: "loading",
-    thinkingCollapsed: true,
-  };
+  turn.models.main = createMainModelState(config);
 
   topic.turns = Array.isArray(topic.turns) ? topic.turns : [];
   topic.turns.push(turn);
@@ -143,7 +192,14 @@ export async function sendPrompt() {
 
   scheduleSaveChat();
 
-  const createdEls = createTurnElement(turn);
+  // 如果是该话题的第一条消息，移除空状态提示
+  if (topic.turns.length === 1) {
+    const emptyState = elements.chatMessages.querySelector(".empty-chat-state");
+    if (emptyState) emptyState.remove();
+    setEmptyThreadState(false);
+  }
+
+  const createdEls = createTurnElement(turn, topic.id);
   elements.chatMessages.appendChild(createdEls.el);
   if (createdEls.cards?.main) {
     state.chat.turnUiById.set(turn.id, createdEls.cards.main);
@@ -188,6 +244,97 @@ export function stopGeneration(topicId = state.chat.activeTopicId) {
   return true;
 }
 
+export async function regenerateTurn(turn, options = {}) {
+  if (!isDesktopBackendAvailable() || !turn?.id) {
+    return false;
+  }
+
+  const shouldScrollToBottom = options?.scrollToBottom === true;
+
+  const topic = state.chat.topics.find((item) =>
+    Array.isArray(item?.turns) && item.turns.some((entry) => entry.id === turn.id)
+  );
+  if (!topic || isTopicRunning(topic.id)) {
+    return false;
+  }
+
+  const config = getConfig();
+  const webSearchConfig = getWebSearchConfig();
+
+  if (!hasEffectiveApiKey(config) || !hasEffectiveModel(config)) {
+    await showAlert("请先配置模型", {
+      title: "缺少配置",
+    });
+    return false;
+  }
+
+  turn.models.main = createMainModelState(config);
+  turn.webSearch = null;
+  topic.updatedAt = Date.now();
+  scheduleSaveChat();
+  renderTopicList();
+
+  const turnEl = elements.chatMessages?.querySelector(
+    `.turn[data-turn-id="${turn.id}"]`
+  );
+  let ui = null;
+  if (turnEl) {
+    const createdEls = createTurnElement(turn, topic.id);
+    turnEl.replaceWith(createdEls.el);
+    if (createdEls.cards?.main) {
+      state.chat.turnUiById.set(turn.id, createdEls.cards.main);
+      ui = createdEls.cards.main;
+    }
+  } else if (topic.id === state.chat.activeTopicId) {
+    renderChatMessages();
+    ui = state.chat.turnUiById.get(turn.id) || null;
+  }
+
+  const activeTurnEl = elements.chatMessages?.querySelector(
+    `.turn[data-turn-id="${turn.id}"]`
+  );
+
+  if (shouldScrollToBottom) {
+    state.autoScroll = true;
+    scrollToBottom(elements.chatMessages, false);
+  } else {
+    state.autoScroll = false;
+    activeTurnEl?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }
+
+  await callModel(
+    turn.prompt,
+    config,
+    topic.id,
+    turn,
+    ui,
+    Date.now(),
+    webSearchConfig
+  );
+
+  scheduleSaveChat();
+  return true;
+}
+
+export async function submitTurnEdit(turn, nextPrompt) {
+  if (!turn?.id) return false;
+
+  const normalizedPrompt = String(nextPrompt || "").trim();
+  const hasImages = Array.isArray(turn.images) && turn.images.length > 0;
+  if (!normalizedPrompt && !hasImages) {
+    await showAlert("请输入内容或保留图片后再重新发送", {
+      title: "无法重新发送",
+    });
+    return false;
+  }
+
+  turn.prompt = normalizedPrompt;
+  return regenerateTurn(turn, { scrollToBottom: false });
+}
+
 export async function callModel(
   prompt,
   config,
@@ -207,7 +354,7 @@ export async function callModel(
   if (initUi) {
     applyStatus(initUi.statusEl, "loading");
     initUi.modelNameEl.textContent =
-      resolveModelDisplayName(config.model, config.customModelName) || "未配置";
+      resolveModelDisplayName(config.model) || "未配置";
   }
 
   const abortController = new AbortController();
@@ -256,17 +403,33 @@ export async function callModel(
 
     // 构建请求体（发送到后端）
     const useWebSearchTool = !!webSearchConfig?.enabled;
+    const endpointMode = config.endpointMode === "responses"
+      ? "responses"
+      : "chat_completions";
+    const useResponsesEndpoint = endpointMode === "responses";
+    const webSearchToolMode = String(webSearchConfig?.toolMode || "tavily").toLowerCase();
+    const useBuiltinWebSearch =
+      useResponsesEndpoint &&
+      useWebSearchTool &&
+      webSearchToolMode === "builtin";
     const webSearchProvider = normalizeWebSearchProvider(
-      webSearchConfig?.provider
+      webSearchToolMode === "exa" || webSearchToolMode === "tavily"
+        ? webSearchToolMode
+        : webSearchConfig?.provider
     );
     const isGeminiProvider = config.provider === "gemini";
     const enableCodeExecution =
-      isGeminiProvider && !!config.enableCodeExecution;
+      supportsCodeExecution(config.provider, config.endpointMode) &&
+      !!config.enableCodeExecution;
     const useGeminiGoogleSearch =
       isGeminiProvider && useWebSearchTool && webSearchProvider === "gemini_search";
-    const useCustomTools = !useGeminiGoogleSearch && !enableCodeExecution;
+    const useCustomTools = !(isGeminiProvider && (useGeminiGoogleSearch || enableCodeExecution));
     const selectedWebSearchTool =
       webSearchProvider === "exa" ? "exa_search" : "tavily_search";
+    const selectedTools = ["get_current_time"];
+    if (useWebSearchTool && !useBuiltinWebSearch) {
+      selectedTools.unshift(selectedWebSearchTool);
+    }
     const requestBody = {
       provider: config.provider,
       apiKey: config.apiKey,
@@ -275,32 +438,39 @@ export async function callModel(
       prompt: prompt,
       images: images,
       systemPrompt: config.systemPrompt || null,
+      endpointMode,
       reasoningEffort: config.reasoningEffort,
       historyTurns: historyTurns,
-      enableTools: useCustomTools,
+      enableBuiltinWebSearch: useBuiltinWebSearch,
+      enableTools: useCustomTools || (!isGeminiProvider && !useBuiltinWebSearch),
       enableGoogleSearch: useGeminiGoogleSearch,
       enableCodeExecution: enableCodeExecution,
-      selectedTools: useCustomTools
-        ? useWebSearchTool
-          ? [selectedWebSearchTool, "get_current_time"]
-          : ["get_current_time"]
-        : [],
+      selectedTools: useCustomTools ? selectedTools : [],
       webSearchProvider: webSearchProvider,
       webSearchMaxResults: webSearchConfig?.maxResults || 5,
-      tavilyApiKey: (webSearchConfig?.tavilyApiKey || "").trim() || null,
-      exaApiKey: (webSearchConfig?.exaApiKey || "").trim() || null,
+      tavilyApiKey: useResponsesEndpoint
+        ? null
+        : (webSearchConfig?.tavilyApiKey || "").trim() || null,
+      exaApiKey: useResponsesEndpoint
+        ? null
+        : (webSearchConfig?.exaApiKey || "").trim() || null,
       exaSearchType: webSearchConfig?.exaSearchType || "auto",
       tavilyMaxResults: webSearchConfig?.maxResults || 5,
       tavilySearchDepth: webSearchConfig?.searchDepth || "basic",
     };
 
     // 调用后端接口
-    const response = await fetch(buildApiUrl("/api/chat/stream"), {
+    const response = await fetch(
+      buildApiUrl(
+        useResponsesEndpoint ? "/api/responses/stream" : "/api/chat/stream"
+      ),
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
       signal: abortController.signal,
-    });
+      }
+    );
 
     if (!response.ok)
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -332,12 +502,15 @@ export async function callModel(
 
           if (chunk.type === "thinking" && chunk.data) {
             if (!thinkingStartTime) thinkingStartTime = Date.now();
-            turn.models.main.thinking += chunk.data;
+            turn.models.main.thinking = appendThinkingChunk(
+              turn.models.main.thinking,
+              chunk.data
+            );
             if (uiRef?.thinkingSectionEl) {
               uiRef.thinkingSectionEl.style.display = "block";
               renderMarkdownToElement(
                 uiRef.thinkingContentEl,
-                turn.models.main.thinking
+                normalizeThinkingText(turn.models.main.thinking)
               );
               if (uiRef.thinkingLabelEl) {
                 const summary = buildThinkingLabel(
@@ -607,7 +780,7 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
     model: resolveAutoTitleModel(topic, titleConfig),
   };
 
-  if (!resolvedTitleConfig.apiKey || !resolvedTitleConfig.model) {
+  if (!hasEffectiveApiKey(resolvedTitleConfig) || !hasEffectiveModel(resolvedTitleConfig)) {
     console.warn("标题生成配置不完整，无法生成标题");
     return;
   }
@@ -616,14 +789,12 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
     const title = await generateTopicTitle(topic.id, resolvedTitleConfig);
     const nextTitle = (title || "").trim() || fallbackTopicTitleFromTurns(topic);
     topic.title = nextTitle;
-    topic.updatedAt = Date.now();
     scheduleSaveChat();
     renderTopicList();
   } catch (error) {
     console.warn("自动生成标题失败:", error.message);
     if (topic.title.startsWith("新话题")) {
       topic.title = fallbackTopicTitleFromTurns(topic);
-      topic.updatedAt = Date.now();
       scheduleSaveChat();
       renderTopicList();
     }
@@ -644,7 +815,7 @@ export async function generateTopicTitle(topicId, config) {
   };
 
   // 检查模型配置
-  if (!normalizedConfig.apiKey || !normalizedConfig.model) {
+  if (!hasEffectiveApiKey(normalizedConfig) || !hasEffectiveModel(normalizedConfig)) {
     throw new Error("标题生成配置不完整（需要 API Key 和模型名称）");
   }
 
@@ -705,6 +876,9 @@ export async function generateTopicTitle(topicId, config) {
 }
 
 export function resolveAutoTitleModel(topic, config) {
+  const explicitTitleModel = (config?.model || "").trim();
+  if (explicitTitleModel) return explicitTitleModel;
+
   const mainInputModel = (elements.model?.value || "").trim();
   if (mainInputModel) return mainInputModel;
 

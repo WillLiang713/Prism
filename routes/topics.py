@@ -14,8 +14,8 @@ router = APIRouter(prefix="/api")
 
 class GenerateTitleRequest(BaseModel):
     provider: str = Field(default="openai")
-    apiKey: str
-    model: str
+    apiKey: str | None = None
+    model: str | None = None
     apiUrl: str | None = None
     messages: list[dict[str, str]]
 
@@ -87,7 +87,18 @@ def _normalize_generated_title(raw_title: str, messages: list[dict[str, str]]) -
 
 @router.post("/topics/generate-title")
 async def generate_topic_title(payload: GenerateTitleRequest):
+    fallback_title = _fallback_title_from_messages(payload.messages)
     try:
+        provider = str(payload.provider or "openai").strip()
+        api_key = str(payload.apiKey or "").strip()
+        model = str(payload.model or "").strip()
+        api_url = str(payload.apiUrl or "").strip() or None
+
+        if not api_key:
+            return {"title": fallback_title, "source": "fallback"}
+        if not model:
+            return {"title": fallback_title, "source": "fallback"}
+
         system_prompt = (
             "你是话题标题生成助手。请基于对话语义生成4-12字的中文名词短语标题。"
             "禁止复述用户原句，禁止输出解释，禁止使用“这个对话”“标题是”等表述。"
@@ -118,7 +129,7 @@ async def generate_topic_title(payload: GenerateTitleRequest):
 
         if provider_mode == "anthropic":
             request_body = {
-                "model": payload.model,
+                "model": model,
                 "max_tokens": 50,
                 "messages": [{"role": "user", "content": user_prompt}],
                 "system": system_prompt,
@@ -142,7 +153,7 @@ async def generate_topic_title(payload: GenerateTitleRequest):
             }
         else:
             request_body = {
-                "model": payload.model,
+                "model": model,
                 "max_tokens": 50,
                 "messages": [
                     {"role": "system", "content": system_prompt},
@@ -160,7 +171,8 @@ async def generate_topic_title(payload: GenerateTitleRequest):
                 error_message = error_data.get("error", {}).get("message", resp.text)
             except Exception:
                 error_message = resp.text
-            raise HTTPException(status_code=resp.status_code, detail=f"AI请求失败: {error_message}")
+            print(f"生成标题请求失败: {resp.status_code} - {error_message}")
+            return {"title": fallback_title, "source": "fallback"}
 
         data = resp.json()
         if provider_mode == "anthropic":
@@ -177,13 +189,18 @@ async def generate_topic_title(payload: GenerateTitleRequest):
                     texts.append(str(part.get("text") or ""))
             title = "".join(texts).strip()
         else:
-            title = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            title = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                .strip()
+            )
 
         title, source = _normalize_generated_title(title, payload.messages)
         return {"title": title, "source": source}
 
     except HTTPException:
-        raise
+        return {"title": fallback_title, "source": "fallback"}
     except Exception as e:
         print(f"生成标题错误: {type(e).__name__} - {e}")
-        raise HTTPException(status_code=500, detail=f"生成标题失败: {str(e)}")
+        return {"title": fallback_title, "source": "fallback"}

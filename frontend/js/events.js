@@ -1,84 +1,101 @@
 import { state, elements, STORAGE_KEYS } from './state.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
-import { openConfigModal, closeConfigModal, updateProviderUi, updateModelNames, saveConfig, clearConfig, setActiveConfigTab, syncRoleSettingPreview, showRoleSettingPreview, showRoleSettingEditor } from './config.js';
-import { updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
-import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
+import {
+  openConfigModal,
+  closeConfigModal,
+  updateProviderUi,
+  updateModelNames,
+  clearConfig,
+  setActiveConfigTab,
+  syncRoleSettingPreview,
+  showRoleSettingPreview,
+  showRoleSettingEditor,
+  handleCurrentServiceChange,
+  createService,
+  duplicateService,
+  deleteService,
+  testSelectedServiceConnection,
+  autoSaveManagedServiceDraft,
+  normalizeApiUrlInputValue,
+} from './config.js';
+import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { syncDesktopPreferences } from './desktop.js';
+import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning, requestDeleteTopic } from './chat.js';
 import { addImages } from './images.js';
-import { toggleSidebar, isMobileLayout } from './layout.js';
+import {
+  toggleSidebar,
+  isMobileLayout,
+  beginMobileNativePickerSession,
+  endMobileNativePickerSession,
+} from './layout.js';
+
+const PRESS_START_EVENT =
+  typeof window !== "undefined" && "PointerEvent" in window
+    ? "pointerdown"
+    : "mousedown";
 
 export function bindEvents() {
   initScrollbarAutoHide();
+  const autoSaveConfigDraft = () => {
+    void autoSaveManagedServiceDraft();
+  };
 
-  elements.saveConfig.addEventListener("click", saveConfig);
-  elements.clearConfig.addEventListener("click", clearConfig);
+  elements.clearConfig?.addEventListener("click", clearConfig);
 
-  const PRESS_START_EVENT =
-    typeof window !== "undefined" && "PointerEvent" in window
-      ? "pointerdown"
-      : "mousedown";
-
-  // 联网搜索开关的label元素，阻止焦点转移
-  const switchLabels = [
-    elements.enableWebSearch?.parentElement,
-    elements.enableCodeExecution?.parentElement,
-  ].filter(Boolean);
-  switchLabels.forEach((labelEl) => {
-    labelEl.addEventListener(PRESS_START_EVENT, (e) => {
-      // 只阻止label本身的默认行为，不阻止checkbox的点击
-      if (
-        e.target === labelEl ||
-        e.target.classList.contains("switch-track") ||
-        e.target.classList.contains("switch-text") ||
-        e.target.tagName === "svg" ||
-        e.target.tagName === "path"
-      ) {
-        e.preventDefault();
-      }
-    });
-  });
-
-  elements.enableWebSearch?.addEventListener("change", (e) => {
+  elements.closeToTrayOnClose?.addEventListener("change", () => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.config);
       const config = raw ? JSON.parse(raw) : {};
-      config.webSearch = config.webSearch || {};
-      config.webSearch.enabled = !!elements.enableWebSearch.checked;
+      config.desktop = config.desktop || {};
+      config.desktop.closeToTrayOnClose =
+        !!elements.closeToTrayOnClose?.checked;
       localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-    } catch (e) {
-      console.error("保存联网搜索开关失败:", e);
+    } catch (error) {
+      console.error("保存关闭到托盘设置失败:", error);
     }
+    void syncDesktopPreferences({
+      closeToTray: !!elements.closeToTrayOnClose?.checked,
+    });
+    autoSaveConfigDraft();
   });
 
   elements.enableCodeExecution?.addEventListener("change", () => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.config);
-      const config = raw ? JSON.parse(raw) : {};
-      config.webSearch = config.webSearch || {};
-      config.model = config.model || {};
-      const enabled = !!elements.enableCodeExecution?.checked;
-      config.webSearch.enableCodeExecution = enabled;
-      config.model.enableCodeExecution = enabled;
-      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-      updateConfigStatusStrip();
-    } catch (e) {
-      console.error("保存代码执行开关失败:", e);
-    }
+    updateConfigStatusStrip();
+    autoSaveConfigDraft();
   });
-
   elements.webSearchProvider?.addEventListener("change", () => {
+    const currentMode = getCurrentWebSearchToolMode();
+    if (currentMode !== "builtin") {
+      setWebSearchToolMode(elements.webSearchProvider.value);
+    } else {
+      updateWebSearchProviderUi();
+    }
     updateWebSearchProviderUi();
     updateConfigStatusStrip();
+    autoSaveConfigDraft();
+  });
+  elements.webSearchToolCurrent?.addEventListener("click", () => {
+    toggleWebSearchToolSelector();
   });
   elements.tavilyApiKey?.addEventListener("input", updateConfigStatusStrip);
+  elements.tavilyApiKey?.addEventListener("blur", autoSaveConfigDraft);
   elements.exaApiKey?.addEventListener("input", updateConfigStatusStrip);
-  elements.exaSearchType?.addEventListener("change", updateConfigStatusStrip);
+  elements.exaApiKey?.addEventListener("blur", autoSaveConfigDraft);
+  elements.exaSearchType?.addEventListener("change", () => {
+    updateConfigStatusStrip();
+    autoSaveConfigDraft();
+  });
   elements.tavilyMaxResults?.addEventListener("input", updateConfigStatusStrip);
-  elements.tavilySearchDepth?.addEventListener("change", updateConfigStatusStrip);
-
+  elements.tavilyMaxResults?.addEventListener("blur", autoSaveConfigDraft);
+  elements.tavilyMaxResults?.addEventListener("change", autoSaveConfigDraft);
+  elements.tavilySearchDepth?.addEventListener("change", () => {
+    updateConfigStatusStrip();
+    autoSaveConfigDraft();
+  });
 
   // 思考强度下拉选择器
   elements.reasoningEffortSelector?.addEventListener("click", (e) => {
@@ -88,15 +105,12 @@ export function bindEvents() {
       elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       elements.reasoningEffortValue.textContent = btn.dataset.label;
+      elements.reasoningEffortSelector?.classList.toggle(
+        "is-off",
+        btn.dataset.value === "none"
+      );
       elements.reasoningEffortSelector.classList.remove("open");
-      try {
-        const raw = localStorage.getItem(STORAGE_KEYS.config);
-        const config = raw ? JSON.parse(raw) : {};
-        config.reasoningEffort = btn.dataset.value;
-        localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(config));
-      } catch (e) {
-        console.error("保存思考强度失败:", e);
-      }
+      autoSaveConfigDraft();
       return;
     }
     // 点击触发器，切换展开
@@ -110,10 +124,34 @@ export function bindEvents() {
     if (!e.target.closest(".reasoning-effort-selector")) {
       elements.reasoningEffortSelector?.classList.remove("open");
     }
+    if (!e.target.closest(".web-search-control") && !e.target.closest(".web-search-tool-dropdown")) {
+      closeWebSearchToolSelector();
+    }
   });
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
+  elements.currentService?.addEventListener("change", () => {
+    void handleCurrentServiceChange(elements.currentService.value);
+  });
+  elements.createServiceBtn?.addEventListener("click", () => {
+    void createService();
+  });
+  elements.duplicateServiceBtn?.addEventListener("click", () => {
+    void duplicateService();
+  });
+  elements.deleteServiceBtn?.addEventListener("click", () => {
+    void deleteService();
+  });
+  elements.testServiceConnectionBtn?.addEventListener("click", () => {
+    void testSelectedServiceConnection();
+  });
+  elements.serviceNameInput?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    autoSaveConfigDraft();
+  });
+  elements.serviceNameInput?.addEventListener("blur", autoSaveConfigDraft);
   elements.configTabs?.addEventListener("click", (e) => {
     const tabBtn = e.target?.closest?.(".config-tab[data-tab]");
     if (!tabBtn) return;
@@ -169,6 +207,13 @@ export function bindEvents() {
     await requestDeleteTopic();
   });
 
+  // 收起/展开话题栏快捷键：Ctrl+B
+  document.addEventListener("keydown", (e) => {
+    if (!isToggleSidebarShortcut(e)) return;
+    e.preventDefault();
+    toggleSidebar();
+  });
+
   // 打开快捷键页：Shift+/
   document.addEventListener("keydown", (e) => {
     if (!isShortcutHelpShortcut(e)) return;
@@ -189,27 +234,47 @@ export function bindEvents() {
     });
   });
 
-  // 监听提供商变化，更新API地址提示 + 自动获取模型列表
+  // 监听接口类型变化，更新 API 地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
+    setWebSearchEnabled(false);
+    closeWebSearchToolSelector();
     updateProviderUi();
     updateModelHint();
+    updateModelHint("Title");
     updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
+    autoSaveConfigDraft();
   });
 
   elements.apiKey?.addEventListener("input", () => {
     updateModelHint();
+    updateModelHint("Title");
     updateConfigStatusStrip();
     scheduleFetchModels("main", 400);
+    scheduleFetchModels("Title", 400);
   });
+  elements.apiKey?.addEventListener("blur", autoSaveConfigDraft);
   elements.apiUrl?.addEventListener("input", () => {
     updateModelHint();
+    updateModelHint("Title");
     updateConfigStatusStrip();
     scheduleFetchModels("main", 500);
+    scheduleFetchModels("Title", 500);
+  });
+  elements.apiUrl?.addEventListener("blur", () => {
+    normalizeApiUrlInputValue();
+    updateModelHint();
+    updateModelHint("Title");
+    updateConfigStatusStrip();
+    scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
+    autoSaveConfigDraft();
   });
 
   elements.roleSetting?.addEventListener("blur", () => {
     showRoleSettingPreview();
+    autoSaveConfigDraft();
   });
   elements.roleSettingPreview?.addEventListener("click", () => {
     showRoleSettingEditor(true);
@@ -227,40 +292,154 @@ export function bindEvents() {
     updateConfigStatusStrip();
     updateModelDropdownFilter("main");
   });
-
-  elements.modelCustomName?.addEventListener("input", () => {
-    updateModelNames();
-    updateConfigStatusStrip();
+  elements.model?.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      const activeEl = document.activeElement;
+      const keepDropdownOpen =
+        activeEl instanceof HTMLElement &&
+        (activeEl.closest(".model-picker") || activeEl.closest(".model-dropdown"));
+      if (!keepDropdownOpen) {
+        closeModelDropdown("main");
+      }
+      autoSaveConfigDraft();
+    }, 0);
   });
 
   elements.modelDropdownBtn?.addEventListener("click", () =>
     toggleModelDropdown("main")
   );
-  elements.model?.addEventListener("focus", () => {
-    const models = getCachedModelIds("main");
-    if (models.length) {
-      closeAllConfigSelectPickers();
-      openModelDropdown("main");
-    }
+  elements.headerModelTrigger?.addEventListener("click", () =>
+    toggleHeaderModelDropdown()
+  );
+  elements.titleGenerationModel?.addEventListener("input", () => {
+    updateConfigStatusStrip();
+    updateModelDropdownFilter("Title");
+  });
+  elements.titleGenerationModel?.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      const activeEl = document.activeElement;
+      const keepDropdownOpen =
+        activeEl instanceof HTMLElement &&
+        (activeEl.closest(".model-picker") || activeEl.closest(".model-dropdown"));
+      if (!keepDropdownOpen) {
+        closeModelDropdown("Title");
+      }
+      autoSaveConfigDraft();
+    }, 0);
+  });
+
+  elements.modelDropdownBtnTitle?.addEventListener("click", () =>
+    toggleModelDropdown("Title")
+  );
+  elements.clearTitleGenerationModelBtn?.addEventListener("click", () => {
+    if (!elements.titleGenerationModel) return;
+    elements.titleGenerationModel.value = "";
+    elements.titleGenerationModel.dispatchEvent(new Event("input", { bubbles: true }));
+    closeModelDropdown("Title");
+    elements.titleGenerationModel.focus();
+    autoSaveConfigDraft();
   });
 
   document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;
     if (!(t instanceof Node)) return;
+    if (t instanceof HTMLElement && (t.closest?.(".brand-model-trigger") || t.closest?.(".header-model-dropdown"))) {
+      return;
+    }
     if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
     closeModelDropdown("main");
+    closeModelDropdown("Title");
+    closeHeaderModelDropdown();
     closeAllConfigSelectPickers();
   });
+  document.addEventListener("focusin", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (t.closest(".brand-model-trigger") || t.closest(".header-model-dropdown")) return;
+    if (t.closest(".model-picker") || t.closest(".model-dropdown")) return;
+    closeModelDropdown("main");
+    closeModelDropdown("Title");
+    closeHeaderModelDropdown();
+  });
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
-  window.addEventListener("resize", repositionOpenFloatingDropdowns);
+  window.addEventListener("resize", () => {
+    repositionOpenFloatingDropdowns();
+    positionWebSearchToolSelector();
+  });
 
   // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）
   let promptImeComposing = false;
   let promptImeEndAt = 0;
+  let promptImeDeferredSendTimer = 0;
+  let imagePickerReturnCleanup = null;
   const PROMPT_IME_GUARD_MS = 120;
+
+  function clearPromptImeDeferredSend() {
+    if (!promptImeDeferredSendTimer) return;
+    window.clearTimeout(promptImeDeferredSendTimer);
+    promptImeDeferredSendTimer = 0;
+  }
+
+  function clearImagePickerReturnHooks() {
+    imagePickerReturnCleanup?.();
+    imagePickerReturnCleanup = null;
+  }
+
+  function finishMobileImagePickerSession(delayMs = 120) {
+    clearImagePickerReturnHooks();
+    endMobileNativePickerSession(delayMs);
+  }
+
+  function bindMobileImagePickerReturnHooks() {
+    clearImagePickerReturnHooks();
+
+    const handleWindowFocus = () => {
+      finishMobileImagePickerSession(120);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      finishMobileImagePickerSession(120);
+    };
+
+    window.addEventListener("focus", handleWindowFocus, { once: true });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    imagePickerReturnCleanup = () => {
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }
+
+  function schedulePromptSendAfterImeGuard() {
+    clearPromptImeDeferredSend();
+
+    const queuedPromptValue = elements.promptInput.value;
+    const queuedImageCount = state.images.selectedImages?.length || 0;
+    const remainingGuardMs = Math.max(
+      0,
+      PROMPT_IME_GUARD_MS - (Date.now() - promptImeEndAt)
+    );
+
+    promptImeDeferredSendTimer = window.setTimeout(() => {
+      promptImeDeferredSendTimer = 0;
+
+      if (document.activeElement !== elements.promptInput) return;
+      if (elements.promptInput.readOnly) return;
+      if (promptImeComposing) return;
+      if (isMobileLayout()) return;
+      if (isTopicRunning(state.chat.activeTopicId)) return;
+      if (elements.promptInput.value !== queuedPromptValue) return;
+
+      const currentImageCount = state.images.selectedImages?.length || 0;
+      if (currentImageCount !== queuedImageCount) return;
+
+      void sendPrompt();
+    }, remainingGuardMs + 10);
+  }
 
   elements.promptInput.addEventListener("compositionstart", () => {
     promptImeComposing = true;
+    clearPromptImeDeferredSend();
   });
 
   elements.promptInput.addEventListener("compositionend", () => {
@@ -273,26 +452,46 @@ export function bindEvents() {
     if (e.shiftKey) return;
     if (elements.promptInput.readOnly) return;
 
-    const isImeGuarded =
-      e.isComposing ||
-      promptImeComposing ||
-      e.keyCode === 229 ||
-      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
-    if (isImeGuarded) return;
-
     if (isMobileLayout()) return;
 
+    const isActiveImeEvent =
+      e.isComposing ||
+      promptImeComposing ||
+      e.keyCode === 229;
+    if (isActiveImeEvent) return;
+
+    const isWithinImeGuard =
+      Date.now() - promptImeEndAt < PROMPT_IME_GUARD_MS;
+    if (isWithinImeGuard) {
+      e.preventDefault();
+      schedulePromptSendAfterImeGuard();
+      return;
+    }
+
     e.preventDefault();
-    if (!isTopicRunning(state.chat.activeTopicId)) sendPrompt();
+    if (!isTopicRunning(state.chat.activeTopicId)) void sendPrompt();
   });
 
-  elements.promptInput.addEventListener("input", autoGrowPromptInput);
+  elements.promptInput.addEventListener("input", () => {
+    clearPromptImeDeferredSend();
+    autoGrowPromptInput();
+  });
+  elements.promptInput.addEventListener("blur", clearPromptImeDeferredSend);
 
   // 图片上传按钮点击事件
   elements.imageUploadBtn?.addEventListener(PRESS_START_EVENT, (e) => {
     e.preventDefault(); // 阻止按钮获得焦点，避免触发输入框容器的选中效果
+    if (!isMobileLayout()) return;
+
+    clearPromptImeDeferredSend();
+    beginMobileNativePickerSession();
+    elements.promptInput?.blur();
   });
   elements.imageUploadBtn?.addEventListener("click", () => {
+    if (isMobileLayout()) {
+      beginMobileNativePickerSession();
+      bindMobileImagePickerReturnHooks();
+    }
     elements.imageInput?.click();
   });
 
@@ -304,6 +503,10 @@ export function bindEvents() {
     }
     // 清空input，允许重复选择同一文件
     e.target.value = "";
+    finishMobileImagePickerSession(60);
+  });
+  elements.imageInput?.addEventListener("cancel", () => {
+    finishMobileImagePickerSession(60);
   });
 
   // 粘贴图片事件
@@ -327,12 +530,18 @@ export function bindEvents() {
 
   elements.toggleSidebarBtn?.addEventListener("click", toggleSidebar);
   elements.expandSidebarBtn?.addEventListener("click", toggleSidebar);
+  elements.mobileExpandSidebarBtn?.addEventListener("click", toggleSidebar);
+  elements.sidebarScrim?.addEventListener("click", () => {
+    if (!isMobileLayout() || state.isSidebarCollapsed) return;
+    toggleSidebar();
+  });
+
 }
 
 export function isNewTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
 
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasShift = !!e.shiftKey;
@@ -353,11 +562,19 @@ export function isEditableKeyboardTarget(target) {
   );
 }
 
+function isPromptInputTarget(target) {
+  return !!elements.promptInput && target === elements.promptInput;
+}
+
+function shouldBlockGlobalShortcutForTarget(target) {
+  return isEditableKeyboardTarget(target) && !isPromptInputTarget(target);
+}
+
 export function isShortcutHelpShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   const key = (e.key || "").toLowerCase();
   return e.shiftKey && (key === "?" || key === "/");
@@ -367,7 +584,7 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
   if (elements.configModal?.classList.contains("open")) return false;
-  if (isEditableKeyboardTarget(e.target)) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
   const hasShift = !!e.shiftKey;
@@ -375,4 +592,17 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (e.metaKey || e.altKey) return false;
   if (!e.ctrlKey) return false;
   return key === "backspace" && hasShift;
+}
+
+export function isToggleSidebarShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (elements.configModal?.classList.contains("open")) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
+
+  const key = (e.key || "").toLowerCase();
+
+  if (e.metaKey || e.altKey || e.shiftKey) return false;
+  if (!e.ctrlKey) return false;
+  return key === "b";
 }

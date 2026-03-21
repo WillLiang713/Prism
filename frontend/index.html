@@ -26,11 +26,17 @@
     <link rel="stylesheet" href="css/content.css" />
     <link rel="stylesheet" href="css/responsive.css" />
     <script>
-      // 破坏 WebView2 对 CSS 文件的缓存，确保每次构建加载最新样式
+      // 样式版本号优先使用构建脚本替换后的 __BUILD__，开发态则自动生成，
+      // 同时避免对已带 ?v= 的链接重复追加版本参数。
+      var PRISM_STYLE_BUILD_ID = "__BUILD__";
+      if (!PRISM_STYLE_BUILD_ID || PRISM_STYLE_BUILD_ID === "__BUILD__") {
+        PRISM_STYLE_BUILD_ID = String(Date.now());
+      }
       document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
         var href = link.getAttribute("href");
-        if (href && !href.startsWith("http")) {
-          link.setAttribute("href", href + "?v=1773647305");
+        if (href && !href.startsWith("http") && href.indexOf("?v=") === -1) {
+          var separator = href.indexOf("?") === -1 ? "?" : "&";
+          link.setAttribute("href", href + separator + "v=" + PRISM_STYLE_BUILD_ID);
         }
       });
     </script>
@@ -50,123 +56,192 @@
       <!-- 聊天区域 -->
       <div class="chat-layout">
         <section class="chat-panel">
-          <div class="chat-side" aria-label="话题">
+          <aside class="chat-side topics-panel" aria-label="话题">
             <div class="sidebar-section">
               <div class="sidebar-top-bar">
-                <button class="topic-new-btn" id="newTopicBtn" title="新建话题 (Ctrl/Cmd+Alt+N)">
-                  <span class="topic-new-icon">+</span>
+                <button
+                  class="sidebar-expand-btn no-drag"
+                  id="expandSidebarBtn"
+                  aria-label="展开侧栏"
+                >
+                  <svg
+                    viewBox="0 0 20 20"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M7.5 4.5L13 10l-5.5 5.5"></path>
+                  </svg>
+                </button>
+                <button class="topic-new-btn" id="newTopicBtn" aria-label="新建话题">
+                  <svg
+                    class="topic-new-icon"
+                    viewBox="0 0 20 20"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M10 5.5v9"></path>
+                    <path d="M5.5 10h9"></path>
+                  </svg>
                   <span class="topic-new-text">新建</span>
                 </button>
                 <button
                   class="sidebar-toggle-handle"
                   id="toggleSidebarBtn"
-                  title="收起侧栏"
+                  aria-label="收起侧栏"
                 >
                   <svg
-                    viewBox="0 0 24 24"
-                    width="14"
-                    height="14"
+                    viewBox="0 0 20 20"
+                    width="20"
+                    height="20"
                     fill="none"
                     stroke="currentColor"
-                    stroke-width="2.5"
+                    stroke-width="1.8"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <polyline points="15 18 9 12 15 6"></polyline>
+                    <path d="M12.5 4.5L7 10l5.5 5.5"></path>
                   </svg>
                 </button>
               </div>
               <div class="topic-list" id="topicList">
               </div>
             </div>
-          </div>
+          </aside>
+          <button
+            class="sidebar-scrim"
+            id="sidebarScrim"
+            type="button"
+            aria-label="关闭侧栏"
+            aria-hidden="true"
+            tabindex="-1"
+          ></button>
 
-          <div class="chat-main">
-            <div class="chat-header" id="desktopTitlebar">
-              <button
-                class="sidebar-expand-btn no-drag"
-                id="expandSidebarBtn"
-                title="展开侧栏"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="14"
-                  height="14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+          <main class="chat-main conversation-panel">
+            <div class="conversation-shell">
+              <div class="chat-header" id="desktopTitlebar">
+                <button
+                  class="mobile-sidebar-expand-btn no-drag"
+                  id="mobileExpandSidebarBtn"
+                  aria-label="展开侧栏"
                 >
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
-              <div class="header-brand desktop-drag-region" aria-label="模型信息" data-tauri-drag-region>
-                <div class="brand-meta">
-                  <span class="brand-model" id="headerModelInfo">
-                    <span class="brand-model-id" id="modelName"></span>
-                  </span>
-                </div>
-              </div>
-              <div class="chat-actions">
-                <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" title="设置" aria-label="设置">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
+                  <svg
+                    viewBox="0 0 20 20"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M7.5 4.5L13 10l-5.5 5.5"></path>
                   </svg>
-                  <span class="sr-only">设置</span>
                 </button>
-                <div class="desktop-window-controls" id="desktopWindowControls" aria-label="窗口控制">
-                  <button
-                    class="desktop-window-btn no-drag"
-                    id="windowMinimizeBtn"
-                    type="button"
-                    title="最小化"
-                    aria-label="最小化"
-                  >
-                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-                      <path d="M2 6h8"></path>
+                <div class="header-brand desktop-drag-region" aria-label="模型信息" data-tauri-drag-region>
+                  <div class="brand-meta">
+                    <span class="brand-model" id="headerModelInfo">
+                      <button
+                        class="brand-model-trigger no-drag"
+                        id="headerModelTrigger"
+                        type="button"
+                        aria-label="选择模型"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                      >
+                        <span class="brand-model-id" id="modelName"></span>
+                        <svg class="brand-model-caret" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                          <path
+                            d="M4.25 6.25L8 10l3.75-3.75"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          ></path>
+                        </svg>
+                      </button>
+                      <div
+                        class="model-dropdown header-model-dropdown"
+                        id="headerModelDropdown"
+                        data-floating-min-width="560"
+                        data-floating-align="center"
+                        role="listbox"
+                        aria-hidden="true"
+                        hidden
+                      ></div>
+                    </span>
+                  </div>
+                </div>
+                <div class="chat-actions">
+                  <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" title="设置" aria-label="设置">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
                     </svg>
+                    <span class="sr-only">设置</span>
                   </button>
-                  <button
-                    class="desktop-window-btn no-drag"
-                    id="windowMaximizeBtn"
-                    type="button"
-                    title="最大化"
-                    aria-label="最大化"
-                  >
-                    <svg class="icon-maximize" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-                      <rect x="2.5" y="2.5" width="7" height="7" rx="0.8"></rect>
-                    </svg>
-                    <svg class="icon-restore" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-                      <path d="M4 2.5h4.5v4.5"></path>
-                      <path d="M3.5 4.5h5v5h-5z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    class="desktop-window-btn desktop-window-btn-close no-drag"
-                    id="windowCloseBtn"
-                    type="button"
-                    title="关闭"
-                    aria-label="关闭"
-                  >
-                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-                      <path d="M3 3l6 6"></path>
-                      <path d="M9 3l-6 6"></path>
-                    </svg>
-                  </button>
+                  <div class="desktop-window-controls" id="desktopWindowControls" aria-label="窗口控制">
+                    <button
+                      class="desktop-window-btn no-drag"
+                      id="windowMinimizeBtn"
+                      type="button"
+                      title="最小化"
+                      aria-label="最小化"
+                    >
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                        <path d="M2 6h8"></path>
+                      </svg>
+                    </button>
+                    <button
+                      class="desktop-window-btn no-drag"
+                      id="windowMaximizeBtn"
+                      type="button"
+                      title="最大化"
+                      aria-label="最大化"
+                    >
+                      <svg class="icon-maximize" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                        <rect x="2.5" y="2.5" width="7" height="7" rx="0.8"></rect>
+                      </svg>
+                      <svg class="icon-restore" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                        <path d="M4 2.5h4.5v4.5"></path>
+                        <path d="M3.5 4.5h5v5h-5z"></path>
+                      </svg>
+                    </button>
+                    <button
+                      class="desktop-window-btn desktop-window-btn-close no-drag"
+                      id="windowCloseBtn"
+                      type="button"
+                      title="关闭"
+                      aria-label="关闭"
+                    >
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                        <path d="M3 3l6 6"></path>
+                        <path d="M9 3l-6 6"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="chat-body">
-
-            <div class="chat-thread" aria-label="聊天">
-              <div class="chat-messages-wrapper">
-                <div class="chat-messages" id="chatMessages"></div>
+              <div class="chat-body">
+                <div class="chat-thread" aria-label="聊天">
+                  <div class="chat-messages-wrapper">
+                    <div class="chat-messages" id="chatMessages"></div>
+                  </div>
+                </div>
               </div>
 
-              <!-- 输入区域（固定在聊天卡片底部） -->
+              <!-- 输入区域（固定在右侧会话面板底部） -->
               <div class="chat-composer">
                 <div class="composer-wrapper">
                   <!-- 滚动到底部按钮 -->
@@ -190,56 +265,83 @@
                     </svg>
                   </button>
                   <div class="composer-box">
-                    <!-- 图片预览区域（输入框内部上方） -->
-                    <div
-                      class="image-preview-container"
-                      id="imagePreviewContainer"
-                      style="display: none"
-                    ></div>
-                    <textarea
-                      id="promptInput"
-                      placeholder="随便聊点什么吧"
-                    ></textarea>
+                      <!-- 图片预览区域（输入框内部上方） -->
+                      <div
+                        class="image-preview-container"
+                        id="imagePreviewContainer"
+                        style="display: none"
+                      ></div>
+                      <textarea
+                        id="promptInput"
+                        placeholder="随便聊点什么吧"
+                      ></textarea>
 
-                    <div class="composer-footer">
-                      <div class="composer-toolbar">
-                        <input
-                          type="file"
-                          id="imageInput"
-                          accept="image/*"
-                          multiple
-                          style="display: none"
-                        />
+                      <div class="composer-footer">
+                        <div class="composer-toolbar">
+                          <input
+                            type="file"
+                            id="imageInput"
+                            accept="image/*"
+                            multiple
+                            style="display: none"
+                          />
 
-                        <button
-                          class="toolbar-btn icon-only"
-                          id="imageUploadBtn"
-                          title="上传图片"
-                          aria-label="上传图片"
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2.2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
+                          <button
+                            class="toolbar-btn icon-only"
+                            id="imageUploadBtn"
+                            title="上传图片"
+                            aria-label="上传图片"
                           >
-                            <path d="M12 5v14"></path>
-                            <path d="M5 12h14"></path>
-                          </svg>
-                        </button>
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2.2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <path d="M12 5v14"></path>
+                              <path d="M5 12h14"></path>
+                            </svg>
+                          </button>
 
-                        <label class="toolbar-switch" title="允许模型按需联网">
-                          <input type="checkbox" id="enableWebSearch" />
-                          <span class="switch-track" aria-hidden="true"></span>
-                          <span class="switch-text">联网</span>
-                        </label>
+                        <div
+                          class="web-search-control"
+                          id="webSearchControl"
+                          title="联网设置"
+                        >
+                          <button
+                            type="button"
+                            class="web-search-tool-current"
+                            id="webSearchToolCurrent"
+                            aria-expanded="false"
+                            aria-label="选择联网方式"
+                          >
+                            <span class="switch-text" id="webSearchSwitchText">联网</span>
+                            <span class="web-search-tool-value" id="webSearchToolValue" hidden>Tavily</span>
+                            <svg
+                              viewBox="0 0 12 12"
+                              width="10"
+                              height="10"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <polyline points="3 5 6 8 9 5"></polyline>
+                            </svg>
+                          </button>
+                          <div
+                            class="web-search-tool-dropdown"
+                            id="webSearchToolDropdown"
+                          ></div>
+                        </div>
 
                         <label
                           class="toolbar-switch"
                           id="codeExecutionSwitch"
-                          title="允许 Gemini 进行代码执行"
+                          title="允许模型进行代码执行"
                           style="display: none"
                         >
                           <input type="checkbox" id="enableCodeExecution" />
@@ -248,22 +350,22 @@
                         </label>
 
 
-                        <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
-                          <span class="reasoning-effort-current">
-                            <span class="reasoning-effort-label">思考</span>
-                            <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
-                            <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 5 6 8 9 5"></polyline></svg>
-                          </span>
-                          <div class="reasoning-effort-dropdown" id="reasoningEffortDropdown">
-                            <button type="button" data-value="none" data-label="关">关</button>
-                            <button type="button" data-value="minimal" data-label="微">微</button>
-                            <button type="button" data-value="low" data-label="低">低</button>
-                            <button type="button" data-value="medium" data-label="中" class="active">中</button>
-                            <button type="button" data-value="high" data-label="高">高</button>
-                            <button type="button" data-value="xhigh" data-label="极高">极高</button>
+                          <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
+                            <span class="reasoning-effort-current">
+                              <span class="reasoning-effort-label">思考</span>
+                              <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
+                              <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 5 6 8 9 5"></polyline></svg>
+                            </span>
+                            <div class="reasoning-effort-dropdown" id="reasoningEffortDropdown">
+                              <button type="button" data-value="none" data-label="关">关</button>
+                              <button type="button" data-value="minimal" data-label="微">微</button>
+                              <button type="button" data-value="low" data-label="低">低</button>
+                              <button type="button" data-value="medium" data-label="中" class="active">中</button>
+                              <button type="button" data-value="high" data-label="高">高</button>
+                              <button type="button" data-value="xhigh" data-label="极高">极高</button>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
                       <button
                         class="btn btn-primary send-button"
@@ -280,8 +382,7 @@
                 </div>
               </div>
             </div>
-          </div>
-          </div>
+          </main>
         </section>
       </div>
     </div>
@@ -299,10 +400,21 @@
             <button
               type="button"
               class="config-tab is-active"
+              id="configTabServices"
+              data-tab="services"
+              role="tab"
+              aria-selected="true"
+              aria-controls="configPanelServices"
+            >
+              服务
+            </button>
+            <button
+              type="button"
+              class="config-tab"
               id="configTabModel"
               data-tab="model"
               role="tab"
-              aria-selected="true"
+              aria-selected="false"
               aria-controls="configPanelModel"
             >
               模型
@@ -335,113 +447,227 @@
           <div class="config-content" id="configContent">
             <section
               class="config-tab-panel is-active"
+              id="configPanelServices"
+              data-panel="services"
+              role="tabpanel"
+              aria-labelledby="configTabServices"
+            >
+            <div class="global-config service-config">
+              <div class="service-config-layout">
+                <div class="service-list-panel">
+                  <div class="service-toolbar" aria-label="服务操作">
+                    <button type="button" class="btn btn-secondary btn-settings" id="createServiceBtn" title="新建" aria-label="新建">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                      </svg>
+                      <span class="sr-only">新建</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-settings" id="duplicateServiceBtn" title="复制" aria-label="复制">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+                        <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                      </svg>
+                      <span class="sr-only">复制</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-settings" id="deleteServiceBtn" title="删除" aria-label="删除">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 7h16"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                        <path d="M6 7l1 11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-11"></path>
+                        <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                      </svg>
+                      <span class="sr-only">删除</span>
+                    </button>
+                  </div>
+                  <div class="service-list" id="serviceList" aria-label="服务列表"></div>
+                </div>
+                <div class="service-detail-panel">
+                  <div class="form-group">
+                    <label for="serviceNameInput">服务名称</label>
+                    <input
+                      type="text"
+                      id="serviceNameInput"
+                      placeholder="输入服务名称"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div class="service-detail-form">
+                    <div class="service-detail-main">
+                      <div class="form-group">
+                        <label for="providerPickerInput">接口类型</label>
+                        <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
+                          <option value="openai_chat">OpenAI Chat Completions</option>
+                          <option value="openai_responses">OpenAI Responses</option>
+                          <option value="anthropic">Anthropic Messages</option>
+                          <option value="gemini">Google Gemini</option>
+                        </select>
+                        <div class="model-picker config-static-picker" data-picker="provider">
+                          <div class="model-picker-row">
+                            <input
+                              type="text"
+                              id="providerPickerInput"
+                              placeholder="选择接口类型"
+                              readonly
+                            />
+                            <button
+                              type="button"
+                              class="model-picker-btn"
+                              id="providerPickerBtn"
+                              aria-label="打开接口类型列表"
+                              aria-expanded="false"
+                            ></button>
+                          </div>
+                          <div
+                            class="model-dropdown"
+                            id="providerPickerDropdown"
+                            hidden
+                          ></div>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                      <div class="required-credentials-grid">
+                        <div class="form-group">
+                          <label for="apiKey">API 密钥</label>
+                          <div class="password-input-wrapper key-input-wrapper">
+                            <input
+                              type="password"
+                              id="apiKey"
+                              placeholder="输入API密钥"
+                            />
+                            <button type="button" class="password-toggle-btn" data-target="apiKey" title="显示/隐藏密钥">
+                              <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                              <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label for="apiUrl">API 地址</label>
+                          <input
+                            type="text"
+                            id="apiUrl"
+                            placeholder="输入API地址"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="service-connectivity-card">
+                    <div class="service-connectivity-header">
+                      <div>
+                        <div class="service-connectivity-title">连通性测试</div>
+                      </div>
+                    </div>
+                    <div class="service-connectivity-message" id="serviceConnectivityMessage">
+                      选择一条服务后可执行测试。
+                    </div>
+                    <div class="service-connectivity-time" id="serviceConnectivityTime"></div>
+                    <div class="service-connectivity-footer">
+                      <span
+                        class="service-connectivity-badge"
+                        id="serviceConnectivityBadge"
+                        data-status="idle"
+                      >
+                        未测试
+                      </span>
+                      <div class="service-connectivity-actions">
+                        <button type="button" class="btn btn-secondary btn-small" id="testServiceConnectionBtn">
+                          测试连通性
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </section>
+            <section
+              class="config-tab-panel"
               id="configPanelModel"
               data-panel="model"
               role="tabpanel"
               aria-labelledby="configTabModel"
+              hidden
             >
             <div class="config-row">
               <!-- AI模型配置 -->
-              <div class="config-section config-section-model">
+              <div class="config-section config-section-model model-role-config">
                 <div class="model-config-layout">
                   <div class="model-config-main">
-                    <h4 class="config-subtitle">必填</h4>
                     <div class="form-group">
-                      <label for="providerPickerInput">API 提供商</label>
-                      <select id="provider" class="config-native-select" aria-hidden="true" tabindex="-1">
-                        <option value="openai">OpenAI 兼容</option>
-                        <option value="anthropic">Anthropic 兼容</option>
-                        <option value="gemini">Google Gemini</option>
+                      <label for="currentServicePickerInput">当前服务</label>
+                      <select id="currentService" class="config-native-select" aria-hidden="true" tabindex="-1">
                       </select>
-                      <div class="model-picker config-static-picker" data-picker="provider">
+                      <div class="model-picker config-static-picker" data-picker="currentService">
                         <div class="model-picker-row">
                           <input
                             type="text"
-                            id="providerPickerInput"
-                            placeholder="选择提供商"
+                            id="currentServicePickerInput"
+                            placeholder="选择当前服务"
                             readonly
                           />
                           <button
                             type="button"
                             class="model-picker-btn"
-                            id="providerPickerBtn"
-                            aria-label="打开提供商列表"
+                            id="currentServicePickerBtn"
+                            aria-label="打开当前服务列表"
                             aria-expanded="false"
                           ></button>
                         </div>
                         <div
                           class="model-dropdown"
-                          id="providerPickerDropdown"
+                          id="currentServicePickerDropdown"
                           hidden
                         ></div>
                       </div>
                     </div>
+                    <input type="hidden" id="model" />
+                    <div class="model-dropdown" id="modelDropdown" hidden></div>
+                    <div class="form-hint" id="modelHint" hidden></div>
                     <div class="form-group">
-                      <label for="model">模型</label>
-                      <div class="model-picker" data-side="main">
+                      <label for="titleGenerationModel">话题生成模型</label>
+                      <div class="model-picker" data-side="title">
                         <div class="model-picker-row">
-                          <input
-                            type="text"
-                            id="model"
-                            placeholder="例如: gpt-5"
-                            autocomplete="off"
-                            autocorrect="off"
-                            autocapitalize="off"
-                            spellcheck="false"
-                          />
+                          <div class="model-picker-input-wrap">
+                            <input
+                              type="text"
+                              id="titleGenerationModel"
+                              placeholder="留空则跟随主模型"
+                              autocomplete="off"
+                              autocorrect="off"
+                              autocapitalize="off"
+                              spellcheck="false"
+                            />
+                            <button
+                              type="button"
+                              class="model-input-clear-btn"
+                              id="clearTitleGenerationModelBtn"
+                              aria-label="清空话题生成模型"
+                              title="清空并跟随主模型"
+                            ></button>
+                          </div>
                           <button
                             type="button"
                             class="model-picker-btn"
-                            id="modelDropdownBtn"
-                            aria-label="打开模型列表"
+                            id="modelDropdownBtnTitle"
+                            aria-label="打开话题生成模型列表"
                             aria-expanded="false"
                           ></button>
                         </div>
                         <div
                           class="model-dropdown"
-                          id="modelDropdown"
+                          id="modelDropdownTitle"
                           hidden
                         ></div>
                       </div>
-                      <div class="form-hint" id="modelHint">
-                        填模型ID；支持自动获取和手动输入
-                      </div>
-                    </div>
-                    <div class="required-credentials-grid">
-                      <div class="form-group">
-                      <label for="apiKey">API 密钥</label>
-                      <div class="password-input-wrapper">
-                      <input
-                        type="password"
-                        id="apiKey"
-                        placeholder="输入API密钥"
-                      />
-                      <button type="button" class="password-toggle-btn" data-target="apiKey" title="显示/隐藏密钥">
-                        <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                      </button>
-                      </div>
-                      </div>
-                      <div class="form-group">
-                      <label for="apiUrl">API 地址</label>
-                      <input
-                        type="text"
-                        id="apiUrl"
-                        placeholder="https://api.example.com/v1/chat/completions"
-                        required
-                      />
+                      <div class="form-hint">
+                        留空时回退到当前主模型
                       </div>
                     </div>
                   </div>
                   <div class="model-config-side">
-                    <h4 class="config-subtitle">可选</h4>
-                    <div class="form-group">
-                      <label for="modelCustomName">模型自定义名称</label>
-                      <input type="text" id="modelCustomName" />
-                      <div class="form-hint">
-                        设置后聊天界面优先显示该名称；留空则显示模型 ID
-                      </div>
-                    </div>
                     <div class="form-group">
                       <label for="roleSetting">角色设定</label>
                       <textarea
@@ -456,7 +682,7 @@
                         hidden
                       ></div>
                       <div class="form-hint">
-                        留空用内置提示词，填写即覆盖。支持 {{datetime}} {{date}} {{time}} {{timestamp}}
+                        留空用内置提示词。支持 {{datetime}} {{date}} {{time}} {{timestamp}}
                       </div>
                     </div>
                   </div>
@@ -480,7 +706,6 @@
                     <select id="webSearchProvider" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="tavily">Tavily</option>
                       <option value="exa">Exa</option>
-                      <option value="gemini_search">Google Search（Gemini 内置）</option>
                     </select>
                     <div class="model-picker config-static-picker" data-picker="webSearchProvider">
                       <div class="model-picker-row">
@@ -506,37 +731,31 @@
                     </div>
                   </div>
                   <div class="form-group" id="tavilyApiKeyGroup">
-                    <label for="tavilyApiKey">Tavily Key</label>
-                    <div class="password-input-wrapper">
+                    <label for="tavilyApiKey">API 密钥</label>
+                    <div class="password-input-wrapper key-input-wrapper">
                     <input
                       type="password"
                       id="tavilyApiKey"
-                      placeholder="tvly-..."
+                      placeholder="输入API密钥"
                     />
                     <button type="button" class="password-toggle-btn" data-target="tavilyApiKey" title="显示/隐藏密钥">
                       <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>
                     </div>
-                    <div class="form-hint">
-                      留空则使用服务端 `TAVILY_API_KEY`
-                    </div>
                   </div>
                   <div class="form-group" id="exaApiKeyGroup">
-                    <label for="exaApiKey">Exa Key</label>
-                    <div class="password-input-wrapper">
+                    <label for="exaApiKey">API 密钥</label>
+                    <div class="password-input-wrapper key-input-wrapper">
                     <input
                       type="password"
                       id="exaApiKey"
-                      placeholder="exa-..."
+                      placeholder="输入API密钥"
                     />
                     <button type="button" class="password-toggle-btn" data-target="exaApiKey" title="显示/隐藏密钥">
                       <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>
-                    </div>
-                    <div class="form-hint">
-                      留空则使用服务端 `EXA_API_KEY`
                     </div>
                   </div>
                 </div>
@@ -553,7 +772,7 @@
                     />
                   </div>
                   <div class="form-group" id="tavilySearchDepthGroup">
-                    <label for="tavilySearchDepthPickerInput">搜索深度</label>
+                    <label for="tavilySearchDepthPickerInput">搜索模式</label>
                     <select id="tavilySearchDepth" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="basic">basic</option>
                       <option value="advanced">advanced</option>
@@ -563,14 +782,14 @@
                         <input
                           type="text"
                           id="tavilySearchDepthPickerInput"
-                          placeholder="选择搜索深度"
+                          placeholder="选择搜索模式"
                           readonly
                         />
                         <button
                           type="button"
                           class="model-picker-btn"
                           id="tavilySearchDepthPickerBtn"
-                          aria-label="打开搜索深度列表"
+                          aria-label="打开搜索模式列表"
                           aria-expanded="false"
                         ></button>
                       </div>
@@ -582,29 +801,29 @@
                     </div>
                   </div>
                   <div class="form-group" id="exaSearchTypeGroup">
-                    <label for="exaSearchTypePickerInput">Exa 搜索模式</label>
+                    <label for="exaSearchTypePickerInput">搜索模式</label>
                     <select id="exaSearchType" class="config-native-select" aria-hidden="true" tabindex="-1">
-                      <option value="auto">auto（智能混合）</option>
-                      <option value="neural">neural（语义检索）</option>
-                      <option value="fast">fast（快速检索）</option>
-                      <option value="deep">deep（轻量深度）</option>
-                      <option value="deep-reasoning">deep-reasoning（标准深度）</option>
-                      <option value="deep-max">deep-max（最大深度）</option>
-                      <option value="instant">instant（最低延迟）</option>
+                      <option value="neural">neural</option>
+                      <option value="fast">fast</option>
+                      <option value="auto">auto</option>
+                      <option value="deep">deep</option>
+                      <option value="deep-reasoning">deep-reasoning</option>
+                      <option value="deep-max">deep-max</option>
+                      <option value="instant">instant</option>
                     </select>
                     <div class="model-picker config-static-picker" data-picker="exaSearchType">
                       <div class="model-picker-row">
                         <input
                           type="text"
                           id="exaSearchTypePickerInput"
-                          placeholder="选择 Exa 搜索模式"
+                          placeholder="选择搜索模式"
                           readonly
                         />
                         <button
                           type="button"
                           class="model-picker-btn"
                           id="exaSearchTypePickerBtn"
-                          aria-label="打开 Exa 搜索模式列表"
+                          aria-label="打开搜索模式列表"
                           aria-expanded="false"
                         ></button>
                       </div>
@@ -613,9 +832,6 @@
                         id="exaSearchTypePickerDropdown"
                         hidden
                       ></div>
-                    </div>
-                    <div class="form-hint">
-                      可选：auto / neural / fast / deep / deep-reasoning / deep-max / instant
                     </div>
                   </div>
                 </div>
@@ -631,10 +847,6 @@
               hidden
             >
             <div class="global-config shortcuts-config">
-              <div class="shortcut-config-intro">
-                <h3>快捷键</h3>
-                <p>所有全局快捷键都集中在这里查看。输入框聚焦时，仅保留编辑相关操作。</p>
-              </div>
               <div class="shortcut-help-body shortcut-help-inline-body">
                 <table class="shortcut-help-table" aria-label="快捷键列表">
                   <thead>
@@ -653,12 +865,6 @@
           <div class="config-footer">
 
             <div class="config-footer-actions">
-              <button class="btn btn-primary btn-small" id="saveConfig">
-                保存
-              </button>
-              <button class="btn btn-secondary btn-small" id="clearConfig">
-                清除
-              </button>
               <button class="btn btn-secondary btn-small" id="closeConfigBtn">
                 关闭
               </button>

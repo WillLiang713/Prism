@@ -160,6 +160,12 @@ You can also provide search keys through environment variables:
 - `TAVILY_API_KEY`
 - `EXA_API_KEY`
 
+Notes:
+
+- If you use `responses`, the default provider should currently be `openai`.
+- When the provider is `openai` and the endpoint mode switches to `responses`, `builtin` becomes available as a web-search option.
+- Whether web search is enabled, and whether `builtin` is selected, is still controlled manually by the user. The frontend does not auto-switch the current web-search mode.
+
 ## Environment Variables
 
 | Name | Purpose | Default |

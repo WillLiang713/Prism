@@ -26,27 +26,29 @@ class ChatRequest(BaseModel):
 
     # 提供商配置
     provider: str = Field(default="openai")
-    apiKey: str
-    model: str
+    apiKey: str | None = None
+    model: str | None = None
     apiUrl: str | None = None
 
     # 消息内容
     prompt: str
     images: list[ImageContent] = []
     systemPrompt: str | None = None
+    endpointMode: Literal["chat_completions", "responses"] = "chat_completions"
 
     # 推理与工具
     reasoningEffort: str = "medium"
     enableTools: bool = False  # 是否启用工具调用
     enableGoogleSearch: bool = False  # 是否启用 Gemini 内置 Google Search
-    enableCodeExecution: bool = False  # 是否启用 Gemini 内置 Code Execution
-    maxToolRounds: int = Field(
-        default=50, ge=1, le=200
-    )  # 最大工具调用轮数（实际不再限制）
+    enableCodeExecution: bool = False  # 是否启用模型内置代码执行
+    maxToolRounds: int | None = Field(
+        default=None, ge=1
+    )  # 最大工具调用轮数；留空表示不限制
     selectedTools: list[str] = []  # 选中的工具名称列表
 
     # 联网相关
     webSearchProvider: str = Field(default="tavily")  # 联网服务提供方（tavily|exa）
+    enableBuiltinWebSearch: bool = False  # Responses 模式下是否启用 OpenAI 内置网页搜索
     webSearchMaxResults: int | None = Field(
         default=None, ge=1, le=20
     )  # 联网默认结果数量

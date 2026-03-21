@@ -1,3 +1,4 @@
+import json
 import mimetypes
 import re
 from pathlib import Path
@@ -5,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
-from config import BUILD_ID
+from config import BUILD_ID, DESKTOP_MODE
 from runtime_paths import frontend_path
 
 mimetypes.init()
@@ -102,6 +103,19 @@ def _render_index_html() -> str:
     _ensure_frontend_asset(INDEX_HTML_PATH, "主页")
     with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
+    runtime_payload = {
+        "platform": "desktop" if DESKTOP_MODE else "web",
+    }
+    runtime_json = json.dumps(runtime_payload, ensure_ascii=False).replace("</", "<\\/")
+    runtime_script = (
+        "<script>"
+        "window.__PRISM_RUNTIME__ = Object.assign("
+        "window.__PRISM_RUNTIME__ || {}, "
+        f"{runtime_json}"
+        ");"
+        "</script>"
+    )
+    html = html.replace("</head>", f"{runtime_script}\n  </head>", 1)
     html = re.sub(
         r'(href|src)="((?:css|js|libs|styles|app)/[^"?]+|style\.css|app\.js|favicon\.svg)(?:\?[^"]*)?"',
         lambda match: f'{match.group(1)}="{match.group(2)}?v={BUILD_ID}"',

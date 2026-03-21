@@ -83,7 +83,7 @@
 #configModal .config-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px 24px 18px;
+  padding: 20px 28px 18px;
   background: var(--surface-solid);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -253,22 +253,18 @@
 
 .config-tab.is-active,
 .config-tab[aria-selected="true"] {
-  border-color: var(--border-accent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04)),
-    rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
-  font-weight: 700;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 8px 18px rgba(0, 0, 0, 0.18);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .config-tab.is-active:hover,
 .config-tab[aria-selected="true"]:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.16);
   color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .config-tab:focus-visible {
@@ -321,6 +317,380 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+
+.model-role-config .model-config-layout {
+  gap: 18px;
+}
+
+.service-config-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+  min-height: 0;
+}
+
+.service-list-panel,
+.service-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+}
+
+.service-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
+}
+
+#configModal .service-toolbar .btn,
+#configModal .service-connectivity-actions .btn,
+#configModal .config-footer-actions .btn {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  box-shadow: none;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 14px;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+#configModal .service-toolbar .btn:hover,
+#configModal .service-connectivity-actions .btn:hover,
+#configModal .config-footer-actions .btn:hover {
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+#configModal .service-toolbar .btn:focus-visible,
+#configModal .service-connectivity-actions .btn:focus-visible,
+#configModal .config-footer-actions .btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+#configModal .service-toolbar .btn:disabled,
+#configModal .service-connectivity-actions .btn:disabled,
+#configModal .config-footer-actions .btn:disabled {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+#configModal .service-toolbar .btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+#configModal .service-toolbar .btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.1;
+}
+
+#configModal .service-toolbar .btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-accent);
+}
+
+#configModal .service-toolbar .btn:active {
+  transform: scale(0.92);
+}
+
+#configModal .config-footer-actions #saveConfig {
+  border-color: transparent;
+  background: #e0e0e0;
+  color: #000;
+}
+
+#configModal .config-footer-actions #saveConfig:hover,
+#configModal .config-footer-actions #saveConfig:focus,
+#configModal .config-footer-actions #saveConfig:focus-visible {
+  border-color: transparent;
+  background: #e0e0e0;
+  color: #000;
+}
+
+#configModal .config-footer-actions #saveConfig:active {
+  border-color: transparent;
+  background: #d6d6d6;
+  color: #000;
+}
+
+#configModal .config-footer-actions #saveConfig:disabled {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  opacity: 1;
+}
+
+.service-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.service-detail-panel {
+  overflow-y: auto;
+}
+
+.service-detail-form,
+.service-detail-main {
+  display: grid;
+  gap: 14px;
+}
+
+.service-detail-panel .form-group,
+.service-summary-card,
+.service-connectivity-card {
+  flex: 0 0 auto;
+}
+
+.service-list-item {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  padding: 10px 12px 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-list-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.service-list-item:active {
+  transform: none;
+}
+
+.service-list-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.2);
+  outline-offset: 2px;
+}
+
+.service-list-item.is-selected {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  color: var(--text);
+}
+
+.service-list-item.is-active-service {
+  box-shadow: none;
+}
+
+.service-list-head,
+.service-connectivity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.service-connectivity-header {
+  min-height: 28px;
+}
+
+.service-list-title {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-list-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.service-list-item:hover .service-list-tag,
+.service-list-item.is-selected .service-list-tag {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.service-list-meta,
+.service-list-submeta,
+.service-connectivity-subtitle,
+.service-connectivity-message,
+.service-connectivity-time,
+.service-summary-label {
+  color: var(--text-dim);
+}
+
+.service-list-meta,
+.service-list-submeta,
+.service-connectivity-subtitle,
+.service-connectivity-message,
+.service-connectivity-time {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.service-list-meta,
+.service-list-submeta {
+  word-break: break-word;
+}
+
+.service-connectivity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  padding: 0;
+  line-height: 1;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.service-connectivity-badge[data-status="idle"] {
+  color: var(--text-dim);
+}
+
+.service-connectivity-badge[data-status="testing"] {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.24) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
+}
+
+.service-connectivity-badge[data-status="success"] {
+  color: #8fd6a8;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+}
+
+.service-connectivity-badge[data-status="error"] {
+  color: #f3b2b2;
+}
+
+.service-summary-card,
+.service-connectivity-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 14px;
+}
+
+.service-summary-card {
+  display: grid;
+  gap: 10px;
+}
+
+.service-summary-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 108px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.service-summary-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.service-summary-value {
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.service-connectivity-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.service-connectivity-message {
+  margin-top: 12px;
+  min-height: 18px;
+}
+
+.service-connectivity-time {
+  margin-top: 8px;
+  min-height: 18px;
+}
+
+.service-connectivity-footer {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-connectivity-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+#configPanelServices .global-config {
+  min-height: 0;
+  padding-bottom: 12px;
 }
 
 .config-section-model .model-config-main,
@@ -516,7 +886,7 @@
 }
 
 .shortcut-help-inline-body .shortcut-help-table th {
-  background: rgba(17, 17, 17, 0.92);
+  background: var(--surface-solid);
 }
 
 .toggle-btn {
@@ -551,36 +921,39 @@
   line-height: 1.4;
 }
 
+#endpointModeHint.is-warning {
+  color: #f1b56a;
+}
+
 .password-input-wrapper {
   position: relative;
 }
 
-.password-input-wrapper input {
-  padding-right: 40px;
-}
-
-.password-toggle-btn {
+.key-input-wrapper .password-toggle-btn {
   position: absolute;
-  right: 8px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-dim);
   transition: color 0.2s ease;
   border-radius: 4px;
+  z-index: 1;
 }
 
-.password-toggle-btn:hover {
+.key-input-wrapper .password-toggle-btn:hover {
   color: var(--text);
 }
 
-.password-toggle-btn .eye-icon {
+.key-input-wrapper .password-toggle-btn .eye-icon {
   width: 18px;
   height: 18px;
 }
@@ -599,6 +972,11 @@
   transition: border-color 0.2s, box-shadow 0.2s;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
+}
+
+.key-input-wrapper input[type="text"],
+.key-input-wrapper input[type="password"] {
+  padding-right: 52px;
 }
 
 .form-group textarea {
@@ -672,21 +1050,33 @@
 
 /* 选择器统一高亮：点击输入区或展开时，整个控件（含箭头区）一致高亮
    - 静态选择器：.config-static-picker
-   - 模型 ID 选择器：.model-picker[data-side="main"]
+   - 模型 ID 选择器：.model-picker[data-side="main"] / [data-side="title"]
 */
 #configModal .config-static-picker .model-picker-row input[type="text"]:focus,
-#configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus {
+#configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus,
+#configModal .model-picker[data-side="title"] .model-picker-row input[type="text"]:focus {
   border-color: var(--accent);
   box-shadow: none;
 }
 
 #configModal .config-static-picker .model-picker-row input[type="text"]:focus + .model-picker-btn,
-#configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus + .model-picker-btn {
+#configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus + .model-picker-btn,
+#configModal .model-picker[data-side="title"] .model-picker-row input[type="text"]:focus + .model-picker-btn {
+  border-color: var(--accent);
+}
+
+#configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) .model-picker-btn {
+  border-color: var(--accent);
+}
+
+#configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) input[type="text"] {
   border-color: var(--accent);
 }
 
 #configModal .config-static-picker .model-picker-row:has(input[type="text"]:focus),
-#configModal .model-picker[data-side="main"] .model-picker-row:has(input[type="text"]:focus) {
+#configModal .model-picker[data-side="main"] .model-picker-row:has(input[type="text"]:focus),
+#configModal .model-picker[data-side="title"] .model-picker-row:has(input[type="text"]:focus),
+#configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) {
   border-radius: 10px;
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
@@ -694,12 +1084,15 @@
 #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row input[type="text"],
 #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-btn,
 #configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-row input[type="text"],
-#configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-btn {
+#configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row input[type="text"],
+#configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-btn,
+#configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-btn {
   border-color: var(--accent);
 }
 
 #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row,
-#configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-row {
+#configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-row,
+#configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row {
   border-radius: 10px;
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
@@ -883,6 +1276,13 @@
   align-items: stretch;
 }
 
+.model-picker-input-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
 .model-picker-row input[type="text"],
 .model-picker-row select {
   flex: 1;
@@ -896,6 +1296,70 @@
 .model-picker-row select:focus {
   border-color: var(--accent);
   box-shadow: none;
+}
+
+.model-picker[data-side="title"] .model-picker-input-wrap input[type="text"] {
+  width: 100%;
+  padding-right: 38px;
+}
+
+.model-input-clear-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  top: 50%;
+  right: calc((38px - 20px) / 2);
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, background 0.18s ease, color 0.18s ease;
+  z-index: 1;
+}
+
+.model-picker-input-wrap input[type="text"]:not(:placeholder-shown) + .model-input-clear-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.model-input-clear-btn::before,
+.model-input-clear-btn::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.model-input-clear-btn::before {
+  transform: rotate(45deg);
+}
+
+.model-input-clear-btn::after {
+  transform: rotate(-45deg);
+}
+
+.model-input-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.model-input-clear-btn:focus,
+.model-input-clear-btn:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
 }
 
 .model-picker-btn {
@@ -1017,6 +1481,27 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.model-dropdown-item.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.model-dropdown-item.is-active:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.model-dropdown-item:disabled,
+.model-dropdown-item.is-disabled {
+  cursor: not-allowed;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.model-dropdown-item:disabled:hover,
+.model-dropdown-item.is-disabled:hover {
+  background: transparent;
+}
+
 /* Radio group */
 .radio-group {
   display: flex;
@@ -1088,9 +1573,4 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-}
-
-.config-footer-actions .btn {
-  border-radius: 999px;
-  padding: 6px 14px;
 }

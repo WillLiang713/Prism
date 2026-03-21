@@ -1,23 +1,23 @@
 /* ---------- Composer (Input Area) ---------- */
 .chat-composer {
-  padding: 14px 20px 22px;
+  padding: 14px var(--chat-gutter) 22px;
   background: transparent;
   display: flex;
   justify-content: center;
+  position: relative;
 }
 
 .composer-wrapper {
   position: relative;
-  max-width: none;
   width: 100%;
-  margin: 0;
+  max-width: var(--composer-max-width);
   transition: max-width 0.3s ease;
 }
 
 .composer-box {
   position: relative;
   background: transparent;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--editable-panel-border);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   transition: border-color 0.24s ease, box-shadow 0.24s ease,
@@ -61,20 +61,17 @@
 }
 
 .composer-box:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--editable-panel-border-hover);
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
 }
 
 .composer-box:focus-within {
-  border-color: transparent;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 0 0 3px rgba(255, 255, 255, 0.035),
-    0 10px 28px rgba(0, 0, 0, 0.36);
+  border-color: var(--editable-panel-border-focus);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .composer-box:focus-within::before {
-  opacity: 0.98;
+  opacity: 0;
 }
 
 .composer-box:focus-within::after {
@@ -99,7 +96,7 @@
   padding: 14px 16px;
   border: none;
   border-radius: 0;
-  font-size: 15px;
+  font-size: var(--chat-font-size);
   line-height: 1.6;
   font-family: inherit;
   resize: none;
@@ -243,6 +240,146 @@
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
+.web-search-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  margin-left: 1px;
+  font-size: 12px;
+}
+
+.web-search-tool-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 9px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.web-search-tool-current svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.web-search-tool-current:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-accent);
+  color: var(--text);
+}
+
+.web-search-tool-current.is-active {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.web-search-tool-current:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.web-search-control.is-open {
+  z-index: 40;
+}
+
+.web-search-control.is-open .web-search-tool-current {
+  border-color: var(--border-accent);
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.switch-text,
+.web-search-tool-value {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.switch-text {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.web-search-tool-value {
+  max-width: 80px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.web-search-tool-current:not(.is-active) .web-search-tool-value {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.web-search-tool-value[hidden] {
+  display: none !important;
+}
+
+.web-search-tool-dropdown {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  min-width: 108px;
+  backdrop-filter: blur(16px);
+  gap: 4px;
+}
+
+.web-search-control.is-open .web-search-tool-dropdown,
+.web-search-tool-dropdown.is-floating-open {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-composer:has(.web-search-control.is-open),
+.composer-wrapper:has(.web-search-control.is-open),
+.composer-box:has(.web-search-control.is-open) {
+  overflow: visible !important;
+}
+
+.web-search-tool-dropdown button {
+  all: unset;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+  display: block;
+}
+
+.web-search-tool-dropdown button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.web-search-tool-dropdown button.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  box-shadow: none;
+}
+
 /* Toolbar switch */
 .toolbar-switch {
   display: inline-flex;
@@ -368,6 +505,10 @@
   color: var(--text);
 }
 
+.reasoning-effort-selector.is-off .reasoning-effort-value {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .reasoning-effort-dropdown {
   display: none;
   position: absolute;
@@ -388,6 +529,7 @@
 .reasoning-effort-selector.open .reasoning-effort-dropdown {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .reasoning-effort-selector.open .reasoning-effort-current {
@@ -405,7 +547,7 @@
   overflow: visible !important;
 }
 
-.chat-thread:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
+.chat-main:has(.reasoning-effort-selector.open) .scroll-to-bottom-btn {
   opacity: 0;
   pointer-events: none;
 }

@@ -2,8 +2,12 @@ use std::env;
 use std::net::TcpListener;
 use std::sync::Mutex;
 
-use serde::Serialize;
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use serde::{Deserialize, Serialize};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager, WebviewUrl, WebviewWindowBuilder,
+};
 use tauri::webview::Color;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
 
@@ -11,9 +15,30 @@ const WINDOW_LABEL: &str = "main";
 const DEV_API_BASE_ENV: &str = "PRISM_DESKTOP_API_BASE";
 const DEFAULT_DEV_API_BASE: &str = "http://127.0.0.1:33100";
 const SIDECAR_NAME: &str = "prism-backend";
+const TRAY_ID: &str = "main-tray";
+const TRAY_MENU_SHOW_ID: &str = "tray-show";
+const TRAY_MENU_QUIT_ID: &str = "tray-quit";
 
 #[derive(Default)]
 struct SidecarState(Mutex<Option<CommandChild>>);
+
+#[derive(Default)]
+struct DesktopPreferencesState(Mutex<DesktopPreferences>);
+
+#[derive(Default)]
+struct ExitIntentState(Mutex<bool>);
+
+struct DesktopPreferences {
+    close_to_tray: bool,
+}
+
+impl Default for DesktopPreferences {
+    fn default() -> Self {
+        Self {
+            close_to_tray: true,
+        }
+    }
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,6 +52,12 @@ struct DesktopRuntime {
 struct PreparedRuntime {
     config: DesktopRuntime,
     child: Option<CommandChild>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DesktopPreferencesPayload {
+    close_to_tray: bool,
 }
 
 fn dev_api_base() -> String {
@@ -128,6 +159,91 @@ fn shutdown_sidecar(app: &tauri::AppHandle) {
     }
 }
 
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+fn should_close_to_tray(app: &tauri::AppHandle) -> bool {
+    app.state::<DesktopPreferencesState>()
+        .0
+        .lock()
+        .map(|guard| guard.close_to_tray)
+        .unwrap_or(false)
+}
+
+fn is_exit_requested(app: &tauri::AppHandle) -> bool {
+    app.state::<ExitIntentState>()
+        .0
+        .lock()
+        .map(|guard| *guard)
+        .unwrap_or(false)
+}
+
+fn request_exit(app: &tauri::AppHandle) {
+    if let Ok(mut guard) = app.state::<ExitIntentState>().0.lock() {
+        *guard = true;
+    }
+    app.exit(0);
+}
+
+fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
+    let show_item = MenuItem::with_id(app, TRAY_MENU_SHOW_ID, "显示窗口", true, None::<&str>)
+        .map_err(|error| format!("创建托盘菜单失败: {error}"))?;
+    let quit_item = MenuItem::with_id(app, TRAY_MENU_QUIT_ID, "退出", true, None::<&str>)
+        .map_err(|error| format!("创建托盘菜单失败: {error}"))?;
+    let menu = Menu::with_items(app, &[&show_item, &quit_item])
+        .map_err(|error| format!("创建托盘菜单失败: {error}"))?;
+
+    let mut builder = TrayIconBuilder::with_id(TRAY_ID)
+        .tooltip("Prism")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            TRAY_MENU_SHOW_ID => show_main_window(app),
+            TRAY_MENU_QUIT_ID => request_exit(app),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if matches!(
+                event,
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                }
+            ) {
+                show_main_window(&tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+
+    builder
+        .build(app)
+        .map(|_| ())
+        .map_err(|error| format!("创建托盘图标失败: {error}"))
+}
+
+#[tauri::command]
+fn update_desktop_preferences(
+    app: tauri::AppHandle,
+    payload: DesktopPreferencesPayload,
+) -> Result<(), String> {
+    let state = app.state::<DesktopPreferencesState>();
+    let mut guard = state
+        .0
+        .lock()
+        .map_err(|error| format!("更新桌面配置失败: {error}"))?;
+    guard.close_to_tray = payload.close_to_tray;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -141,7 +257,18 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_shell::init())
         .manage(SidecarState::default())
+        .manage(DesktopPreferencesState::default())
+        .manage(ExitIntentState::default())
+        .invoke_handler(tauri::generate_handler![update_desktop_preferences])
         .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if should_close_to_tray(&window.app_handle()) && !is_exit_requested(&window.app_handle()) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    return;
+                }
+            }
+
             if matches!(
                 event,
                 tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
@@ -175,6 +302,8 @@ pub fn run() {
                 .initialization_script(init_script)
                 .build()
                 .map_err(std::io::Error::other)?;
+
+            create_tray(app.handle()).map_err(std::io::Error::other)?;
 
             Ok(())
         })
