@@ -140,8 +140,8 @@ Sync-VersionField `
 
 Sync-VersionField `
   -Path $cargoTomlPath `
-  -Pattern '^(version\s*=\s*")[^"]+(")$' `
-  -Replacement ('${1}{0}${2}' -f $buildVersion) `
+  -Pattern '^version\s*=\s*"[^"]+"(\r?)$' `
+  -Replacement ('version = "' + $buildVersion + '"$1') `
   -Version $buildVersion `
   -Description "Cargo package version"
 
