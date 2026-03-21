@@ -252,98 +252,6 @@ function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = ""
   return previousLabel || "思考中";
 }
 
-function highlightCodeElement(codeEl, language) {
-  if (!codeEl) return;
-  if (language) {
-    codeEl.classList.add(`language-${language}`);
-  }
-  if (window.hljs?.highlightElement) {
-    window.hljs.highlightElement(codeEl);
-  }
-}
-
-function renderCodeExecutionCard(container, event) {
-  const item = document.createElement("li");
-  item.className = "code-execution-item";
-
-  const titleRow = document.createElement("div");
-  titleRow.className = "code-execution-title-row";
-
-  const title = document.createElement("span");
-  title.className = "code-execution-title";
-  title.textContent = event?.language
-    ? `已执行代码 · ${String(event.language).toUpperCase()}`
-    : "已执行代码";
-  titleRow.appendChild(title);
-
-  item.appendChild(titleRow);
-
-  if (event?.code) {
-    const pre = document.createElement("pre");
-    pre.className = "code-execution-block";
-    const code = document.createElement("code");
-    code.textContent = event.code;
-    pre.appendChild(code);
-    item.appendChild(pre);
-    highlightCodeElement(code, String(event.language || "").toLowerCase());
-  }
-
-  if (event?.output) {
-    const output = document.createElement("pre");
-    output.className = "code-execution-output";
-    output.textContent = event.output;
-    item.appendChild(output);
-  }
-
-  container.appendChild(item);
-}
-
-export function renderCodeExecutionEvents(sectionEl, listEl, events) {
-  if (!sectionEl || !listEl) return;
-  const items = Array.isArray(events) ? events : [];
-
-  if (!items.length) {
-    sectionEl.style.display = "none";
-    listEl.innerHTML = "";
-    return;
-  }
-
-  sectionEl.style.display = "block";
-  listEl.innerHTML = "";
-
-  if (!sectionEl.querySelector(".code-execution-header")) {
-    const header = document.createElement("div");
-    header.className = "code-execution-header";
-    header.innerHTML = `
-      <div class="code-execution-header-main">
-        <span class="code-execution-header-text"></span>
-      </div>
-    `;
-
-    const detail = document.createElement("div");
-    detail.className = "code-execution-detail";
-
-    sectionEl.innerHTML = "";
-    detail.appendChild(listEl);
-    sectionEl.appendChild(header);
-    sectionEl.appendChild(detail);
-
-    header.addEventListener("click", () => {
-      sectionEl.dataset.userToggled = "1";
-      sectionEl.classList.toggle("ce-expanded");
-    });
-  }
-
-  const headerText = sectionEl.querySelector(".code-execution-header-text");
-  if (headerText) {
-    headerText.textContent = `Code Execution · ${items.length} 次`;
-  }
-
-  items.forEach((event) => {
-    renderCodeExecutionCard(listEl, event);
-  });
-}
-
 export function isTopicRunning(topicId) {
   return !!topicId && state.chat.runningControllers.has(topicId);
 }
@@ -912,9 +820,6 @@ export function createAssistantCard(
   const webSearchEventsSnapshot = Array.isArray(turn?.models?.main?.webSearchEvents)
     ? turn.models.main.webSearchEvents
     : [];
-  const codeExecutionSnapshot = Array.isArray(turn?.models?.main?.codeExecutions)
-    ? turn.models.main.codeExecutions
-    : [];
   const mergedToolEventsSnapshot = mergeToolEventsWithWebSearch(
     toolEventsSnapshot,
     webSearchEventsSnapshot
@@ -1065,33 +970,6 @@ export function createAssistantCard(
     }
   });
 
-  const codeExecutionSection = document.createElement("div");
-  codeExecutionSection.className = "code-execution-section";
-  codeExecutionSection.style.display = "none";
-
-  const codeExecutionList = document.createElement("ul");
-  codeExecutionList.className = "code-execution-list";
-
-  codeExecutionSection.appendChild(codeExecutionList);
-  renderCodeExecutionEvents(
-    codeExecutionSection,
-    codeExecutionList,
-    codeExecutionSnapshot
-  );
-  codeExecutionSection.classList.toggle(
-    "ce-expanded",
-    turn?.models?.[side]?.codeExecutionExpanded !== false
-  );
-  codeExecutionSection.addEventListener("click", (event) => {
-    const header = event.target?.closest?.(".code-execution-header");
-    if (!header) return;
-    if (turn?.models?.[side]) {
-      turn.models[side].codeExecutionExpanded =
-        codeExecutionSection.classList.contains("ce-expanded");
-      scheduleSaveChat();
-    }
-  });
-
   // 来源状态条
   const sourcesSnapshot = Array.isArray(turn?.models?.main?.sources)
     ? turn.models.main.sources
@@ -1103,7 +981,6 @@ export function createAssistantCard(
 
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
-  content.appendChild(codeExecutionSection);
   content.appendChild(sourcesStatus);
   content.appendChild(responseSection);
 
@@ -1213,8 +1090,7 @@ export function createAssistantCard(
     (
       thinkingSnapshot ||
       contentSnapshot ||
-      mergedToolEventsSnapshot.length > 0 ||
-      codeExecutionSnapshot.length > 0
+      mergedToolEventsSnapshot.length > 0
     )
   ) {
     message.classList.remove("loading");
@@ -1228,8 +1104,6 @@ export function createAssistantCard(
     responseEl: responseContent,
     toolCallsSectionEl: toolCallsSection,
     toolCallsListEl: toolCallsList,
-    codeExecutionSectionEl: codeExecutionSection,
-    codeExecutionListEl: codeExecutionList,
     thinkingSectionEl: thinkingSection,
     thinkingContentEl: thinkingContent,
     thinkingLabelEl: thinkingLabel,

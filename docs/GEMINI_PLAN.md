@@ -5,7 +5,7 @@
 Prism 目前支持 OpenAI 和 Anthropic 两种提供商。用户希望新增 Google Gemini 作为第三个提供商，包括：
 1. Gemini API 的端点适配（消息格式、流式响应、认证方式等）
 2. 现有工具（Tavily/Exa 搜索、获取时间）通过 Gemini 的 function calling 格式正常工作
-3. Gemini 内置工具支持（Google Search 联网搜索、Code Execution 代码执行）
+3. Gemini 内置工具支持（Google Search 联网搜索）
 
 ## Gemini API 与现有提供商的关键差异
 
@@ -99,8 +99,6 @@ Prism 目前支持 OpenAI 和 Anthropic 两种提供商。用户希望新增 Goo
 - **工具调用**：`candidates[0].content.parts[].functionCall` → `{name, args}`
 - **Token 统计**：`usageMetadata.totalTokenCount` 或 `candidatesTokenCount`
 - **Google Search 结果**：`candidates[0].groundingMetadata`（搜索来源、查询词）
-- **Code Execution**：`candidates[0].content.parts[].executableCode` 和 `codeExecutionResult`
-
 返回统一格式的 dict（与 OpenAI/Anthropic 解析器一致）。
 
 ### 第五步：后端核心 - chat_stream() 增加 Gemini 流式处理
@@ -121,10 +119,6 @@ Prism 目前支持 OpenAI 和 Anthropic 两种提供商。用户希望新增 Goo
    - 转换为现有的 `sources` 和 `web_search` 事件格式发送到前端
    - 从 `groundingMetadata.webSearchQueries` 提取搜索查询词
 
-5. **Code Execution 结果处理**：
-   - 从 parts 中提取 `executableCode` 和 `codeExecutionResult`
-   - 发送新类型事件 `{type: "code_execution", data: {code, language, output, outcome}}` 到前端
-
 ### 第六步：ChatRequest 数据模型扩展
 
 **文件：`ai_service.py` ChatRequest 类**
@@ -132,7 +126,6 @@ Prism 目前支持 OpenAI 和 Anthropic 两种提供商。用户希望新增 Goo
 新增字段：
 ```python
 enableGoogleSearch: bool = False      # 启用 Gemini 内置 Google Search
-enableCodeExecution: bool = False     # 启用 Gemini 内置 Code Execution
 ```
 
 ### 第七步：后端 - server.py 适配
@@ -165,15 +158,6 @@ enableCodeExecution: bool = False     # 启用 Gemini 内置 Code Execution
    <option value="gemini_search">Google Search（Gemini 内置）</option>
    ```
 
-3. 输入区域工具栏增加 Code Execution 开关（仅 Gemini 可见）：
-   ```html
-   <label class="toolbar-switch" id="codeExecutionSwitch" style="display:none">
-     <input type="checkbox" id="enableCodeExecution" />
-     <span class="switch-track"></span>
-     <span class="switch-text">代码</span>
-   </label>
-   ```
-
 ### 第九步：前端 - app.js 适配
 
 **文件：`frontend/app.js`**
@@ -192,28 +176,13 @@ enableCodeExecution: bool = False     # 启用 Gemini 内置 Code Execution
    - 提取 base URL（去除 `/models/xxx:generateContent` 后缀）
 
 5. 提供商切换时动态显隐 Gemini 专属控件：
-   - 当 provider=gemini 时，显示 Google Search 内置联网选项和 Code Execution 开关
-   - 当 provider 不是 gemini 时，隐藏这些控件，并自动切回 tavily/exa
+   - 当 provider=gemini 时，显示 Google Search 内置联网选项
+   - 当 provider 不是 gemini 时，隐藏该控件，并自动切回 tavily/exa
 
 6. `sendPrompt()` 请求体增加 Gemini 内置工具字段：
    ```javascript
    enableGoogleSearch: provider === "gemini" && webSearchProvider === "gemini_search" && enableWebSearch,
-   enableCodeExecution: provider === "gemini" && codeExecutionEnabled,
    ```
-
-7. 流式响应处理增加 `code_execution` 类型：
-   - 新增 `renderCodeExecution()` 函数，在聊天消息中展示代码块和执行结果
-
-8. `StreamChunk` 类型增加 `"code_execution"` 到 `type` 字段
-
-### 第十步：前端 - Code Execution 结果渲染
-
-**文件：`frontend/app.js`**
-
-新增 `renderCodeExecution()` 函数：
-- 展示代码块（使用 highlight.js 高亮 Python 代码）
-- 展示执行输出（成功/失败状态）
-- 样式与现有的 tool events 展示区域一致
 
 ---
 
@@ -223,7 +192,7 @@ enableCodeExecution: bool = False     # 启用 Gemini 内置 Code Execution
 |------|---------|
 | `ai_service.py` | ProviderConfig + MessageBuilder + StreamParser + chat_stream |
 | `server.py` | list_models + generate_topic_title + build_models_base_url |
-| `frontend/index.html` | 提供商选项 + 联网服务选项 + Code Execution 开关 |
+| `frontend/index.html` | 提供商选项 + 联网服务选项 |
 | `frontend/app.js` | providerMode + URL 处理 + UI 切换 + 请求体 + 响应解析 + 渲染 |
 
 ## 不需要改动的文件
@@ -239,7 +208,6 @@ enableCodeExecution: bool = False     # 启用 Gemini 内置 Code Execution
 3. **模型列表测试**：验证可以自动获取 Gemini 可用模型列表
 4. **现有工具测试**：开启联网（Tavily/Exa），验证 Gemini 能正确调用搜索工具并返回结果
 5. **Google Search 测试**：选择"Google Search（Gemini 内置）"，验证联网搜索和来源展示
-6. **Code Execution 测试**：开启"代码"开关，发送需要计算的问题，验证代码执行和结果展示
-7. **思考模式测试**：调整思考强度，验证 Gemini 2.5 模型的思考内容正常展示
-8. **历史对话测试**：验证多轮对话历史正确传递给 Gemini
-9. **标题生成测试**：验证对话标题自动生成功能在 Gemini 下正常工作
+6. **思考模式测试**：调整思考强度，验证 Gemini 2.5 模型的思考内容正常展示
+7. **历史对话测试**：验证多轮对话历史正确传递给 Gemini
+8. **标题生成测试**：验证对话标题自动生成功能在 Gemini 下正常工作

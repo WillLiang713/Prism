@@ -40,7 +40,6 @@ class ChatRequest(BaseModel):
     reasoningEffort: str = "medium"
     enableTools: bool = False  # 是否启用工具调用
     enableGoogleSearch: bool = False  # 是否启用 Gemini 内置 Google Search
-    enableCodeExecution: bool = False  # 是否启用模型内置代码执行
     maxToolRounds: int | None = Field(
         default=None, ge=1
     )  # 最大工具调用轮数；留空表示不限制
@@ -77,6 +76,5 @@ class StreamChunk(BaseModel):
         "tool",
         "sources",
         "web_search",
-        "code_execution",
     ]
     data: Any

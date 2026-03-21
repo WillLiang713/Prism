@@ -174,7 +174,7 @@ class AIService:
             return False
         if provider_mode != "gemini":
             return True
-        return not (request.enableGoogleSearch or request.enableCodeExecution)
+        return not request.enableGoogleSearch
 
     @staticmethod
     def _build_tool_runtime_context(request: ChatRequest) -> dict[str, Any]:
@@ -250,70 +250,6 @@ class AIService:
                 existing_parts.append(dict(part))
 
     @staticmethod
-    def _build_code_execution_event(
-        buffer: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        if not isinstance(buffer, dict):
-            return None
-        language = str(buffer.get("language") or "").strip()
-        code = str(buffer.get("code") or "")
-        output = str(buffer.get("output") or "")
-        outcome = str(buffer.get("outcome") or "").strip()
-        if not code and not output and not outcome:
-            return None
-        return {
-            "language": language,
-            "code": code,
-            "output": output,
-            "outcome": outcome,
-        }
-
-    @staticmethod
-    def _consume_code_execution_events(
-        state: dict[str, Any], code_events: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        emitted = []
-        for item in code_events:
-            if not isinstance(item, dict):
-                continue
-            pending = state.setdefault("pending_code_execution", {})
-            if item.get("kind") == "code":
-                existing = AIService._build_code_execution_event(pending)
-                if existing:
-                    emitted.append(existing)
-                state["pending_code_execution"] = {
-                    "language": str(item.get("language") or "").strip(),
-                    "code": str(item.get("code") or ""),
-                    "output": "",
-                    "outcome": "",
-                }
-            elif item.get("kind") == "result":
-                pending["output"] = str(item.get("output") or "")
-                pending["outcome"] = str(item.get("outcome") or "").strip()
-                complete = AIService._build_code_execution_event(pending)
-                if complete:
-                    emitted.append(complete)
-                state["pending_code_execution"] = {}
-
-        return emitted
-
-    @staticmethod
-    def _flush_pending_code_execution(state: dict[str, Any]) -> list[dict[str, Any]]:
-        pending = state.get("pending_code_execution") or {}
-        state["pending_code_execution"] = {}
-        event = AIService._build_code_execution_event(pending)
-        return [event] if event else []
-
-    @staticmethod
-    def _code_execution_key(event: dict[str, Any]) -> tuple[str, str, str, str]:
-        return (
-            str(event.get("language") or ""),
-            str(event.get("code") or ""),
-            str(event.get("output") or ""),
-            str(event.get("outcome") or ""),
-        )
-
-    @staticmethod
     def _build_round_state() -> dict[str, Any]:
         return {
             "assistant_thinking": "",
@@ -322,8 +258,6 @@ class AIService:
             "gemini_model_parts": [],
             "grounding_urls": set(),
             "web_search_keys": set(),
-            "pending_code_execution": {},
-            "code_execution_keys": set(),
         }
 
     @staticmethod
@@ -471,39 +405,6 @@ class AIService:
                                 )
                                 + "\n\n"
                             )
-
-                code_events = parsed.get("code_execution")
-                if isinstance(code_events, list):
-                    for event in AIService._consume_code_execution_events(
-                        round_state, code_events
-                    ):
-                        event_key = AIService._code_execution_key(event)
-                        if event_key in round_state["code_execution_keys"]:
-                            continue
-                        round_state["code_execution_keys"].add(event_key)
-                        yield (
-                            "data: "
-                            + json.dumps(
-                                {"type": "code_execution", "data": event},
-                                ensure_ascii=False,
-                            )
-                            + "\n\n"
-                        )
-
-        if provider_mode == "gemini":
-            for event in AIService._flush_pending_code_execution(round_state):
-                event_key = AIService._code_execution_key(event)
-                if event_key in round_state["code_execution_keys"]:
-                    continue
-                round_state["code_execution_keys"].add(event_key)
-                yield (
-                    "data: "
-                    + json.dumps(
-                        {"type": "code_execution", "data": event},
-                        ensure_ascii=False,
-                    )
-                    + "\n\n"
-                )
 
     @staticmethod
     async def chat_stream(request: ChatRequest) -> AsyncIterator[str]:
@@ -902,7 +803,6 @@ class AIService:
             current_round = 0
             max_rounds = AIService._resolve_max_tool_rounds(request.maxToolRounds)
             current_body: dict[str, Any] = dict(body)
-            code_execution_keys: set[tuple[str, str, str, str]] = set()
             accumulated_input_items = AIService._clone_responses_input_items(
                 current_body.get("input")
             )
@@ -958,21 +858,6 @@ class AIService:
 
                             if parsed.get("content"):
                                 yield AIService._sse_chunk("content", parsed["content"])
-
-                            code_events = parsed.get("code_execution")
-                            if isinstance(code_events, list):
-                                for event in code_events:
-                                    if not isinstance(event, dict):
-                                        continue
-                                    event_key = AIService._code_execution_key(event)
-                                    if event_key in code_execution_keys:
-                                        continue
-                                    code_execution_keys.add(event_key)
-                                    yield AIService._sse_chunk(
-                                        "code_execution",
-                                        event,
-                                        ensure_ascii=False,
-                                    )
 
                             call_id = str(parsed.get("call_id") or "").strip()
                             round_number = None

@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection, supportsCodeExecution } from './state.js';
+import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection } from './state.js';
 import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
@@ -1066,8 +1066,6 @@ export function updateConfigStatusStrip() {
 }
 
 export function updateWebSearchProviderUi() {
-  const providerConfig = resolveProviderSelection(elements.provider?.value);
-  const canUseCodeExecution = supportsCodeExecution(providerConfig);
   disableBuiltinWebSearchWhenUnavailable();
   state.webSearch.toolMode = getCurrentWebSearchToolMode();
   const toolMode = state.webSearch.toolMode;
@@ -1094,12 +1092,6 @@ export function updateWebSearchProviderUi() {
   }
   if (elements.exaSearchTypeGroup) {
     elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
-  }
-  if (elements.codeExecutionSwitch) {
-    elements.codeExecutionSwitch.style.display = canUseCodeExecution ? "" : "none";
-  }
-  if (!canUseCodeExecution && elements.enableCodeExecution) {
-    elements.enableCodeExecution.checked = false;
   }
   updateConfigStatusStrip();
 }

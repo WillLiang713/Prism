@@ -1,10 +1,10 @@
-import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText, supportsCodeExecution } from './state.js';
+import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText } from './state.js';
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
 import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
-import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, renderCodeExecutionEvents, setEmptyThreadState } from './chat.js';
+import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState } from './chat.js';
 import { clearImages } from './images.js';
 
 function stripMarkdownForThinkingSummary(text) {
@@ -425,12 +425,9 @@ export async function callModel(
         : webSearchConfig?.provider
     );
     const isGeminiProvider = config.provider === "gemini";
-    const enableCodeExecution =
-      supportsCodeExecution(config.provider, config.endpointMode) &&
-      !!config.enableCodeExecution;
     const useGeminiGoogleSearch =
       isGeminiProvider && useWebSearchTool && webSearchProvider === "gemini_search";
-    const useCustomTools = !(isGeminiProvider && (useGeminiGoogleSearch || enableCodeExecution));
+    const useCustomTools = !(isGeminiProvider && useGeminiGoogleSearch);
     const selectedWebSearchTool =
       webSearchProvider === "exa" ? "exa_search" : "tavily_search";
     const selectedTools = ["get_current_time"];
@@ -449,9 +446,8 @@ export async function callModel(
       reasoningEffort: config.reasoningEffort,
       historyTurns: historyTurns,
       enableBuiltinWebSearch: useBuiltinWebSearch,
-      enableTools: useCustomTools || (!isGeminiProvider && !useBuiltinWebSearch),
+      enableTools: useCustomTools,
       enableGoogleSearch: useGeminiGoogleSearch,
-      enableCodeExecution: enableCodeExecution,
       selectedTools: useCustomTools ? selectedTools : [],
       webSearchProvider: webSearchProvider,
       webSearchMaxResults: webSearchConfig?.maxResults || 5,
@@ -640,47 +636,6 @@ export async function callModel(
             }
             // 不在流式过程中渲染来源，等响应完成后再显示
             scheduleSaveChat();
-          } else if (chunk.type === "code_execution" && chunk.data) {
-            const payload =
-              chunk.data && typeof chunk.data === "object" ? chunk.data : {};
-            if (!Array.isArray(turn.models.main.codeExecutions)) {
-              turn.models.main.codeExecutions = [];
-            }
-            const eventKey = JSON.stringify([
-              payload.language || "",
-              payload.code || "",
-              payload.output || "",
-              payload.outcome || "",
-            ]);
-            const exists = turn.models.main.codeExecutions.some(
-              (item) =>
-                JSON.stringify([
-                  item.language || "",
-                  item.code || "",
-                  item.output || "",
-                  item.outcome || "",
-                ]) === eventKey
-            );
-            if (!exists) {
-              turn.models.main.codeExecutions.push(payload);
-            }
-            if (uiRef?.codeExecutionSectionEl && uiRef?.codeExecutionListEl) {
-              renderCodeExecutionEvents(
-                uiRef.codeExecutionSectionEl,
-                uiRef.codeExecutionListEl,
-                turn.models.main.codeExecutions
-              );
-            }
-            scheduleSaveChat();
-            updateScrollToBottomButton();
-            const message = uiRef?.statusEl?.closest(".assistant-message");
-            if (message && message.classList.contains("loading")) {
-              message.classList.remove("loading");
-              message.classList.add("streaming");
-            }
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
           } else if (chunk.type === "error") {
             throw new Error(chunk.data);
           }

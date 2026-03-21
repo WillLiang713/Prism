@@ -3,7 +3,6 @@ import {
   elements,
   STORAGE_KEYS,
   resolveProviderSelection,
-  supportsCodeExecution,
   createId,
   formatTime,
 } from './state.js';
@@ -160,7 +159,6 @@ function createServiceTemplate(name = "") {
       titleModel: "",
       apiUrl: "",
       systemPrompt: "",
-      enableCodeExecution: false,
     },
     reasoningEffort: DEFAULT_REASONING_EFFORT,
     connectivity: createConnectivityState(),
@@ -232,7 +230,6 @@ function normalizeService(service, index = 0) {
       systemPrompt: String(
         service?.model?.systemPrompt || service?.model?.roleSetting || ""
       ),
-      enableCodeExecution: service?.model?.enableCodeExecution === true,
     },
     reasoningEffort: normalizeReasoningEffortValue(
       service?.reasoningEffort || DEFAULT_REASONING_EFFORT
@@ -270,9 +267,6 @@ function migrateLegacyConfig(rawConfig = {}) {
         apiUrl: legacyModelConfig.apiUrl || "",
         systemPrompt:
           legacyModelConfig.systemPrompt || legacyModelConfig.roleSetting || "",
-        enableCodeExecution:
-          legacyModelConfig.enableCodeExecution === true ||
-          rawConfig.webSearch?.enableCodeExecution === true,
       },
       reasoningEffort:
         rawConfig.reasoningEffort || DEFAULT_REASONING_EFFORT,
@@ -520,8 +514,7 @@ function isEffectivelyEmptyService(service) {
     String(service?.model?.model || "").trim() === "" &&
     String(service?.model?.titleModel || "").trim() === "" &&
     String(service?.model?.apiUrl || "").trim() === "" &&
-    String(service?.model?.systemPrompt || "").trim() === "" &&
-    service?.model?.enableCodeExecution !== true
+    String(service?.model?.systemPrompt || "").trim() === ""
   );
 }
 
@@ -673,11 +666,6 @@ function applyManagedServiceConnectionToForm(service) {
   if (elements.apiUrl) {
     elements.apiUrl.value = service.model?.apiUrl || "";
   }
-  if (elements.enableCodeExecution) {
-    elements.enableCodeExecution.checked =
-      supportsCodeExecution(providerConfig) &&
-      service.model?.enableCodeExecution === true;
-  }
   syncConfigSelectPicker("provider");
   updateProviderUi();
 }
@@ -692,10 +680,6 @@ function applyActiveRoleSettingToForm(service) {
   }
   if (elements.roleSetting) {
     elements.roleSetting.value = service.model?.systemPrompt || "";
-  }
-  if (elements.enableCodeExecution) {
-    elements.enableCodeExecution.checked =
-      service.model?.enableCodeExecution === true;
   }
   syncRoleSettingPreview(true);
   updateModelHint("main");
@@ -731,9 +715,6 @@ function applyEmptyServiceStateToForm() {
   if (elements.roleSetting) {
     elements.roleSetting.value = "";
   }
-  if (elements.enableCodeExecution) {
-    elements.enableCodeExecution.checked = false;
-  }
 
   syncConfigSelectPicker("provider");
   syncRoleSettingPreview(false);
@@ -763,9 +744,6 @@ function readManagedServiceConnectionFromForm(existingService = null) {
           providerConfig.provider
         ),
         systemPrompt: String(base.model?.systemPrompt || ""),
-        enableCodeExecution:
-          supportsCodeExecution(providerConfig) &&
-          !!elements.enableCodeExecution?.checked,
       },
       reasoningEffort: base.reasoningEffort,
       connectivity: base.connectivity || createConnectivityState(),
@@ -784,9 +762,6 @@ function applyRoleSettingToService(service) {
       model: getActiveServiceModelFormValue(),
       titleModel: getActiveServiceTitleModelFormValue(),
       systemPrompt: getActiveRoleSettingFormValue(),
-      enableCodeExecution:
-        supportsCodeExecution(service?.model || {}) &&
-        !!elements.enableCodeExecution?.checked,
     },
   });
 }
@@ -1351,10 +1326,6 @@ export function getConfig(side) {
             : activeService?.model?.titleModel || ""
         )
       : String(activeService?.model?.titleModel || "");
-  const liveEnableCodeExecution =
-    usingLiveActiveServiceForm
-      ? !!elements.enableCodeExecution?.checked
-      : activeService?.model?.enableCodeExecution === true;
 
   if (side === "Title") {
     return {
@@ -1378,12 +1349,6 @@ export function getConfig(side) {
     apiUrl: String(activeServiceRequestConfig.apiUrl || "").trim(),
     systemPrompt: liveRoleSetting,
     reasoningEffort: getReasoningEffortValue(),
-    enableCodeExecution:
-      supportsCodeExecution(
-        activeServiceRequestConfig.provider,
-        activeServiceRequestConfig.endpointMode
-      ) &&
-      liveEnableCodeExecution,
   };
 }
 
@@ -1450,14 +1415,9 @@ export function loadConfig() {
           store.webSearch.searchDepth
         );
       }
-      if (elements.enableCodeExecution) {
-        elements.enableCodeExecution.checked =
-          getActiveService()?.model?.enableCodeExecution === true;
-      }
     } else if (elements.webSearchProvider) {
       elements.webSearchProvider.value = "tavily";
       if (elements.exaSearchType) elements.exaSearchType.value = "auto";
-      if (elements.enableCodeExecution) elements.enableCodeExecution.checked = false;
       pendingWebSearchToolMode = "tavily";
       if (elements.exaSearchType) {
         elements.exaSearchType.value = "auto";
@@ -1515,7 +1475,6 @@ export async function clearConfig() {
   if (elements.exaSearchType) elements.exaSearchType.value = "auto";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
-  if (elements.enableCodeExecution) elements.enableCodeExecution.checked = false;
   if (elements.closeToTrayOnClose) elements.closeToTrayOnClose.checked = false;
 
   persistState({

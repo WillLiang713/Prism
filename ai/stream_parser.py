@@ -206,7 +206,6 @@ class StreamParser:
             "tokens": None,
             "tool_calls": None,
             "grounding_metadata": None,
-            "code_execution": None,
             "model_parts": [],
         }
 
@@ -222,7 +221,6 @@ class StreamParser:
                     ]
 
                     tool_calls = []
-                    code_events = []
                     for index, part in enumerate(result["model_parts"]):
                         text = str(part.get("text") or "")
                         if text:
@@ -251,36 +249,8 @@ class StreamParser:
                                 tool_call["thought_signature"] = signature
                             tool_calls.append(tool_call)
 
-                        executable_code = part.get("executableCode")
-                        if isinstance(executable_code, dict):
-                            code_events.append(
-                                {
-                                    "kind": "code",
-                                    "language": str(
-                                        executable_code.get("language") or ""
-                                    ),
-                                    "code": str(executable_code.get("code") or ""),
-                                }
-                            )
-
-                        execution_result = part.get("codeExecutionResult")
-                        if isinstance(execution_result, dict):
-                            code_events.append(
-                                {
-                                    "kind": "result",
-                                    "outcome": str(
-                                        execution_result.get("outcome") or ""
-                                    ),
-                                    "output": str(
-                                        execution_result.get("output") or ""
-                                    ),
-                                }
-                            )
-
                     if tool_calls:
                         result["tool_calls"] = tool_calls
-                    if code_events:
-                        result["code_execution"] = code_events
 
             grounding_metadata = candidate.get("groundingMetadata")
             if isinstance(grounding_metadata, dict):
@@ -626,73 +596,6 @@ def build_web_search_event_from_sources(
         "results": preview_results[:8],
     }
 
-
-def _extract_code_interpreter_output_text(item: dict[str, Any] | None) -> str:
-    if not isinstance(item, dict):
-        return ""
-
-    outputs = item.get("outputs")
-    if not isinstance(outputs, list):
-        return ""
-
-    parts: list[str] = []
-    for output in outputs:
-        if not isinstance(output, dict):
-            continue
-
-        text = str(
-            output.get("logs")
-            or output.get("text")
-            or output.get("content")
-            or ""
-        ).strip()
-        if text:
-            parts.append(text)
-            continue
-
-        output_type = str(output.get("type") or "").strip().lower()
-        if output_type in {"image", "output_image"}:
-            image_ref = str(
-                output.get("file_id")
-                or output.get("image_url")
-                or output.get("url")
-                or ""
-            ).strip()
-            parts.append(
-                f"[生成图片]{f' {image_ref}' if image_ref else ''}".rstrip()
-            )
-        elif output_type in {"file", "output_file"}:
-            file_ref = str(output.get("file_id") or output.get("id") or "").strip()
-            parts.append(
-                f"[生成文件]{f' {file_ref}' if file_ref else ''}".rstrip()
-            )
-
-    return "\n\n".join(part for part in parts if part).strip()
-
-
-def build_code_execution_event_from_responses_item(
-    item: dict[str, Any] | None,
-) -> dict[str, Any] | None:
-    if not isinstance(item, dict):
-        return None
-    if str(item.get("type") or "").strip() != "code_interpreter_call":
-        return None
-
-    code = str(item.get("code") or item.get("input") or "")
-    output = _extract_code_interpreter_output_text(item)
-    outcome = str(item.get("status") or "").strip()
-    language = str(item.get("language") or "python").strip() or "python"
-
-    if not code and not output:
-        return None
-
-    return {
-        "language": language,
-        "code": code,
-        "output": output,
-        "outcome": outcome,
-    }
-
 def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
     """解析 OpenAI Responses API 流式事件。"""
     result: dict[str, Any] = {
@@ -707,7 +610,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
         "response_id": "",
         "function_calls": None,
         "response_output_items": None,
-        "code_execution": None,
     }
 
     event_type = str(chunk.get("type") or "").strip()
@@ -809,12 +711,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
                 result["sources"] = sources
             return result
 
-        if item_type == "code_interpreter_call":
-            code_execution = build_code_execution_event_from_responses_item(item)
-            if code_execution:
-                result["code_execution"] = [code_execution]
-            return result
-
         if item_type == "function_call":
             call_id = str(item.get("call_id") or item.get("id") or "").strip()
             result["call_id"] = call_id
@@ -837,7 +733,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
             if isinstance(output_items, list):
                 result["response_output_items"] = output_items
             collected_sources: list[dict[str, str]] = []
-            collected_code_execution: list[dict[str, Any]] = []
             if isinstance(output_items, list):
                 for item in output_items:
                     if not isinstance(item, dict):
@@ -856,12 +751,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
                         collected_sources.extend(
                             extract_sources_from_responses_web_search_call(item)
                         )
-                    elif item_type == "code_interpreter_call":
-                        code_execution = build_code_execution_event_from_responses_item(
-                            item
-                        )
-                        if code_execution:
-                            collected_code_execution.append(code_execution)
 
             if collected_sources:
                 deduped_sources: list[dict[str, str]] = []
@@ -888,9 +777,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
                         )
                         if synthetic_web_search:
                             result["web_search"] = synthetic_web_search
-
-            if collected_code_execution:
-                result["code_execution"] = collected_code_execution
 
             usage = response.get("usage")
             if isinstance(usage, dict):

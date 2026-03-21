@@ -88,24 +88,6 @@ export function resolveProviderSelection(value, endpointMode = "chat_completions
   };
 }
 
-export function supportsCodeExecution(value, endpointMode = "chat_completions") {
-  const providerConfig =
-    value && typeof value === "object"
-      ? resolveProviderSelection(
-          value.providerSelection ?? value.provider,
-          value.endpointMode ?? endpointMode
-        )
-      : resolveProviderSelection(value, endpointMode);
-
-  return (
-    providerConfig.provider === "gemini" ||
-    (
-      providerConfig.provider === "openai" &&
-      providerConfig.endpointMode === "responses"
-    )
-  );
-}
-
 export function resolveRuntimeConfig() {
   const runtime = window.__PRISM_RUNTIME__ || {};
   const params = new URLSearchParams(window.location.search);
@@ -246,8 +228,6 @@ export const elements = {
   webSearchToolCurrent: document.getElementById("webSearchToolCurrent"),
   webSearchToolValue: document.getElementById("webSearchToolValue"),
   webSearchToolDropdown: document.getElementById("webSearchToolDropdown"),
-  enableCodeExecution: document.getElementById("enableCodeExecution"),
-  codeExecutionSwitch: document.getElementById("codeExecutionSwitch"),
   webSearchProvider: document.getElementById("webSearchProvider"),
   webSearchProviderGroup: document.getElementById("webSearchProviderGroup"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),

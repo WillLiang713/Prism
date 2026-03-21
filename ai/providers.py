@@ -718,14 +718,6 @@ class MessageBuilder:
         if config.enableBuiltinWebSearch:
             response_tools.append({"type": "web_search"})
 
-        if config.enableCodeExecution:
-            response_tools.append(
-                {
-                    "type": "code_interpreter",
-                    "container": {"type": "auto"},
-                }
-            )
-
         local_tools = MessageBuilder._load_selected_tools(config)
         if local_tools:
             response_tools.extend(MessageBuilder._convert_tools_to_responses(local_tools))
@@ -746,11 +738,8 @@ class MessageBuilder:
         if config.enableGoogleSearch:
             tools.append({"google_search": {}})
 
-        if config.enableCodeExecution:
-            tools.append({"code_execution": {}})
-
-        # Gemini 当前原生工具与 function calling 不能在这个 REST 工作流里混用，
-        # 因此开启原生工具时，不再附带自定义函数工具。
+        # Gemini 当前原生 Google Search 与 function calling 不能在这个 REST 工作流里混用，
+        # 因此开启原生搜索时，不再附带自定义函数工具。
         if not tools:
             selected_tools = MessageBuilder._load_selected_tools(config)
             if selected_tools:
