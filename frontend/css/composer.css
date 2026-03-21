@@ -335,7 +335,8 @@
   gap: 4px;
 }
 
-.web-search-control.is-open .web-search-tool-dropdown {
+.web-search-control.is-open .web-search-tool-dropdown,
+.web-search-tool-dropdown.is-floating-open {
   display: flex;
   flex-direction: column;
 }

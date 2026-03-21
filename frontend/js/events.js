@@ -17,7 +17,7 @@ import {
   testSelectedServiceConnection,
   autoSaveManagedServiceDraft,
 } from './config.js';
-import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown } from './models.js';
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
@@ -114,7 +114,7 @@ export function bindEvents() {
     if (!e.target.closest(".reasoning-effort-selector")) {
       elements.reasoningEffortSelector?.classList.remove("open");
     }
-    if (!e.target.closest(".web-search-control")) {
+    if (!e.target.closest(".web-search-control") && !e.target.closest(".web-search-tool-dropdown")) {
       closeWebSearchToolSelector();
     }
   });
@@ -335,7 +335,10 @@ export function bindEvents() {
     closeModelDropdown("Title");
   });
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
-  window.addEventListener("resize", repositionOpenFloatingDropdowns);
+  window.addEventListener("resize", () => {
+    repositionOpenFloatingDropdowns();
+    positionWebSearchToolSelector();
+  });
 
   // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）
   let promptImeComposing = false;

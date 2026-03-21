@@ -1,4 +1,5 @@
 import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection } from './state.js';
+import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "模型内置",
@@ -7,6 +8,81 @@ const WEB_SEARCH_TOOL_MODE_LABELS = {
 };
 
 const WEB_SEARCH_DISABLED_LABEL = "关闭联网";
+
+function mountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  rememberDropdownOrigin(dropdownEl);
+  if (dropdownEl.parentElement !== document.body) {
+    document.body.appendChild(dropdownEl);
+  }
+  dropdownEl.classList.add("is-floating-open");
+}
+
+function unmountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  dropdownEl.classList.remove("is-floating-open");
+  restoreDropdownOrigin(dropdownEl);
+}
+
+function clearWebSearchToolDropdownPosition(dropdownEl = elements.webSearchToolDropdown) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  dropdownEl.style.position = "";
+  dropdownEl.style.left = "";
+  dropdownEl.style.top = "";
+  dropdownEl.style.right = "";
+  dropdownEl.style.bottom = "";
+  dropdownEl.style.width = "";
+  dropdownEl.style.minWidth = "";
+  dropdownEl.style.maxWidth = "";
+}
+
+export function positionWebSearchToolSelector() {
+  const dropdownEl = elements.webSearchToolDropdown;
+  const buttonEl = elements.webSearchToolCurrent;
+  if (!(dropdownEl instanceof HTMLElement) || !(buttonEl instanceof HTMLElement)) return;
+  if (!state.webSearch.selectorOpen) {
+    clearWebSearchToolDropdownPosition(dropdownEl);
+    return;
+  }
+
+  const rect = buttonEl.getBoundingClientRect();
+  const viewportPadding = 12;
+  const gap = 8;
+  const maxWidth = Math.max(180, window.innerWidth - viewportPadding * 2);
+
+  dropdownEl.style.position = "fixed";
+  dropdownEl.style.left = "0px";
+  dropdownEl.style.top = "0px";
+  dropdownEl.style.right = "auto";
+  dropdownEl.style.bottom = "auto";
+  dropdownEl.style.width = "";
+  dropdownEl.style.minWidth = `${Math.max(132, Math.round(rect.width))}px`;
+  dropdownEl.style.maxWidth = `${maxWidth}px`;
+
+  const width = Math.min(
+    Math.max(dropdownEl.offsetWidth, Math.round(rect.width), 132),
+    maxWidth
+  );
+  const height = dropdownEl.offsetHeight;
+  const unclampedLeft = rect.left + rect.width / 2 - width / 2;
+  const left = Math.min(
+    Math.max(viewportPadding, Math.round(unclampedLeft)),
+    Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
+  );
+  let top = Math.round(rect.top - gap - height);
+  if (top < viewportPadding) {
+    top = Math.round(
+      Math.min(
+        window.innerHeight - viewportPadding - height,
+        rect.bottom + gap
+      )
+    );
+  }
+
+  dropdownEl.style.left = `${left}px`;
+  dropdownEl.style.top = `${top}px`;
+  dropdownEl.style.width = `${width}px`;
+}
 
 export function renderWebSearchSection(container, webSearch, options = {}) {
   if (!container) return;
@@ -866,6 +942,8 @@ export function closeWebSearchToolSelector() {
   state.webSearch.selectorOpen = false;
   elements.webSearchControl?.classList.remove("is-open");
   elements.webSearchToolCurrent?.setAttribute("aria-expanded", "false");
+  clearWebSearchToolDropdownPosition();
+  unmountWebSearchToolDropdown();
 }
 
 export function renderWebSearchToolSelector() {
@@ -904,6 +982,16 @@ export function renderWebSearchToolSelector() {
     "aria-expanded",
     state.webSearch.selectorOpen ? "true" : "false"
   );
+  if (state.webSearch.selectorOpen) {
+    mountWebSearchToolDropdown(dropdownEl);
+    positionWebSearchToolSelector();
+    window.requestAnimationFrame(() => {
+      positionWebSearchToolSelector();
+    });
+  } else {
+    clearWebSearchToolDropdownPosition(dropdownEl);
+    unmountWebSearchToolDropdown(dropdownEl);
+  }
 }
 
 export function toggleWebSearchToolSelector() {
