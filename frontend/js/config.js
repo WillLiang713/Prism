@@ -1296,11 +1296,6 @@ export function updateModelNames() {
   if (modelLine) {
     modelLine.style.display = "";
   }
-  if (elements.headerModelTrigger) {
-    elements.headerModelTrigger.title = displayName
-      ? `切换模型：${serviceName} / ${displayName}`
-      : `选择模型：${serviceName}`;
-  }
   if (isHeaderModelDropdownOpen()) {
     renderHeaderModelDropdown();
   }

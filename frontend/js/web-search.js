@@ -680,7 +680,6 @@ export function renderSourcesToggle(buttonEl, sources) {
     buttonEl.setAttribute("aria-expanded", "false");
     buttonEl.textContent = "来源";
     buttonEl.setAttribute("aria-label", "暂无来源");
-    buttonEl.setAttribute("title", "暂无来源");
     return;
   }
 
@@ -688,7 +687,6 @@ export function renderSourcesToggle(buttonEl, sources) {
   buttonEl.disabled = false;
   buttonEl.textContent = `来源 ${items.length}`;
   buttonEl.setAttribute("aria-label", `查看 ${items.length} 个来源`);
-  buttonEl.setAttribute("title", `查看 ${items.length} 个来源`);
 }
 
 export function renderSources(sectionEl, sources) {

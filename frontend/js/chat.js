@@ -166,7 +166,6 @@ function createIconActionButton({
   const button = document.createElement("button");
   button.type = "button";
   button.className = className;
-  if (title) button.title = title;
   if (ariaLabel) button.setAttribute("aria-label", ariaLabel);
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -499,12 +498,10 @@ export function renderTopicList() {
     item.tabIndex = 0;
     item.setAttribute("role", "button");
     item.setAttribute("aria-label", `切换到话题：${topicTitle}`);
-    item.title = topicTitle;
 
     const title = document.createElement("div");
     title.className = "topic-title";
     title.textContent = topicTitle;
-    title.title = topicTitle;
 
     const meta = document.createElement("div");
     meta.className = "topic-meta";
@@ -527,7 +524,6 @@ export function renderTopicList() {
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
       deleteBtn.className = "topic-delete-btn";
-      deleteBtn.title = "删除该话题";
       deleteBtn.setAttribute(
         "aria-label",
         `删除话题：${topic.title || "未命名话题"}`
@@ -1043,7 +1039,6 @@ export function createAssistantCard(
   const regenerateBtn = document.createElement("button");
   regenerateBtn.type = "button";
   regenerateBtn.className = "action-btn regenerate-btn";
-  regenerateBtn.title = "重新生成";
   regenerateBtn.setAttribute("aria-label", "重新生成");
   regenerateBtn.dataset.topicId = topicId || "";
   regenerateBtn.dataset.status = statusSnapshot;

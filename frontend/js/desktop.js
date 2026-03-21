@@ -49,10 +49,6 @@ export function applyDesktopWindowState() {
 
   if (elements.windowMaximizeBtn) {
     elements.windowMaximizeBtn.setAttribute(
-    "title",
-    state.runtime.isWindowMaximized ? "还原" : "最大化"
-  );
-    elements.windowMaximizeBtn.setAttribute(
     "aria-label",
     state.runtime.isWindowMaximized ? "还原" : "最大化"
   );
@@ -161,7 +157,6 @@ export function syncDesktopBackendUi() {
   if (elements.sendBtn) {
     elements.sendBtn.disabled = !isReady;
     if (!isReady) {
-      elements.sendBtn.title = promptPlaceholder;
       elements.sendBtn.setAttribute("aria-label", promptPlaceholder);
     } else {
       setSendButtonMode(elements.sendBtn.dataset.mode);

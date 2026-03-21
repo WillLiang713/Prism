@@ -33,6 +33,7 @@
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
+  order: -1;
   color: currentColor;
   opacity: 0.8;
   transition: transform 0.2s ease, opacity 0.2s ease;

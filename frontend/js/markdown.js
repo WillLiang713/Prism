@@ -177,7 +177,6 @@ export function createCopyButton(getText, options = {}) {
   if (icon) {
     btn.classList.add("copy-icon-btn");
     btn.setAttribute("aria-label", label);
-    btn.title = label;
 
     const mkSvg = (svgClass, inner) => {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -210,7 +209,6 @@ export function createCopyButton(getText, options = {}) {
     btn.disabled = true;
     if (icon) {
       btn.dataset.copyState = "loading";
-      btn.title = loadingText;
     } else {
       btn.textContent = loadingText;
     }
@@ -219,7 +217,6 @@ export function createCopyButton(getText, options = {}) {
     const ok = await copyTextToClipboard(text);
     if (icon) {
       btn.dataset.copyState = ok ? "success" : "error";
-      btn.title = ok ? successText : errorText;
     } else {
       btn.textContent = ok ? successText : errorText;
     }
@@ -233,14 +230,12 @@ export function createCopyButton(getText, options = {}) {
           btn.disabled = false;
           btn.classList.remove("copy-btn-fade-out");
           delete btn.dataset.copyState;
-          btn.title = original;
         }, 300);
       } else {
         // 错误状态或非图标按钮恢复原状态
         btn.disabled = false;
         if (icon) {
           delete btn.dataset.copyState;
-          btn.title = original;
         } else {
           btn.textContent = original;
         }

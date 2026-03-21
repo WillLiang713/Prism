@@ -48,10 +48,8 @@ export function setSendButtonMode(mode) {
   const nextMode = mode === "stop" ? "stop" : "send";
   elements.sendBtn.dataset.mode = nextMode;
   if (nextMode === "stop") {
-    elements.sendBtn.title = "停止生成";
     elements.sendBtn.setAttribute("aria-label", "停止生成");
   } else {
-    elements.sendBtn.title = "发送";
     elements.sendBtn.setAttribute("aria-label", "发送");
   }
 }

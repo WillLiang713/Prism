@@ -188,7 +188,7 @@
                   </div>
                 </div>
                 <div class="chat-actions">
-                  <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" title="设置" aria-label="设置">
+                  <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" aria-label="设置">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <circle cx="12" cy="12" r="3"></circle>
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
@@ -200,7 +200,6 @@
                       class="desktop-window-btn no-drag"
                       id="windowMinimizeBtn"
                       type="button"
-                      title="最小化"
                       aria-label="最小化"
                     >
                       <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
@@ -211,7 +210,6 @@
                       class="desktop-window-btn no-drag"
                       id="windowMaximizeBtn"
                       type="button"
-                      title="最大化"
                       aria-label="最大化"
                     >
                       <svg class="icon-maximize" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
@@ -226,7 +224,6 @@
                       class="desktop-window-btn desktop-window-btn-close no-drag"
                       id="windowCloseBtn"
                       type="button"
-                      title="关闭"
                       aria-label="关闭"
                     >
                       <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
@@ -254,7 +251,7 @@
                     class="scroll-to-bottom-btn"
                     id="scrollToBottomBtn"
                     style="display: none"
-                    title="滚动到底部"
+                    aria-label="滚动到底部"
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -294,7 +291,6 @@
                           <button
                             class="toolbar-btn icon-only"
                             id="imageUploadBtn"
-                            title="上传图片"
                             aria-label="上传图片"
                           >
                             <svg
@@ -313,7 +309,6 @@
                         <div
                           class="web-search-control"
                           id="webSearchControl"
-                          title="联网设置"
                         >
                           <button
                             type="button"
@@ -343,7 +338,7 @@
                           ></div>
                         </div>
 
-                          <div class="reasoning-effort-selector" id="reasoningEffortSelector" title="思考强度">
+                          <div class="reasoning-effort-selector" id="reasoningEffortSelector">
                             <span class="reasoning-effort-current">
                               <span class="reasoning-effort-label">思考</span>
                               <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
@@ -364,7 +359,6 @@
                         class="btn btn-primary send-button"
                         id="sendBtn"
                         data-mode="send"
-                        title="发送"
                         aria-label="发送"
                       >
                         <span class="action-label label-send">发送</span>
@@ -449,21 +443,21 @@
               <div class="service-config-layout">
                 <div class="service-list-panel">
                   <div class="service-toolbar" aria-label="服务操作">
-                    <button type="button" class="btn btn-secondary btn-settings" id="createServiceBtn" title="新建" aria-label="新建">
+                    <button type="button" class="btn btn-secondary btn-settings" id="createServiceBtn" aria-label="新建">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 5v14"></path>
                         <path d="M5 12h14"></path>
                       </svg>
                       <span class="sr-only">新建</span>
                     </button>
-                    <button type="button" class="btn btn-secondary btn-settings" id="duplicateServiceBtn" title="复制" aria-label="复制">
+                    <button type="button" class="btn btn-secondary btn-settings" id="duplicateServiceBtn" aria-label="复制">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <rect x="9" y="9" width="10" height="10" rx="2"></rect>
                         <path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
                       </svg>
                       <span class="sr-only">复制</span>
                     </button>
-                    <button type="button" class="btn btn-secondary btn-settings" id="deleteServiceBtn" title="删除" aria-label="删除">
+                    <button type="button" class="btn btn-secondary btn-settings" id="deleteServiceBtn" aria-label="删除">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M4 7h16"></path>
                         <path d="M10 11v6"></path>
@@ -529,7 +523,7 @@
                               id="apiKey"
                               placeholder="输入API密钥"
                             />
-                            <button type="button" class="password-toggle-btn" data-target="apiKey" title="显示/隐藏密钥">
+                            <button type="button" class="password-toggle-btn" data-target="apiKey" aria-label="显示/隐藏密钥">
                               <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                               <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                             </button>
@@ -611,7 +605,6 @@
                               class="model-input-clear-btn"
                               id="clearTitleGenerationModelBtn"
                               aria-label="清空话题生成模型"
-                              title="清空并跟随主模型"
                             ></button>
                           </div>
                           <button
@@ -704,7 +697,7 @@
                       id="tavilyApiKey"
                       placeholder="输入API密钥"
                     />
-                    <button type="button" class="password-toggle-btn" data-target="tavilyApiKey" title="显示/隐藏密钥">
+                    <button type="button" class="password-toggle-btn" data-target="tavilyApiKey" aria-label="显示/隐藏密钥">
                       <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>
@@ -718,7 +711,7 @@
                       id="exaApiKey"
                       placeholder="输入API密钥"
                     />
-                    <button type="button" class="password-toggle-btn" data-target="exaApiKey" title="显示/隐藏密钥">
+                    <button type="button" class="password-toggle-btn" data-target="exaApiKey" aria-label="显示/隐藏密钥">
                       <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>

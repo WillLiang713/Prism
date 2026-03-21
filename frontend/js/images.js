@@ -92,7 +92,6 @@ export function renderImagePreviews() {
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "image-preview-remove";
-    removeBtn.title = "移除图片";
     removeBtn.innerHTML = "×";
     removeBtn.addEventListener("click", () => removeImage(image.id));
 
