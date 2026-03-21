@@ -420,7 +420,9 @@ export async function callModel(
       useWebSearchTool &&
       webSearchToolMode === "builtin";
     const webSearchProvider = normalizeWebSearchProvider(
-      webSearchToolMode === "exa" || webSearchToolMode === "tavily"
+      webSearchToolMode === "exa" ||
+      webSearchToolMode === "tavily" ||
+      webSearchToolMode === "gemini_search"
         ? webSearchToolMode
         : webSearchConfig?.provider
     );
@@ -429,9 +431,13 @@ export async function callModel(
       isGeminiProvider && useWebSearchTool && webSearchProvider === "gemini_search";
     const useCustomTools = !(isGeminiProvider && useGeminiGoogleSearch);
     const selectedWebSearchTool =
-      webSearchProvider === "exa" ? "exa_search" : "tavily_search";
+      webSearchProvider === "exa"
+        ? "exa_search"
+        : webSearchProvider === "tavily"
+        ? "tavily_search"
+        : "";
     const selectedTools = ["get_current_time"];
-    if (useWebSearchTool && !useBuiltinWebSearch) {
+    if (useWebSearchTool && !useBuiltinWebSearch && selectedWebSearchTool) {
       selectedTools.unshift(selectedWebSearchTool);
     }
     const requestBody = {

@@ -3,6 +3,7 @@ import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "Web Search",
+  gemini_search: "Google Search",
   tavily: "Tavily",
   exa: "Exa",
 };
@@ -777,6 +778,7 @@ export function normalizeTavilySearchDepth(value) {
 
 export function normalizeWebSearchProvider(value) {
   const normalized = String(value || "").toLowerCase();
+  if (normalized === "gemini_search") return "gemini_search";
   if (normalized === "exa") return "exa";
   return "tavily";
 }
@@ -815,15 +817,32 @@ export function canUseBuiltinWebSearch(configLike = {}) {
   return endpointMode === "responses" && provider === "openai";
 }
 
+export function canUseGeminiGoogleSearch(configLike = {}) {
+  const providerConfig = resolveProviderSelection(
+    configLike.providerSelection ??
+      configLike.provider ??
+      elements.provider?.value,
+    configLike.endpointMode
+  );
+  return String(providerConfig.provider || "").toLowerCase() === "gemini";
+}
+
 export function normalizeWebSearchToolMode(
   value,
   supportsBuiltin = canUseBuiltinWebSearch(),
+  supportsGeminiGoogleSearch = canUseGeminiGoogleSearch(),
   fallbackProvider = normalizeWebSearchProvider(elements.webSearchProvider?.value)
 ) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "builtin" && supportsBuiltin) return "builtin";
+  if (normalized === "gemini_search" && supportsGeminiGoogleSearch) {
+    return "gemini_search";
+  }
   if (normalized === "exa") return "exa";
   if (normalized === "tavily") return "tavily";
+  if (fallbackProvider === "gemini_search" && supportsGeminiGoogleSearch) {
+    return "gemini_search";
+  }
   return fallbackProvider === "exa" ? "exa" : "tavily";
 }
 
@@ -849,18 +868,24 @@ export function getCurrentWebSearchToolMode() {
   return normalizeWebSearchToolMode(
     state.webSearch?.toolMode,
     canUseBuiltinWebSearch(),
+    canUseGeminiGoogleSearch(),
     normalizeWebSearchProvider(elements.webSearchProvider?.value)
   );
 }
 
 export function getWebSearchToolModeLabel(mode) {
+  const normalized = String(mode || "").toLowerCase();
+  if (WEB_SEARCH_TOOL_MODE_LABELS[normalized]) {
+    return WEB_SEARCH_TOOL_MODE_LABELS[normalized];
+  }
   return WEB_SEARCH_TOOL_MODE_LABELS[
-    normalizeWebSearchToolMode(mode, true, "tavily")
+    normalizeWebSearchToolMode(mode, true, true, "tavily")
   ] || "Tavily";
 }
 
 export function getAvailableWebSearchToolModes() {
   const supportsBuiltin = canUseBuiltinWebSearch();
+  const supportsGeminiGoogleSearch = canUseGeminiGoogleSearch();
   const items = [
     {
       value: "off",
@@ -871,6 +896,12 @@ export function getAvailableWebSearchToolModes() {
     items.push({
       value: "builtin",
       label: WEB_SEARCH_TOOL_MODE_LABELS.builtin,
+    });
+  }
+  if (supportsGeminiGoogleSearch) {
+    items.push({
+      value: "gemini_search",
+      label: WEB_SEARCH_TOOL_MODE_LABELS.gemini_search,
     });
   }
   items.push(
@@ -896,6 +927,18 @@ function disableBuiltinWebSearchWhenUnavailable(options = {}) {
   return true;
 }
 
+function disableGeminiGoogleSearchWhenUnavailable(options = {}) {
+  if (state.webSearch?.toolMode !== "gemini_search") return false;
+  if (canUseGeminiGoogleSearch()) return false;
+
+  state.webSearch.enabled = false;
+  if (options.persist === true) {
+    persistWebSearchConfigPatch({ enabled: false });
+  }
+  closeWebSearchToolSelector();
+  return true;
+}
+
 export function setWebSearchEnabled(enabled, options = {}) {
   state.webSearch.enabled = enabled === true;
   if (options.persist !== false) {
@@ -908,14 +951,17 @@ export function setWebSearchEnabled(enabled, options = {}) {
 
 export function setWebSearchToolMode(mode, options = {}) {
   const supportsBuiltin = canUseBuiltinWebSearch();
+  const supportsGeminiGoogleSearch = canUseGeminiGoogleSearch();
   const normalized = normalizeWebSearchToolMode(
     mode,
     supportsBuiltin,
+    supportsGeminiGoogleSearch,
     normalizeWebSearchProvider(elements.webSearchProvider?.value)
   );
   state.webSearch.toolMode = normalized;
 
   if (
+    normalized === "gemini_search" ||
     normalized === "tavily" ||
     normalized === "exa"
   ) {
@@ -1046,7 +1092,6 @@ export function updateConfigStatusStrip() {
     : "模型：待完成（需 Key + 地址 + 模型）";
   setStatusPillState(elements.modelStatusPill, modelReady, modelText);
 
-  const webProvider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
   const maxResults = Math.max(
     1,
     Math.min(20, parseInt(elements.tavilyMaxResults?.value) || 5)
@@ -1057,6 +1102,8 @@ export function updateConfigStatusStrip() {
     ? "联网：关闭"
     : toolMode === "builtin"
       ? "联网：Web Search"
+      : toolMode === "gemini_search"
+      ? "联网：Google Search"
       : toolMode === "exa"
       ? `联网：Exa · ${exaType} · ${maxResults} 条`
       : `联网：Tavily · ${depth} · ${maxResults} 条`;
@@ -1065,11 +1112,13 @@ export function updateConfigStatusStrip() {
 
 export function updateWebSearchProviderUi() {
   disableBuiltinWebSearchWhenUnavailable();
+  disableGeminiGoogleSearchWhenUnavailable();
   state.webSearch.toolMode = getCurrentWebSearchToolMode();
   const toolMode = state.webSearch.toolMode;
   state.webSearch.enabled = isWebSearchEnabled();
-  let provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
+  const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
   const isExa = provider === "exa";
+  const isGeminiSearch = provider === "gemini_search";
   const usesExternalSearch = toolMode === "tavily" || toolMode === "exa";
 
   renderWebSearchToolSelector();
@@ -1080,10 +1129,12 @@ export function updateWebSearchProviderUi() {
     elements.webSearchMaxResultsGroup.style.display = usesExternalSearch ? "" : "none";
   }
   if (elements.tavilyApiKeyGroup) {
-    elements.tavilyApiKeyGroup.style.display = isExa ? "none" : "";
+    elements.tavilyApiKeyGroup.style.display =
+      isExa || isGeminiSearch ? "none" : "";
   }
   if (elements.tavilySearchDepthGroup) {
-    elements.tavilySearchDepthGroup.style.display = isExa ? "none" : "";
+    elements.tavilySearchDepthGroup.style.display =
+      isExa || isGeminiSearch ? "none" : "";
   }
   if (elements.exaApiKeyGroup) {
     elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
