@@ -383,6 +383,10 @@ function setReasoningEffortValue(value) {
     elements.reasoningEffortValue.textContent =
       activeBtn.dataset.label || "中";
   }
+  elements.reasoningEffortSelector?.classList.toggle(
+    "is-off",
+    normalizedValue === "none"
+  );
 }
 
 function getEffectiveProviderSelectionValue() {

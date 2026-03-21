@@ -99,6 +99,10 @@ export function bindEvents() {
       elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       elements.reasoningEffortValue.textContent = btn.dataset.label;
+      elements.reasoningEffortSelector?.classList.toggle(
+        "is-off",
+        btn.dataset.value === "none"
+      );
       elements.reasoningEffortSelector.classList.remove("open");
       autoSaveConfigDraft();
       return;

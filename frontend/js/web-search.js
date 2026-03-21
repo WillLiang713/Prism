@@ -963,8 +963,8 @@ export function renderWebSearchToolSelector() {
   const toolMode = getCurrentWebSearchToolMode();
   const enabled = isWebSearchEnabled();
   const options = getAvailableWebSearchToolModes();
-  currentEl.hidden = !enabled;
-  currentEl.textContent = getWebSearchToolModeLabel(toolMode);
+  currentEl.hidden = false;
+  currentEl.textContent = enabled ? getWebSearchToolModeLabel(toolMode) : "关";
   dropdownEl.innerHTML = "";
   buttonEl.classList.toggle("is-active", enabled);
   elements.webSearchControl?.classList.toggle("is-active", enabled);
