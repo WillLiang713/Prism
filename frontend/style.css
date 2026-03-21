@@ -1616,7 +1616,7 @@ body {
 
 #promptInput::placeholder {
   color: var(--text-dim);
-  transition: color 0.2s ease, transform 0.2s ease;
+  transition: color 0.2s ease;
 }
 
 .composer-box:focus-within #promptInput::placeholder {

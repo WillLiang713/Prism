@@ -66,6 +66,10 @@ export function bindEvents() {
     updateConfigStatusStrip();
     autoSaveConfigDraft();
   });
+  elements.codeExecutionSwitch?.addEventListener(PRESS_START_EVENT, (e) => {
+    // 鼠标点击开关时保持当前焦点，避免输入框 placeholder 因 blur/focus 抖动闪烁。
+    e.preventDefault();
+  });
   elements.webSearchProvider?.addEventListener("change", () => {
     const currentMode = getCurrentWebSearchToolMode();
     if (currentMode !== "builtin") {
