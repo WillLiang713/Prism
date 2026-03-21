@@ -340,6 +340,8 @@ export const elements = {
   headerModelInfo: document.getElementById("headerModelInfo"),
   headerModelTrigger: document.getElementById("headerModelTrigger"),
   headerModelDropdown: document.getElementById("headerModelDropdown"),
+  serviceNameLabel: document.getElementById("serviceNameLabel"),
+  serviceModelDivider: document.getElementById("serviceModelDivider"),
   modelName: document.getElementById("modelName"),
   headerSessionInfo: document.getElementById("headerSessionInfo"),
 

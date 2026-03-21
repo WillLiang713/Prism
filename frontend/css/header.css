@@ -248,6 +248,22 @@
   }
 }
 
+.brand-service-name {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .brand-service-name {
+    max-width: 60px;
+  }
+}
+
 .brand-model-id {
   font-family: var(--font-mono);
   font-size: 12px;

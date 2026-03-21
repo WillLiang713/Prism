@@ -47,6 +47,16 @@
   color: var(--message-label-color);
 }
 
+.assistant-service-name {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.assistant-model-divider {
+  color: var(--text-dim);
+  margin: 0 4px;
+}
+
 .assistant-message.loading .assistant-model-name,
 .assistant-message.streaming .assistant-model-name {
   background: linear-gradient(

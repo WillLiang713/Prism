@@ -8,6 +8,9 @@
     />
     <title>Prism</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/layout.css" />
     <link rel="stylesheet" href="css/header.css" />
@@ -159,6 +162,8 @@
                         aria-haspopup="listbox"
                         aria-expanded="false"
                       >
+                        <span class="brand-service-name" id="serviceNameLabel" style="display: none;"></span>
+                        <span class="brand-divider" id="serviceModelDivider" style="display: none;">/</span>
                         <span class="brand-model-id" id="modelName"></span>
                         <svg class="brand-model-caret" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                           <path

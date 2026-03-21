@@ -935,8 +935,30 @@ export function createAssistantCard(
 
   const modelName = document.createElement("span");
   modelName.className = "assistant-model-name";
-  modelName.textContent =
-    modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || "未配置";
+  const displayModel = modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || "未配置";
+  const displayService = turn?.models?.main?.serviceName || "";
+  
+  if (displayService) {
+    const sName = document.createElement("span");
+    sName.className = "assistant-service-name";
+    sName.textContent = displayService;
+    
+    const divider = document.createElement("span");
+    divider.className = "assistant-model-divider";
+    divider.textContent = " / ";
+    
+    const mName = document.createElement("span");
+    mName.className = "assistant-model-id";
+    mName.textContent = displayModel;
+    
+    modelName.appendChild(sName);
+    modelName.appendChild(divider);
+    modelName.appendChild(mName);
+  } else {
+    modelName.textContent = displayModel;
+  }
+
+
 
   const statusEl = document.createElement("span");
   statusEl.className = "status";

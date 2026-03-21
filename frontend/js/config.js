@@ -1302,6 +1302,21 @@ export function updateModelNames() {
     : "当前服务";
   elements.modelName.textContent = displayName || "选择模型";
   elements.modelName.classList.toggle("is-placeholder", !displayName);
+
+  if (elements.serviceNameLabel) {
+    if (activeService) {
+      elements.serviceNameLabel.textContent = serviceName;
+      elements.serviceNameLabel.style.display = "";
+      if (elements.serviceModelDivider) {
+        elements.serviceModelDivider.style.display = "";
+      }
+    } else {
+      elements.serviceNameLabel.style.display = "none";
+      if (elements.serviceModelDivider) {
+        elements.serviceModelDivider.style.display = "none";
+      }
+    }
+  }
   const modelLine = elements.modelName.closest(".brand-model");
   if (modelLine) {
     modelLine.style.display = "";
@@ -1347,6 +1362,7 @@ export function getConfig(side) {
       endpointMode: activeServiceRequestConfig.endpointMode,
       apiKey: activeServiceRequestConfig.apiKey || "",
       model: liveTitleModelValue,
+      serviceName: activeService ? getServiceDisplayName(activeService) : "当前服务",
       apiUrl: String(activeServiceRequestConfig.apiUrl || "").trim(),
       systemPrompt: "",
       reasoningEffort: "none",
@@ -1358,6 +1374,7 @@ export function getConfig(side) {
     endpointMode: activeServiceRequestConfig.endpointMode,
     apiKey: activeServiceRequestConfig.apiKey || "",
     model: liveModelValue,
+    serviceName: activeService ? getServiceDisplayName(activeService) : "当前服务",
     apiUrl: String(activeServiceRequestConfig.apiUrl || "").trim(),
     systemPrompt: liveRoleSetting,
     reasoningEffort: getReasoningEffortValue(),

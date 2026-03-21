@@ -105,6 +105,7 @@ function createMainModelState(config) {
   return {
     provider: config.provider,
     model: config.model,
+    serviceName: config.serviceName || "",
     displayName: resolveModelDisplayName(config.model, config.customModelName),
     thinking: "",
     thinkingLabel: "思考中",
@@ -353,8 +354,14 @@ export async function callModel(
   const initUi = resolveUi();
   if (initUi) {
     applyStatus(initUi.statusEl, "loading");
-    initUi.modelNameEl.textContent =
-      resolveModelDisplayName(config.model) || "未配置";
+    const mIdSpan = initUi.modelNameEl.querySelector(".assistant-model-id");
+    if (mIdSpan) {
+      mIdSpan.textContent = resolveModelDisplayName(config.model) || "未配置";
+    } else {
+      initUi.modelNameEl.textContent = resolveModelDisplayName(config.model) || "未配置";
+    }
+
+
   }
 
   const abortController = new AbortController();
