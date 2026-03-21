@@ -734,7 +734,7 @@ function persistState(overrides = {}) {
 
 function getConnectivityLabel(status) {
   const normalized = String(status || "idle").toLowerCase();
-  if (normalized === "testing") return "测试中";
+  if (normalized === "testing") return "连接中";
   if (normalized === "success") return "连接成功";
   if (normalized === "error") return "连接失败";
   return "未测试";
@@ -779,8 +779,7 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
   const normalizedStatus = String(nextConnectivity.status || "idle").toLowerCase();
   const shouldShowBadge =
     normalizedStatus === "testing" ||
-    normalizedStatus === "success" ||
-    normalizedStatus === "error";
+    normalizedStatus === "success";
   const messageText = String(nextConnectivity.message || "").trim();
   const timeText = nextConnectivity.testedAt
     ? `最近测试：${formatTime(nextConnectivity.testedAt)}`

@@ -585,37 +585,44 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
-  padding: 6px 12px;
+  min-height: auto;
+  padding: 0;
   line-height: 1;
-  border-radius: 10px;
-  border: 1px solid var(--border-strong);
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
   flex: 0 0 auto;
 }
 
 .service-connectivity-badge[data-status="idle"] {
   color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.04);
 }
 
 .service-connectivity-badge[data-status="testing"] {
-  color: var(--accent-strong);
-  border-color: var(--border-accent);
-  background: rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.24) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
 }
 
 .service-connectivity-badge[data-status="success"] {
-  color: var(--accent-strong);
-  border-color: var(--border-accent);
-  background: rgba(255, 255, 255, 0.06);
+  color: #8fd6a8;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
 }
 
 .service-connectivity-badge[data-status="error"] {
   color: #f3b2b2;
-  border-color: rgba(239, 68, 68, 0.34);
-  background: rgba(239, 68, 68, 0.12);
 }
 
 .service-summary-card,
@@ -667,10 +674,18 @@
   min-height: 18px;
 }
 
-.service-connectivity-actions {
+.service-connectivity-footer {
   margin-top: 14px;
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-connectivity-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
 #configPanelServices .global-config {
