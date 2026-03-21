@@ -519,12 +519,21 @@ export function renderTopicList() {
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
       deleteBtn.className = "topic-delete-btn";
-      deleteBtn.textContent = "删除";
       deleteBtn.title = "删除该话题";
       deleteBtn.setAttribute(
         "aria-label",
         `删除话题：${topic.title || "未命名话题"}`
       );
+      deleteBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 7h16"></path>
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M6 7l1 11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-11"></path>
+          <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+        </svg>
+        <span class="sr-only">删除</span>
+      `;
       deleteBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
