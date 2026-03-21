@@ -8,6 +8,7 @@ const WEB_SEARCH_TOOL_MODE_LABELS = {
 };
 
 const WEB_SEARCH_DISABLED_LABEL = "关闭联网";
+const WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH = 108;
 
 function mountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
   if (!(dropdownEl instanceof HTMLElement)) return;
@@ -56,11 +57,18 @@ export function positionWebSearchToolSelector() {
   dropdownEl.style.right = "auto";
   dropdownEl.style.bottom = "auto";
   dropdownEl.style.width = "";
-  dropdownEl.style.minWidth = `${Math.max(132, Math.round(rect.width))}px`;
+  dropdownEl.style.minWidth = `${Math.max(
+    WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH,
+    Math.round(rect.width)
+  )}px`;
   dropdownEl.style.maxWidth = `${maxWidth}px`;
 
   const width = Math.min(
-    Math.max(dropdownEl.offsetWidth, Math.round(rect.width), 132),
+    Math.max(
+      dropdownEl.offsetWidth,
+      Math.round(rect.width),
+      WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH
+    ),
     maxWidth
   );
   const height = dropdownEl.offsetHeight;
