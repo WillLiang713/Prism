@@ -760,7 +760,7 @@
                     />
                   </div>
                   <div class="form-group" id="tavilySearchDepthGroup">
-                    <label for="tavilySearchDepthPickerInput">搜索深度</label>
+                    <label for="tavilySearchDepthPickerInput">搜索模式</label>
                     <select id="tavilySearchDepth" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="basic">basic</option>
                       <option value="advanced">advanced</option>
@@ -770,14 +770,14 @@
                         <input
                           type="text"
                           id="tavilySearchDepthPickerInput"
-                          placeholder="选择搜索深度"
+                          placeholder="选择搜索模式"
                           readonly
                         />
                         <button
                           type="button"
                           class="model-picker-btn"
                           id="tavilySearchDepthPickerBtn"
-                          aria-label="打开搜索深度列表"
+                          aria-label="打开搜索模式列表"
                           aria-expanded="false"
                         ></button>
                       </div>
@@ -791,20 +791,20 @@
                   <div class="form-group" id="exaSearchTypeGroup">
                     <label for="exaSearchTypePickerInput">搜索模式</label>
                     <select id="exaSearchType" class="config-native-select" aria-hidden="true" tabindex="-1">
-                      <option value="auto">auto（智能混合）</option>
-                      <option value="neural">neural（语义检索）</option>
-                      <option value="fast">fast（快速检索）</option>
-                      <option value="deep">deep（轻量深度）</option>
-                      <option value="deep-reasoning">deep-reasoning（标准深度）</option>
-                      <option value="deep-max">deep-max（最大深度）</option>
-                      <option value="instant">instant（最低延迟）</option>
+                      <option value="neural">neural</option>
+                      <option value="fast">fast</option>
+                      <option value="auto">auto</option>
+                      <option value="deep">deep</option>
+                      <option value="deep-reasoning">deep-reasoning</option>
+                      <option value="deep-max">deep-max</option>
+                      <option value="instant">instant</option>
                     </select>
                     <div class="model-picker config-static-picker" data-picker="exaSearchType">
                       <div class="model-picker-row">
                         <input
                           type="text"
                           id="exaSearchTypePickerInput"
-                          placeholder="选择 Exa 搜索模式"
+                          placeholder="选择搜索模式"
                           readonly
                         />
                         <button
@@ -820,9 +820,6 @@
                         id="exaSearchTypePickerDropdown"
                         hidden
                       ></div>
-                    </div>
-                    <div class="form-hint">
-                      可选：auto / neural / fast / deep / deep-reasoning / deep-max / instant
                     </div>
                   </div>
                 </div>
