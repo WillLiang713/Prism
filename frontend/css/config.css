@@ -478,6 +478,10 @@
   flex: 0 0 auto;
 }
 
+.service-list-card {
+  position: relative;
+}
+
 .service-list-item {
   width: 100%;
   border: none;
@@ -507,14 +511,26 @@
   outline-offset: 2px;
 }
 
-.service-list-item.is-selected {
+.service-list-card.is-selected .service-list-item {
   background: rgba(255, 255, 255, 0.08);
   box-shadow: none;
   color: var(--text);
 }
 
-.service-list-item.is-active-service {
+.service-list-card.is-active-service .service-list-item {
   box-shadow: none;
+}
+
+.service-list-card.is-active-service .service-list-head::after {
+  content: "当前使用";
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #4ed9c1;
+  margin-left: auto;
+  line-height: 1.5;
+  letter-spacing: 0.2px;
+  flex: 0 0 auto;
 }
 
 .service-list-head,
@@ -554,7 +570,7 @@
 }
 
 .service-list-item:hover .service-list-tag,
-.service-list-item.is-selected .service-list-tag {
+.service-list-card.is-selected .service-list-tag {
   background: rgba(255, 255, 255, 0.14);
 }
 

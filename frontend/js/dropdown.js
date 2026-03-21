@@ -12,13 +12,6 @@ const PRESS_START_EVENT =
 export function getConfigSelectPickerDefs() {
   return [
     {
-      key: "currentService",
-      select: elements.currentService,
-      input: elements.currentServicePickerInput,
-      btn: elements.currentServicePickerBtn,
-      dropdown: elements.currentServicePickerDropdown,
-    },
-    {
       key: "provider",
       select: elements.provider,
       input: elements.providerPickerInput,

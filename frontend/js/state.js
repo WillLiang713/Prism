@@ -299,10 +299,6 @@ export const elements = {
   windowCloseBtn: document.getElementById("windowCloseBtn"),
 
   // 模型配置
-  currentService: document.getElementById("currentService"),
-  currentServicePickerInput: document.getElementById("currentServicePickerInput"),
-  currentServicePickerBtn: document.getElementById("currentServicePickerBtn"),
-  currentServicePickerDropdown: document.getElementById("currentServicePickerDropdown"),
   serviceList: document.getElementById("serviceList"),
   serviceNameInput: document.getElementById("serviceNameInput"),
   serviceSummary: document.getElementById("serviceSummary"),

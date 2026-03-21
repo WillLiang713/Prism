@@ -148,6 +148,39 @@
   padding: 10px;
 }
 
+.header-model-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px 6px;
+}
+
+.header-model-summary-title {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-model-summary-meta {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.header-model-empty {
+  grid-column: 1 / -1;
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 .header-model-group {
   display: grid;
   gap: 4px;
@@ -227,6 +260,13 @@
   white-space: nowrap;
   color: var(--text);
   letter-spacing: 0;
+}
+
+.brand-model-id.is-placeholder {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .brand-mark {

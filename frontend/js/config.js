@@ -563,35 +563,16 @@ function getManagedService() {
   );
 }
 
-function getCurrentServiceOptionValue() {
-  return elements.currentService?.value || "";
-}
-
-function syncCurrentServiceOptions() {
-  if (!elements.currentService) return;
-  const nextOptions = state.services.map((service) => ({
-    value: service.id,
-    label: getServiceDisplayName(service),
-  }));
-  const select = elements.currentService;
-  select.innerHTML = "";
-  nextOptions.forEach((optionData) => {
-    const option = document.createElement("option");
-    option.value = optionData.value;
-    option.textContent = optionData.label;
-    select.appendChild(option);
-  });
-  if (state.activeServiceId && nextOptions.some((item) => item.value === state.activeServiceId)) {
-    select.value = state.activeServiceId;
-  }
-  syncConfigSelectPicker("currentService");
+function isEditingActiveService() {
+  return (
+    elements.configModal?.classList.contains("open") &&
+    !!state.activeServiceId &&
+    state.serviceManagerSelectedId === state.activeServiceId
+  );
 }
 
 function setServiceFormDisabled(disabled) {
   const controls = [
-    elements.currentService,
-    elements.currentServicePickerInput,
-    elements.currentServicePickerBtn,
     elements.serviceNameInput,
     elements.provider,
     elements.providerPickerInput,
@@ -717,7 +698,6 @@ function applyActiveRoleSettingToForm(service) {
       service.model?.enableCodeExecution === true;
   }
   syncRoleSettingPreview(true);
-  syncCurrentServiceOptions();
   updateModelHint("main");
   updateModelHint("Title");
   scheduleFetchModels("main", 0);
@@ -755,7 +735,6 @@ function applyEmptyServiceStateToForm() {
     elements.enableCodeExecution.checked = false;
   }
 
-  syncCurrentServiceOptions();
   syncConfigSelectPicker("provider");
   syncRoleSettingPreview(false);
   updateProviderUi();
@@ -955,15 +934,27 @@ function renderServiceList() {
   }
   const fragment = document.createDocumentFragment();
   state.services.forEach((service) => {
-    const item = document.createElement("button");
-    item.type = "button";
-    item.className = `service-list-item${
+    const card = document.createElement("div");
+    card.className = `service-list-card${
       service.id === state.serviceManagerSelectedId ? " is-selected" : ""
     }${service.id === state.activeServiceId ? " is-active-service" : ""}`;
+    card.dataset.serviceId = service.id;
+
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "service-list-item";
     item.addEventListener("click", () => {
-      state.serviceManagerSelectedId = service.id;
-      renderServiceManagementUi();
-      scheduleFetchModels("main", 0);
+      if (service.id === state.activeServiceId) {
+        if (state.serviceManagerSelectedId !== service.id) {
+          state.serviceManagerSelectedId = service.id;
+          renderServiceManagementUi();
+          scheduleFetchModels("main", 0);
+        }
+        return;
+      }
+      void handleCurrentServiceChange(service.id, {
+        syncManagerSelection: true,
+      });
     });
 
     const head = document.createElement("div");
@@ -973,13 +964,6 @@ function renderServiceList() {
     title.className = "service-list-title";
     title.textContent = getServiceDisplayName(service);
     head.appendChild(title);
-
-    if (service.id === state.activeServiceId) {
-      const currentTag = document.createElement("span");
-      currentTag.className = "service-list-tag";
-      currentTag.textContent = "当前服务";
-      head.appendChild(currentTag);
-    }
 
     const meta = document.createElement("div");
     meta.className = "service-list-meta";
@@ -998,13 +982,13 @@ function renderServiceList() {
     if (subMeta.textContent) {
       item.appendChild(subMeta);
     }
-    fragment.appendChild(item);
+    card.appendChild(item);
+    fragment.appendChild(card);
   });
   elements.serviceList.appendChild(fragment);
 }
 
 export function renderServiceManagementUi(options = {}) {
-  syncCurrentServiceOptions();
   renderServiceList();
   syncServiceDetailPanel(options);
   if (!options.preserveConnectionForm) {
@@ -1308,17 +1292,16 @@ export function resolveModelDisplayName(modelId) {
 
 export function updateModelNames() {
   const activeService = getActiveService();
-  const liveModelValue =
-    elements.configModal?.classList.contains("open") &&
-    elements.currentService?.value === state.activeServiceId
-      ? getEffectiveModelValue()
-      : String(activeService?.model?.model || "").trim();
+  const liveModelValue = isEditingActiveService()
+    ? getEffectiveModelValue()
+    : String(activeService?.model?.model || "").trim();
   const modelId = liveModelValue;
   const displayName = resolveModelDisplayName(modelId);
   const serviceName = activeService
     ? getServiceDisplayName(activeService)
     : "当前服务";
   elements.modelName.textContent = displayName || "选择模型";
+  elements.modelName.classList.toggle("is-placeholder", !displayName);
   const modelLine = elements.modelName.closest(".brand-model");
   if (modelLine) {
     modelLine.style.display = "";
@@ -1336,9 +1319,7 @@ export function updateModelNames() {
 export function getConfig(side) {
   const activeService = getActiveService();
   const activeServiceRequestConfig = getActiveServiceModelRequestConfig();
-  const usingLiveActiveServiceForm =
-    elements.configModal?.classList.contains("open") &&
-    elements.currentService?.value === state.activeServiceId;
+  const usingLiveActiveServiceForm = isEditingActiveService();
   const liveModelValue =
     usingLiveActiveServiceForm
       ? getEffectiveModelValue()
@@ -1550,10 +1531,10 @@ export async function clearConfig() {
   closeConfigModal();
 }
 
-export async function handleCurrentServiceChange(nextServiceId) {
-  const nextId = String(nextServiceId || getCurrentServiceOptionValue() || "");
+export async function handleCurrentServiceChange(nextServiceId, options = {}) {
+  const nextId = String(nextServiceId || "");
+  const syncManagerSelection = options.syncManagerSelection !== false;
   if (!nextId || nextId === state.activeServiceId) {
-    syncCurrentServiceOptions();
     return false;
   }
 
@@ -1564,7 +1545,7 @@ export async function handleCurrentServiceChange(nextServiceId) {
 
   if (!editingCurrentServiceConnection && !editingCurrentServiceRole) {
     return setActiveServiceLocally(nextId, {
-      syncManagerSelection: false,
+      syncManagerSelection,
       refreshModelList: false,
     });
   }
@@ -1581,11 +1562,10 @@ export async function handleCurrentServiceChange(nextServiceId) {
       closeAfterSave: false,
     });
     if (!saved) {
-      syncCurrentServiceOptions();
       return false;
     }
     return setActiveServiceLocally(nextId, {
-      syncManagerSelection: false,
+      syncManagerSelection,
       refreshModelList: false,
     });
   }
@@ -1597,12 +1577,11 @@ export async function handleCurrentServiceChange(nextServiceId) {
     danger: true,
   });
   if (!shouldDiscard) {
-    syncCurrentServiceOptions();
     return false;
   }
 
   return setActiveServiceLocally(nextId, {
-    syncManagerSelection: false,
+    syncManagerSelection,
     refreshModelList: false,
   });
 }

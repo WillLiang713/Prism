@@ -10,7 +10,6 @@ import {
   syncRoleSettingPreview,
   showRoleSettingPreview,
   showRoleSettingEditor,
-  handleCurrentServiceChange,
   createService,
   duplicateService,
   deleteService,
@@ -131,9 +130,6 @@ export function bindEvents() {
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
-  elements.currentService?.addEventListener("change", () => {
-    void handleCurrentServiceChange(elements.currentService.value);
-  });
   elements.createServiceBtn?.addEventListener("click", () => {
     void createService();
   });
