@@ -18,6 +18,7 @@ mimetypes.add_type("application/json", ".json")
 router = APIRouter()
 
 INDEX_HTML_PATH = frontend_path("index.html")
+DEV_FRONTEND_ASSET_VERSION = str(time.time_ns())
 NO_CACHE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate",
     "Pragma": "no-cache",
@@ -45,7 +46,7 @@ def _should_disable_frontend_cache() -> bool:
 
 def _get_frontend_asset_version() -> str:
     if _should_disable_frontend_cache():
-        return str(time.time_ns())
+        return DEV_FRONTEND_ASSET_VERSION
     return BUILD_ID
 
 
