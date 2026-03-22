@@ -133,9 +133,7 @@ async def generate_topic_title(payload: GenerateTitleRequest):
                 "max_tokens": 50,
                 "messages": [{"role": "user", "content": user_prompt}],
                 "system": system_prompt,
-                "temperature": 0.7,
             }
-            headers["content-type"] = "application/json"
         elif provider_mode == "gemini":
             now = datetime.now()
             rendered_system_prompt = MessageBuilder._render_system_prompt_template(

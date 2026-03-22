@@ -2,15 +2,17 @@ import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRunt
 import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
-  builtin: "Web Search",
+  builtin: "OpenAI Web Search",
+  anthropic_search: "Anthropic Web Search",
   gemini_search: "Google Search",
   tavily: "Tavily",
   exa: "Exa",
 };
 
 const TOOL_EVENT_DISPLAY_NAMES = {
-  web_search: "Web Search",
-  web_search_preview: "Web Search",
+  web_search: "OpenAI Web Search",
+  web_search_preview: "OpenAI Web Search",
+  anthropic_search: "Anthropic Web Search",
   gemini_search: "Google Search",
   tavily_search: "Tavily Search",
   exa_search: "Exa Search",
@@ -778,9 +780,14 @@ export function normalizeTavilySearchDepth(value) {
 
 export function normalizeWebSearchProvider(value) {
   const normalized = String(value || "").toLowerCase();
+  if (normalized === "anthropic_search") return "anthropic_search";
   if (normalized === "gemini_search") return "gemini_search";
   if (normalized === "exa") return "exa";
   return "tavily";
+}
+
+export function normalizeExternalWebSearchProvider(value) {
+  return normalizeWebSearchProvider(value) === "exa" ? "exa" : "tavily";
 }
 
 export function normalizeExaSearchType(value) {
@@ -817,6 +824,16 @@ export function canUseBuiltinWebSearch(configLike = {}) {
   return endpointMode === "responses" && provider === "openai";
 }
 
+export function canUseAnthropicWebSearch(configLike = {}) {
+  const providerConfig = resolveProviderSelection(
+    configLike.providerSelection ??
+      configLike.provider ??
+      elements.provider?.value,
+    configLike.endpointMode
+  );
+  return String(providerConfig.provider || "").toLowerCase() === "anthropic";
+}
+
 export function canUseGeminiGoogleSearch(configLike = {}) {
   const providerConfig = resolveProviderSelection(
     configLike.providerSelection ??
@@ -830,16 +847,23 @@ export function canUseGeminiGoogleSearch(configLike = {}) {
 export function normalizeWebSearchToolMode(
   value,
   supportsBuiltin = canUseBuiltinWebSearch(),
+  supportsAnthropicWebSearch = canUseAnthropicWebSearch(),
   supportsGeminiGoogleSearch = canUseGeminiGoogleSearch(),
   fallbackProvider = normalizeWebSearchProvider(elements.webSearchProvider?.value)
 ) {
   const normalized = String(value || "").toLowerCase();
   if (normalized === "builtin" && supportsBuiltin) return "builtin";
+  if (normalized === "anthropic_search" && supportsAnthropicWebSearch) {
+    return "anthropic_search";
+  }
   if (normalized === "gemini_search" && supportsGeminiGoogleSearch) {
     return "gemini_search";
   }
   if (normalized === "exa") return "exa";
   if (normalized === "tavily") return "tavily";
+  if (fallbackProvider === "anthropic_search" && supportsAnthropicWebSearch) {
+    return "anthropic_search";
+  }
   if (fallbackProvider === "gemini_search" && supportsGeminiGoogleSearch) {
     return "gemini_search";
   }
@@ -868,6 +892,7 @@ export function getCurrentWebSearchToolMode() {
   return normalizeWebSearchToolMode(
     state.webSearch?.toolMode,
     canUseBuiltinWebSearch(),
+    canUseAnthropicWebSearch(),
     canUseGeminiGoogleSearch(),
     normalizeWebSearchProvider(elements.webSearchProvider?.value)
   );
@@ -879,12 +904,13 @@ export function getWebSearchToolModeLabel(mode) {
     return WEB_SEARCH_TOOL_MODE_LABELS[normalized];
   }
   return WEB_SEARCH_TOOL_MODE_LABELS[
-    normalizeWebSearchToolMode(mode, true, true, "tavily")
+    normalizeWebSearchToolMode(mode, true, true, true, "tavily")
   ] || "Tavily";
 }
 
 export function getAvailableWebSearchToolModes() {
   const supportsBuiltin = canUseBuiltinWebSearch();
+  const supportsAnthropicWebSearch = canUseAnthropicWebSearch();
   const supportsGeminiGoogleSearch = canUseGeminiGoogleSearch();
   const items = [
     {
@@ -896,6 +922,12 @@ export function getAvailableWebSearchToolModes() {
     items.push({
       value: "builtin",
       label: WEB_SEARCH_TOOL_MODE_LABELS.builtin,
+    });
+  }
+  if (supportsAnthropicWebSearch) {
+    items.push({
+      value: "anthropic_search",
+      label: WEB_SEARCH_TOOL_MODE_LABELS.anthropic_search,
     });
   }
   if (supportsGeminiGoogleSearch) {
@@ -939,6 +971,18 @@ function disableGeminiGoogleSearchWhenUnavailable(options = {}) {
   return true;
 }
 
+function disableAnthropicWebSearchWhenUnavailable(options = {}) {
+  if (state.webSearch?.toolMode !== "anthropic_search") return false;
+  if (canUseAnthropicWebSearch()) return false;
+
+  state.webSearch.enabled = false;
+  if (options.persist === true) {
+    persistWebSearchConfigPatch({ enabled: false });
+  }
+  closeWebSearchToolSelector();
+  return true;
+}
+
 export function setWebSearchEnabled(enabled, options = {}) {
   state.webSearch.enabled = enabled === true;
   if (options.persist !== false) {
@@ -951,16 +995,19 @@ export function setWebSearchEnabled(enabled, options = {}) {
 
 export function setWebSearchToolMode(mode, options = {}) {
   const supportsBuiltin = canUseBuiltinWebSearch();
+  const supportsAnthropicWebSearch = canUseAnthropicWebSearch();
   const supportsGeminiGoogleSearch = canUseGeminiGoogleSearch();
   const normalized = normalizeWebSearchToolMode(
     mode,
     supportsBuiltin,
+    supportsAnthropicWebSearch,
     supportsGeminiGoogleSearch,
     normalizeWebSearchProvider(elements.webSearchProvider?.value)
   );
   state.webSearch.toolMode = normalized;
 
   if (
+    normalized === "anthropic_search" ||
     normalized === "gemini_search" ||
     normalized === "tavily" ||
     normalized === "exa"
@@ -1101,7 +1148,9 @@ export function updateConfigStatusStrip() {
   const webText = !webSearchEnabled
     ? "联网：关闭"
     : toolMode === "builtin"
-      ? "联网：Web Search"
+      ? "联网：OpenAI Web Search"
+      : toolMode === "anthropic_search"
+      ? "联网：Anthropic Web Search"
       : toolMode === "gemini_search"
       ? "联网：Google Search"
       : toolMode === "exa"
@@ -1112,12 +1161,14 @@ export function updateConfigStatusStrip() {
 
 export function updateWebSearchProviderUi() {
   disableBuiltinWebSearchWhenUnavailable();
+  disableAnthropicWebSearchWhenUnavailable();
   disableGeminiGoogleSearchWhenUnavailable();
   state.webSearch.toolMode = getCurrentWebSearchToolMode();
   const toolMode = state.webSearch.toolMode;
   state.webSearch.enabled = isWebSearchEnabled();
   const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
   const isExa = provider === "exa";
+  const isAnthropicSearch = provider === "anthropic_search";
   const isGeminiSearch = provider === "gemini_search";
   const usesExternalSearch = toolMode === "tavily" || toolMode === "exa";
 
@@ -1130,11 +1181,11 @@ export function updateWebSearchProviderUi() {
   }
   if (elements.tavilyApiKeyGroup) {
     elements.tavilyApiKeyGroup.style.display =
-      isExa || isGeminiSearch ? "none" : "";
+      isExa || isGeminiSearch || isAnthropicSearch ? "none" : "";
   }
   if (elements.tavilySearchDepthGroup) {
     elements.tavilySearchDepthGroup.style.display =
-      isExa || isGeminiSearch ? "none" : "";
+      isExa || isGeminiSearch || isAnthropicSearch ? "none" : "";
   }
   if (elements.exaApiKeyGroup) {
     elements.exaApiKeyGroup.style.display = isExa ? "" : "none";

@@ -248,7 +248,7 @@ async function fetchHeaderModelsForService(service, options = {}) {
   }
 
   try {
-    const ids = await fetchModelsOnce(config);
+    const { ids } = await fetchModelsOnce(config);
     if (slot.requestToken !== requestToken) {
       return slot.models;
     }
@@ -668,6 +668,7 @@ export async function fetchModelsOnce(config) {
       provider: config?.provider || "openai",
       apiKey: config?.apiKey || "",
       apiUrl: config?.apiUrl || "",
+      model: config?.model || "",
     }),
   });
 
@@ -692,7 +693,14 @@ export async function fetchModelsOnce(config) {
 
   const ids = Array.isArray(json?.models) ? json.models : [];
   if (!ids.length) throw new Error("获取到的模型列表为空");
-  return ids;
+  return {
+    ids,
+    connectivityMode:
+      typeof json?.connectivityMode === "string"
+        ? json.connectivityMode
+        : "models_list",
+    message: typeof json?.message === "string" ? json.message : "",
+  };
 }
 
 export function scheduleFetchModels(side, delayMs = 400) {
@@ -749,7 +757,7 @@ export async function fetchAndUpdateModels(side) {
     renderHeaderModelDropdown();
   }
   try {
-    const ids = await fetchModelsOnce(config);
+    const { ids, connectivityMode, message } = await fetchModelsOnce(config);
     if (slot.datalistFillToken !== requestToken) {
       return;
     }
@@ -758,10 +766,17 @@ export async function fetchAndUpdateModels(side) {
       syncHeaderSlotFromMainModelCache();
     }
     if (side !== "Title") {
-      setModelHint(
-        side,
-        `已获取 ${ids.length} 个模型ID，可下拉选或手动输入`
-      );
+      if (connectivityMode === "messages_probe") {
+        setModelHint(
+          side,
+          message || "模型列表接口不可用，已验证消息接口；可手动输入模型ID"
+        );
+      } else {
+        setModelHint(
+          side,
+          `已获取 ${ids.length} 个模型ID，可下拉选或手动输入`
+        );
+      }
     }
     // 只在下拉框已经打开的情况下更新显示，不自动打开
     if (isModelDropdownOpen(side)) {

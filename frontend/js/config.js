@@ -25,6 +25,7 @@ import { renderMarkdownToElement } from './markdown.js';
 import {
   getCurrentWebSearchToolMode,
   isWebSearchEnabled,
+  normalizeExternalWebSearchProvider,
   normalizeWebSearchProvider,
   normalizeTavilySearchDepth,
   normalizeExaSearchType,
@@ -914,6 +915,7 @@ function renderServiceList() {
       service.id === state.serviceManagerSelectedId ? " is-selected" : ""
     }${service.id === state.activeServiceId ? " is-active-service" : ""}`;
     card.dataset.serviceId = service.id;
+    card.dataset.provider = service.model?.provider || "";
 
     const item = document.createElement("button");
     item.type = "button";
@@ -1007,7 +1009,9 @@ async function persistCurrentServiceForm(options = {}) {
     webSearch: {
       enabled: isWebSearchEnabled(),
       toolMode: getWebSearchConfig().toolMode,
-      provider: normalizeWebSearchProvider(elements.webSearchProvider?.value),
+      provider: normalizeExternalWebSearchProvider(
+        elements.webSearchProvider?.value
+      ),
       tavilyApiKey: elements.tavilyApiKey?.value || "",
       exaApiKey: elements.exaApiKey?.value || "",
       exaSearchType: normalizeExaSearchType(elements.exaSearchType?.value),
@@ -1356,7 +1360,7 @@ export function getWebSearchConfig() {
     enabled: isWebSearchEnabled(),
     provider:
       toolMode === "builtin"
-        ? normalizeWebSearchProvider(elements.webSearchProvider?.value)
+        ? normalizeExternalWebSearchProvider(elements.webSearchProvider?.value)
         : toolMode,
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
     exaApiKey: (elements.exaApiKey?.value || "").trim(),
@@ -1383,7 +1387,7 @@ export function loadConfig() {
 
     const pendingWebSearchEnabled = store.webSearch?.enabled === true;
     if (store.webSearch) {
-      const normalizedProvider = normalizeWebSearchProvider(
+      const normalizedProvider = normalizeExternalWebSearchProvider(
         store.webSearch.provider
       );
       if (elements.webSearchProvider) {
@@ -1684,11 +1688,17 @@ export async function testSelectedServiceConnection() {
   }
 
   try {
-    const ids = await fetchModelsOnce(draftService.model);
+    const { ids, connectivityMode, message } = await fetchModelsOnce(
+      draftService.model
+    );
+    const successMessage =
+      connectivityMode === "messages_probe"
+        ? message || "模型列表接口不可用，但已通过 Messages 接口验证连接。"
+        : `成功拉取 ${ids.length} 个模型。`;
     if (hasDraftChanges) {
       const transientSuccessState = createConnectivityState(
         "success",
-        `成功拉取 ${ids.length} 个模型。`,
+        successMessage,
         Date.now()
       );
       renderServiceConnectivityState(transientSuccessState, true);
@@ -1696,7 +1706,7 @@ export async function testSelectedServiceConnection() {
     } else {
       updateServiceConnectivity(service.id, {
         status: "success",
-        message: `成功拉取 ${ids.length} 个模型。`,
+        message: successMessage,
         testedAt: Date.now(),
       });
     }

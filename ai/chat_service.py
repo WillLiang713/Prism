@@ -7,8 +7,10 @@ from .models import ChatRequest
 from .providers import MessageBuilder, ProviderConfig
 from .stream_parser import (
     ToolCallsAccumulator,
+    build_anthropic_web_search_event,
     build_web_search_event,
     build_web_search_event_from_grounding,
+    extract_sources_from_anthropic_content_block,
     extract_sources_from_grounding_metadata,
     extract_sources_from_search_result,
     parse_responses_sse_stream,
@@ -258,6 +260,7 @@ class AIService:
             "gemini_model_parts": [],
             "grounding_urls": set(),
             "web_search_keys": set(),
+            "stop_reason": "",
         }
 
     @staticmethod
@@ -313,6 +316,22 @@ class AIService:
         return {"role": "model", "parts": parts}
 
     @staticmethod
+    def _build_anthropic_assistant_message(
+        round_state: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        content = list(round_state.get("assistant_blocks") or [])
+        if not content and round_state.get("assistant_content"):
+            content.append(
+                {
+                    "type": "text",
+                    "text": round_state["assistant_content"],
+                }
+            )
+        if not content:
+            return None
+        return {"role": "assistant", "content": content}
+
+    @staticmethod
     def _extract_error_text(response_text: bytes) -> str:
         return response_text.decode(errors="ignore")
 
@@ -331,7 +350,52 @@ class AIService:
 
         async for parsed in parse_sse_stream(response, provider_mode):
             if provider_mode == "anthropic" and parsed.get("completed_block"):
-                round_state["assistant_blocks"].append(parsed["completed_block"])
+                completed_block = parsed["completed_block"]
+                round_state["assistant_blocks"].append(completed_block)
+
+                fresh_sources = AIService._merge_sources(
+                    round_state["grounding_urls"],
+                    extract_sources_from_anthropic_content_block(completed_block),
+                )
+                if fresh_sources:
+                    yield AIService._sse_chunk(
+                        "sources",
+                        fresh_sources,
+                        ensure_ascii=False,
+                    )
+
+                web_search_event = build_anthropic_web_search_event(
+                    completed_block,
+                    current_round,
+                )
+                if web_search_event:
+                    yield AIService._sse_chunk(
+                        "web_search",
+                        web_search_event,
+                        ensure_ascii=False,
+                    )
+                    yield AIService._sse_chunk(
+                        "tool",
+                        {
+                            "callId": str(web_search_event.get("callId") or "").strip(),
+                            "status": (
+                                "error"
+                                if web_search_event.get("status") == "error"
+                                else "success"
+                            ),
+                            "round": current_round,
+                            "name": str(web_search_event.get("name") or "web_search"),
+                            "resultSummary": (
+                                str(web_search_event.get("error") or "").strip()
+                                if web_search_event.get("status") == "error"
+                                else (
+                                    f"返回 {int(web_search_event.get('totalResults') or 0)} 条结果"
+                                    if int(web_search_event.get("totalResults") or 0) > 0
+                                    else "搜索完成"
+                                )
+                            ),
+                        },
+                    )
 
             if provider_mode == "gemini" and parsed.get("model_parts"):
                 AIService._append_gemini_model_parts(
@@ -353,10 +417,39 @@ class AIService:
             if parsed.get("tool_calls") and custom_tool_calls_enabled:
                 tool_calls_buffer.add(parsed["tool_calls"])
 
+            if parsed.get("tool"):
+                tool_payload = dict(parsed["tool"])
+                tool_payload.setdefault("round", current_round)
+                yield AIService._sse_chunk("tool", tool_payload)
+
+            if parsed.get("sources"):
+                fresh_sources = AIService._merge_sources(
+                    round_state["grounding_urls"],
+                    parsed["sources"],
+                )
+                if fresh_sources:
+                    yield AIService._sse_chunk(
+                        "sources",
+                        fresh_sources,
+                        ensure_ascii=False,
+                    )
+
+            if parsed.get("web_search"):
+                web_search_payload = dict(parsed["web_search"])
+                web_search_payload.setdefault("round", current_round)
+                yield AIService._sse_chunk(
+                    "web_search",
+                    web_search_payload,
+                    ensure_ascii=False,
+                )
+
             if parsed.get("tokens") is not None:
                 yield (
                     f"data: {json.dumps({'type': 'tokens', 'data': parsed['tokens']})}\n\n"
                 )
+
+            if parsed.get("stop_reason"):
+                round_state["stop_reason"] = str(parsed["stop_reason"])
 
             if provider_mode == "gemini":
                 grounding_metadata = parsed.get("grounding_metadata")
@@ -475,12 +568,68 @@ class AIService:
                     request.maxToolRounds
                 )
                 messages_with_tools = AIService._build_messages_buffer(body, provider_mode)
+                anthropic_pause_turns = 0
+                max_anthropic_pause_turns = 4
 
-                while (
-                    tool_calls_buffer
-                    and AIService._custom_tool_calls_enabled(request, provider_mode)
-                    and (max_rounds is None or current_round < max_rounds)
-                ):
+                while True:
+                    should_continue_anthropic_pause = (
+                        provider_mode == "anthropic"
+                        and str(round_state.get("stop_reason") or "") == "pause_turn"
+                        and not tool_calls_buffer
+                    )
+                    if should_continue_anthropic_pause:
+                        if anthropic_pause_turns >= max_anthropic_pause_turns:
+                            yield AIService._sse_chunk(
+                                "error",
+                                "Anthropic 内置搜索暂停次数过多，已停止继续请求",
+                            )
+                            break
+
+                        anthropic_pause_turns += 1
+                        assistant_message = AIService._build_anthropic_assistant_message(
+                            round_state
+                        )
+                        if not assistant_message:
+                            break
+
+                        messages_with_tools.append(assistant_message)
+                        tool_calls_buffer.clear()
+                        round_state = AIService._build_round_state()
+                        body = AIService._build_next_body(
+                            body, provider_mode, messages_with_tools
+                        )
+
+                        async with client.stream(
+                            method="POST",
+                            url=api_url,
+                            headers=headers,
+                            json=body,
+                        ) as response_next:
+                            if response_next.status_code >= 400:
+                                error_text = await AIService._format_http_error(
+                                    response_next, "Anthropic 内置搜索继续失败"
+                                )
+                                yield AIService._sse_chunk("error", error_text)
+                                return
+
+                            async for event in AIService._stream_round(
+                                response_next,
+                                provider_mode,
+                                request,
+                                current_round,
+                                tool_calls_buffer,
+                                round_state,
+                            ):
+                                yield event
+                        continue
+
+                    if not (
+                        tool_calls_buffer
+                        and AIService._custom_tool_calls_enabled(request, provider_mode)
+                        and (max_rounds is None or current_round < max_rounds)
+                    ):
+                        break
+
                     current_round += 1
                     valid_tool_calls = tool_calls_buffer.valid_calls()
                     if not valid_tool_calls:
@@ -491,13 +640,13 @@ class AIService:
                     gemini_tool_results_parts = []
 
                     if provider_mode == "anthropic":
-                        assistant_message: dict[str, Any] | None = {
-                            "role": "assistant",
-                            "content": list(round_state["assistant_blocks"]),
-                        }
-                        use_synthetic_anthropic_blocks = (
-                            len(assistant_message["content"]) == 0
+                        assistant_message = (
+                            AIService._build_anthropic_assistant_message(round_state)
+                            or {"role": "assistant", "content": []}
                         )
+                        use_synthetic_anthropic_blocks = len(
+                            assistant_message["content"]
+                        ) == 0
                         anthropic_tool_results: list[dict[str, Any]] = []
                     elif provider_mode == "gemini":
                         assistant_message = AIService._build_gemini_assistant_message(
@@ -693,7 +842,7 @@ class AIService:
 
                     tool_calls_buffer.clear()
                     round_state = AIService._build_round_state()
-                    body_next = AIService._build_next_body(
+                    body = AIService._build_next_body(
                         body, provider_mode, messages_with_tools
                     )
 
@@ -701,7 +850,7 @@ class AIService:
                         method="POST",
                         url=api_url,
                         headers=headers,
-                        json=body_next,
+                        json=body,
                     ) as response_next:
                         if response_next.status_code >= 400:
                             error_text = await AIService._format_http_error(

@@ -7,6 +7,7 @@ import { collapseSidebarForMobile } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
 import { resolveModelDisplayName } from './config.js';
 import { estimateTokensFromText } from './state.js';
+import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
 
 let _stopGeneration = () => {};
 export function setStopGeneration(fn) { _stopGeneration = fn; }
@@ -14,24 +15,16 @@ let _regenerateTurn = async () => {};
 export function setRegenerateTurn(fn) { _regenerateTurn = fn; }
 let _submitTurnEdit = async () => false;
 export function setSubmitTurnEdit(fn) { _submitTurnEdit = fn; }
-let topicDeleteHoverSuppressTimer = null;
+let _regenerateTopicTitle = async () => false;
+export function setRegenerateTopicTitle(fn) { _regenerateTopicTitle = fn; }
+let openTopicActionMenuId = null;
+let floatingTopicActionMenuEl = null;
+let floatingTopicActionTriggerEl = null;
 
 export function setEmptyThreadState(isEmpty) {
   const chatThread = document.querySelector(".chat-thread");
   if (!chatThread) return;
   chatThread.classList.toggle("is-empty", isEmpty);
-}
-
-function suppressTopicDeleteHover(durationMs = 180) {
-  if (!elements.topicList) return;
-  elements.topicList.classList.add("suppress-delete-hover");
-  if (topicDeleteHoverSuppressTimer) {
-    window.clearTimeout(topicDeleteHoverSuppressTimer);
-  }
-  topicDeleteHoverSuppressTimer = window.setTimeout(() => {
-    elements.topicList?.classList.remove("suppress-delete-hover");
-    topicDeleteHoverSuppressTimer = null;
-  }, durationMs);
 }
 
 function createEmptyChatState() {
@@ -401,6 +394,9 @@ export function createTopic(forceCreate = false) {
 
 export function deleteTopic(topicId) {
   _stopGeneration(topicId);
+  if (openTopicActionMenuId === topicId) {
+    openTopicActionMenuId = null;
+  }
   const topic = state.chat.topics.find((item) => item.id === topicId) || null;
   if (topic && state.chat.editingTurnId) {
     const editingTurnExists = Array.isArray(topic.turns) &&
@@ -469,8 +465,100 @@ export function renderAll() {
   syncSendButtonModeByActiveTopic();
 }
 
+function positionFloatingTopicActionMenu() {
+  if (!(floatingTopicActionMenuEl instanceof HTMLElement) || !(floatingTopicActionTriggerEl instanceof HTMLElement)) {
+    return;
+  }
+
+  const triggerRect = floatingTopicActionTriggerEl.getBoundingClientRect();
+  const menuRect = floatingTopicActionMenuEl.getBoundingClientRect();
+  const viewportPadding = 12;
+  const gap = 8;
+  let left = Math.round(triggerRect.right + gap);
+  if (left + menuRect.width > window.innerWidth - viewportPadding) {
+    left = Math.max(
+      viewportPadding,
+      Math.round(triggerRect.left - gap - menuRect.width)
+    );
+  }
+
+  let top = Math.round(triggerRect.top);
+  if (top + menuRect.height > window.innerHeight - viewportPadding) {
+    top = Math.max(
+      viewportPadding,
+      Math.round(window.innerHeight - viewportPadding - menuRect.height)
+    );
+  }
+
+  floatingTopicActionMenuEl.style.left = `${left}px`;
+  floatingTopicActionMenuEl.style.top = `${top}px`;
+}
+
+function closeFloatingTopicActionMenu() {
+  if (!(floatingTopicActionMenuEl instanceof HTMLElement)) {
+    floatingTopicActionTriggerEl = null;
+    return;
+  }
+  floatingTopicActionMenuEl.classList.remove("is-floating-topic-menu");
+  floatingTopicActionMenuEl.style.left = "";
+  floatingTopicActionMenuEl.style.top = "";
+  floatingTopicActionMenuEl.hidden = true;
+  restoreDropdownOrigin(floatingTopicActionMenuEl);
+  floatingTopicActionMenuEl = null;
+  floatingTopicActionTriggerEl = null;
+}
+
+function openFloatingTopicActionMenu(menuEl, triggerEl) {
+  if (!(menuEl instanceof HTMLElement) || !(triggerEl instanceof HTMLElement)) return;
+  rememberDropdownOrigin(menuEl);
+  if (menuEl.parentElement !== document.body) {
+    document.body.appendChild(menuEl);
+  }
+  menuEl.hidden = false;
+  menuEl.classList.add("is-floating-topic-menu");
+  floatingTopicActionMenuEl = menuEl;
+  floatingTopicActionTriggerEl = triggerEl;
+  positionFloatingTopicActionMenu();
+  window.requestAnimationFrame(() => {
+    positionFloatingTopicActionMenu();
+  });
+}
+
+function syncTopicActionMenuUi() {
+  if (!elements.topicList) return;
+  const items = elements.topicList.querySelectorAll(".topic-item");
+  items.forEach((item) => {
+    const isOpen = item.dataset.topicId === openTopicActionMenuId;
+    item.classList.toggle("topic-menu-open", isOpen);
+    const trigger = item.querySelector(".topic-action-trigger");
+    if (trigger) {
+      trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+    const menu = item.querySelector(".topic-action-dropdown");
+    if (menu) {
+      if (isOpen && trigger) {
+        openFloatingTopicActionMenu(menu, trigger);
+      } else if (menu !== floatingTopicActionMenuEl) {
+        menu.hidden = true;
+      }
+    }
+  });
+}
+
+function setTopicActionMenu(topicId = null) {
+  closeFloatingTopicActionMenu();
+  openTopicActionMenuId = topicId;
+  syncTopicActionMenuUi();
+}
+
+export function closeTopicActionMenu() {
+  if (!openTopicActionMenuId) return;
+  setTopicActionMenu(null);
+}
+
 export function renderTopicList() {
   if (!elements.topicList) return;
+  closeFloatingTopicActionMenu();
 
   // 清空列表
   elements.topicList.innerHTML = "";
@@ -488,11 +576,15 @@ export function renderTopicList() {
     const item = document.createElement("div");
     const isGeneratingTitle = state.chat.generatingTitleTopicIds.has(topic.id);
     const isGenerating = isTopicRunning(topic.id);
+    const isActionMenuOpen = openTopicActionMenuId === topic.id;
+    const canRegenerateTitle =
+      Array.isArray(topic.turns) && topic.turns.some((turn) => !!String(turn?.prompt || "").trim());
     const topicTitle = (topic.title || "未命名话题").trim() || "未命名话题";
     item.className = `topic-item${
       topic.id === state.chat.activeTopicId ? " active" : ""
     }${isGeneratingTitle ? " generating-title" : ""}${
       isGenerating ? " running" : ""
+    }${isActionMenuOpen ? " topic-menu-open" : ""
     }`;
     item.dataset.topicId = topic.id;
     item.tabIndex = 0;
@@ -521,39 +613,112 @@ export function renderTopicList() {
     content.appendChild(footer);
 
     if (!hideDeleteForOnlyNewTopic) {
+      const actionWrap = document.createElement("div");
+      actionWrap.className = "topic-action-menu";
+      actionWrap.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+      actionWrap.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          setTopicActionMenu(null);
+          return;
+        }
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+        }
+      });
+
+      const moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "topic-action-trigger";
+      moreBtn.setAttribute("aria-label", `更多操作：${topic.title || "未命名话题"}`);
+      moreBtn.setAttribute("aria-haspopup", "menu");
+      moreBtn.setAttribute("aria-expanded", isActionMenuOpen ? "true" : "false");
+      moreBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="6" cy="12" r="1.7"></circle>
+          <circle cx="12" cy="12" r="1.7"></circle>
+          <circle cx="18" cy="12" r="1.7"></circle>
+        </svg>
+        <span class="sr-only">更多操作</span>
+      `;
+      moreBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nextTopicId = openTopicActionMenuId === topic.id ? null : topic.id;
+        setTopicActionMenu(nextTopicId);
+      });
+
+      const menu = document.createElement("div");
+      menu.className = "topic-action-dropdown";
+      menu.setAttribute("role", "menu");
+      menu.hidden = !isActionMenuOpen;
+
+      const regenerateBtn = document.createElement("button");
+      regenerateBtn.type = "button";
+      regenerateBtn.className = "topic-action-item";
+      regenerateBtn.setAttribute("role", "menuitem");
+      regenerateBtn.disabled = isGeneratingTitle || !canRegenerateTitle;
+      regenerateBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+          <path d="M21 3v6h-6"></path>
+        </svg>
+        <span>${isGeneratingTitle ? "正在生成话题..." : "重新生成话题"}</span>
+      `;
+      regenerateBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (regenerateBtn.disabled) return;
+        setTopicActionMenu(null);
+        await _regenerateTopicTitle(topic.id);
+      });
+
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
-      deleteBtn.className = "topic-delete-btn";
-      deleteBtn.setAttribute(
-        "aria-label",
-        `删除话题：${topic.title || "未命名话题"}`
-      );
+      deleteBtn.className = "topic-action-item danger";
+      deleteBtn.setAttribute("role", "menuitem");
       deleteBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M4 7h16"></path>
           <path d="M10 11v6"></path>
           <path d="M14 11v6"></path>
           <path d="M6 7l1 11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-11"></path>
           <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
         </svg>
-        <span class="sr-only">删除</span>
+        <span>删除话题</span>
       `;
       deleteBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        await requestDeleteTopic(topic.id);
+        setTopicActionMenu(null);
+        item.classList.add("delete-pending");
+        try {
+          await requestDeleteTopic(topic.id);
+        } finally {
+          if (item.isConnected) {
+            item.classList.remove("delete-pending");
+          }
+        }
       });
-      footer.appendChild(deleteBtn);
+
+      menu.appendChild(regenerateBtn);
+      menu.appendChild(deleteBtn);
+      actionWrap.appendChild(moreBtn);
+      actionWrap.appendChild(menu);
+      footer.appendChild(actionWrap);
     }
 
     item.appendChild(content);
 
     const activateTopic = () => {
       const isAlreadyActive = topic.id === state.chat.activeTopicId;
+      openTopicActionMenuId = null;
       collapseSidebarForMobile();
       if (isAlreadyActive) return;
 
-      suppressTopicDeleteHover();
       setActiveTopic(topic.id);
       renderAll();
     };
@@ -568,6 +733,7 @@ export function renderTopicList() {
     elements.topicList.appendChild(item);
   }
 
+  syncTopicActionMenuUi();
   updateHeaderMeta();
 }
 

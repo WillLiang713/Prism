@@ -196,66 +196,136 @@
   text-overflow: ellipsis;
 }
 
-.topic-delete-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.topic-action-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.topic-action-trigger {
+  border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
-  width: 28px;
-  height: 28px;
+  color: rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   cursor: pointer;
-  flex-shrink: 0;
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
-  transform: translateY(2px);
   transition:
-    opacity 0.15s ease,
-    visibility 0.15s ease,
-    transform 0.15s ease,
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
+    opacity 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.topic-delete-btn svg {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
+.topic-action-trigger svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
 }
 
-.topic-item:hover .topic-delete-btn {
+.topic-item.active .topic-action-trigger,
+.topic-item.topic-menu-open .topic-action-trigger,
+.topic-item.delete-pending .topic-action-trigger {
   opacity: 1;
-  visibility: visible;
   pointer-events: auto;
-  transform: translateY(0);
 }
 
-.topic-list.suppress-delete-hover .topic-delete-btn {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-  transform: translateY(2px) !important;
-}
-
-.topic-delete-btn:hover {
+.topic-action-trigger:hover,
+.topic-item.topic-menu-open .topic-action-trigger {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.25);
-  color: #fff;
+  color: rgba(255, 255, 255, 0.92);
 }
 
-.topic-delete-btn:active {
-  transform: scale(0.96);
-}
-
-.topic-delete-btn:focus-visible {
+.topic-action-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
+}
+
+.topic-action-dropdown {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  min-width: 126px;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-chat);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  backdrop-filter: blur(18px);
+  z-index: 12;
+}
+
+.topic-action-dropdown.is-floating-topic-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 140;
+}
+
+.topic-action-dropdown[hidden] {
+  display: none;
+}
+
+.topic-action-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 9px;
+  padding: 8px 9px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.12s ease;
+}
+
+.topic-action-item svg {
+  display: none;
+}
+
+.topic-action-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.topic-action-item:active {
+  transform: scale(0.98);
+}
+
+.topic-action-item:focus-visible {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12) inset;
+}
+
+.topic-action-item:disabled {
+  color: rgba(255, 255, 255, 0.32);
+  cursor: not-allowed;
+}
+
+.topic-action-item:disabled:hover,
+.topic-action-item:disabled:focus-visible {
+  background: transparent;
+  box-shadow: none;
+}
+
+.topic-action-item.danger {
+  color: #ff9a9a;
+}
+
+.topic-action-item.danger:hover,
+.topic-action-item.danger:focus-visible {
+  background: rgba(248, 113, 113, 0.14);
+  color: #ffb3b3;
 }
 
 .sidebar-collapsed .topic-item {
@@ -269,7 +339,7 @@
 }
 
 .sidebar-collapsed .topic-content,
-.sidebar-collapsed .topic-delete-btn {
+.sidebar-collapsed .topic-action-menu {
   display: none !important;
 }
 

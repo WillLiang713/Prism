@@ -419,7 +419,9 @@ export async function callModel(
       useResponsesEndpoint &&
       useWebSearchTool &&
       webSearchToolMode === "builtin";
+    const isAnthropicProvider = config.provider === "anthropic";
     const webSearchProvider = normalizeWebSearchProvider(
+      webSearchToolMode === "anthropic_search" ||
       webSearchToolMode === "exa" ||
       webSearchToolMode === "tavily" ||
       webSearchToolMode === "gemini_search"
@@ -427,6 +429,10 @@ export async function callModel(
         : webSearchConfig?.provider
     );
     const isGeminiProvider = config.provider === "gemini";
+    const useAnthropicWebSearch =
+      isAnthropicProvider &&
+      useWebSearchTool &&
+      webSearchProvider === "anthropic_search";
     const useGeminiGoogleSearch =
       isGeminiProvider && useWebSearchTool && webSearchProvider === "gemini_search";
     const useCustomTools = !(isGeminiProvider && useGeminiGoogleSearch);
@@ -452,6 +458,7 @@ export async function callModel(
       reasoningEffort: config.reasoningEffort,
       historyTurns: historyTurns,
       enableBuiltinWebSearch: useBuiltinWebSearch,
+      enableAnthropicWebSearch: useAnthropicWebSearch,
       enableTools: useCustomTools,
       enableGoogleSearch: useGeminiGoogleSearch,
       selectedTools: useCustomTools ? selectedTools : [],
@@ -767,6 +774,41 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
       renderTopicList();
     }
     // 静默失败，不影响用户体验
+  }
+}
+
+export async function regenerateTopicTitle(topicId = state.chat.activeTopicId) {
+  if (!topicId) return false;
+  const topic = state.chat.topics.find((t) => t.id === topicId) || null;
+  if (!topic) return false;
+  if (state.chat.generatingTitleTopicIds.has(topic.id)) return false;
+
+  const titleConfig = getConfig("Title");
+  const resolvedTitleConfig = {
+    ...titleConfig,
+    apiKey: (titleConfig.apiKey || "").trim(),
+    model: resolveAutoTitleModel(topic, titleConfig),
+  };
+
+  if (!hasEffectiveApiKey(resolvedTitleConfig) || !hasEffectiveModel(resolvedTitleConfig)) {
+    await showAlert("请先在设置里补全标题生成模型配置", {
+      title: "无法生成话题",
+    });
+    return false;
+  }
+
+  try {
+    const title = await generateTopicTitle(topic.id, resolvedTitleConfig);
+    const nextTitle = (title || "").trim() || fallbackTopicTitleFromTurns(topic);
+    topic.title = nextTitle;
+    scheduleSaveChat();
+    renderTopicList();
+    return true;
+  } catch (error) {
+    await showAlert(error?.message || "重新生成话题失败", {
+      title: "生成失败",
+    });
+    return false;
   }
 }
 

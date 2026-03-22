@@ -23,7 +23,7 @@ import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDr
 import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
-import { triggerCreateTopic, isTopicRunning, requestDeleteTopic } from './chat.js';
+import { triggerCreateTopic, isTopicRunning, requestDeleteTopic, closeTopicActionMenu } from './chat.js';
 import { addImages } from './images.js';
 import {
   toggleSidebar,
@@ -36,6 +36,15 @@ const PRESS_START_EVENT =
   typeof window !== "undefined" && "PointerEvent" in window
     ? "pointerdown"
     : "mousedown";
+
+function isWithinTopicActionUi(target) {
+  const element =
+    target instanceof HTMLElement ? target : target instanceof Node ? target.parentElement : null;
+  if (!(element instanceof HTMLElement)) return false;
+  return !!element.closest(
+    ".topic-action-menu, .topic-action-dropdown.is-floating-topic-menu"
+  );
+}
 
 export function bindEvents() {
   initScrollbarAutoHide();
@@ -122,6 +131,9 @@ export function bindEvents() {
     if (!e.target.closest(".web-search-control") && !e.target.closest(".web-search-tool-dropdown")) {
       closeWebSearchToolSelector();
     }
+    if (!isWithinTopicActionUi(e.target)) {
+      closeTopicActionMenu();
+    }
   });
 
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
@@ -159,6 +171,7 @@ export function bindEvents() {
       resolvePromptConfirmDialog(false);
       return;
     }
+    closeTopicActionMenu();
     closeConfigModal();
   });
 
@@ -339,10 +352,12 @@ export function bindEvents() {
       return;
     }
     if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
+    if (isWithinTopicActionUi(t)) return;
     closeModelDropdown("main");
     closeModelDropdown("Title");
     closeHeaderModelDropdown();
     closeAllConfigSelectPickers();
+    closeTopicActionMenu();
   });
   document.addEventListener("focusin", (e) => {
     const t = e.target;
@@ -352,11 +367,18 @@ export function bindEvents() {
     closeModelDropdown("main");
     closeModelDropdown("Title");
     closeHeaderModelDropdown();
+    if (!isWithinTopicActionUi(t)) {
+      closeTopicActionMenu();
+    }
   });
   elements.configContent?.addEventListener("scroll", repositionOpenFloatingDropdowns);
+  elements.topicList?.addEventListener("scroll", () => {
+    closeTopicActionMenu();
+  });
   window.addEventListener("resize", () => {
     repositionOpenFloatingDropdowns();
     positionWebSearchToolSelector();
+    closeTopicActionMenu();
   });
 
   // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）

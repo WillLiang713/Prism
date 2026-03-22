@@ -46,8 +46,11 @@ class ChatRequest(BaseModel):
     selectedTools: list[str] = []  # 选中的工具名称列表
 
     # 联网相关
-    webSearchProvider: str = Field(default="tavily")  # 联网服务提供方（tavily|exa）
+    webSearchProvider: str = Field(
+        default="tavily"
+    )  # 联网服务提供方（tavily|exa|gemini_search|anthropic_search）
     enableBuiltinWebSearch: bool = False  # Responses 模式下是否启用 OpenAI 内置网页搜索
+    enableAnthropicWebSearch: bool = False  # Messages 模式下是否启用 Anthropic 内置网页搜索
     webSearchMaxResults: int | None = Field(
         default=None, ge=1, le=20
     )  # 联网默认结果数量

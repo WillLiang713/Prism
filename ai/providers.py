@@ -383,9 +383,9 @@ class MessageBuilder:
         if system_text:
             body["system"] = system_text
 
-        tools = MessageBuilder._load_selected_tools(config)
+        tools = MessageBuilder._build_anthropic_tools(config)
         if tools:
-            body["tools"] = MessageBuilder._convert_tools_to_anthropic(tools)
+            body["tools"] = tools
 
         # 思考模式
         if config.reasoningEffort and config.reasoningEffort != "none":
@@ -746,6 +746,24 @@ class MessageBuilder:
                 converted = MessageBuilder._convert_tools_to_gemini(selected_tools)
                 if converted:
                     tools.extend(converted)
+
+        return tools
+
+    @staticmethod
+    def _build_anthropic_tools(config: ChatRequest) -> list[dict]:
+        tools: list[dict] = []
+
+        if config.enableAnthropicWebSearch:
+            tools.append(
+                {
+                    "type": "web_search_20250305",
+                    "name": "web_search",
+                }
+            )
+
+        selected_tools = MessageBuilder._load_selected_tools(config)
+        if selected_tools:
+            tools.extend(MessageBuilder._convert_tools_to_anthropic(selected_tools))
 
         return tools
 

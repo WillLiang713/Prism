@@ -159,10 +159,11 @@
 
 .header-model-summary-title {
   min-width: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.02em;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -249,6 +250,7 @@
 }
 
 .brand-service-name {
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 400;
   color: var(--text-muted);
@@ -256,6 +258,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 @media (max-width: 720px) {
@@ -265,17 +268,17 @@
 }
 
 .brand-model-id {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.25;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
-  letter-spacing: 0;
+  letter-spacing: 0.01em;
 }
 
 .brand-model-id.is-placeholder {

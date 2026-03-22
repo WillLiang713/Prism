@@ -140,7 +140,7 @@ async def serve_style():
     _ensure_frontend_asset(style_path, "样式文件")
     return FileResponse(
         style_path,
-        headers=IMMUTABLE_CACHE_HEADERS,
+        headers=REVALIDATE_CACHE_HEADERS,
     )
 
 
@@ -179,7 +179,12 @@ async def serve_js_asset(asset_path: str):
 
 @router.get("/css/{asset_path:path}")
 async def serve_css_asset(asset_path: str):
-    return _serve_frontend_sub_asset("css", asset_path, "样式文件")
+    return _serve_frontend_sub_asset(
+        "css",
+        asset_path,
+        "样式文件",
+        headers=REVALIDATE_CACHE_HEADERS,
+    )
 
 
 @router.get("/libs/{asset_path:path}")
@@ -189,7 +194,12 @@ async def serve_lib_asset(asset_path: str):
 
 @router.get("/styles/{asset_path:path}")
 async def serve_styles_asset(asset_path: str):
-    return _serve_frontend_sub_asset("styles", asset_path, "样式文件")
+    return _serve_frontend_sub_asset(
+        "styles",
+        asset_path,
+        "样式文件",
+        headers=REVALIDATE_CACHE_HEADERS,
+    )
 
 
 @router.get("/app/{asset_path:path}")

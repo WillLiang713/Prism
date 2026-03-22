@@ -180,7 +180,7 @@
 
 .chip-id {
   font-size: 12px;
-  font-family: var(--font-mono);
+  font-family: var(--font-body);
   font-weight: 600;
   letter-spacing: 0.3px;
   font-variant-numeric: tabular-nums;

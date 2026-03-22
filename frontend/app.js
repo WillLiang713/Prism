@@ -13,8 +13,8 @@ import { initDesktopWindowShell, syncDesktopBackendUi, beginDesktopBackendBootst
 import { closeModelDropdown, setConfigFns } from './js/models.js';
 import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm, autoSaveManagedServiceDraft, applyHeaderModelSelection, getServiceDisplayName } from './js/config.js';
 import { updateConfigStatusStrip } from './js/web-search.js';
-import { initChat, renderAll, getActiveTopic, isTopicRunning, setStopGeneration, setRegenerateTurn, setSubmitTurnEdit } from './js/chat.js';
-import { sendPrompt, stopGeneration, regenerateTurn, submitTurnEdit } from './js/conversation.js';
+import { initChat, renderAll, getActiveTopic, isTopicRunning, setStopGeneration, setRegenerateTurn, setSubmitTurnEdit, setRegenerateTopicTitle } from './js/chat.js';
+import { sendPrompt, stopGeneration, regenerateTurn, submitTurnEdit, regenerateTopicTitle } from './js/conversation.js';
 
 // ---- 连接模块间的延迟绑定 ----
 setCloseModelDropdown(closeModelDropdown);
@@ -30,6 +30,7 @@ setChatFns(getActiveTopic, isTopicRunning);
 setStopGeneration(stopGeneration);
 setRegenerateTurn(regenerateTurn);
 setSubmitTurnEdit(submitTurnEdit);
+setRegenerateTopicTitle(regenerateTopicTitle);
 
 // ---- 启动 ----
 document.addEventListener("DOMContentLoaded", () => {
