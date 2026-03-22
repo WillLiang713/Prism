@@ -1,5 +1,6 @@
 import { state, elements, STORAGE_KEYS, createId, formatTime } from './state.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
+import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
 import { showConfirm } from './dialog.js';
@@ -416,6 +417,26 @@ export function deleteTopic(topicId) {
   if (before !== state.chat.topics.length) scheduleSaveChat();
 }
 
+export function deleteTurn(turnId, topicId = state.chat.activeTopicId) {
+  if (!turnId || !topicId) return false;
+
+  const topic = state.chat.topics.find((item) => item.id === topicId) || null;
+  if (!topic || !Array.isArray(topic.turns)) return false;
+
+  const turnIndex = topic.turns.findIndex((turn) => turn?.id === turnId);
+  if (turnIndex < 0) return false;
+
+  if (state.chat.editingTurnId === turnId) {
+    clearTurnEditState(turnId);
+  }
+  state.chat.turnUiById.delete(turnId);
+
+  topic.turns.splice(turnIndex, 1);
+  topic.updatedAt = Date.now();
+  scheduleSaveChat();
+  return true;
+}
+
 export async function requestDeleteTopic(topicId = state.chat.activeTopicId) {
   const topic = state.chat.topics.find((item) => item.id === topicId);
   if (!topic) return false;
@@ -443,6 +464,50 @@ export async function requestDeleteTopic(topicId = state.chat.activeTopicId) {
   if (!confirmed) return false;
 
   deleteTopic(topic.id);
+  renderAll();
+  return true;
+}
+
+export async function requestDeleteTurn(turn, topicId = state.chat.activeTopicId) {
+  if (!turn?.id || !topicId) return false;
+
+  const topic = state.chat.topics.find((item) => item.id === topicId) || null;
+  if (!topic || !Array.isArray(topic.turns)) return false;
+
+  const targetTurn = topic.turns.find((item) => item?.id === turn.id) || null;
+  if (!targetTurn) return false;
+
+  if (isTopicRunning(topic.id)) {
+    const stopThenDelete = await showConfirm(
+      "当前消息正在生成中，删除前会先停止生成，是否继续？",
+      {
+        title: "删除消息",
+        okText: "继续",
+      }
+    );
+    if (!stopThenDelete) return false;
+  }
+
+  const promptPreview = String(targetTurn.prompt || "").trim();
+  const messageLabel = promptPreview
+    ? `这条消息“${promptPreview.slice(0, 30)}${promptPreview.length > 30 ? "..." : ""}”`
+    : "这条消息";
+  const confirmed = await showConfirm(`确定要删除${messageLabel}吗？`, {
+    title: "删除消息",
+    okText: "删除",
+    danger: true,
+    hint: "",
+  });
+  if (!confirmed) return false;
+
+  if (isTopicRunning(topic.id)) {
+    _stopGeneration(topic.id);
+  }
+
+  if (!deleteTurn(targetTurn.id, topic.id)) {
+    return false;
+  }
+
   renderAll();
   return true;
 }
@@ -749,6 +814,7 @@ export function renderChatMessages() {
     if (elements.scrollToBottomBtn) {
       elements.scrollToBottomBtn.style.display = "none";
     }
+    reconcileHtmlPreviewWithTopic(topic);
     return;
   }
 
@@ -763,6 +829,7 @@ export function renderChatMessages() {
   }
   syncTopicActionButtons(topic.id);
   updateScrollToBottomButton();
+  reconcileHtmlPreviewWithTopic(topic);
 }
 
 export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
@@ -820,6 +887,18 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       await _regenerateTurn(turn);
     });
     userActions.appendChild(userRegenerateBtn);
+
+    const userDeleteBtn = createIconActionButton({
+      className: "message-copy-btn copy-icon-btn delete-btn user-delete-btn",
+      title: "删除消息",
+      ariaLabel: "删除消息",
+      path: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>',
+    });
+    userDeleteBtn.dataset.topicId = topicId || "";
+    userDeleteBtn.addEventListener("click", async () => {
+      await requestDeleteTurn(turn, topicId);
+    });
+    userActions.appendChild(userDeleteBtn);
 
     if (hasUserText) {
       const userCopyBtn = createCopyButton(() => turn.prompt || "", {
@@ -1108,6 +1187,9 @@ export function createAssistantCard(
   responseSection.className = "response-section";
   const responseContent = document.createElement("div");
   responseContent.className = "response-content";
+  responseContent.dataset.topicId = String(topicId || "");
+  responseContent.dataset.turnId = String(turn?.id || "");
+  responseContent.dataset.turnCreatedAt = String(turn?.createdAt || 0);
   renderMarkdownToElement(responseContent, contentSnapshot);
   responseSection.appendChild(responseContent);
 
@@ -1221,8 +1303,27 @@ export function createAssistantCard(
   });
   regenerateBtn.disabled = statusSnapshot === "loading" || isTopicRunning(topicId);
 
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "action-btn delete-btn";
+  deleteBtn.setAttribute("aria-label", "删除消息");
+  deleteBtn.dataset.topicId = topicId || "";
+  deleteBtn.innerHTML = `
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 6h18"></path>
+      <path d="M8 6V4h8v2"></path>
+      <path d="M19 6l-1 14H6L5 6"></path>
+      <path d="M10 11v6"></path>
+      <path d="M14 11v6"></path>
+    </svg>
+  `;
+  deleteBtn.addEventListener("click", async () => {
+    await requestDeleteTurn(turn, topicId);
+  });
+
   actions.appendChild(copyBtn);
   actions.appendChild(regenerateBtn);
+  actions.appendChild(deleteBtn);
 
   footer.appendChild(metaInfo);
   footer.appendChild(sourcesToggleBtn);
@@ -1273,6 +1374,7 @@ export function createAssistantCard(
     speedEl,
     copyBtn,
     regenerateBtn,
+    deleteBtn,
     sourcesStatusEl: sourcesStatus,
     sourcesToggleBtnEl: sourcesToggleBtn,
     sourcesSectionEl: sourcesPanel,

@@ -331,6 +331,14 @@ export const elements = {
   promptConfirmHint: document.getElementById("promptConfirmHint"),
   promptConfirmCancelBtn: document.getElementById("promptConfirmCancelBtn"),
   promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
+
+  // HTML 预览
+  htmlPreviewLayer: document.getElementById("htmlPreviewLayer"),
+  htmlPreviewBackdrop: document.getElementById("htmlPreviewBackdrop"),
+  htmlPreviewDrawer: document.getElementById("htmlPreviewDrawer"),
+  htmlPreviewCloseBtn: document.getElementById("htmlPreviewCloseBtn"),
+  htmlPreviewFrame: document.getElementById("htmlPreviewFrame"),
+  htmlPreviewEmpty: document.getElementById("htmlPreviewEmpty"),
 };
 
 export function isDesktopBackendAvailable() {

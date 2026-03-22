@@ -249,6 +249,22 @@
   color: var(--text);
 }
 
+.assistant-message-footer .delete-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--text-muted);
+}
+
+.assistant-message-footer .delete-btn:hover:not(:disabled) {
+  border-color: rgba(255, 120, 120, 0.4);
+  background: rgba(255, 120, 120, 0.08);
+  color: #ff8d8d;
+}
+
 .assistant-message-footer .regenerate-btn:disabled {
   opacity: 0.5;
 }

@@ -118,6 +118,10 @@
     padding: 12px;
   }
 
+  #configModal .config-close-corner-btn {
+    right: 12px;
+  }
+
   #configModal .config-status-strip {
     padding: 10px 12px;
     gap: 6px;

@@ -79,26 +79,54 @@
   font-family: var(--font-mono);
 }
 
+.response-content .code-block .code-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.response-content .code-block .code-preview-btn,
+.response-content .code-block .code-copy-btn {
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.response-content .code-block .code-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.response-content .code-block .code-preview-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 .response-content .code-block .code-copy-btn {
   padding: 4px;
   border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
   width: 28px;
   height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
 }
 
+.response-content .code-block .code-preview-btn:hover,
 .response-content .code-block .code-copy-btn:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
 }
 
+.response-content .code-block .code-preview-btn:disabled,
 .response-content .code-block .code-copy-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .response-content .code-block .code-copy-btn .icon { width: 16px; height: 16px; }
 .response-content .code-block pre { margin: 0; border: none; border-radius: 0; background: transparent; }

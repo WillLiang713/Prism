@@ -6,6 +6,7 @@ import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEven
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
 import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState } from './chat.js';
 import { clearImages } from './images.js';
+import { syncHtmlPreviewForTurn } from './html-preview.js';
 
 function stripMarkdownForThinkingSummary(text) {
   return String(text || "")
@@ -117,6 +118,7 @@ function createMainModelState(config) {
     tokens: null,
     timeCostSec: null,
     status: "loading",
+    previewAutoOpened: false,
     thinkingCollapsed: true,
     toolCallsExpanded: false,
   };
@@ -557,10 +559,17 @@ export async function callModel(
               thinkingEndTime = Date.now();
             turn.models.main.content += chunk.data;
             if (uiRef?.responseEl) {
+              uiRef.responseEl.dataset.topicId = String(topicId || "");
+              uiRef.responseEl.dataset.turnId = String(turn?.id || "");
+              uiRef.responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
               renderMarkdownToElement(uiRef.responseEl, turn.models.main.content);
               const tokens = estimateTokensFromText(turn.models.main.content);
               uiRef.tokenEl.textContent = `${tokens} tokens`;
             }
+            syncHtmlPreviewForTurn(topicId, turn, {
+              autoOpen: true,
+              forceReload: true,
+            });
             if (thinkingStartTime && uiRef?.thinkingLabelEl) {
               turn.models.main.thinkingComplete = true;
               uiRef.thinkingLabelEl.textContent = "思考完成";
@@ -714,6 +723,11 @@ export async function callModel(
         uiRef.speedEl.style.display = "inline";
       }
     }
+
+    syncHtmlPreviewForTurn(topicId, turn, {
+      autoOpen: true,
+      forceReload: true,
+    });
   } catch (error) {
     const uiRef = resolveUi();
     if (error?.name === "AbortError") {
@@ -724,10 +738,17 @@ export async function callModel(
       turn.models.main.status = "error";
       turn.models.main.content = `错误: ${error.message}`;
       if (uiRef?.responseEl) {
+        uiRef.responseEl.dataset.topicId = String(topicId || "");
+        uiRef.responseEl.dataset.turnId = String(turn?.id || "");
+        uiRef.responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
         renderMarkdownToElement(uiRef.responseEl, turn.models.main.content);
       }
       if (uiRef?.statusEl) applyStatus(uiRef.statusEl, "error");
     }
+    syncHtmlPreviewForTurn(topicId, turn, {
+      autoOpen: false,
+      forceReload: true,
+    });
   } finally {
     if (timeTimer) clearInterval(timeTimer);
     timeTimer = null;

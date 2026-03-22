@@ -27,6 +27,7 @@
     <link rel="stylesheet" href="css/tools.css" />
     <link rel="stylesheet" href="css/sources.css" />
     <link rel="stylesheet" href="css/content.css" />
+    <link rel="stylesheet" href="css/html-preview.css" />
     <link rel="stylesheet" href="css/responsive.css" />
     <script>
       // 样式版本号优先使用构建脚本替换后的 __BUILD__，开发态则自动生成，
@@ -241,6 +242,55 @@
                     <div class="chat-messages" id="chatMessages"></div>
                   </div>
                 </div>
+                <section
+                  class="html-preview-layer"
+                  id="htmlPreviewLayer"
+                  aria-hidden="true"
+                  aria-label="HTML 预览"
+                  hidden
+                >
+                  <button
+                    class="html-preview-backdrop"
+                    id="htmlPreviewBackdrop"
+                    type="button"
+                    aria-label="关闭 HTML 预览"
+                    tabindex="-1"
+                  ></button>
+                  <div class="html-preview-drawer" id="htmlPreviewDrawer">
+                    <div class="html-preview-body">
+                      <div class="html-preview-stage">
+                        <button
+                          type="button"
+                          class="html-preview-close-btn html-preview-close-btn-floating"
+                          id="htmlPreviewCloseBtn"
+                          aria-label="关闭 HTML 预览"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                            <path d="M6 6l12 12"></path>
+                            <path d="M18 6L6 18"></path>
+                          </svg>
+                        </button>
+                        <div class="html-preview-frame-wrap">
+                          <div class="html-preview-frame-clip">
+                            <iframe
+                              class="html-preview-frame"
+                              id="htmlPreviewFrame"
+                              title="HTML 预览画布"
+                              sandbox="allow-scripts"
+                              referrerpolicy="no-referrer"
+                            ></iframe>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="html-preview-empty" id="htmlPreviewEmpty">
+                        <div class="html-preview-empty-title">等待预览内容</div>
+                        <div class="html-preview-empty-text">
+                          在 AI 回复里的 HTML 代码块上点击“预览”，右侧会打开页面内预览面板。
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
 
               <!-- 输入区域（固定在右侧会话面板底部） -->
@@ -382,6 +432,17 @@
             <div class="config-header-title">
               <h2>配置中心</h2>
             </div>
+            <button
+              type="button"
+              class="btn btn-secondary btn-small config-close-corner-btn"
+              id="closeConfigBtn"
+              aria-label="关闭配置中心"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                <path d="M6 6l12 12"></path>
+                <path d="M18 6L6 18"></path>
+              </svg>
+            </button>
           </div>
           <div class="config-tabs" id="configTabs" role="tablist" aria-label="配置分组">
             <button
@@ -471,6 +532,18 @@
                   <div class="service-list" id="serviceList" aria-label="服务列表"></div>
                 </div>
                 <div class="service-detail-panel">
+                  <div class="service-detail-topbar">
+                    <div class="service-connectivity-mini-card">
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-small"
+                        id="testServiceConnectionBtn"
+                        data-status="idle"
+                      >
+                        测试连接
+                      </button>
+                    </div>
+                  </div>
                   <div class="form-group">
                     <label for="serviceNameInput">服务名称</label>
                     <input
@@ -538,31 +611,6 @@
                             required
                           />
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="service-connectivity-card">
-                    <div class="service-connectivity-header">
-                      <div>
-                        <div class="service-connectivity-title">连通性测试</div>
-                      </div>
-                    </div>
-                    <div class="service-connectivity-message" id="serviceConnectivityMessage">
-                      选择一条服务后可执行测试。
-                    </div>
-                    <div class="service-connectivity-time" id="serviceConnectivityTime"></div>
-                    <div class="service-connectivity-footer">
-                      <span
-                        class="service-connectivity-badge"
-                        id="serviceConnectivityBadge"
-                        data-status="idle"
-                      >
-                        未测试
-                      </span>
-                      <div class="service-connectivity-actions">
-                        <button type="button" class="btn btn-secondary btn-small" id="testServiceConnectionBtn">
-                          测试连通性
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -811,14 +859,6 @@
               </div>
             </div>
             </section>
-          </div>
-          <div class="config-footer">
-
-            <div class="config-footer-actions">
-              <button class="btn btn-secondary btn-small" id="closeConfigBtn">
-                关闭
-              </button>
-            </div>
           </div>
         </div>
       </div>

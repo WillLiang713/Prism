@@ -132,13 +132,47 @@
 .config-header {
   display: flex;
   justify-content: flex-start;
-  align-items: flex-start;
-  padding: 16px 20px 12px;
+  align-items: center;
+  padding: 16px 64px 12px 20px;
   background: var(--surface-solid);
   border-bottom: none;
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.config-close-corner-btn {
+  position: absolute;
+  top: calc(50% + 5px);
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  transform: translateY(-50%);
+}
+
+.config-close-corner-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+#configModal .config-close-corner-btn {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+#configModal .config-close-corner-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#configModal .config-close-corner-btn:active {
+  transform: translateY(-50%) scale(0.94);
 }
 
 .config-header h2 {
@@ -343,6 +377,7 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.02);
   padding: 16px;
+  transition: border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
 }
 
 .service-toolbar {
@@ -354,7 +389,7 @@
 }
 
 #configModal .service-toolbar .btn,
-#configModal .service-connectivity-actions .btn,
+#configModal .service-connectivity-inline .btn,
 #configModal .config-footer-actions .btn {
   appearance: none;
   -webkit-appearance: none;
@@ -371,7 +406,7 @@
 }
 
 #configModal .service-toolbar .btn:hover,
-#configModal .service-connectivity-actions .btn:hover,
+#configModal .service-connectivity-inline .btn:hover,
 #configModal .config-footer-actions .btn:hover {
   border-color: var(--border);
   background: rgba(255, 255, 255, 0.03);
@@ -379,39 +414,20 @@
 }
 
 #configModal .service-toolbar .btn:focus-visible,
-#configModal .service-connectivity-actions .btn:focus-visible,
+#configModal .service-connectivity-inline .btn:focus-visible,
 #configModal .config-footer-actions .btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 #configModal .service-toolbar .btn:disabled,
-#configModal .service-connectivity-actions .btn:disabled,
+#configModal .service-connectivity-inline .btn:disabled,
 #configModal .config-footer-actions .btn:disabled {
   border-color: var(--border-strong);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-dim);
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-#configModal #testServiceConnectionBtn {
-  border-color: rgba(255, 255, 255, 0.94);
-  background: rgba(255, 255, 255, 0.96);
-  color: #111111;
-}
-
-#configModal #testServiceConnectionBtn:hover {
-  border-color: #ffffff;
-  background: #ffffff;
-  color: #111111;
-}
-
-#configModal #testServiceConnectionBtn:disabled {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(17, 17, 17, 0.52);
-  opacity: 1;
 }
 
 #configModal .service-toolbar .btn {
@@ -493,8 +509,50 @@
 
 .service-detail-panel .form-group,
 .service-summary-card,
-.service-connectivity-card {
+.service-connectivity-inline,
+.service-connectivity-mini-card {
   flex: 0 0 auto;
+}
+
+.service-detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-height: 0;
+  margin-top: auto;
+  padding-top: 12px;
+  order: 99;
+}
+
+.service-connectivity-mini-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.service-connectivity-mini-card:has(#testServiceConnectionBtn[data-status="testing"]) {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.service-connectivity-mini-card:has(#testServiceConnectionBtn[data-status="success"]) {
+  border-color: rgba(78, 217, 193, 0.18);
+  background: rgba(78, 217, 193, 0.06);
+  box-shadow: inset 0 0 14px rgba(78, 217, 193, 0.04);
+}
+
+.service-connectivity-mini-card:has(#testServiceConnectionBtn[data-status="error"]) {
+  border-color: rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.05);
 }
 
 .service-list-card {
@@ -559,16 +617,11 @@
   background: rgba(255, 255, 255, 0.96);
 }
 
-.service-list-head,
-.service-connectivity-header {
+.service-list-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-}
-
-.service-connectivity-header {
-  min-height: 28px;
 }
 
 .service-list-title {
@@ -603,17 +656,13 @@
 .service-list-meta,
 .service-list-submeta,
 .service-connectivity-subtitle,
-.service-connectivity-message,
-.service-connectivity-time,
 .service-summary-label {
   color: var(--text-dim);
 }
 
 .service-list-meta,
 .service-list-submeta,
-.service-connectivity-subtitle,
-.service-connectivity-message,
-.service-connectivity-time {
+.service-connectivity-subtitle {
   font-size: 13px;
   line-height: 1.5;
 }
@@ -640,9 +689,8 @@
   opacity: 1;
 }
 
-/* ---------- Connectivity Card – State-reactive ---------- */
-.service-summary-card,
-.service-connectivity-card {
+/* ---------- Connectivity ---------- */
+.service-summary-card {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
@@ -677,59 +725,68 @@
 }
 
 /* --- Card state: testing --- */
-.service-connectivity-card:has(.service-connectivity-badge[data-status="testing"]) {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-/* --- Card state: success --- */
-.service-connectivity-card:has(.service-connectivity-badge[data-status="success"]) {
+.service-detail-panel:has(#testServiceConnectionBtn[data-status="success"]) {
   border-color: rgba(78, 217, 193, 0.25);
-  background: rgba(78, 217, 193, 0.03);
-  box-shadow: inset 0 0 20px rgba(78, 217, 193, 0.03);
+  background: rgba(78, 217, 193, 0.035);
+  box-shadow:
+    inset 0 0 26px rgba(78, 217, 193, 0.04),
+    0 0 0 1px rgba(78, 217, 193, 0.08);
 }
 
-/* --- Card state: error --- */
-.service-connectivity-card:has(.service-connectivity-badge[data-status="error"]) {
-  border-color: rgba(239, 68, 68, 0.22);
-  background: rgba(239, 68, 68, 0.025);
-  box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.025);
-}
-
-/* --- Title --- */
-.service-connectivity-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  transition: color 0.3s ease;
-}
-
-/* --- Message --- */
-.service-connectivity-message {
-  margin-top: 12px;
-  min-height: 18px;
-  transition: color 0.3s ease;
-}
-
-/* --- Time --- */
-.service-connectivity-time {
-  margin-top: 8px;
-  min-height: 18px;
-}
-
-/* --- Footer --- */
-.service-connectivity-footer {
-  margin-top: 14px;
+.service-connectivity-inline {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  min-height: 34px;
 }
 
-.service-connectivity-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-left: auto;
+#configModal .service-connectivity-mini-card .btn {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.82;
+}
+
+#configModal .service-connectivity-mini-card .btn:hover {
+  background: transparent;
+  border-color: transparent;
+  color: #ffffff;
+  opacity: 1;
+}
+
+#configModal .service-connectivity-mini-card .btn:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+}
+
+#configModal .service-connectivity-mini-card .btn[data-status="testing"] {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.24) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3.5s linear infinite;
+}
+
+#configModal .service-connectivity-mini-card .btn[data-status="success"] {
+  color: #8fd6a8;
+}
+
+#configModal .service-connectivity-mini-card .btn[data-status="error"] {
+  color: #f3b2b2;
 }
 
 /* --- Badge (status indicator) --- */
@@ -748,6 +805,7 @@
   font-weight: 700;
   flex: 0 0 auto;
   transition: color 0.3s ease;
+  white-space: nowrap;
 }
 
 /* Status dot (::before pseudo-element) */

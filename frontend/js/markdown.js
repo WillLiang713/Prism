@@ -1,4 +1,5 @@
 import { isDesktopRuntime } from "./state.js";
+import { openHtmlPreview, openHtmlPreviewForSource } from "./html-preview.js";
 
 export function initMarkdown() {
   if (typeof marked === "undefined") return;
@@ -129,6 +130,62 @@ export function getLanguageFromCodeEl(codeEl) {
   return m?.[1] || "";
 }
 
+function normalizeMarkupLanguage(language, sourceText = "") {
+  const normalizedLanguage = String(language || "").trim().toLowerCase();
+  if (["html", "htm", "xml", "svg"].includes(normalizedLanguage)) {
+    return normalizedLanguage === "htm" ? "html" : normalizedLanguage;
+  }
+
+  const text = String(sourceText || "").trim();
+  const looksLikeMarkup =
+    text.startsWith("<") &&
+    /<\/?[a-z][\w:-]*[\s>]/i.test(text);
+
+  if (!normalizedLanguage && looksLikeMarkup) {
+    if (/<svg[\s>]/i.test(text)) return "svg";
+    return "html";
+  }
+
+  return "";
+}
+
+function createPreviewButton(getMarkup, language = "html", sourceMeta = null) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "code-preview-btn";
+  btn.setAttribute("aria-label", "预览 HTML 代码");
+  btn.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12s-3.6 6.5-9.5 6.5S2.5 12 2.5 12z"></path>
+      <circle cx="12" cy="12" r="2.7"></circle>
+    </svg>
+  `;
+
+  btn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const markup = typeof getMarkup === "function" ? getMarkup() : getMarkup;
+    if (sourceMeta?.turnId) {
+      openHtmlPreviewForSource({
+        markup,
+        language,
+        topicId: sourceMeta.topicId,
+        turnId: sourceMeta.turnId,
+        blockIndex: sourceMeta.blockIndex,
+        trigger: btn,
+      });
+      return;
+    }
+    openHtmlPreview({
+      markup,
+      language,
+      trigger: btn,
+    });
+  });
+
+  return btn;
+}
+
 export async function copyTextToClipboard(text) {
   const content = (text ?? "").toString();
   if (!content) return false;
@@ -248,6 +305,11 @@ export function createCopyButton(getText, options = {}) {
 
 export function addCopyButtonsToCodeBlocks(root) {
   const codeBlocks = root.querySelectorAll("pre > code");
+  const previewContextEl = root.closest(".response-content");
+  const topicId = String(previewContextEl?.dataset?.topicId || "");
+  const turnId = String(previewContextEl?.dataset?.turnId || "");
+  const turnCreatedAt = Number(previewContextEl?.dataset?.turnCreatedAt || 0);
+  let previewBlockIndex = 0;
   for (const codeEl of codeBlocks) {
     const preEl = codeEl.parentElement;
     if (!preEl || preEl.tagName !== "PRE") continue;
@@ -266,6 +328,31 @@ export function addCopyButtonsToCodeBlocks(root) {
     lang.textContent = language || "text";
     toolbar.appendChild(lang);
 
+    const actions = document.createElement("div");
+    actions.className = "code-actions";
+
+    const previewLanguage = normalizeMarkupLanguage(
+      language,
+      codeEl.textContent || ""
+    );
+    if (previewLanguage) {
+      const sourceMeta = turnId
+        ? {
+            topicId,
+            turnId,
+            blockIndex: previewBlockIndex,
+            turnCreatedAt,
+          }
+        : null;
+      const previewBtn = createPreviewButton(
+        () => codeEl.textContent || "",
+        previewLanguage,
+        sourceMeta
+      );
+      actions.appendChild(previewBtn);
+      previewBlockIndex += 1;
+    }
+
     // 使用统一的createCopyButton函数创建复制按钮
     const btn = createCopyButton(() => codeEl.textContent || "", {
       label: "复制代码",
@@ -279,9 +366,14 @@ export function addCopyButtonsToCodeBlocks(root) {
       btn.disabled = true;
       btn.style.opacity = "0.5";
       btn.style.cursor = "not-allowed";
+      const previewBtn = actions.querySelector(".code-preview-btn");
+      if (previewBtn) {
+        previewBtn.disabled = true;
+      }
     }
 
-    toolbar.appendChild(btn);
+    actions.appendChild(btn);
+    toolbar.appendChild(actions);
 
     const parent = preEl.parentNode;
     if (!parent) continue;

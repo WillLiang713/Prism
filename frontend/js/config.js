@@ -168,6 +168,42 @@ function createServiceTemplate(name = "") {
   };
 }
 
+function createDraftService() {
+  return createServiceTemplate("");
+}
+
+function ensureServicesWithDraft(
+  services = [],
+  activeServiceId = null,
+  serviceManagerSelectedId = null
+) {
+  const list = Array.isArray(services) ? services.filter(Boolean) : [];
+  if (!list.length) {
+    const draftService = createDraftService();
+    return {
+      services: [draftService],
+      activeServiceId: draftService.id,
+      serviceManagerSelectedId: draftService.id,
+      createdDraft: true,
+    };
+  }
+
+  const hasActiveService = list.some((service) => service.id === activeServiceId);
+  const resolvedActiveServiceId = hasActiveService ? activeServiceId : list[0].id;
+  const hasSelectedService = list.some(
+    (service) => service.id === serviceManagerSelectedId
+  );
+
+  return {
+    services: list,
+    activeServiceId: resolvedActiveServiceId,
+    serviceManagerSelectedId: hasSelectedService
+      ? serviceManagerSelectedId
+      : resolvedActiveServiceId,
+    createdDraft: false,
+  };
+}
+
 function createConfigStoreShape(rawConfig = {}, overrides = {}) {
   return {
     version: CONFIG_STORE_VERSION,
@@ -844,29 +880,17 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
     ? connectivity || createConnectivityState()
     : createConnectivityState();
   const normalizedStatus = String(nextConnectivity.status || "idle").toLowerCase();
-  const shouldShowBadge =
-    normalizedStatus === "testing" ||
-    normalizedStatus === "success";
-  const messageText = String(nextConnectivity.message || "").trim();
-  const timeText = nextConnectivity.testedAt
-    ? `最近测试：${formatTime(nextConnectivity.testedAt)}`
-    : "";
+  const buttonLabel =
+    normalizedStatus === "idle"
+      ? "测试连接"
+      : getConnectivityLabel(nextConnectivity.status);
 
-  if (elements.serviceConnectivityBadge) {
-    elements.serviceConnectivityBadge.hidden = !shouldShowBadge;
-    elements.serviceConnectivityBadge.textContent = getConnectivityLabel(
-      nextConnectivity.status
-    );
-    elements.serviceConnectivityBadge.dataset.status =
+  if (elements.testServiceConnectionBtn) {
+    elements.testServiceConnectionBtn.textContent = buttonLabel;
+    elements.testServiceConnectionBtn.dataset.status =
       nextConnectivity.status || "idle";
-  }
-  if (elements.serviceConnectivityMessage) {
-    elements.serviceConnectivityMessage.hidden = !messageText;
-    elements.serviceConnectivityMessage.textContent = messageText;
-  }
-  if (elements.serviceConnectivityTime) {
-    elements.serviceConnectivityTime.hidden = !timeText;
-    elements.serviceConnectivityTime.textContent = timeText;
+    elements.testServiceConnectionBtn.disabled =
+      !hasService || normalizedStatus === "testing";
   }
 }
 
@@ -1377,9 +1401,23 @@ export function loadConfig() {
   let pendingWebSearchToolMode = null;
 
   try {
-    state.services = cloneValue(store.services);
-    state.activeServiceId = store.activeServiceId;
-    state.serviceManagerSelectedId = store.activeServiceId;
+    const ensuredServices = ensureServicesWithDraft(
+      cloneValue(store.services),
+      store.activeServiceId,
+      store.activeServiceId
+    );
+    state.services = ensuredServices.services;
+    state.activeServiceId = ensuredServices.activeServiceId;
+    state.serviceManagerSelectedId = ensuredServices.serviceManagerSelectedId;
+
+    if (ensuredServices.createdDraft) {
+      persistState({
+        services: state.services,
+        activeServiceId: state.activeServiceId,
+        webSearch: store.webSearch,
+        desktop: store.desktop,
+      });
+    }
 
     const pendingWebSearchEnabled = store.webSearch?.enabled === true;
     if (store.webSearch) {
@@ -1457,10 +1495,10 @@ export async function clearConfig() {
   });
   if (!confirmed) return;
 
-  state.services = [];
-  state.activeServiceId = null;
-  state.serviceManagerSelectedId = null;
-  applyEmptyServiceStateToForm();
+  const ensuredServices = ensureServicesWithDraft([]);
+  state.services = ensuredServices.services;
+  state.activeServiceId = ensuredServices.activeServiceId;
+  state.serviceManagerSelectedId = ensuredServices.serviceManagerSelectedId;
 
   setWebSearchEnabled(false, { persist: false });
   if (elements.webSearchProvider) elements.webSearchProvider.value = "tavily";
@@ -1558,7 +1596,7 @@ export async function handleCurrentServiceChange(nextServiceId, options = {}) {
 }
 
 export async function createService() {
-  const service = createServiceTemplate("");
+  const service = createDraftService();
   state.services = [service, ...state.services];
   state.serviceManagerSelectedId = service.id;
   persistState({
@@ -1619,23 +1657,24 @@ export async function deleteService() {
   }
 
   state.services = state.services.filter((item) => item.id !== service.id);
-  const fallbackService = state.services[0] || null;
-  if (state.activeServiceId === service.id) {
-    state.activeServiceId = fallbackService?.id || null;
-  }
-  state.serviceManagerSelectedId = fallbackService?.id || null;
+  const ensuredServices = ensureServicesWithDraft(
+    state.services,
+    state.activeServiceId === service.id ? null : state.activeServiceId,
+    state.serviceManagerSelectedId === service.id
+      ? null
+      : state.serviceManagerSelectedId
+  );
+  state.services = ensuredServices.services;
+  state.activeServiceId = ensuredServices.activeServiceId;
+  state.serviceManagerSelectedId = ensuredServices.serviceManagerSelectedId;
   persistState({
     services: state.services,
     activeServiceId: state.activeServiceId,
   });
   renderServiceManagementUi();
-  if (fallbackService) {
-    applyActiveRoleSettingToForm(getActiveService() || fallbackService);
-    scheduleFetchModels("main", 0);
-    scheduleFetchModels("Title", 0);
-  } else {
-    applyEmptyServiceStateToForm();
-  }
+  applyActiveRoleSettingToForm(getActiveService());
+  scheduleFetchModels("main", 0);
+  scheduleFetchModels("Title", 0);
   updateModelNames();
   updateConfigStatusStrip();
 }
@@ -1665,7 +1704,7 @@ export async function testSelectedServiceConnection() {
   if (!service) {
     clearTransientConnectivityHideTimer();
     renderServiceConnectivityState(
-      createConnectivityState("idle", "请先选择或新建一个服务，再测试连通性。", 0),
+      createConnectivityState("idle", "请先选择或新建一个服务，再测试连接。", 0),
       true
     );
     return;

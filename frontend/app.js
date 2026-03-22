@@ -4,6 +4,7 @@
 
 import { state, isDesktopRuntime } from './js/state.js';
 import { initMarkdown } from './js/markdown.js';
+import { initHtmlPreview } from './js/html-preview.js';
 import { initConfigSelectPickers, syncAllConfigSelectPickers, setCloseModelDropdown } from './js/dropdown.js';
 import { renderShortcutHelpList, bindDialogEvents } from './js/dialog.js';
 import { bindEvents } from './js/events.js';
@@ -53,6 +54,7 @@ function bootstrapApplication() {
 function startApplication() {
   document.body.classList.toggle("is-desktop-runtime", isDesktopRuntime());
   initMarkdown();
+  initHtmlPreview();
   initConfigSelectPickers();
   loadConfig();
   syncAllConfigSelectPickers();
