@@ -336,14 +336,6 @@ export function bindEvents() {
   elements.modelDropdownBtnTitle?.addEventListener("click", () =>
     toggleModelDropdown("Title")
   );
-  elements.clearTitleGenerationModelBtn?.addEventListener("click", () => {
-    if (!elements.titleGenerationModel) return;
-    elements.titleGenerationModel.value = "";
-    elements.titleGenerationModel.dispatchEvent(new Event("input", { bubbles: true }));
-    closeModelDropdown("Title");
-    elements.titleGenerationModel.focus();
-    autoSaveConfigDraft();
-  });
 
   document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;

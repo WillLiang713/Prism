@@ -85,7 +85,7 @@ export function updateModelHint(side) {
   setModelHint(
     resolvedSide,
     resolvedSide === "Title"
-      ? "可独立指定；也可留空跟随主模型"
+      ? "可独立指定；也可选择“跟随主模型”"
       : "填模型ID；可下拉选或手动输入"
   );
 }
@@ -458,6 +458,8 @@ export function setModelDropdownQuery(side, query) {
 
 export function renderModelDropdown(side, filterText = null) {
   const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
+  const inputEl =
+    side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl) return;
 
   const slot = state.modelFetch[side];
@@ -468,9 +470,35 @@ export function renderModelDropdown(side, filterText = null) {
     : String(filterText || "").trim().toLowerCase();
   const models = q ? all.filter((m) => m.toLowerCase().includes(q)) : all;
   const limit = getModelDropdownLimit(side);
+  const currentValue = String(inputEl?.value || "").trim();
 
   dropdownEl.innerHTML = "";
-  if (!models.length) {
+  if (
+    side === "Title" &&
+    (!q || "跟随主模型".toLowerCase().includes(q))
+  ) {
+    const followBtn = document.createElement("button");
+    followBtn.type = "button";
+    followBtn.className = "model-dropdown-item";
+    followBtn.textContent = "跟随主模型";
+    followBtn.dataset.value = "";
+    if (!currentValue) {
+      followBtn.classList.add("is-active");
+      followBtn.setAttribute("aria-selected", "true");
+    }
+    followBtn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
+    followBtn.addEventListener("click", () => {
+      if (inputEl) {
+        inputEl.value = "";
+        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      closeModelDropdown(side);
+      void _autoSaveManagedServiceDraft();
+    });
+    dropdownEl.appendChild(followBtn);
+  }
+
+  if (!models.length && !dropdownEl.childElementCount) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
     empty.textContent = all.length
@@ -487,17 +515,17 @@ export function renderModelDropdown(side, filterText = null) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "model-dropdown-item";
+    if (id === currentValue) {
+      btn.classList.add("is-active");
+      btn.setAttribute("aria-selected", "true");
+    }
     btn.textContent = id;
     btn.dataset.value = id;
     btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     btn.addEventListener("click", () => {
-      const input =
-        side === "Title"
-          ? elements.titleGenerationModel
-          : elements.model;
-      if (input) {
-        input.value = id;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
+      if (inputEl) {
+        inputEl.value = id;
+        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       }
       if (side !== "Title") _updateModelNames();
       closeModelDropdown(side);

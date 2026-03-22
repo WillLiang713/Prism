@@ -307,7 +307,6 @@ export const elements = {
   titleGenerationModelHint: document.getElementById("titleGenerationModelHint"),
   modelDropdownTitle: document.getElementById("modelDropdownTitle"),
   modelDropdownBtnTitle: document.getElementById("modelDropdownBtnTitle"),
-  clearTitleGenerationModelBtn: document.getElementById("clearTitleGenerationModelBtn"),
   webSearchProviderPickerInput: document.getElementById(
     "webSearchProviderPickerInput"
   ),

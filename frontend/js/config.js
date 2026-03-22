@@ -577,7 +577,6 @@ function setServiceFormDisabled(disabled) {
     elements.modelDropdownBtn,
     elements.titleGenerationModel,
     elements.modelDropdownBtnTitle,
-    elements.clearTitleGenerationModelBtn,
     elements.roleSetting,
   ];
   controls.forEach((control) => {
@@ -892,9 +891,6 @@ function syncServiceDetailPanel(options = {}) {
   }
   if (elements.deleteServiceBtn) {
     elements.deleteServiceBtn.disabled = !service;
-  }
-  if (elements.testServiceConnectionBtn) {
-    elements.testServiceConnectionBtn.disabled = !service;
   }
 }
 
@@ -1666,7 +1662,14 @@ function updateServiceConnectivity(serviceId, payload) {
 
 export async function testSelectedServiceConnection() {
   const service = getManagedService();
-  if (!service) return;
+  if (!service) {
+    clearTransientConnectivityHideTimer();
+    renderServiceConnectivityState(
+      createConnectivityState("idle", "请先选择或新建一个服务，再测试连通性。", 0),
+      true
+    );
+    return;
+  }
   const hasDraftChanges = hasUnsavedManagedServiceChanges();
   const draftService = hasDraftChanges
     ? readManagedServiceConnectionFromForm(service)
