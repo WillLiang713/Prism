@@ -16,6 +16,7 @@ const previewState = {
   sourceTurnId: "",
   sourceBlockIndex: -1,
   sourceTurnCreatedAt: 0,
+  frameLoadPending: false,
 };
 
 function normalizeLanguage(language) {
@@ -108,6 +109,11 @@ function revokeActiveObjectUrl() {
   previewState.activeObjectUrl = "";
 }
 
+function setFrameLoading(isLoading) {
+  previewState.frameLoadPending = !!isLoading;
+  elements.htmlPreviewDrawer?.classList.toggle("is-loading", !!isLoading);
+}
+
 function buildPreviewDocument(markup) {
   const source = String(markup || "");
   const baseHref = escapeHtmlAttribute(document.baseURI || window.location.href || "/");
@@ -149,6 +155,7 @@ function syncFrameContent(forceReload = false) {
   }
 
   revokeActiveObjectUrl();
+  setFrameLoading(true);
   elements.htmlPreviewFrame.dataset.previewDocument = nextDocument;
   elements.htmlPreviewFrame.removeAttribute("srcdoc");
   elements.htmlPreviewFrame.src = "about:blank";
@@ -257,6 +264,14 @@ export function initHtmlPreview() {
 
   previewState.initialized = true;
   renderPreview(true);
+
+  elements.htmlPreviewFrame.addEventListener("load", () => {
+    if (!previewState.frameLoadPending) return;
+    setFrameLoading(false);
+  });
+  elements.htmlPreviewFrame.addEventListener("error", () => {
+    setFrameLoading(false);
+  });
 
   elements.htmlPreviewBackdrop?.addEventListener("click", () => {
     closeHtmlPreview();

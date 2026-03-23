@@ -242,55 +242,6 @@
                     <div class="chat-messages" id="chatMessages"></div>
                   </div>
                 </div>
-                <section
-                  class="html-preview-layer"
-                  id="htmlPreviewLayer"
-                  aria-hidden="true"
-                  aria-label="HTML 预览"
-                  hidden
-                >
-                  <button
-                    class="html-preview-backdrop"
-                    id="htmlPreviewBackdrop"
-                    type="button"
-                    aria-label="关闭 HTML 预览"
-                    tabindex="-1"
-                  ></button>
-                  <div class="html-preview-drawer" id="htmlPreviewDrawer">
-                    <div class="html-preview-body">
-                      <div class="html-preview-stage">
-                        <button
-                          type="button"
-                          class="html-preview-close-btn html-preview-close-btn-floating"
-                          id="htmlPreviewCloseBtn"
-                          aria-label="关闭 HTML 预览"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
-                            <path d="M6 6l12 12"></path>
-                            <path d="M18 6L6 18"></path>
-                          </svg>
-                        </button>
-                        <div class="html-preview-frame-wrap">
-                          <div class="html-preview-frame-clip">
-                            <iframe
-                              class="html-preview-frame"
-                              id="htmlPreviewFrame"
-                              title="HTML 预览画布"
-                              sandbox="allow-scripts"
-                              referrerpolicy="no-referrer"
-                            ></iframe>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="html-preview-empty" id="htmlPreviewEmpty">
-                        <div class="html-preview-empty-title">等待预览内容</div>
-                        <div class="html-preview-empty-text">
-                          在 AI 回复里的 HTML 代码块上点击“预览”，右侧会打开页面内预览面板。
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
               </div>
 
               <!-- 输入区域（固定在右侧会话面板底部） -->
@@ -418,6 +369,56 @@
                   </div>
                 </div>
               </div>
+
+              <section
+                class="html-preview-layer"
+                id="htmlPreviewLayer"
+                aria-hidden="true"
+                aria-label="HTML 预览"
+                hidden
+              >
+                <button
+                  class="html-preview-backdrop"
+                  id="htmlPreviewBackdrop"
+                  type="button"
+                  aria-label="关闭 HTML 预览"
+                  tabindex="-1"
+                ></button>
+                <div class="html-preview-drawer" id="htmlPreviewDrawer">
+                  <div class="html-preview-body">
+                    <div class="html-preview-stage">
+                      <button
+                        type="button"
+                        class="html-preview-close-btn html-preview-close-btn-floating"
+                        id="htmlPreviewCloseBtn"
+                        aria-label="关闭 HTML 预览"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                          <path d="M6 6l12 12"></path>
+                          <path d="M18 6L6 18"></path>
+                        </svg>
+                      </button>
+                      <div class="html-preview-frame-wrap">
+                        <div class="html-preview-frame-clip">
+                          <iframe
+                            class="html-preview-frame"
+                            id="htmlPreviewFrame"
+                            title="HTML 预览画布"
+                            sandbox="allow-scripts"
+                            referrerpolicy="no-referrer"
+                          ></iframe>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="html-preview-empty" id="htmlPreviewEmpty">
+                      <div class="html-preview-empty-title">等待预览内容</div>
+                      <div class="html-preview-empty-text">
+                        在 AI 回复里的 HTML 代码块上点击“预览”，右侧会打开页面内预览面板。
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </main>
         </section>
