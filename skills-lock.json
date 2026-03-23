@@ -5,6 +5,11 @@
       "source": "rknall/claude-skills",
       "sourceType": "github",
       "computedHash": "a4733318997e024c77f9bc585581d924d8444d45295e21ef0d77bd569fcbafd9"
+    },
+    "agent-browser": {
+      "source": "vercel-labs/agent-browser",
+      "sourceType": "github",
+      "computedHash": "35478d4b0a33b3f98e22b7b4f3fe2d2919ebe72a6ca24b3a7175a9b17cc2788d"
     }
   }
 }
