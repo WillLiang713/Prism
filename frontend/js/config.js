@@ -41,6 +41,7 @@ const LEGACY_DEFAULT_SERVICE_NAME = "默认服务";
 const UNNAMED_SERVICE_LABEL = "未命名服务";
 const DEFAULT_REASONING_EFFORT = "medium";
 const CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS = 3000;
+const DEFAULT_CLOSE_TO_TRAY_ON_CLOSE = true;
 
 const serviceConnectivityHideTimers = new Map();
 let transientConnectivityHideTimer = 0;
@@ -400,6 +401,20 @@ function getReasoningEffortValue() {
       ?.querySelector("button.active")
       ?.dataset.value || DEFAULT_REASONING_EFFORT
   );
+}
+
+function resolveCloseToTrayOnClose(value) {
+  if (value === undefined || value === null) {
+    return DEFAULT_CLOSE_TO_TRAY_ON_CLOSE;
+  }
+  return value === true;
+}
+
+function getCloseToTrayOnCloseValue(store = null) {
+  if (elements.closeToTrayOnClose) {
+    return !!elements.closeToTrayOnClose.checked;
+  }
+  return resolveCloseToTrayOnClose(store?.desktop?.closeToTrayOnClose);
 }
 
 function setReasoningEffortValue(value) {
@@ -1051,7 +1066,7 @@ async function persistCurrentServiceForm(options = {}) {
   updateModelNames();
   updateConfigStatusStrip();
   await syncDesktopPreferences({
-    closeToTray: !!elements.closeToTrayOnClose?.checked,
+    closeToTray: getCloseToTrayOnCloseValue(),
   });
   if (showFeedback) {
     await showAlert("配置已保存", {
@@ -1392,7 +1407,7 @@ export function getWebSearchConfig() {
 
 function getDesktopConfig() {
   return {
-    closeToTrayOnClose: !!elements.closeToTrayOnClose?.checked,
+    closeToTrayOnClose: getCloseToTrayOnCloseValue(),
   };
 }
 
@@ -1457,9 +1472,9 @@ export function loadConfig() {
       }
     }
 
+    const closeToTrayOnClose = getCloseToTrayOnCloseValue(store);
     if (elements.closeToTrayOnClose) {
-      elements.closeToTrayOnClose.checked =
-        store.desktop?.closeToTrayOnClose === true;
+      elements.closeToTrayOnClose.checked = closeToTrayOnClose;
     }
 
     if (getManagedService() && getActiveService()) {
@@ -1480,7 +1495,7 @@ export function loadConfig() {
   syncAllConfigSelectPickers();
   updateProviderUi();
   void syncDesktopPreferences({
-    closeToTray: !!elements.closeToTrayOnClose?.checked,
+    closeToTray: getCloseToTrayOnCloseValue(store),
   });
   updateWebSearchProviderUi();
   updateConfigStatusStrip();
@@ -1508,7 +1523,9 @@ export async function clearConfig() {
   if (elements.exaSearchType) elements.exaSearchType.value = "auto";
   if (elements.tavilyMaxResults) elements.tavilyMaxResults.value = 5;
   if (elements.tavilySearchDepth) elements.tavilySearchDepth.value = "basic";
-  if (elements.closeToTrayOnClose) elements.closeToTrayOnClose.checked = false;
+  if (elements.closeToTrayOnClose) {
+    elements.closeToTrayOnClose.checked = DEFAULT_CLOSE_TO_TRAY_ON_CLOSE;
+  }
 
   persistState({
     services: state.services,
@@ -1523,7 +1540,7 @@ export async function clearConfig() {
       maxResults: 5,
       searchDepth: "basic",
     },
-    desktop: { closeToTrayOnClose: false },
+    desktop: { closeToTrayOnClose: DEFAULT_CLOSE_TO_TRAY_ON_CLOSE },
   });
 
   syncRoleSettingPreview(false);
@@ -1533,7 +1550,9 @@ export async function clearConfig() {
   updateWebSearchProviderUi();
   updateModelNames();
   updateConfigStatusStrip();
-  await syncDesktopPreferences({ closeToTray: false });
+  await syncDesktopPreferences({
+    closeToTray: DEFAULT_CLOSE_TO_TRAY_ON_CLOSE,
+  });
   await showAlert("配置已清除", {
     title: "操作完成",
   });

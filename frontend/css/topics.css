@@ -249,7 +249,7 @@
   position: absolute;
   top: 0;
   left: calc(100% + 8px);
-  min-width: 126px;
+  min-width: 104px;
   padding: 4px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
