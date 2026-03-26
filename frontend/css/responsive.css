@@ -299,6 +299,11 @@
     z-index: 0;
   }
 
+  .header-brand .brand-model,
+  .header-brand .brand-model-trigger {
+    pointer-events: auto;
+  }
+
   .brand-session {
     max-width: 100%;
   }
