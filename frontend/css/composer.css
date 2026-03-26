@@ -301,7 +301,7 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .switch-text {
@@ -309,6 +309,7 @@
   color: var(--text-muted);
   font-size: 12px;
   letter-spacing: 0.01em;
+  line-height: 1.2;
 }
 
 .web-search-tool-value {
@@ -498,11 +499,13 @@
 .reasoning-effort-label {
   font-weight: 500;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .reasoning-effort-value {
   font-weight: 600;
   color: var(--text);
+  line-height: 1.2;
 }
 
 .reasoning-effort-selector.is-off .reasoning-effort-value {
