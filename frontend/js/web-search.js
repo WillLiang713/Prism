@@ -1,10 +1,19 @@
 import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection } from './state.js';
 import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
+import { isMobileLayout } from './layout.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "OpenAI Web Search",
   anthropic_search: "Anthropic Web Search",
   gemini_search: "Google Search",
+  tavily: "Tavily",
+  exa: "Exa",
+};
+
+const WEB_SEARCH_TOOL_MODE_COMPACT_LABELS = {
+  builtin: "OpenAI",
+  anthropic_search: "Anthropic",
+  gemini_search: "Google",
   tavily: "Tavily",
   exa: "Exa",
 };
@@ -900,12 +909,21 @@ export function getCurrentWebSearchToolMode() {
 
 export function getWebSearchToolModeLabel(mode) {
   const normalized = String(mode || "").toLowerCase();
-  if (WEB_SEARCH_TOOL_MODE_LABELS[normalized]) {
-    return WEB_SEARCH_TOOL_MODE_LABELS[normalized];
+  const fallbackMode = normalizeWebSearchToolMode(mode, true, true, true, "tavily");
+  return WEB_SEARCH_TOOL_MODE_LABELS[normalized]
+    || WEB_SEARCH_TOOL_MODE_LABELS[fallbackMode]
+    || "Tavily";
+}
+
+function getWebSearchToolButtonLabel(mode) {
+  const normalized = String(mode || "").toLowerCase();
+  const fallbackMode = normalizeWebSearchToolMode(mode, true, true, true, "tavily");
+  const resolvedMode = WEB_SEARCH_TOOL_MODE_LABELS[normalized] ? normalized : fallbackMode;
+  if (isMobileLayout()) {
+    return WEB_SEARCH_TOOL_MODE_COMPACT_LABELS[resolvedMode]
+      || getWebSearchToolModeLabel(resolvedMode);
   }
-  return WEB_SEARCH_TOOL_MODE_LABELS[
-    normalizeWebSearchToolMode(mode, true, true, true, "tavily")
-  ] || "Tavily";
+  return getWebSearchToolModeLabel(resolvedMode);
 }
 
 export function getAvailableWebSearchToolModes() {
@@ -1071,7 +1089,9 @@ export function renderWebSearchToolSelector() {
   const enabled = isWebSearchEnabled();
   const options = getAvailableWebSearchToolModes();
   currentEl.hidden = false;
-  currentEl.textContent = enabled ? getWebSearchToolModeLabel(toolMode) : "关";
+  const fullLabel = enabled ? getWebSearchToolModeLabel(toolMode) : "关";
+  currentEl.textContent = enabled ? getWebSearchToolButtonLabel(toolMode) : "关";
+  currentEl.title = fullLabel;
   dropdownEl.innerHTML = "";
   buttonEl.classList.toggle("is-active", enabled);
   elements.webSearchControl?.classList.toggle("is-active", enabled);

@@ -655,6 +655,23 @@
     height: 38px !important;
   }
 
+  .composer-toolbar .web-search-control {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .composer-toolbar .web-search-tool-current {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0 10px;
+    gap: 4px;
+  }
+
+  .composer-toolbar .web-search-tool-value {
+    max-width: clamp(48px, 22vw, 84px);
+  }
+
   .toolbar-btn.icon-only {
     width: 38px;
     min-width: 38px;
