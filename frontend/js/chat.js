@@ -14,6 +14,11 @@ import {
   clearBodyDropdownPosition,
 } from './dropdown.js';
 
+const PRESS_START_EVENT =
+  typeof window !== "undefined" && "PointerEvent" in window
+    ? "pointerdown"
+    : "mousedown";
+
 let _stopGeneration = () => {};
 export function setStopGeneration(fn) { _stopGeneration = fn; }
 let _regenerateTurn = async () => {};
@@ -798,11 +803,25 @@ export function renderTopicList() {
         </svg>
         <span class="sr-only">更多操作</span>
       `;
-      moreBtn.addEventListener("click", (e) => {
+      let suppressClickUntil = 0;
+      const toggleTopicActionMenu = (e) => {
         e.preventDefault();
         e.stopPropagation();
         const nextTopicId = openTopicActionMenuId === topic.id ? null : topic.id;
         setTopicActionMenu(nextTopicId);
+      };
+      moreBtn.addEventListener(PRESS_START_EVENT, (e) => {
+        if ("button" in e && e.button !== 0) return;
+        suppressClickUntil = Date.now() + 400;
+        toggleTopicActionMenu(e);
+      });
+      moreBtn.addEventListener("click", (e) => {
+        if (Date.now() <= suppressClickUntil) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        toggleTopicActionMenu(e);
       });
 
       const menu = document.createElement("div");
