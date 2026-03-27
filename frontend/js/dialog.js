@@ -2,6 +2,122 @@ import { state, elements, SHORTCUTS } from './state.js';
 
 let imagePreviewLastTrigger = null;
 
+function inferPreviewImageExtension(src = "") {
+  const normalized = String(src || "").trim().toLowerCase();
+  if (normalized.startsWith("data:image/")) {
+    const mime = normalized.slice("data:image/".length).split(/[;,]/, 1)[0];
+    if (mime === "jpeg") return "jpg";
+    if (mime) return mime;
+  }
+  if (normalized.includes(".png")) return "png";
+  if (normalized.includes(".webp")) return "webp";
+  if (normalized.includes(".gif")) return "gif";
+  if (normalized.includes(".jpg") || normalized.includes(".jpeg")) return "jpg";
+  return "png";
+}
+
+function blobFromDataUrl(dataUrl) {
+  const raw = String(dataUrl || "");
+  const parts = raw.split(",", 2);
+  if (parts.length !== 2) {
+    throw new Error("无效的图片数据");
+  }
+  const header = parts[0];
+  const body = parts[1];
+  const mimeMatch = header.match(/^data:([^;]+);base64$/i);
+  const mimeType = mimeMatch?.[1] || "image/png";
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+async function resolvePreviewImageFile(src) {
+  const normalizedSrc = String(src || "").trim();
+  if (!normalizedSrc) {
+    throw new Error("没有可保存的图片");
+  }
+
+  let blob = null;
+  if (normalizedSrc.startsWith("data:")) {
+    blob = blobFromDataUrl(normalizedSrc);
+  } else {
+    const response = await fetch(normalizedSrc);
+    if (!response.ok) {
+      throw new Error(`图片读取失败: HTTP ${response.status}`);
+    }
+    blob = await response.blob();
+  }
+
+  const extension = inferPreviewImageExtension(normalizedSrc);
+  const mimeType = blob.type || `image/${extension}`;
+  const fileName = `prism-image-${Date.now()}.${extension}`;
+  const file = new File([blob], fileName, {
+    type: mimeType,
+    lastModified: Date.now(),
+  });
+  return { blob, file, fileName };
+}
+
+function triggerImageDownload(blob, fileName) {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 1000);
+}
+
+async function savePreviewImage() {
+  const imageSrc = String(elements.imagePreviewImage?.src || "").trim();
+  if (!imageSrc) {
+    return;
+  }
+
+  const saveButton = elements.imagePreviewSaveBtn;
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.dataset.saving = "1";
+  }
+
+  try {
+    const { blob, file, fileName } = await resolvePreviewImageFile(imageSrc);
+
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({ files: [file] })
+    ) {
+      await navigator.share({
+        files: [file],
+        title: fileName,
+      });
+      return;
+    }
+
+    triggerImageDownload(blob, fileName);
+  } catch (error) {
+    const message = String(error?.message || "").trim();
+    if (message && /abort|cancel|canceled/i.test(message)) {
+      return;
+    }
+    console.error("保存图片失败:", error);
+  } finally {
+    if (saveButton) {
+      saveButton.disabled = false;
+      delete saveButton.dataset.saving;
+    }
+  }
+}
+
 export function hasOpenModal() {
   return !!document.querySelector(".modal-overlay.open");
 }
@@ -205,6 +321,10 @@ export function bindDialogEvents() {
 
   elements.imagePreviewCloseBtn?.addEventListener("click", () => {
     closeImagePreview();
+  });
+
+  elements.imagePreviewSaveBtn?.addEventListener("click", async () => {
+    await savePreviewImage();
   });
 
   document.addEventListener("keydown", (e) => {

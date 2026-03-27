@@ -807,6 +807,58 @@ export function canUseGeminiGoogleSearch(configLike = {}) {
   return String(providerConfig.provider || "").toLowerCase() === "gemini";
 }
 
+export function getPreferredWebSearchToolMode(
+  configLike = {},
+  fallbackProvider = normalizeExternalWebSearchProvider(
+    elements.webSearchProvider?.value
+  )
+) {
+  if (canUseBuiltinWebSearch(configLike)) return "builtin";
+  if (canUseAnthropicWebSearch(configLike)) return "anthropic_search";
+  if (canUseGeminiGoogleSearch(configLike)) return "gemini_search";
+  return fallbackProvider === "exa" ? "exa" : "tavily";
+}
+
+export function isNativeWebSearchToolMode(mode) {
+  const normalized = String(mode || "").toLowerCase();
+  return (
+    normalized === "builtin" ||
+    normalized === "anthropic_search" ||
+    normalized === "gemini_search"
+  );
+}
+
+export function resolvePreferredWebSearchState(
+  configLike = {},
+  options = {}
+) {
+  const toolMode = getPreferredWebSearchToolMode(
+    configLike,
+    options.fallbackProvider
+  );
+  const currentMode = String(options.currentMode || "").toLowerCase();
+  const currentEnabled = options.currentEnabled === true;
+
+  if (isNativeWebSearchToolMode(toolMode)) {
+    return {
+      toolMode,
+      enabled: true,
+    };
+  }
+
+  if (currentEnabled && isNativeWebSearchToolMode(currentMode)) {
+    return {
+      toolMode,
+      enabled: false,
+    };
+  }
+
+  return {
+    toolMode,
+    enabled: currentEnabled,
+  };
+}
+
 export function normalizeWebSearchToolMode(
   value,
   supportsBuiltin = canUseBuiltinWebSearch(),
@@ -978,12 +1030,9 @@ export function setWebSearchToolMode(mode, options = {}) {
   );
   state.webSearch.toolMode = normalized;
 
-  if (
-    normalized === "anthropic_search" ||
-    normalized === "gemini_search" ||
-    normalized === "tavily" ||
-    normalized === "exa"
-  ) {
+  // `webSearchProvider` select only stores the external fallback provider.
+  // Native search modes should stay in `state.webSearch.toolMode` only.
+  if (normalized === "tavily" || normalized === "exa") {
     if (elements.webSearchProvider) {
       elements.webSearchProvider.value = normalized;
     }
@@ -1140,10 +1189,12 @@ export function updateWebSearchProviderUi() {
   state.webSearch.toolMode = getCurrentWebSearchToolMode();
   const toolMode = state.webSearch.toolMode;
   state.webSearch.enabled = isWebSearchEnabled();
-  const provider = normalizeWebSearchProvider(elements.webSearchProvider?.value);
-  const isExa = provider === "exa";
-  const isAnthropicSearch = provider === "anthropic_search";
-  const isGeminiSearch = provider === "gemini_search";
+  const externalProvider = normalizeExternalWebSearchProvider(
+    elements.webSearchProvider?.value
+  );
+  const isExa = externalProvider === "exa";
+  const isAnthropicSearch = toolMode === "anthropic_search";
+  const isGeminiSearch = toolMode === "gemini_search";
   const usesExternalSearch = toolMode === "tavily" || toolMode === "exa";
 
   renderWebSearchToolSelector();
@@ -1155,17 +1206,17 @@ export function updateWebSearchProviderUi() {
   }
   if (elements.tavilyApiKeyGroup) {
     elements.tavilyApiKeyGroup.style.display =
-      isExa || isGeminiSearch || isAnthropicSearch ? "none" : "";
+      usesExternalSearch && !isExa ? "" : "none";
   }
   if (elements.tavilySearchDepthGroup) {
     elements.tavilySearchDepthGroup.style.display =
-      isExa || isGeminiSearch || isAnthropicSearch ? "none" : "";
+      usesExternalSearch && !isExa ? "" : "none";
   }
   if (elements.exaApiKeyGroup) {
-    elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
+    elements.exaApiKeyGroup.style.display = usesExternalSearch && isExa ? "" : "none";
   }
   if (elements.exaSearchTypeGroup) {
-    elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
+    elements.exaSearchTypeGroup.style.display = usesExternalSearch && isExa ? "" : "none";
   }
   updateConfigStatusStrip();
 }

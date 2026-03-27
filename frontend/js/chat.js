@@ -187,6 +187,63 @@ function createUserImagesContainer(
   return imagesContainer;
 }
 
+function resolveAssistantImageUrl(image) {
+  if (typeof image === "string") {
+    return image.trim();
+  }
+  if (!image || typeof image !== "object") {
+    return "";
+  }
+  if (typeof image.url === "string" && image.url.trim()) {
+    return image.url.trim();
+  }
+  if (typeof image.dataUrl === "string" && image.dataUrl.trim()) {
+    return image.dataUrl.trim();
+  }
+  const imageValue = image.image_url;
+  if (imageValue && typeof imageValue === "object") {
+    return String(imageValue.url || "").trim();
+  }
+  return String(imageValue || "").trim();
+}
+
+export function renderAssistantImages(container, images) {
+  if (!(container instanceof HTMLElement)) return;
+
+  container.innerHTML = "";
+  const normalizedImages = Array.isArray(images) ? images : [];
+  const seen = new Set();
+  let count = 0;
+
+  for (const image of normalizedImages) {
+    const imageUrl = resolveAssistantImageUrl(image);
+    if (!imageUrl || seen.has(imageUrl)) continue;
+    seen.add(imageUrl);
+    count += 1;
+
+    const imageButton = document.createElement("button");
+    imageButton.type = "button";
+    imageButton.className = "assistant-image-item user-image-trigger";
+    imageButton.setAttribute("aria-label", `查看生成图片 ${count}`);
+    imageButton.addEventListener("click", () => {
+      openImagePreview({
+        src: imageUrl,
+        alt: `生成图片 ${count}`,
+        trigger: imageButton,
+      });
+    });
+
+    const img = document.createElement("img");
+    img.src = imageUrl;
+    img.alt = `生成图片 ${count}`;
+    img.loading = "lazy";
+    imageButton.appendChild(img);
+    container.appendChild(imageButton);
+  }
+
+  container.hidden = count === 0;
+}
+
 async function handleSubmitTurnEdit(turn) {
   if (!turn?.id || isTopicRunning(state.chat.activeTopicId)) return false;
   const draft = getTurnEditDraft(turn);
@@ -1153,6 +1210,9 @@ export function createAssistantCard(
   const modelDisplaySnapshot = (turn?.models?.main?.displayName || "").trim();
   const modelSnapshot = turn?.models?.main?.model || "";
   const contentSnapshot = turn?.models?.main?.content || "";
+  const imagesSnapshot = Array.isArray(turn?.models?.main?.images)
+    ? turn.models.main.images
+    : [];
   const thinkingSnapshot = normalizeThinkingText(turn?.models?.main?.thinking || "");
   const toolEventsSnapshot = Array.isArray(turn?.models?.main?.toolEvents)
     ? turn.models.main.toolEvents
@@ -1284,12 +1344,16 @@ export function createAssistantCard(
 
   const responseSection = document.createElement("div");
   responseSection.className = "response-section";
+  const responseImages = document.createElement("div");
+  responseImages.className = "response-images";
+  renderAssistantImages(responseImages, imagesSnapshot);
   const responseContent = document.createElement("div");
   responseContent.className = "response-content";
   responseContent.dataset.topicId = String(topicId || "");
   responseContent.dataset.turnId = String(turn?.id || "");
   responseContent.dataset.turnCreatedAt = String(turn?.createdAt || 0);
   renderMarkdownToElement(responseContent, contentSnapshot);
+  responseSection.appendChild(responseImages);
   responseSection.appendChild(responseContent);
 
   const toolCallsSection = document.createElement("div");
@@ -1463,6 +1527,7 @@ export function createAssistantCard(
     statusEl,
     modelNameEl: modelName,
     responseEl: responseContent,
+    responseImagesEl: responseImages,
     toolCallsSectionEl: toolCallsSection,
     toolCallsListEl: toolCallsList,
     thinkingSectionEl: thinkingSection,

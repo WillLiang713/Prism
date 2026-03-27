@@ -4,7 +4,7 @@ import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config
 import { renderMarkdownToElement } from './markdown.js';
 import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
-import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState } from './chat.js';
+import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState, renderAssistantImages } from './chat.js';
 import { clearImages } from './images.js';
 import { syncHtmlPreviewForTurn } from './html-preview.js';
 
@@ -102,6 +102,27 @@ function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = ""
   return previousLabel || "思考中";
 }
 
+function appendAssistantImages(existingImages, nextImages) {
+  const target = Array.isArray(existingImages) ? existingImages : [];
+  const incoming = Array.isArray(nextImages) ? nextImages : [];
+  const seen = new Set(
+    target
+      .map((item) => String(item?.url || item?.dataUrl || "").trim())
+      .filter(Boolean)
+  );
+  let appended = false;
+
+  for (const item of incoming) {
+    const imageUrl = String(item?.url || item?.dataUrl || "").trim();
+    if (!imageUrl || seen.has(imageUrl)) continue;
+    seen.add(imageUrl);
+    target.push({ url: imageUrl });
+    appended = true;
+  }
+
+  return appended;
+}
+
 function createMainModelState(config) {
   return {
     provider: config.provider,
@@ -115,6 +136,7 @@ function createMainModelState(config) {
     webSearchEvents: [],
     sources: [],
     content: "",
+    images: [],
     tokens: null,
     timeCostSec: null,
     status: "loading",
@@ -585,6 +607,38 @@ export async function callModel(
               message.classList.add("streaming");
             }
             // 如果启用了自动滚动，则跟随内容滚动
+            if (state.autoScroll && topicId === state.chat.activeTopicId) {
+              scrollToBottom(elements.chatMessages, false);
+            }
+          } else if (chunk.type === "images" && Array.isArray(chunk.data)) {
+            if (thinkingStartTime && !thinkingEndTime) {
+              thinkingEndTime = Date.now();
+            }
+            if (!Array.isArray(turn.models.main.images)) {
+              turn.models.main.images = [];
+            }
+            const hasNewImages = appendAssistantImages(
+              turn.models.main.images,
+              chunk.data
+            );
+            if (hasNewImages && uiRef?.responseImagesEl) {
+              renderAssistantImages(uiRef.responseImagesEl, turn.models.main.images);
+            }
+            if (thinkingStartTime && uiRef?.thinkingLabelEl) {
+              turn.models.main.thinkingComplete = true;
+              uiRef.thinkingLabelEl.textContent = "思考完成";
+              uiRef.thinkingLabelEl.title = "思考完成";
+              uiRef.thinkingLabelEl.classList.add("is-complete");
+            }
+            if (hasNewImages) {
+              scheduleSaveChat();
+            }
+            updateScrollToBottomButton();
+            const message = uiRef?.statusEl?.closest(".assistant-message");
+            if (message && message.classList.contains("loading")) {
+              message.classList.remove("loading");
+              message.classList.add("streaming");
+            }
             if (state.autoScroll && topicId === state.chat.activeTopicId) {
               scrollToBottom(elements.chatMessages, false);
             }

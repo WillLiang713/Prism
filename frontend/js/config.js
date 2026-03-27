@@ -24,11 +24,13 @@ import {
 import { renderMarkdownToElement } from './markdown.js';
 import {
   getCurrentWebSearchToolMode,
+  getPreferredWebSearchToolMode,
   isWebSearchEnabled,
   normalizeExternalWebSearchProvider,
   normalizeWebSearchProvider,
   normalizeTavilySearchDepth,
   normalizeExaSearchType,
+  resolvePreferredWebSearchState,
   setWebSearchEnabled,
   setWebSearchToolMode,
   updateConfigStatusStrip,
@@ -1213,9 +1215,22 @@ function setActiveServiceLocally(serviceId, options = {}) {
       services: state.services,
     });
   }
+  const preferredWebSearchState = resolvePreferredWebSearchState(
+    targetService.model,
+    {
+      currentMode: state.webSearch?.toolMode,
+      currentEnabled: state.webSearch?.enabled === true,
+    }
+  );
   renderServiceManagementUi();
   syncAllConfigSelectPickers();
   updateModelNames();
+  setWebSearchToolMode(preferredWebSearchState.toolMode, {
+    persist,
+  });
+  setWebSearchEnabled(preferredWebSearchState.enabled, {
+    persist,
+  });
   updateConfigStatusStrip();
   if (refreshModelList) {
     scheduleFetchModels("main", 0);
@@ -1598,10 +1613,25 @@ export function loadConfig() {
     } else {
       applyEmptyServiceStateToForm();
     }
-    setWebSearchEnabled(pendingWebSearchEnabled, { persist: false });
-    setWebSearchToolMode(pendingWebSearchToolMode || "tavily", {
+    const activeService = getActiveService();
+    const preferredWebSearchState = resolvePreferredWebSearchState(
+      activeService?.model || {},
+      {
+        currentMode: pendingWebSearchToolMode,
+        currentEnabled: pendingWebSearchEnabled,
+      }
+    );
+
+    setWebSearchToolMode(
+      preferredWebSearchState.toolMode ||
+        getPreferredWebSearchToolMode(activeService?.model || {}) ||
+        pendingWebSearchToolMode ||
+        "tavily",
+      {
       persist: false,
-    });
+      }
+    );
+    setWebSearchEnabled(preferredWebSearchState.enabled, { persist: false });
   } catch (error) {
     console.error("加载配置失败:", error);
   }

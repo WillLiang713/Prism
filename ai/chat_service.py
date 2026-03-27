@@ -252,10 +252,35 @@ class AIService:
                 existing_parts.append(dict(part))
 
     @staticmethod
+    def _append_assistant_images(
+        existing_images: list[dict[str, str]], new_images: list[dict[str, Any]]
+    ) -> list[dict[str, str]]:
+        seen_urls = {
+            str(item.get("url") or "").strip()
+            for item in existing_images
+            if isinstance(item, dict)
+        }
+        appended: list[dict[str, str]] = []
+
+        for item in new_images:
+            if not isinstance(item, dict):
+                continue
+            image_url = str(item.get("url") or "").strip()
+            if not image_url or image_url in seen_urls:
+                continue
+            seen_urls.add(image_url)
+            normalized = {"url": image_url}
+            existing_images.append(normalized)
+            appended.append(normalized)
+
+        return appended
+
+    @staticmethod
     def _build_round_state() -> dict[str, Any]:
         return {
             "assistant_thinking": "",
             "assistant_content": "",
+            "assistant_images": [],
             "assistant_blocks": [],
             "gemini_model_parts": [],
             "grounding_urls": set(),
@@ -413,6 +438,13 @@ class AIService:
                 yield (
                     f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
                 )
+
+            if isinstance(parsed.get("images"), list):
+                fresh_images = AIService._append_assistant_images(
+                    round_state["assistant_images"], parsed["images"]
+                )
+                if fresh_images:
+                    yield AIService._sse_chunk("images", fresh_images)
 
             if parsed.get("tool_calls") and custom_tool_calls_enabled:
                 tool_calls_buffer.add(parsed["tool_calls"])

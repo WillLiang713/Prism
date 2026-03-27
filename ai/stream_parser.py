@@ -4,6 +4,46 @@ from typing import Any, AsyncIterator
 import httpx
 
 
+def _extract_image_url_from_item(item: Any) -> str:
+    if isinstance(item, str):
+        return item.strip()
+    if not isinstance(item, dict):
+        return ""
+
+    item_type = str(item.get("type") or "").strip().lower()
+    if item_type == "image_url":
+        image_value = item.get("image_url")
+        if isinstance(image_value, dict):
+            return str(image_value.get("url") or "").strip()
+        return str(image_value or "").strip()
+
+    if "url" in item:
+        return str(item.get("url") or "").strip()
+
+    image_value = item.get("image")
+    if isinstance(image_value, dict):
+        return str(image_value.get("url") or "").strip()
+    return ""
+
+
+def _append_openai_images(target: list[dict[str, str]], payload: Any) -> None:
+    if not isinstance(payload, list):
+        return
+
+    seen_urls = {str(item.get("url") or "").strip() for item in target}
+    for item in payload:
+        image_url = _extract_image_url_from_item(item)
+        if not image_url or image_url in seen_urls:
+            continue
+        seen_urls.add(image_url)
+        target.append({"url": image_url})
+
+
+def _build_data_url(mime_type: str, data: str) -> str:
+    normalized_mime_type = str(mime_type or "").strip() or "image/png"
+    return f"data:{normalized_mime_type};base64,{data}"
+
+
 class StreamParser:
     """流式响应解析器"""
 
@@ -217,11 +257,19 @@ class StreamParser:
     @staticmethod
     def parse_openai_chunk(chunk: dict) -> dict:
         """解析OpenAI流式响应块"""
-        result = {"thinking": "", "content": "", "tokens": None, "tool_calls": None}
+        result = {
+            "thinking": "",
+            "content": "",
+            "tokens": None,
+            "tool_calls": None,
+            "images": None,
+        }
 
         choices = chunk.get("choices", [])
         if choices and len(choices) > 0:
-            delta = choices[0].get("delta", {})
+            choice = choices[0] if isinstance(choices[0], dict) else {}
+            delta = choice.get("delta", {})
+            message = choice.get("message", {})
 
             # 思考内容
             if "reasoning_content" in delta:
@@ -234,6 +282,12 @@ class StreamParser:
             # 工具调用
             if "tool_calls" in delta and delta["tool_calls"]:
                 result["tool_calls"] = delta["tool_calls"]
+
+            images: list[dict[str, str]] = []
+            _append_openai_images(images, delta.get("images"))
+            _append_openai_images(images, message.get("images"))
+            if images:
+                result["images"] = images
 
         # Token统计
         usage = chunk.get("usage", {})
@@ -257,6 +311,7 @@ class StreamParser:
             "tool_calls": None,
             "grounding_metadata": None,
             "model_parts": [],
+            "images": None,
         }
 
         candidates = chunk.get("candidates")
@@ -271,6 +326,7 @@ class StreamParser:
                     ]
 
                     tool_calls = []
+                    images: list[dict[str, str]] = []
                     for index, part in enumerate(result["model_parts"]):
                         text = str(part.get("text") or "")
                         if text:
@@ -299,8 +355,25 @@ class StreamParser:
                                 tool_call["thought_signature"] = signature
                             tool_calls.append(tool_call)
 
+                        inline_data = part.get("inlineData")
+                        if not isinstance(inline_data, dict):
+                            inline_data = part.get("inline_data")
+                        if isinstance(inline_data, dict):
+                            data = str(inline_data.get("data") or "").strip()
+                            if data:
+                                mime_type = str(
+                                    inline_data.get("mimeType")
+                                    or inline_data.get("mime_type")
+                                    or "image/png"
+                                ).strip() or "image/png"
+                                images.append(
+                                    {"url": _build_data_url(mime_type, data)}
+                                )
+
                     if tool_calls:
                         result["tool_calls"] = tool_calls
+                    if images:
+                        result["images"] = images
 
             grounding_metadata = candidate.get("groundingMetadata")
             if isinstance(grounding_metadata, dict):

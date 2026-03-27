@@ -334,6 +334,7 @@ export const elements = {
   imagePreviewModal: document.getElementById("imagePreviewModal"),
   imagePreviewDialog: document.getElementById("imagePreviewDialog"),
   imagePreviewCloseBtn: document.getElementById("imagePreviewCloseBtn"),
+  imagePreviewSaveBtn: document.getElementById("imagePreviewSaveBtn"),
   imagePreviewImage: document.getElementById("imagePreviewImage"),
   imagePreviewCaption: document.getElementById("imagePreviewCaption"),
 

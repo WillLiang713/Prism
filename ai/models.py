@@ -74,6 +74,7 @@ class StreamChunk(BaseModel):
     type: Literal[
         "thinking",
         "content",
+        "images",
         "tokens",
         "error",
         "tool",

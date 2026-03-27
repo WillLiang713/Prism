@@ -201,7 +201,15 @@ class MessageBuilder:
         for turn in history_turns:
             # 跳过未完成或出错的turn
             model_data = turn.models.get(side, {})
-            if not model_data.get("content") or model_data.get("status") != "complete":
+            assistant_content = str(model_data.get("content") or "")
+            assistant_images = (
+                model_data.get("images")
+                if isinstance(model_data.get("images"), list)
+                else []
+            )
+            if model_data.get("status") != "complete" or (
+                not assistant_content and not assistant_images
+            ):
                 continue
 
             # 构建用户消息
@@ -214,18 +222,88 @@ class MessageBuilder:
                 messages.append({"role": "user", "content": user_content})
 
             # 构建助手消息
-            assistant_content = model_data.get("content")
-            if assistant_content:
-                if provider_mode == "gemini":
-                    messages.append(
-                        {"role": "model", "parts": [{"text": assistant_content}]}
-                    )
-                else:
-                    messages.append(
-                        {"role": "assistant", "content": assistant_content}
-                    )
+            if provider_mode == "gemini":
+                assistant_parts = MessageBuilder._build_gemini_assistant_parts(
+                    assistant_content, assistant_images
+                )
+                if assistant_parts:
+                    messages.append({"role": "model", "parts": assistant_parts})
+            elif provider_mode != "anthropic" and assistant_images:
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": MessageBuilder._build_openai_assistant_content(
+                            assistant_content, assistant_images
+                        ),
+                    }
+                )
+            elif assistant_content:
+                messages.append({"role": "assistant", "content": assistant_content})
 
         return messages
+
+    @staticmethod
+    def _extract_assistant_image_url(image: object) -> str:
+        if isinstance(image, str):
+            return image.strip()
+        if not isinstance(image, dict):
+            return ""
+
+        direct_url = str(image.get("url") or image.get("dataUrl") or "").strip()
+        if direct_url:
+            return direct_url
+
+        image_value = image.get("image_url")
+        if isinstance(image_value, dict):
+            return str(image_value.get("url") or "").strip()
+        return str(image_value or "").strip()
+
+    @staticmethod
+    def _build_openai_assistant_content(
+        text: str, images: list[object]
+    ) -> str | list[dict[str, object]]:
+        content: list[dict[str, object]] = []
+
+        if text:
+            content.append({"type": "text", "text": text})
+
+        for image in images:
+            image_url = MessageBuilder._extract_assistant_image_url(image)
+            if not image_url:
+                continue
+            content.append({"type": "image_url", "image_url": {"url": image_url}})
+
+        if not content:
+            return text
+        if len(content) == 1 and content[0].get("type") == "text":
+            return text
+        return content
+
+    @staticmethod
+    def _build_gemini_assistant_parts(text: str, images: list[object]) -> list[dict]:
+        parts: list[dict] = []
+
+        if text:
+            parts.append({"text": text})
+
+        for image in images:
+            image_url = MessageBuilder._extract_assistant_image_url(image)
+            if not image_url.startswith("data:") or "," not in image_url:
+                continue
+            header, base64_data = image_url.split(",", 1)
+            mime_type = "image/png"
+            if ":" in header and ";" in header:
+                mime_type = header.split(":", 1)[1].split(";", 1)[0]
+            parts.append(
+                {
+                    "inlineData": {
+                        "mimeType": mime_type,
+                        "data": base64_data,
+                    }
+                }
+            )
+
+        return parts
 
     @staticmethod
     def _build_user_content(
@@ -408,6 +486,9 @@ class MessageBuilder:
             "stream_options": {"include_usage": True},
         }
 
+        if MessageBuilder._is_image_generation_model(config.model):
+            body["modalities"] = ["image", "text"]
+
         # 添加工具定义
         tools = MessageBuilder._load_selected_tools(config)
         if tools:
@@ -449,18 +530,30 @@ class MessageBuilder:
                 }
             }
 
+        generation_config: dict[str, object] = {}
+        if MessageBuilder._is_image_generation_model(config.model):
+            generation_config["responseModalities"] = ["IMAGE", "TEXT"]
+
         thinking_budget = MessageBuilder._map_reasoning_effort_to_gemini_budget(
             config.reasoningEffort
         )
         if thinking_budget is not None:
-            body["generationConfig"] = {
-                "thinkingConfig": {
-                    "thinkingBudget": thinking_budget,
-                    "includeThoughts": True,
-                }
+            generation_config["thinkingConfig"] = {
+                "thinkingBudget": thinking_budget,
+                "includeThoughts": True,
             }
 
+        if generation_config:
+            body["generationConfig"] = generation_config
+
         return body
+
+    @staticmethod
+    def _is_image_generation_model(model: str | None) -> bool:
+        model_name = str(model or "").strip().lower()
+        if not model_name:
+            return False
+        return "image-preview" in model_name or model_name.startswith("imagen-")
 
     @staticmethod
     def build_responses_request_body(

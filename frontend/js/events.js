@@ -17,7 +17,7 @@ import {
   autoSaveManagedServiceDraft,
   normalizeApiUrlInputValue,
 } from './config.js';
-import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { closeWebSearchToolSelector, isWebSearchEnabled, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown } from './models.js';
 import {
@@ -329,7 +329,17 @@ export function bindEvents() {
 
   // 监听接口类型变化，更新 API 地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
-    setWebSearchEnabled(false);
+    const preferredWebSearchState = resolvePreferredWebSearchState(
+      {
+        providerSelection: elements.provider?.value,
+      },
+      {
+        currentMode: state.webSearch?.toolMode,
+        currentEnabled: isWebSearchEnabled(),
+      }
+    );
+    setWebSearchToolMode(preferredWebSearchState.toolMode);
+    setWebSearchEnabled(preferredWebSearchState.enabled);
     closeWebSearchToolSelector();
     updateProviderUi();
     updateModelHint();

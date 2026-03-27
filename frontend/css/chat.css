@@ -440,21 +440,57 @@
   transition: background 0.16s ease, border-color 0.16s ease;
 }
 
-.image-preview-close-btn:hover {
+.image-preview-save-btn {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2;
+}
+
+.image-preview-close-btn,
+.image-preview-save-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(15, 15, 18, 0.42);
+  color: rgba(248, 248, 249, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  pointer-events: auto;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+}
+
+.image-preview-close-btn:hover,
+.image-preview-save-btn:hover {
   background: rgba(20, 20, 24, 0.62);
   border-color: rgba(255, 255, 255, 0.18);
 }
 
-.image-preview-close-btn:focus-visible {
+.image-preview-close-btn:focus-visible,
+.image-preview-save-btn:focus-visible {
   outline: none;
   box-shadow:
     0 10px 22px rgba(0, 0, 0, 0.22),
     0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 
-.image-preview-close-btn svg {
+.image-preview-close-btn svg,
+.image-preview-save-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.image-preview-save-btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .image-preview-stage {
