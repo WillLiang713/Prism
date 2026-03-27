@@ -1,5 +1,7 @@
 import { state, elements, SHORTCUTS } from './state.js';
 
+let imagePreviewLastTrigger = null;
+
 export function hasOpenModal() {
   return !!document.querySelector(".modal-overlay.open");
 }
@@ -10,6 +12,50 @@ export function syncBodyScrollLock() {
 
 export function isPromptConfirmDialogOpen() {
   return !!elements.promptConfirmModal?.classList.contains("open");
+}
+
+export function isImagePreviewOpen() {
+  return !!elements.imagePreviewModal?.classList.contains("open");
+}
+
+export function openImagePreview({ src = "", alt = "", trigger = null } = {}) {
+  if (
+    !elements.imagePreviewModal ||
+    !elements.imagePreviewImage ||
+    !String(src || "").trim()
+  ) {
+    return;
+  }
+
+  imagePreviewLastTrigger = trigger instanceof HTMLElement ? trigger : null;
+  elements.imagePreviewImage.src = src;
+  elements.imagePreviewImage.alt = alt || "图片预览";
+
+  if (elements.imagePreviewCaption) {
+    elements.imagePreviewCaption.textContent = "";
+    elements.imagePreviewCaption.hidden = true;
+  }
+
+  elements.imagePreviewModal.classList.add("open");
+  elements.imagePreviewModal.setAttribute("aria-hidden", "false");
+  syncBodyScrollLock();
+
+  window.setTimeout(() => {
+    elements.imagePreviewCloseBtn?.focus();
+  }, 0);
+}
+
+export function closeImagePreview({ restoreFocus = true } = {}) {
+  if (!elements.imagePreviewModal) return;
+
+  elements.imagePreviewModal.classList.remove("open");
+  elements.imagePreviewModal.setAttribute("aria-hidden", "true");
+  syncBodyScrollLock();
+
+  if (restoreFocus && imagePreviewLastTrigger instanceof HTMLElement) {
+    imagePreviewLastTrigger.focus();
+  }
+  imagePreviewLastTrigger = null;
 }
 
 export function createShortcutKeysElement(keys = []) {
@@ -150,4 +196,20 @@ export function bindDialogEvents() {
   elements.promptConfirmOkBtn?.addEventListener("click", () =>
     resolvePromptConfirmDialog(true)
   );
+
+  elements.imagePreviewModal?.addEventListener("click", (e) => {
+    if (e.target === elements.imagePreviewModal) {
+      closeImagePreview();
+    }
+  });
+
+  elements.imagePreviewCloseBtn?.addEventListener("click", () => {
+    closeImagePreview();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !isImagePreviewOpen()) return;
+    e.preventDefault();
+    closeImagePreview();
+  });
 }

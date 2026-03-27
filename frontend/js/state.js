@@ -331,6 +331,11 @@ export const elements = {
   promptConfirmHint: document.getElementById("promptConfirmHint"),
   promptConfirmCancelBtn: document.getElementById("promptConfirmCancelBtn"),
   promptConfirmOkBtn: document.getElementById("promptConfirmOkBtn"),
+  imagePreviewModal: document.getElementById("imagePreviewModal"),
+  imagePreviewDialog: document.getElementById("imagePreviewDialog"),
+  imagePreviewCloseBtn: document.getElementById("imagePreviewCloseBtn"),
+  imagePreviewImage: document.getElementById("imagePreviewImage"),
+  imagePreviewCaption: document.getElementById("imagePreviewCaption"),
 
   // HTML 预览
   htmlPreviewLayer: document.getElementById("htmlPreviewLayer"),

@@ -180,6 +180,25 @@
   border: 1px solid var(--border-strong);
 }
 
+.user-image-trigger {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.user-image-trigger:hover {
+  border-color: var(--border-accent);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+}
+
+.user-image-trigger:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
 .user-image-item img {
   display: block;
   max-width: 100%;
@@ -328,6 +347,146 @@
 
 .user-edit-panel:focus-within::after {
   background: rgba(20, 20, 20, 0.96);
+}
+
+.user-edit-images {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.user-edit-images::-webkit-scrollbar {
+  height: 6px;
+}
+
+.user-edit-images::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.user-edit-images::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.user-edit-images:hover::-webkit-scrollbar-thumb,
+.user-edit-images:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-edit-image-item {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.user-edit-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-preview-modal {
+  z-index: 1200;
+  padding: 24px;
+}
+
+.image-preview-dialog {
+  position: relative;
+  width: auto;
+  max-width: min(92vw, 1120px);
+  max-height: min(88vh, 920px);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.image-preview-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(15, 15, 18, 0.42);
+  color: rgba(248, 248, 249, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  pointer-events: auto;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.image-preview-close-btn:hover {
+  background: rgba(20, 20, 24, 0.62);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.image-preview-close-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.22),
+    0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+.image-preview-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.image-preview-stage {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+}
+
+.image-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: min(78vh, 820px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 18px;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.34);
+}
+
+.image-preview-caption {
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+  word-break: break-word;
+  padding: 0 12px 4px;
 }
 
 .user-edit-input {
@@ -495,6 +654,34 @@
     min-height: 72px;
     max-height: 72px;
     font-size: var(--chat-font-size);
+  }
+
+  .user-edit-images {
+    gap: 8px;
+    padding: 12px 14px 10px;
+  }
+
+  .user-edit-image-item {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .image-preview-modal {
+    padding: 14px;
+  }
+
+  .image-preview-dialog {
+    max-width: calc(100vw - 28px);
+  }
+
+  .image-preview-stage {
+    border-radius: 0;
+  }
+
+  .image-preview-image {
+    max-height: min(72vh, 640px);
+    border-radius: 14px;
   }
 
   .user-edit-footer {

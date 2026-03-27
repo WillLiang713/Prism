@@ -891,6 +891,32 @@
       </div>
     </div>
 
+    <div class="modal-overlay image-preview-modal" id="imagePreviewModal" aria-hidden="true">
+      <div
+        class="image-preview-dialog"
+        id="imagePreviewDialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="图片预览"
+      >
+        <div class="image-preview-stage">
+          <button
+            type="button"
+            class="image-preview-close-btn"
+            id="imagePreviewCloseBtn"
+            aria-label="关闭图片预览"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12"></path>
+              <path d="M18 6L6 18"></path>
+            </svg>
+          </button>
+          <img class="image-preview-image" id="imagePreviewImage" alt="" />
+        </div>
+        <div class="image-preview-caption" id="imagePreviewCaption" hidden></div>
+      </div>
+    </div>
+
     <script type="module" src="app.js"></script>
   </body>
 </html>

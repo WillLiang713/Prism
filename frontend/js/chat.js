@@ -3,7 +3,7 @@ import { renderMarkdownToElement, createCopyButton } from './markdown.js';
 import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
-import { showConfirm } from './dialog.js';
+import { showConfirm, openImagePreview } from './dialog.js';
 import { collapseSidebarForMobile } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
 import { resolveModelDisplayName } from './config.js';
@@ -134,6 +134,48 @@ function cancelEditingTurn(turnId = state.chat.editingTurnId) {
   markActiveTopicTurnsWithoutAnimation();
   clearTurnEditState(turnId);
   renderChatMessages();
+}
+
+function createUserImagesContainer(
+  images,
+  {
+    containerClass = "user-images",
+    itemClass = "user-image-item",
+    imageClass = "",
+  } = {}
+) {
+  if (!Array.isArray(images) || images.length === 0) return null;
+
+  const imagesContainer = document.createElement("div");
+  imagesContainer.className = containerClass;
+
+  for (const image of images) {
+    const imgWrapper = document.createElement("button");
+    imgWrapper.type = "button";
+    imgWrapper.className = `${itemClass} user-image-trigger`;
+    imgWrapper.setAttribute(
+      "aria-label",
+      `查看图片${image.name ? `：${image.name}` : ""}`
+    );
+    imgWrapper.addEventListener("click", () => {
+      openImagePreview({
+        src: image.dataUrl,
+        alt: image.name || "用户上传的图片",
+        trigger: imgWrapper,
+      });
+    });
+
+    const img = document.createElement("img");
+    img.src = image.dataUrl;
+    img.alt = image.name || "用户上传的图片";
+    img.loading = "lazy";
+    if (imageClass) img.className = imageClass;
+
+    imgWrapper.appendChild(img);
+    imagesContainer.appendChild(imgWrapper);
+  }
+
+  return imagesContainer;
 }
 
 async function handleSubmitTurnEdit(turn) {
@@ -913,6 +955,17 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       const editPanel = document.createElement("div");
       editPanel.className = "user-edit-panel";
 
+      if (hasUserImages) {
+        const editImages = createUserImagesContainer(turn.images, {
+          containerClass: "user-edit-images",
+          itemClass: "user-edit-image-item",
+          imageClass: "user-edit-image",
+        });
+        if (editImages) {
+          editPanel.appendChild(editImages);
+        }
+      }
+
       const editTextarea = document.createElement("textarea");
       editTextarea.className = "user-edit-input";
       editTextarea.dataset.turnId = turn.id;
@@ -936,13 +989,6 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
       const editFooter = document.createElement("div");
       editFooter.className = "user-edit-footer";
-
-      if (hasUserImages) {
-        const imageHint = document.createElement("div");
-        imageHint.className = "user-edit-hint";
-        imageHint.textContent = "当前图片会一并保留";
-        editFooter.appendChild(imageHint);
-      }
 
       const editActions = document.createElement("div");
       editActions.className = "user-edit-actions";
@@ -984,23 +1030,10 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
       // 如果有图片，先显示图片
       if (hasUserImages) {
-        const imagesContainer = document.createElement("div");
-        imagesContainer.className = "user-images";
-
-        for (const image of turn.images) {
-          const imgWrapper = document.createElement("div");
-          imgWrapper.className = "user-image-item";
-
-          const img = document.createElement("img");
-          img.src = image.dataUrl;
-          img.alt = image.name || "用户上传的图片";
-          img.loading = "lazy";
-
-          imgWrapper.appendChild(img);
-          imagesContainer.appendChild(imgWrapper);
+        const imagesContainer = createUserImagesContainer(turn.images);
+        if (imagesContainer) {
+          userBubble.appendChild(imagesContainer);
         }
-
-        userBubble.appendChild(imagesContainer);
       }
 
       // 显示文本消息
