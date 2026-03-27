@@ -4,11 +4,15 @@ import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
 import { showConfirm, openImagePreview } from './dialog.js';
-import { collapseSidebarForMobile } from './layout.js';
+import { collapseSidebarForMobile, isMobileLayout } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
 import { resolveModelDisplayName } from './config.js';
 import { estimateTokensFromText } from './state.js';
-import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
+import {
+  rememberDropdownOrigin,
+  restoreDropdownOrigin,
+  clearBodyDropdownPosition,
+} from './dropdown.js';
 
 let _stopGeneration = () => {};
 export function setStopGeneration(fn) { _stopGeneration = fn; }
@@ -577,6 +581,45 @@ function positionFloatingTopicActionMenu() {
     return;
   }
 
+  if (isMobileLayout()) {
+    const viewportPadding = 12;
+    const gap = 8;
+    const triggerRect = floatingTopicActionTriggerEl.getBoundingClientRect();
+    const maxWidth = Math.max(104, window.innerWidth - viewportPadding * 2);
+
+    floatingTopicActionMenuEl.style.position = "fixed";
+    floatingTopicActionMenuEl.style.left = "0px";
+    floatingTopicActionMenuEl.style.top = "0px";
+    floatingTopicActionMenuEl.style.right = "auto";
+    floatingTopicActionMenuEl.style.bottom = "auto";
+    floatingTopicActionMenuEl.style.width = "";
+    floatingTopicActionMenuEl.style.minWidth = "104px";
+    floatingTopicActionMenuEl.style.maxWidth = `${maxWidth}px`;
+
+    const width = Math.min(
+      Math.max(floatingTopicActionMenuEl.offsetWidth, 104),
+      maxWidth
+    );
+    const height = floatingTopicActionMenuEl.offsetHeight;
+    const left = Math.min(
+      Math.max(viewportPadding, Math.round(triggerRect.right - width)),
+      Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
+    );
+
+    let top = Math.round(triggerRect.bottom + gap);
+    if (top + height > window.innerHeight - viewportPadding) {
+      top = Math.max(
+        viewportPadding,
+        Math.round(triggerRect.top - gap - height)
+      );
+    }
+
+    floatingTopicActionMenuEl.style.left = `${left}px`;
+    floatingTopicActionMenuEl.style.top = `${top}px`;
+    floatingTopicActionMenuEl.style.width = `${width}px`;
+    return;
+  }
+
   const triggerRect = floatingTopicActionTriggerEl.getBoundingClientRect();
   const menuRect = floatingTopicActionMenuEl.getBoundingClientRect();
   const viewportPadding = 12;
@@ -607,6 +650,8 @@ function closeFloatingTopicActionMenu() {
     return;
   }
   floatingTopicActionMenuEl.classList.remove("is-floating-topic-menu");
+  floatingTopicActionMenuEl.style.visibility = "";
+  clearBodyDropdownPosition(floatingTopicActionMenuEl);
   floatingTopicActionMenuEl.style.left = "";
   floatingTopicActionMenuEl.style.top = "";
   floatingTopicActionMenuEl.hidden = true;
@@ -623,9 +668,11 @@ function openFloatingTopicActionMenu(menuEl, triggerEl) {
   }
   menuEl.hidden = false;
   menuEl.classList.add("is-floating-topic-menu");
+  menuEl.style.visibility = "hidden";
   floatingTopicActionMenuEl = menuEl;
   floatingTopicActionTriggerEl = triggerEl;
   positionFloatingTopicActionMenu();
+  menuEl.style.visibility = "visible";
   window.requestAnimationFrame(() => {
     positionFloatingTopicActionMenu();
   });
