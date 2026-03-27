@@ -534,29 +534,47 @@ function getEffectiveModelValue() {
   return String(elements.model?.value || "").trim();
 }
 
-function getActiveServiceModelRequestConfig() {
-  const activeService = getActiveService();
-  const activeServiceIsManaged =
-    activeService && activeService.id === state.serviceManagerSelectedId;
-  if (activeServiceIsManaged) {
-    return {
-      provider: getEffectiveProviderValue(),
-      endpointMode: getEffectiveEndpointModeValue(),
-      apiKey: elements.apiKey?.value || "",
-      apiUrl: getEffectiveApiUrlValue(),
-    };
-  }
-
+function getServiceModelRequestConfig(service) {
   const providerConfig = resolveProviderSelection(
-    activeService?.model?.providerSelection || activeService?.model?.provider,
-    activeService?.model?.endpointMode
+    service?.model?.providerSelection || service?.model?.provider,
+    service?.model?.endpointMode
   );
   return {
     provider: providerConfig.provider,
     endpointMode: providerConfig.endpointMode,
-    apiKey: activeService?.model?.apiKey || "",
-    apiUrl: String(activeService?.model?.apiUrl || "").trim(),
+    apiKey: service?.model?.apiKey || "",
+    apiUrl: String(service?.model?.apiUrl || "").trim(),
   };
+}
+
+function getLiveServiceRequestConfigFromForm() {
+  return {
+    provider: getEffectiveProviderValue(),
+    endpointMode: getEffectiveEndpointModeValue(),
+    apiKey: elements.apiKey?.value || "",
+    apiUrl: getEffectiveApiUrlValue(),
+  };
+}
+
+function getActiveServiceModelRequestConfig() {
+  const activeService = getActiveService();
+  const activeServiceIsManaged =
+    activeService &&
+    activeService.id === state.serviceManagerSelectedId &&
+    elements.configModal?.classList.contains("open");
+  if (activeServiceIsManaged) {
+    return getLiveServiceRequestConfigFromForm();
+  }
+
+  return getServiceModelRequestConfig(activeService);
+}
+
+function getManagedServiceModelRequestConfig() {
+  const managedService = getManagedService();
+  if (managedService && elements.configModal?.classList.contains("open")) {
+    return getLiveServiceRequestConfigFromForm();
+  }
+  return getServiceModelRequestConfig(managedService);
 }
 
 function isEffectivelyEmptyService(service) {
@@ -641,7 +659,10 @@ function getManagedServiceConnectionFormSnapshot() {
     providerSelection: getEffectiveProviderSelectionValue(),
     endpointMode: getEffectiveEndpointModeValue(),
     apiKey: String(elements.apiKey?.value || ""),
-    apiUrl: String(elements.apiUrl?.value || ""),
+    apiUrl: normalizeApiUrlForProvider(
+      elements.apiUrl?.value || "",
+      getEffectiveProviderValue()
+    ),
   };
 }
 
@@ -652,6 +673,45 @@ function getServiceConnectionStoreSnapshot(service) {
     endpointMode: String(service.model?.endpointMode || ""),
     apiKey: String(service.model?.apiKey || ""),
     apiUrl: String(service.model?.apiUrl || ""),
+  };
+}
+
+function hasUnsavedManagedServiceConnectionChanges() {
+  const managedService = getManagedService();
+  if (!managedService) return false;
+  return (
+    JSON.stringify(getManagedServiceConnectionFormSnapshot()) !==
+    JSON.stringify(getServiceConnectionStoreSnapshot(managedService))
+  );
+}
+
+function getManagedServiceFormSnapshot() {
+  return {
+    name: String(elements.serviceNameInput?.value || "").trim(),
+    providerSelection: getEffectiveProviderSelectionValue(),
+    endpointMode: getEffectiveEndpointModeValue(),
+    apiKey: String(elements.apiKey?.value || ""),
+    apiUrl: normalizeApiUrlForProvider(
+      elements.apiUrl?.value || "",
+      getEffectiveProviderValue()
+    ),
+    model: getActiveServiceModelFormValue(),
+    titleModel: getActiveServiceTitleModelFormValue(),
+    systemPrompt: getActiveRoleSettingFormValue(),
+  };
+}
+
+function getServiceFormStoreSnapshot(service) {
+  if (!service) return null;
+  return {
+    name: String(service.name || "").trim(),
+    providerSelection: String(service.model?.providerSelection || ""),
+    endpointMode: String(service.model?.endpointMode || ""),
+    apiKey: String(service.model?.apiKey || ""),
+    apiUrl: String(service.model?.apiUrl || ""),
+    model: String(service.model?.model || ""),
+    titleModel: String(service.model?.titleModel || ""),
+    systemPrompt: String(service.model?.systemPrompt || ""),
   };
 }
 
@@ -683,23 +743,13 @@ function hasUnsavedManagedServiceChanges() {
   const managedService = getManagedService();
   if (!managedService) return false;
   return (
-    JSON.stringify(getManagedServiceConnectionFormSnapshot()) !==
-    JSON.stringify(getServiceConnectionStoreSnapshot(managedService))
-  );
-}
-
-function hasUnsavedActiveRoleSettingChanges() {
-  const activeService = getActiveService();
-  if (!activeService) return false;
-  return (
-    getActiveRoleSettingFormValue() !== getServiceRoleSettingStoreValue(activeService) ||
-    getActiveServiceModelFormValue() !== getActiveServiceModelStoreValue(activeService) ||
-    getActiveServiceTitleModelFormValue() !== getActiveServiceTitleModelStoreValue(activeService)
+    JSON.stringify(getManagedServiceFormSnapshot()) !==
+    JSON.stringify(getServiceFormStoreSnapshot(managedService))
   );
 }
 
 function hasUnsavedConfigChanges() {
-  return hasUnsavedManagedServiceChanges() || hasUnsavedActiveRoleSettingChanges();
+  return hasUnsavedManagedServiceChanges();
 }
 
 function applyManagedServiceConnectionToForm(service) {
@@ -735,8 +785,6 @@ function applyActiveRoleSettingToForm(service) {
   syncRoleSettingPreview(true);
   updateModelHint("main");
   updateModelHint("Title");
-  scheduleFetchModels("main", 0);
-  scheduleFetchModels("Title", 0);
 }
 
 function applyEmptyServiceStateToForm() {
@@ -788,33 +836,19 @@ function readManagedServiceConnectionFromForm(existingService = null) {
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
         apiKey: String(elements.apiKey?.value || ""),
-        model: String(base.model?.model || ""),
-        titleModel: String(base.model?.titleModel || ""),
+        model: getActiveServiceModelFormValue(),
+        titleModel: getActiveServiceTitleModelFormValue(),
         apiUrl: normalizeApiUrlForProvider(
           elements.apiUrl?.value || "",
           providerConfig.provider
         ),
-        systemPrompt: String(base.model?.systemPrompt || ""),
+        systemPrompt: getActiveRoleSettingFormValue(),
       },
       reasoningEffort: base.reasoningEffort,
       connectivity: base.connectivity || createConnectivityState(),
       createdAt: base.createdAt || updatedAt,
     }
   );
-}
-
-function applyRoleSettingToService(service) {
-  if (!service) return service;
-  return normalizeService({
-    ...cloneValue(service),
-    updatedAt: Date.now(),
-    model: {
-      ...cloneValue(service.model || {}),
-      model: getActiveServiceModelFormValue(),
-      titleModel: getActiveServiceTitleModelFormValue(),
-      systemPrompt: getActiveRoleSettingFormValue(),
-    },
-  });
 }
 
 export async function autoSaveManagedServiceDraft() {
@@ -918,8 +952,11 @@ function syncServiceDetailPanel(options = {}) {
   }
   if (service && !preserveConnectionForm) {
     resetModelFetchState("main");
+    resetModelFetchState("Title");
     applyManagedServiceConnectionToForm(service);
+    applyActiveRoleSettingToForm(service);
     scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
   } else if (!service && !preserveConnectionForm) {
     applyEmptyServiceStateToForm();
   }
@@ -945,10 +982,12 @@ function renderServiceList() {
   }
   const fragment = document.createDocumentFragment();
   state.services.forEach((service) => {
+    const isSelected = service.id === state.serviceManagerSelectedId;
+    const isActive = service.id === state.activeServiceId;
     const card = document.createElement("div");
-    card.className = `service-list-card${
-      service.id === state.serviceManagerSelectedId ? " is-selected" : ""
-    }${service.id === state.activeServiceId ? " is-active-service" : ""}`;
+    card.className = `service-list-card${isSelected ? " is-selected" : ""}${
+      isActive ? " is-active-service" : ""
+    }`;
     card.dataset.serviceId = service.id;
     card.dataset.provider = service.model?.provider || "";
 
@@ -956,17 +995,10 @@ function renderServiceList() {
     item.type = "button";
     item.className = "service-list-item";
     item.addEventListener("click", () => {
-      if (service.id === state.activeServiceId) {
-        if (state.serviceManagerSelectedId !== service.id) {
-          state.serviceManagerSelectedId = service.id;
-          renderServiceManagementUi();
-          scheduleFetchModels("main", 0);
-        }
+      if (state.serviceManagerSelectedId === service.id) {
         return;
       }
-      void handleCurrentServiceChange(service.id, {
-        syncManagerSelection: true,
-      });
+      void handleManagedServiceSelectionChange(service.id);
     });
 
     const head = document.createElement("div");
@@ -995,6 +1027,40 @@ function renderServiceList() {
       item.appendChild(subMeta);
     }
     card.appendChild(item);
+
+    if (isActive || isSelected) {
+      const cornerBadge = document.createElement("button");
+      cornerBadge.type = "button";
+      cornerBadge.className = `service-current-corner${
+        isActive ? " is-active" : " is-action"
+      }`;
+      cornerBadge.setAttribute(
+        "aria-label",
+        isActive ? "当前使用" : `将 ${getServiceDisplayName(service)} 设为当前服务`
+      );
+      if (isActive) {
+        cornerBadge.tabIndex = -1;
+        cornerBadge.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+      } else {
+        cornerBadge.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void handleCurrentServiceChange(service.id, {
+            syncManagerSelection: false,
+          });
+        });
+      }
+
+      const cornerLabel = document.createElement("span");
+      cornerLabel.className = "service-current-corner-label";
+      cornerLabel.textContent = isActive ? "当前使用" : "设为当前";
+      cornerBadge.appendChild(cornerLabel);
+      card.appendChild(cornerBadge);
+    }
+
     fragment.appendChild(card);
   });
   elements.serviceList.appendChild(fragment);
@@ -1015,6 +1081,61 @@ function focusServiceNameInput() {
   });
 }
 
+function setManagedServiceLocally(serviceId, options = {}) {
+  const { refreshModelList = true } = options;
+  const targetService = getServiceById(serviceId);
+  if (!targetService) return false;
+  state.serviceManagerSelectedId = targetService.id;
+  renderServiceManagementUi();
+  syncAllConfigSelectPickers();
+  updateConfigStatusStrip();
+  if (refreshModelList) {
+    scheduleFetchModels("main", 0);
+    scheduleFetchModels("Title", 0);
+  }
+  return true;
+}
+
+async function handleManagedServiceSelectionChange(nextServiceId) {
+  const nextId = String(nextServiceId || "");
+  if (!nextId || nextId === state.serviceManagerSelectedId) {
+    return false;
+  }
+
+  if (!hasUnsavedManagedServiceChanges()) {
+    return setManagedServiceLocally(nextId);
+  }
+
+  const shouldSave = await showConfirm("当前编辑服务有未保存修改，是否先保存？", {
+    title: "未保存修改",
+    okText: "保存并切换",
+    cancelText: "继续切换",
+    hint: "继续切换会进入下一步确认。",
+  });
+  if (shouldSave) {
+    const saved = await persistCurrentServiceForm({
+      showFeedback: false,
+      closeAfterSave: false,
+    });
+    if (!saved) {
+      return false;
+    }
+    return setManagedServiceLocally(nextId);
+  }
+
+  const shouldDiscard = await showConfirm("切换后将丢失当前编辑中的未保存修改，是否继续？", {
+    title: "放弃修改",
+    okText: "继续切换",
+    cancelText: "取消",
+    danger: true,
+  });
+  if (!shouldDiscard) {
+    return false;
+  }
+
+  return setManagedServiceLocally(nextId);
+}
+
 function replaceService(updatedService) {
   state.services = state.services.map((service) =>
     service.id === updatedService.id ? normalizeService(updatedService) : service
@@ -1024,17 +1145,12 @@ function replaceService(updatedService) {
 async function persistCurrentServiceForm(options = {}) {
   const { showFeedback = false, closeAfterSave = false } = options;
   const managedService = getManagedService();
-  const activeService = getActiveService();
-  if (managedService && activeService) {
+  if (managedService) {
     state.services = state.services.map((service) => {
-      let nextService = service;
-      if (service.id === managedService.id) {
-        nextService = readManagedServiceConnectionFromForm(service);
+      if (service.id !== managedService.id) {
+        return service;
       }
-      if (service.id === activeService.id) {
-        nextService = applyRoleSettingToService(nextService);
-      }
-      return nextService;
+      return readManagedServiceConnectionFromForm(service);
     });
   }
 
@@ -1058,8 +1174,8 @@ async function persistCurrentServiceForm(options = {}) {
   renderServiceManagementUi({
     preserveConnectionForm: true,
   });
-  if (managedService && activeService) {
-    applyActiveRoleSettingToForm(getActiveService());
+  if (managedService) {
+    applyActiveRoleSettingToForm(getManagedService());
   } else {
     applyEmptyServiceStateToForm();
   }
@@ -1098,7 +1214,6 @@ function setActiveServiceLocally(serviceId, options = {}) {
     });
   }
   renderServiceManagementUi();
-  applyActiveRoleSettingToForm(targetService);
   syncAllConfigSelectPickers();
   updateModelNames();
   updateConfigStatusStrip();
@@ -1143,21 +1258,21 @@ export async function applyHeaderModelSelection(serviceId, modelId) {
 }
 
 export function getConfigFromForm(side) {
-  const activeServiceRequestConfig = getActiveServiceModelRequestConfig();
+  const managedServiceRequestConfig = getManagedServiceModelRequestConfig();
   if (side === "Title") {
     return {
-      provider: activeServiceRequestConfig.provider,
-      endpointMode: activeServiceRequestConfig.endpointMode,
-      apiKey: activeServiceRequestConfig.apiKey,
-      apiUrl: activeServiceRequestConfig.apiUrl,
+      provider: managedServiceRequestConfig.provider,
+      endpointMode: managedServiceRequestConfig.endpointMode,
+      apiKey: managedServiceRequestConfig.apiKey,
+      apiUrl: managedServiceRequestConfig.apiUrl,
     };
   }
 
   return {
-    provider: activeServiceRequestConfig.provider,
-    endpointMode: activeServiceRequestConfig.endpointMode,
-    apiKey: activeServiceRequestConfig.apiKey,
-    apiUrl: activeServiceRequestConfig.apiUrl,
+    provider: managedServiceRequestConfig.provider,
+    endpointMode: managedServiceRequestConfig.endpointMode,
+    apiKey: managedServiceRequestConfig.apiKey,
+    apiUrl: managedServiceRequestConfig.apiUrl,
   };
 }
 
@@ -1477,9 +1592,9 @@ export function loadConfig() {
       elements.closeToTrayOnClose.checked = closeToTrayOnClose;
     }
 
-    if (getManagedService() && getActiveService()) {
+    if (getManagedService()) {
       applyManagedServiceConnectionToForm(getManagedService());
-      applyActiveRoleSettingToForm(getActiveService());
+      applyActiveRoleSettingToForm(getManagedService());
     } else {
       applyEmptyServiceStateToForm();
     }
@@ -1566,19 +1681,14 @@ export async function handleCurrentServiceChange(nextServiceId, options = {}) {
     return false;
   }
 
-  const editingCurrentServiceConnection =
-    state.serviceManagerSelectedId === state.activeServiceId &&
-    hasUnsavedManagedServiceChanges();
-  const editingCurrentServiceRole = hasUnsavedActiveRoleSettingChanges();
-
-  if (!editingCurrentServiceConnection && !editingCurrentServiceRole) {
+  if (!hasUnsavedManagedServiceChanges()) {
     return setActiveServiceLocally(nextId, {
       syncManagerSelection,
       refreshModelList: false,
     });
   }
 
-  const shouldSave = await showConfirm("当前服务有未保存修改，是否先保存？", {
+  const shouldSave = await showConfirm("当前编辑服务有未保存修改，是否先保存？", {
     title: "未保存修改",
     okText: "保存并切换",
     cancelText: "继续切换",
@@ -1598,7 +1708,7 @@ export async function handleCurrentServiceChange(nextServiceId, options = {}) {
     });
   }
 
-  const shouldDiscard = await showConfirm("切换后将丢失当前未保存修改，是否继续？", {
+  const shouldDiscard = await showConfirm("切换后将丢失当前编辑中的未保存修改，是否继续？", {
     title: "放弃修改",
     okText: "继续切换",
     cancelText: "取消",
@@ -1657,12 +1767,7 @@ export async function deleteService() {
   });
   if (!confirmed) return;
 
-  const deletingUnsavedConnection =
-    service.id === state.serviceManagerSelectedId && hasUnsavedManagedServiceChanges();
-  const deletingUnsavedRole =
-    service.id === state.activeServiceId && hasUnsavedActiveRoleSettingChanges();
-
-  if (deletingUnsavedConnection || deletingUnsavedRole) {
+  if (service.id === state.serviceManagerSelectedId && hasUnsavedManagedServiceChanges()) {
     const shouldDiscard = await showConfirm(
       "该服务有未保存修改，删除后这些修改将丢失，是否继续？",
       {
@@ -1691,7 +1796,6 @@ export async function deleteService() {
     activeServiceId: state.activeServiceId,
   });
   renderServiceManagementUi();
-  applyActiveRoleSettingToForm(getActiveService());
   scheduleFetchModels("main", 0);
   scheduleFetchModels("Title", 0);
   updateModelNames();
@@ -1728,7 +1832,7 @@ export async function testSelectedServiceConnection() {
     );
     return;
   }
-  const hasDraftChanges = hasUnsavedManagedServiceChanges();
+  const hasDraftChanges = hasUnsavedManagedServiceConnectionChanges();
   const draftService = hasDraftChanges
     ? readManagedServiceConnectionFromForm(service)
     : service;
