@@ -20,7 +20,14 @@ import {
 import { closeWebSearchToolSelector, getCurrentWebSearchToolMode, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown } from './models.js';
-import { closeAllConfigSelectPickers, repositionOpenFloatingDropdowns } from './dropdown.js';
+import {
+  closeAllConfigSelectPickers,
+  repositionOpenFloatingDropdowns,
+  mountBodyDropdown,
+  unmountBodyDropdown,
+  clearBodyDropdownPosition,
+  positionBodyDropdown,
+} from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning, requestDeleteTopic, closeTopicActionMenu } from './chat.js';
@@ -36,6 +43,7 @@ const PRESS_START_EVENT =
   typeof window !== "undefined" && "PointerEvent" in window
     ? "pointerdown"
     : "mousedown";
+const REASONING_DROPDOWN_MIN_WIDTH = 68;
 
 function isWithinTopicActionUi(target) {
   const element =
@@ -44,6 +52,80 @@ function isWithinTopicActionUi(target) {
   return !!element.closest(
     ".topic-action-menu, .topic-action-dropdown.is-floating-topic-menu"
   );
+}
+
+function isReasoningDropdownOpen() {
+  return !!elements.reasoningEffortSelector?.classList.contains("open");
+}
+
+function mountReasoningDropdown() {
+  const dropdownEl = elements.reasoningEffortDropdown;
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  mountBodyDropdown(dropdownEl);
+}
+
+function unmountReasoningDropdown() {
+  const dropdownEl = elements.reasoningEffortDropdown;
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  unmountBodyDropdown(dropdownEl);
+}
+
+function clearReasoningDropdownPosition() {
+  clearBodyDropdownPosition(elements.reasoningEffortDropdown);
+}
+
+function positionReasoningDropdown() {
+  const dropdownEl = elements.reasoningEffortDropdown;
+  const triggerEl = elements.reasoningEffortSelector?.querySelector(
+    ".reasoning-effort-current"
+  );
+  if (!(dropdownEl instanceof HTMLElement) || !(triggerEl instanceof HTMLElement)) return;
+
+  if (!isReasoningDropdownOpen()) {
+    clearReasoningDropdownPosition();
+    return;
+  }
+
+  if (!isMobileLayout()) {
+    clearReasoningDropdownPosition();
+    unmountReasoningDropdown();
+    return;
+  }
+
+  mountReasoningDropdown();
+  positionBodyDropdown(dropdownEl, triggerEl, {
+    minWidth: REASONING_DROPDOWN_MIN_WIDTH,
+    minViewportWidth: 120,
+    viewportPadding: 12,
+    gap: 8,
+    align: "end",
+  });
+}
+
+function openReasoningDropdown() {
+  if (!elements.reasoningEffortSelector) return;
+  elements.reasoningEffortSelector.classList.add("open");
+  if (isMobileLayout()) {
+    mountReasoningDropdown();
+    positionReasoningDropdown();
+  } else {
+    clearReasoningDropdownPosition();
+  }
+}
+
+function closeReasoningDropdown() {
+  if (!elements.reasoningEffortSelector) return;
+  elements.reasoningEffortSelector.classList.remove("open");
+  clearReasoningDropdownPosition();
+  unmountReasoningDropdown();
+}
+
+function toggleReasoningDropdown() {
+  if (isReasoningDropdownOpen()) {
+    closeReasoningDropdown();
+    return;
+  }
+  openReasoningDropdown();
 }
 
 export function bindEvents() {
@@ -101,32 +183,38 @@ export function bindEvents() {
     autoSaveConfigDraft();
   });
 
-  // 思考强度下拉选择器
-  elements.reasoningEffortSelector?.addEventListener("click", (e) => {
-    // 点击选项
+  elements.reasoningEffortSelector
+    ?.querySelector(".reasoning-effort-current")
+    ?.addEventListener("click", () => {
+      toggleReasoningDropdown();
+    });
+  elements.reasoningEffortDropdown?.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-value]");
-    if (btn) {
-      elements.reasoningEffortDropdown.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      elements.reasoningEffortValue.textContent = btn.dataset.label;
-      elements.reasoningEffortSelector?.classList.toggle(
-        "is-off",
-        btn.dataset.value === "none"
-      );
-      elements.reasoningEffortSelector.classList.remove("open");
-      autoSaveConfigDraft();
-      return;
-    }
-    // 点击触发器，切换展开
-    if (e.target.closest(".reasoning-effort-current")) {
-      elements.reasoningEffortSelector.classList.toggle("open");
-    }
+    if (!(btn instanceof HTMLButtonElement)) return;
+    elements.reasoningEffortDropdown
+      .querySelectorAll("button")
+      .forEach((button) => button.classList.remove("active"));
+    btn.classList.add("active");
+    elements.reasoningEffortValue.textContent = btn.dataset.label;
+    elements.reasoningEffortSelector?.classList.toggle(
+      "is-off",
+      btn.dataset.value === "none"
+    );
+    closeReasoningDropdown();
+    autoSaveConfigDraft();
   });
 
   // 点击外部关闭下拉
   document.addEventListener("click", (e) => {
-    if (!e.target.closest(".reasoning-effort-selector")) {
-      elements.reasoningEffortSelector?.classList.remove("open");
+    const target = e.target;
+    if (
+      !(target instanceof HTMLElement) ||
+      (
+        !target.closest(".reasoning-effort-selector") &&
+        !target.closest(".reasoning-effort-dropdown")
+      )
+    ) {
+      closeReasoningDropdown();
     }
     if (!e.target.closest(".web-search-control") && !e.target.closest(".web-search-tool-dropdown")) {
       closeWebSearchToolSelector();
@@ -370,7 +458,14 @@ export function bindEvents() {
   window.addEventListener("resize", () => {
     repositionOpenFloatingDropdowns();
     positionWebSearchToolSelector();
+    positionReasoningDropdown();
     closeTopicActionMenu();
+  });
+  window.visualViewport?.addEventListener("resize", positionReasoningDropdown, {
+    passive: true,
+  });
+  window.visualViewport?.addEventListener("scroll", positionReasoningDropdown, {
+    passive: true,
   });
 
   // Enter 发送；Shift+Enter 换行（移动端仅换行，避免输入法确认时误发送）

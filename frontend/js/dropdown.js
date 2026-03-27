@@ -74,6 +74,112 @@ export function restoreDropdownOrigin(dropdownEl) {
   }
 }
 
+export function mountBodyDropdown(dropdownEl, options = {}) {
+  if (!(dropdownEl instanceof HTMLElement) || typeof document === "undefined") {
+    return;
+  }
+  const openClass = String(options.openClass || "is-floating-open");
+  const host = options.host instanceof HTMLElement ? options.host : document.body;
+  rememberDropdownOrigin(dropdownEl);
+  if (dropdownEl.parentElement !== host) {
+    host.appendChild(dropdownEl);
+  }
+  if (openClass) {
+    dropdownEl.classList.add(openClass);
+  }
+}
+
+export function unmountBodyDropdown(dropdownEl, options = {}) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  const openClass = String(options.openClass || "is-floating-open");
+  if (openClass) {
+    dropdownEl.classList.remove(openClass);
+  }
+  restoreDropdownOrigin(dropdownEl);
+}
+
+export function clearBodyDropdownPosition(dropdownEl) {
+  if (!(dropdownEl instanceof HTMLElement)) return;
+  dropdownEl.style.position = "";
+  dropdownEl.style.left = "";
+  dropdownEl.style.top = "";
+  dropdownEl.style.right = "";
+  dropdownEl.style.bottom = "";
+  dropdownEl.style.width = "";
+  dropdownEl.style.minWidth = "";
+  dropdownEl.style.maxWidth = "";
+  dropdownEl.style.maxHeight = "";
+}
+
+export function positionBodyDropdown(dropdownEl, anchorEl, options = {}) {
+  if (!(dropdownEl instanceof HTMLElement) || !(anchorEl instanceof HTMLElement)) {
+    return null;
+  }
+
+  const viewportPadding = Math.max(
+    0,
+    Number.isFinite(options.viewportPadding) ? Number(options.viewportPadding) : 12
+  );
+  const gap = Math.max(0, Number.isFinite(options.gap) ? Number(options.gap) : 8);
+  const minWidth = Math.max(
+    0,
+    Number.isFinite(options.minWidth) ? Number(options.minWidth) : 0
+  );
+  const minViewportWidth = Math.max(
+    minWidth,
+    Number.isFinite(options.minViewportWidth)
+      ? Number(options.minViewportWidth)
+      : minWidth
+  );
+  const align = String(options.align || "start").toLowerCase();
+
+  const rect = anchorEl.getBoundingClientRect();
+  const maxWidth = Math.max(minViewportWidth, window.innerWidth - viewportPadding * 2);
+
+  dropdownEl.style.position = "fixed";
+  dropdownEl.style.left = "0px";
+  dropdownEl.style.top = "0px";
+  dropdownEl.style.right = "auto";
+  dropdownEl.style.bottom = "auto";
+  dropdownEl.style.width = "";
+  dropdownEl.style.minWidth = `${Math.max(minWidth, Math.round(rect.width))}px`;
+  dropdownEl.style.maxWidth = `${maxWidth}px`;
+
+  const width = Math.min(
+    Math.max(dropdownEl.offsetWidth, Math.round(rect.width), minWidth),
+    maxWidth
+  );
+  const height = dropdownEl.offsetHeight;
+
+  let desiredLeft = rect.left;
+  if (align === "center") {
+    desiredLeft = rect.left + rect.width / 2 - width / 2;
+  } else if (align === "end" || align === "right") {
+    desiredLeft = rect.right - width;
+  }
+
+  const left = Math.min(
+    Math.max(viewportPadding, Math.round(desiredLeft)),
+    Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
+  );
+
+  let top = Math.round(rect.top - gap - height);
+  if (top < viewportPadding) {
+    top = Math.round(
+      Math.min(
+        window.innerHeight - viewportPadding - height,
+        rect.bottom + gap
+      )
+    );
+  }
+
+  dropdownEl.style.left = `${left}px`;
+  dropdownEl.style.top = `${top}px`;
+  dropdownEl.style.width = `${width}px`;
+
+  return { left, top, width, height };
+}
+
 export function positionFloatingDropdown(dropdownEl) {
   if (!(dropdownEl instanceof HTMLElement)) return;
   const anchorEl = floatingDropdownAnchors.get(dropdownEl);

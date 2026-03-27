@@ -535,6 +535,12 @@
   gap: 4px;
 }
 
+.reasoning-effort-dropdown.is-floating-open {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .reasoning-effort-selector.open .reasoning-effort-current {
   border-color: var(--border-accent);
   box-shadow: 0 4px 16px var(--accent-glow);

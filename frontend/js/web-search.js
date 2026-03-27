@@ -1,5 +1,10 @@
 import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection } from './state.js';
-import { rememberDropdownOrigin, restoreDropdownOrigin } from './dropdown.js';
+import {
+  mountBodyDropdown,
+  unmountBodyDropdown,
+  clearBodyDropdownPosition,
+  positionBodyDropdown,
+} from './dropdown.js';
 import { isMobileLayout } from './layout.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
@@ -33,29 +38,16 @@ const WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH = 108;
 
 function mountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
   if (!(dropdownEl instanceof HTMLElement)) return;
-  rememberDropdownOrigin(dropdownEl);
-  if (dropdownEl.parentElement !== document.body) {
-    document.body.appendChild(dropdownEl);
-  }
-  dropdownEl.classList.add("is-floating-open");
+  mountBodyDropdown(dropdownEl);
 }
 
 function unmountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
   if (!(dropdownEl instanceof HTMLElement)) return;
-  dropdownEl.classList.remove("is-floating-open");
-  restoreDropdownOrigin(dropdownEl);
+  unmountBodyDropdown(dropdownEl);
 }
 
 function clearWebSearchToolDropdownPosition(dropdownEl = elements.webSearchToolDropdown) {
-  if (!(dropdownEl instanceof HTMLElement)) return;
-  dropdownEl.style.position = "";
-  dropdownEl.style.left = "";
-  dropdownEl.style.top = "";
-  dropdownEl.style.right = "";
-  dropdownEl.style.bottom = "";
-  dropdownEl.style.width = "";
-  dropdownEl.style.minWidth = "";
-  dropdownEl.style.maxWidth = "";
+  clearBodyDropdownPosition(dropdownEl);
 }
 
 export function positionWebSearchToolSelector() {
@@ -66,51 +58,13 @@ export function positionWebSearchToolSelector() {
     clearWebSearchToolDropdownPosition(dropdownEl);
     return;
   }
-
-  const rect = buttonEl.getBoundingClientRect();
-  const viewportPadding = 12;
-  const gap = 8;
-  const maxWidth = Math.max(180, window.innerWidth - viewportPadding * 2);
-
-  dropdownEl.style.position = "fixed";
-  dropdownEl.style.left = "0px";
-  dropdownEl.style.top = "0px";
-  dropdownEl.style.right = "auto";
-  dropdownEl.style.bottom = "auto";
-  dropdownEl.style.width = "";
-  dropdownEl.style.minWidth = `${Math.max(
-    WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH,
-    Math.round(rect.width)
-  )}px`;
-  dropdownEl.style.maxWidth = `${maxWidth}px`;
-
-  const width = Math.min(
-    Math.max(
-      dropdownEl.offsetWidth,
-      Math.round(rect.width),
-      WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH
-    ),
-    maxWidth
-  );
-  const height = dropdownEl.offsetHeight;
-  const unclampedLeft = rect.left + rect.width / 2 - width / 2;
-  const left = Math.min(
-    Math.max(viewportPadding, Math.round(unclampedLeft)),
-    Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
-  );
-  let top = Math.round(rect.top - gap - height);
-  if (top < viewportPadding) {
-    top = Math.round(
-      Math.min(
-        window.innerHeight - viewportPadding - height,
-        rect.bottom + gap
-      )
-    );
-  }
-
-  dropdownEl.style.left = `${left}px`;
-  dropdownEl.style.top = `${top}px`;
-  dropdownEl.style.width = `${width}px`;
+  positionBodyDropdown(dropdownEl, buttonEl, {
+    minWidth: WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH,
+    minViewportWidth: 180,
+    viewportPadding: 12,
+    gap: 8,
+    align: "center",
+  });
 }
 
 export function renderWebSearchSection(container, webSearch, options = {}) {
