@@ -2,7 +2,9 @@ import { elements } from "./state.js";
 
 const PREVIEW_CLOSE_DURATION_MS = 260;
 const INLINE_PREVIEW_MEDIA_QUERY = "(min-width: 901px)";
+const MOBILE_PREVIEW_MEDIA_QUERY = "(max-width: 900px)";
 const FENCED_CODE_BLOCK_PATTERN = /```([^\n`]*)\r?\n([\s\S]*?)```/g;
+const FRAME_LOAD_FAILSAFE_MS = 1200;
 
 const previewState = {
   initialized: false,
@@ -17,6 +19,7 @@ const previewState = {
   sourceBlockIndex: -1,
   sourceTurnCreatedAt: 0,
   frameLoadPending: false,
+  frameLoadFailsafeTimer: 0,
 };
 
 function normalizeLanguage(language) {
@@ -109,9 +112,26 @@ function revokeActiveObjectUrl() {
   previewState.activeObjectUrl = "";
 }
 
+function clearFrameLoadFailsafeTimer() {
+  if (!previewState.frameLoadFailsafeTimer) return;
+  window.clearTimeout(previewState.frameLoadFailsafeTimer);
+  previewState.frameLoadFailsafeTimer = 0;
+}
+
 function setFrameLoading(isLoading) {
   previewState.frameLoadPending = !!isLoading;
   elements.htmlPreviewDrawer?.classList.toggle("is-loading", !!isLoading);
+
+  if (!isLoading) {
+    clearFrameLoadFailsafeTimer();
+    return;
+  }
+
+  clearFrameLoadFailsafeTimer();
+  previewState.frameLoadFailsafeTimer = window.setTimeout(() => {
+    previewState.frameLoadFailsafeTimer = 0;
+    setFrameLoading(false);
+  }, FRAME_LOAD_FAILSAFE_MS);
 }
 
 function buildPreviewDocument(markup) {
@@ -145,6 +165,20 @@ function buildPreviewDocument(markup) {
 </html>`;
 }
 
+function supportsFrameSrcdoc() {
+  return !!elements.htmlPreviewFrame && "srcdoc" in elements.htmlPreviewFrame;
+}
+
+function shouldPreferSrcdocPreview() {
+  if (!supportsFrameSrcdoc()) return false;
+
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(MOBILE_PREVIEW_MEDIA_QUERY).matches
+  );
+}
+
 function syncFrameContent(forceReload = false) {
   if (!elements.htmlPreviewFrame) return;
 
@@ -157,6 +191,13 @@ function syncFrameContent(forceReload = false) {
   revokeActiveObjectUrl();
   setFrameLoading(true);
   elements.htmlPreviewFrame.dataset.previewDocument = nextDocument;
+
+  if (shouldPreferSrcdocPreview()) {
+    elements.htmlPreviewFrame.removeAttribute("src");
+    elements.htmlPreviewFrame.srcdoc = nextDocument;
+    return;
+  }
+
   elements.htmlPreviewFrame.removeAttribute("srcdoc");
   elements.htmlPreviewFrame.src = "about:blank";
 
