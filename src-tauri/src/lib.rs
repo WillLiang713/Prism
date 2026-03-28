@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WebviewUrl, WebviewWindowBuilder,
+    Manager, Theme, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri::webview::Color;
 use tauri_plugin_shell::{process::CommandChild, ShellExt};
@@ -93,6 +93,14 @@ if (window.__PRISM_RUNTIME__ && window.__PRISM_RUNTIME__.apiBase) {{
 }}
 "#
     ))
+}
+
+fn background_color_for_theme(theme: Theme) -> Color {
+    match theme {
+        Theme::Light => Color(245, 245, 247, 255),
+        Theme::Dark => Color(0, 0, 0, 255),
+        _ => Color(0, 0, 0, 255),
+    }
 }
 
 fn spawn_release_sidecar(app: &tauri::AppHandle) -> Result<PreparedRuntime, String> {
@@ -292,16 +300,23 @@ pub fn run() {
 
             let init_script = build_runtime_script(&runtime.config)
                 .map_err(std::io::Error::other)?;
-            WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
+            let window = WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
                 .title("Prism")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(1100.0, 760.0)
                 .background_color(Color(0, 0, 0, 255))
+                .visible(false)
                 .decorations(false)
                 .center()
                 .initialization_script(init_script)
                 .build()
                 .map_err(std::io::Error::other)?;
+
+            let theme = window.theme().unwrap_or(Theme::Dark);
+            window
+                .set_background_color(Some(background_color_for_theme(theme)))
+                .map_err(std::io::Error::other)?;
+            window.show().map_err(std::io::Error::other)?;
 
             create_tray(app.handle()).map_err(std::io::Error::other)?;
 
