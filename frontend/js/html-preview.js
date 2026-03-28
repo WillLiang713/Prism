@@ -2,7 +2,6 @@ import { elements } from "./state.js";
 
 const PREVIEW_CLOSE_DURATION_MS = 260;
 const INLINE_PREVIEW_MEDIA_QUERY = "(min-width: 901px)";
-const MOBILE_PREVIEW_MEDIA_QUERY = "(max-width: 900px)";
 const FENCED_CODE_BLOCK_PATTERN = /```([^\n`]*)\r?\n([\s\S]*?)```/g;
 const FRAME_LOAD_FAILSAFE_MS = 1200;
 
@@ -170,13 +169,7 @@ function supportsFrameSrcdoc() {
 }
 
 function shouldPreferSrcdocPreview() {
-  if (!supportsFrameSrcdoc()) return false;
-
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia(MOBILE_PREVIEW_MEDIA_QUERY).matches
-  );
+  return supportsFrameSrcdoc();
 }
 
 function syncFrameContent(forceReload = false) {
