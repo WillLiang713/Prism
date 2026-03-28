@@ -7,6 +7,82 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
+function Stop-ProcessTree {
+  param(
+    [Parameter(Mandatory = $true)]
+    [int]$ProcessId
+  )
+
+  try {
+    & taskkill /PID $ProcessId /T /F *> $null
+  } catch {
+    try {
+      Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    } catch {
+      # ignore cleanup failure
+    }
+  }
+}
+
+function Stop-LockingProcesses {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path
+  )
+
+  $resolvedPath = (Resolve-Path $Path).ProviderPath
+  if (-not $resolvedPath.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
+    $resolvedPath += [System.IO.Path]::DirectorySeparatorChar
+  }
+
+  $lockingProcesses = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+      try {
+        $processPath = $_.Path
+        if (-not $processPath) {
+          return $false
+        }
+
+        return $processPath.StartsWith($resolvedPath, [System.StringComparison]::OrdinalIgnoreCase)
+      } catch {
+        return $false
+      }
+    })
+
+  foreach ($process in $lockingProcesses) {
+    Write-Host "Stopping process locking build artifact: $($process.ProcessName) ($($process.Id))"
+    Stop-ProcessTree -ProcessId $process.Id
+  }
+}
+
+function Invoke-NativeCommand {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath,
+    [string[]]$Arguments = @(),
+    [string]$FailureMessage = "External command failed.",
+    [switch]$SuppressOutput
+  )
+
+  $previousErrorActionPreference = $ErrorActionPreference
+  $exitCode = 0
+
+  try {
+    $ErrorActionPreference = "Continue"
+    if ($SuppressOutput) {
+      & $FilePath @Arguments *> $null
+    } else {
+      & $FilePath @Arguments
+    }
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+  }
+
+  if ($exitCode -ne 0) {
+    throw "$FailureMessage (exit code: $exitCode)"
+  }
+}
+
 function Remove-BuildArtifact {
   param(
     [Parameter(Mandatory = $true)]
@@ -15,12 +91,13 @@ function Remove-BuildArtifact {
 
   if (Test-Path $Path) {
     Write-Host "Removing build artifact: $Path"
+    Stop-LockingProcesses -Path $Path
     # 使用 robocopy 空目录的方式清空内容，避免 Remove-Item -Recurse 在深层目录上失败
     $emptyDir = Join-Path $env:TEMP "prism_empty_$(Get-Random)"
     New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
     robocopy $emptyDir $Path /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     Remove-Item -Path $emptyDir -Force
-    Remove-Item -Path $Path -Force
+    Remove-Item -Path $Path -Recurse -Force
   }
 }
 
@@ -160,24 +237,42 @@ if (-not $SkipBackendBuild) {
     Remove-Item -Path $sidecarTarget -Force
   }
 
-  & $pythonCommand @pythonArgs -m PyInstaller --version *> $null
-  if ($LASTEXITCODE -ne 0) {
-    throw "PyInstaller is required for the selected Python interpreter. Run: `"$pythonCommand`" $($pythonArgs -join ' ') -m pip install pyinstaller"
+  try {
+    Invoke-NativeCommand `
+      -FilePath $pythonCommand `
+      -Arguments ($pythonArgs + @("-m", "PyInstaller", "--version")) `
+      -FailureMessage "PyInstaller is required for the selected Python interpreter. Run: `"$pythonCommand`" $($pythonArgs -join ' ') -m pip install pyinstaller" `
+      -SuppressOutput
+  } catch {
+    throw $_
   }
 
-  & $pythonCommand @pythonArgs -m PyInstaller `
-    --noconfirm `
-    --clean `
-    --onefile `
-    --noconsole `
-    --name prism-backend `
-    --add-data "tools.json;." `
-    --hidden-import uvicorn.logging `
-    --hidden-import uvicorn.loops.auto `
-    --hidden-import uvicorn.protocols.http.auto `
-    --hidden-import uvicorn.protocols.websockets.auto `
-    --hidden-import uvicorn.lifespan.on `
-    server.py
+  Invoke-NativeCommand `
+    -FilePath $pythonCommand `
+    -Arguments ($pythonArgs + @(
+      "-m",
+      "PyInstaller",
+      "--noconfirm",
+      "--clean",
+      "--onefile",
+      "--noconsole",
+      "--name",
+      "prism-backend",
+      "--add-data",
+      "tools.json;.",
+      "--hidden-import",
+      "uvicorn.logging",
+      "--hidden-import",
+      "uvicorn.loops.auto",
+      "--hidden-import",
+      "uvicorn.protocols.http.auto",
+      "--hidden-import",
+      "uvicorn.protocols.websockets.auto",
+      "--hidden-import",
+      "uvicorn.lifespan.on",
+      "server.py"
+    )) `
+    -FailureMessage "PyInstaller build failed."
 
   Copy-Item -Force `
     (Join-Path $projectRoot "dist\prism-backend.exe") `
@@ -191,9 +286,15 @@ $originalContent = Get-Content $indexHtml -Raw -Encoding UTF8
 $stampedContent = $originalContent -replace '__BUILD__', $buildStamp
 Write-Utf8NoBom -Path $indexHtml -Content $stampedContent
 
-npm install
+Invoke-NativeCommand `
+  -FilePath "npm" `
+  -Arguments @("install") `
+  -FailureMessage "npm install failed."
 try {
-  npm run tauri:build
+  Invoke-NativeCommand `
+    -FilePath "npm" `
+    -Arguments @("run", "tauri:build") `
+    -FailureMessage "Tauri build failed."
 } finally {
   # 构建完成后恢复 index.html 中的占位符，避免污染源文件
   Write-Utf8NoBom -Path $indexHtml -Content $originalContent
