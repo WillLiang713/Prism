@@ -73,6 +73,9 @@ body {
   --text-muted: #888888;
   --text-dim: #555555;
   --text-on-accent: #ffffff;
+  --desktop-window-icon: rgba(228, 228, 228, 0.72);
+  --desktop-window-hover-bg: rgba(255, 255, 255, 0.08);
+  --desktop-window-focus-ring: rgba(255, 255, 255, 0.08);
 
   /* Shared panel text semantics */
   --panel-text-primary: var(--text);
@@ -197,6 +200,9 @@ body {
   --text-muted: #86868b;
   --text-dim: #b0b0b5;
   --text-on-accent: #ffffff;
+  --desktop-window-icon: rgba(29, 29, 31, 0.72);
+  --desktop-window-hover-bg: rgba(29, 29, 31, 0.08);
+  --desktop-window-focus-ring: rgba(29, 29, 31, 0.12);
 
   --accent: #424245;
   --accent-strong: #1d1d1f;
@@ -270,6 +276,9 @@ body {
     --text-muted: #86868b;
     --text-dim: #b0b0b5;
     --text-on-accent: #ffffff;
+    --desktop-window-icon: rgba(29, 29, 31, 0.72);
+    --desktop-window-hover-bg: rgba(29, 29, 31, 0.08);
+    --desktop-window-focus-ring: rgba(29, 29, 31, 0.12);
 
     --accent: #424245;
     --accent-strong: #1d1d1f;

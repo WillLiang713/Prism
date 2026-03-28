@@ -429,17 +429,21 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: rgba(228, 228, 228, 0.72);
+  color: var(--desktop-window-icon);
 }
 
 .is-desktop-runtime .desktop-window-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--desktop-window-hover-bg);
   color: var(--text);
 }
 
 .is-desktop-runtime .desktop-window-btn-close:hover {
   background: #c42b1c;
   color: #ffffff;
+}
+
+.is-desktop-runtime .desktop-window-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--desktop-window-focus-ring);
 }
 
 .is-desktop-runtime .container {
