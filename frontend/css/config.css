@@ -299,18 +299,20 @@
 
 .config-tab.is-active,
 .config-tab[aria-selected="true"] {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-accent);
+  background: var(--bg-active);
   color: var(--text);
   font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px var(--border-subtle);
 }
 
 .config-tab.is-active:hover,
 .config-tab[aria-selected="true"]:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--border-accent);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-active);
 }
 
 .config-tab:focus-visible {

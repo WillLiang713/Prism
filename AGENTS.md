@@ -111,6 +111,8 @@ Recent history uses concise, type-led messages such as `feat(frontend): ...`, `s
 - 与用户交互时默认使用中文回复。
 - Avoid heavy jargon; explain technical points in plain language without assuming deep prior knowledge.
 - 避免大量术语；解释时尽量通俗，不假设用户具备深厚技术背景。
+- When the user raises a question or request, first propose the most effective solution with the smallest necessary change, and wait for the user's approval before making edits or taking action.
+- 当用户提出问题或需求时，先优先给出改动最小但效果最好的方案，并在用户明确同意后再进行修改或执行操作。
 
 ## Difficult Bug Investigation
 复杂问题排查
