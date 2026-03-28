@@ -57,7 +57,7 @@
 .thinking-section.collapsed .thinking-content { display: none; }
 .thinking-section:not(.collapsed) .thinking-header-arrow { transform: rotate(180deg); }
 .thinking-section:not(.collapsed) .thinking-content {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid var(--border-strong);
   margin-left: 0;
   padding-left: 12px;
 }
@@ -92,7 +92,7 @@
 .thinking-content li { margin-bottom: 4px; }
 
 .thinking-content code {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-hover);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: var(--font-mono);
@@ -101,7 +101,7 @@
 }
 
 .thinking-content pre {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-active);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
@@ -121,7 +121,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--bg-subtle);
   margin-bottom: 10px;
 }
 
@@ -130,7 +130,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-hover);
   border-bottom: 1px solid var(--border);
 }
 
@@ -161,7 +161,7 @@
   height: 28px;
   padding: 4px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-subtle);
 }
 
 .thinking-content .code-block .code-preview-btn svg {
@@ -172,7 +172,7 @@
 .thinking-content .code-block .code-copy-btn {
   padding: 4px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-subtle);
   width: 28px;
   height: 28px;
   display: flex;
@@ -181,7 +181,7 @@
 }
 
 .thinking-content .code-block .code-preview-btn:hover,
-.thinking-content .code-block .code-copy-btn:hover { background: rgba(255, 255, 255, 0.05); }
+.thinking-content .code-block .code-copy-btn:hover { background: var(--bg-hover); }
 .thinking-content .code-block .code-preview-btn:disabled,
 .thinking-content .code-block .code-copy-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .thinking-content .code-block .code-copy-btn .icon { width: 16px; height: 16px; }
@@ -204,6 +204,6 @@
   padding: 8px 12px;
   text-align: left;
 }
-.thinking-content table th { background: rgba(255, 255, 255, 0.03); font-weight: 600; }
+.thinking-content table th { background: var(--bg-subtle); font-weight: 600; }
 .thinking-content hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .thinking-content img { max-width: 100%; height: auto; }

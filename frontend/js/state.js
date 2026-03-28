@@ -3,6 +3,7 @@ export const STORAGE_KEYS = {
   topics: "aiPkTopicsV1",
   activeTopicId: "aiPkActiveTopicId",
   isSidebarCollapsed: "aiPkIsSidebarCollapsed",
+  theme: "aiPkTheme",
 };
 
 export const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
@@ -197,6 +198,7 @@ export const state = {
   },
   autoScroll: true, // 是否自动跟随滚动
   isSidebarCollapsed: false,
+  theme: localStorage.getItem(STORAGE_KEYS.theme) || "system", // 'light', 'dark', 'system'
   services: [],
   activeServiceId: null,
   serviceManagerSelectedId: null,
@@ -214,6 +216,7 @@ export const elements = {
   configContent: document.getElementById("configContent"),
   modelStatusPill: document.getElementById("modelStatusPill"),
   webStatusPill: document.getElementById("webStatusPill"),
+  themeToggleBtn: document.getElementById("themeToggleBtn"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
   shortcutHelpList: document.getElementById("shortcutHelpList"),
@@ -288,6 +291,7 @@ export const elements = {
   createServiceBtn: document.getElementById("createServiceBtn"),
   duplicateServiceBtn: document.getElementById("duplicateServiceBtn"),
   deleteServiceBtn: document.getElementById("deleteServiceBtn"),
+  setActiveServiceBtn: document.getElementById("setActiveServiceBtn"),
   testServiceConnectionBtn: document.getElementById("testServiceConnectionBtn"),
   provider: document.getElementById("provider"),
   providerPickerInput: document.getElementById("providerPickerInput"),

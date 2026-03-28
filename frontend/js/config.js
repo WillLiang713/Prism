@@ -41,7 +41,7 @@ import { syncDesktopPreferences } from './desktop.js';
 const CONFIG_STORE_VERSION = 2;
 const LEGACY_DEFAULT_SERVICE_NAME = "默认服务";
 const UNNAMED_SERVICE_LABEL = "未命名服务";
-const DEFAULT_REASONING_EFFORT = "medium";
+const DEFAULT_REASONING_EFFORT = "high";
 const CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS = 3000;
 const DEFAULT_CLOSE_TO_TRAY_ON_CLOSE = true;
 
@@ -437,7 +437,7 @@ function setReasoningEffortValue(value) {
   }
   if (activeBtn) {
     elements.reasoningEffortValue.textContent =
-      activeBtn.dataset.label || "中";
+      activeBtn.dataset.label || "";
   }
   elements.reasoningEffortSelector?.classList.toggle(
     "is-off",
@@ -945,6 +945,23 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
   }
 }
 
+function renderSetActiveServiceButton(service) {
+  if (!elements.setActiveServiceBtn) return;
+  const hasService = !!service;
+  const isActive = hasService && service.id === state.activeServiceId;
+  elements.setActiveServiceBtn.textContent = isActive ? "当前使用" : "设为当前";
+  elements.setActiveServiceBtn.disabled = !hasService || isActive;
+  elements.setActiveServiceBtn.classList.toggle("is-active", isActive);
+  elements.setActiveServiceBtn.setAttribute(
+    "aria-label",
+    !hasService
+      ? "当前没有可设为默认的服务"
+      : isActive
+        ? "当前使用的服务"
+        : `将 ${getServiceDisplayName(service)} 设为当前服务`
+  );
+}
+
 function syncServiceDetailPanel(options = {}) {
   const { preserveConnectionForm = false } = options;
   const service = getManagedService();
@@ -963,6 +980,7 @@ function syncServiceDetailPanel(options = {}) {
     applyEmptyServiceStateToForm();
   }
   renderServiceSummary(service);
+  renderSetActiveServiceButton(service);
   renderServiceConnectivityState(service?.connectivity, !!service);
   if (elements.duplicateServiceBtn) {
     elements.duplicateServiceBtn.disabled = !service;
@@ -993,14 +1011,22 @@ function renderServiceList() {
     card.dataset.serviceId = service.id;
     card.dataset.provider = service.model?.provider || "";
 
-    const item = document.createElement("button");
-    item.type = "button";
+    const item = document.createElement("div");
     item.className = "service-list-item";
-    item.addEventListener("click", () => {
+    item.role = "button";
+    item.tabIndex = 0;
+    item.addEventListener("click", (event) => {
       if (state.serviceManagerSelectedId === service.id) {
         return;
       }
       void handleManagedServiceSelectionChange(service.id);
+    });
+
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        item.click();
+      }
     });
 
     const head = document.createElement("div");
@@ -1029,39 +1055,6 @@ function renderServiceList() {
       item.appendChild(subMeta);
     }
     card.appendChild(item);
-
-    if (isActive || isSelected) {
-      const cornerBadge = document.createElement("button");
-      cornerBadge.type = "button";
-      cornerBadge.className = `service-current-corner${
-        isActive ? " is-active" : " is-action"
-      }`;
-      cornerBadge.setAttribute(
-        "aria-label",
-        isActive ? "当前使用" : `将 ${getServiceDisplayName(service)} 设为当前服务`
-      );
-      if (isActive) {
-        cornerBadge.tabIndex = -1;
-        cornerBadge.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        });
-      } else {
-        cornerBadge.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void handleCurrentServiceChange(service.id, {
-            syncManagerSelection: false,
-          });
-        });
-      }
-
-      const cornerLabel = document.createElement("span");
-      cornerLabel.className = "service-current-corner-label";
-      cornerLabel.textContent = isActive ? "当前使用" : "设为当前";
-      cornerBadge.appendChild(cornerLabel);
-      card.appendChild(cornerBadge);
-    }
 
     fragment.appendChild(card);
   });
@@ -1711,6 +1704,16 @@ export async function handleCurrentServiceChange(nextServiceId, options = {}) {
     return false;
   }
 
+  // 如果目标服务就是当前正在管理的（选中）的服务，
+  // 并且它是新建的草稿（或者没有任何表单修改），则直接激活，跳过“未保存”确认弹窗。
+  const isCurrentlyManaging = nextId === state.serviceManagerSelectedId;
+  if (isCurrentlyManaging && !hasUnsavedManagedServiceChanges()) {
+    return setActiveServiceLocally(nextId, {
+      syncManagerSelection,
+      refreshModelList: false,
+    });
+  }
+
   if (!hasUnsavedManagedServiceChanges()) {
     return setActiveServiceLocally(nextId, {
       syncManagerSelection,
@@ -1757,13 +1760,12 @@ export async function handleCurrentServiceChange(nextServiceId, options = {}) {
 export async function createService() {
   const service = createDraftService();
   state.services = [service, ...state.services];
-  state.serviceManagerSelectedId = service.id;
+  // 取消自动选中，让用户手动点击卡片进行编辑
   persistState({
     services: state.services,
     activeServiceId: state.activeServiceId || service.id,
   });
   renderServiceManagementUi();
-  focusServiceNameInput();
 }
 
 export async function duplicateService() {

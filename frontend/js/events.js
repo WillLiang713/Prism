@@ -13,6 +13,7 @@ import {
   createService,
   duplicateService,
   deleteService,
+  handleCurrentServiceChange,
   testSelectedServiceConnection,
   autoSaveManagedServiceDraft,
   normalizeApiUrlInputValue,
@@ -28,7 +29,7 @@ import {
   clearBodyDropdownPosition,
   positionBodyDropdown,
 } from './dropdown.js';
-import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide } from './ui.js';
+import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide, toggleTheme } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning, requestDeleteTopic, closeTopicActionMenu } from './chat.js';
 import { addImages } from './images.js';
@@ -52,6 +53,17 @@ function isWithinTopicActionUi(target) {
   return !!element.closest(
     ".topic-action-menu, .topic-action-dropdown.is-floating-topic-menu"
   );
+}
+
+function bindStableDropdownToggle(button, onToggle) {
+  if (!(button instanceof HTMLElement) || typeof onToggle !== "function") return;
+  button.addEventListener(PRESS_START_EVENT, (e) => {
+    e.preventDefault();
+  });
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    onToggle();
+  });
 }
 
 function isReasoningDropdownOpen() {
@@ -224,6 +236,7 @@ export function bindEvents() {
     }
   });
 
+  elements.themeToggleBtn?.addEventListener("click", toggleTheme);
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
   elements.createServiceBtn?.addEventListener("click", () => {
@@ -234,6 +247,10 @@ export function bindEvents() {
   });
   elements.deleteServiceBtn?.addEventListener("click", () => {
     void deleteService();
+  });
+  elements.setActiveServiceBtn?.addEventListener("click", () => {
+    if (!state.serviceManagerSelectedId) return;
+    void handleCurrentServiceChange(state.serviceManagerSelectedId);
   });
   elements.testServiceConnectionBtn?.addEventListener("click", () => {
     void testSelectedServiceConnection();
@@ -408,10 +425,10 @@ export function bindEvents() {
     }, 0);
   });
 
-  elements.modelDropdownBtn?.addEventListener("click", () =>
+  bindStableDropdownToggle(elements.modelDropdownBtn, () =>
     toggleModelDropdown("main")
   );
-  elements.headerModelTrigger?.addEventListener("click", () =>
+  bindStableDropdownToggle(elements.headerModelTrigger, () =>
     toggleHeaderModelDropdown()
   );
   elements.titleGenerationModel?.addEventListener("input", () => {
@@ -431,7 +448,7 @@ export function bindEvents() {
     }, 0);
   });
 
-  elements.modelDropdownBtnTitle?.addEventListener("click", () =>
+  bindStableDropdownToggle(elements.modelDropdownBtnTitle, () =>
     toggleModelDropdown("Title")
   );
 

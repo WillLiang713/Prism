@@ -1,4 +1,4 @@
-import { state, elements, estimateTokensFromText } from './state.js';
+import { state, elements, estimateTokensFromText, STORAGE_KEYS } from './state.js';
 import { renderMarkdownToElement } from './markdown.js';
 
 const SCROLLBAR_INTERACTIVE_SELECTOR = [
@@ -222,3 +222,21 @@ export function applyStatus(statusEl, status) {
     }
   }
 }
+
+export function updateTheme(theme) {
+  state.theme = theme;
+  localStorage.setItem(STORAGE_KEYS.theme, theme);
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
+export function toggleTheme() {
+  const themes = ['light', 'dark', 'system'];
+  const currentIndex = themes.indexOf(state.theme);
+  const nextIndex = (currentIndex + 1) % themes.length;
+  updateTheme(themes[nextIndex]);
+}
+
+export function initTheme() {
+  updateTheme(state.theme);
+}
+

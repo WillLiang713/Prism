@@ -61,6 +61,8 @@ Keep HTTP wiring inside `routes/`, model/provider orchestration inside `ai/`, to
 - 函数应职责单一，避免把路由绑定、Provider 适配与业务/工具逻辑混写。
 - Follow existing formatting style in touched files; do not introduce unrelated reformatting.
 - 修改代码时遵循现有格式，不做无关的大范围格式化。
+- Do not add, delete, or modify existing styles without the user's explicit permission.
+- 未经用户明确允许，不得随意新增、删除或修改已经写好的样式。
 
 ## Testing Guidelines
 There is currently no committed, active automated test source in `tests/`; the directory is reserved for pytest-style regression tests.

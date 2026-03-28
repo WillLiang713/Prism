@@ -189,6 +189,28 @@
                   </div>
                 </div>
                 <div class="chat-actions">
+                  <button class="btn btn-secondary btn-settings no-drag theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                      <circle cx="12" cy="12" r="4"></circle>
+                      <path d="M12 2v2"></path>
+                      <path d="M12 20v2"></path>
+                      <path d="m4.93 4.93 1.41 1.41"></path>
+                      <path d="m17.66 17.66 1.41 1.41"></path>
+                      <path d="M2 12h2"></path>
+                      <path d="M20 12h2"></path>
+                      <path d="m6.34 17.66-1.41 1.41"></path>
+                      <path d="m19.07 4.93-1.41 1.41"></path>
+                    </svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                    </svg>
+                    <svg class="icon-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                      <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <span class="sr-only">切换主题</span>
+                  </button>
                   <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" aria-label="设置">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <circle cx="12" cy="12" r="3"></circle>
@@ -342,15 +364,15 @@
                           <div class="reasoning-effort-selector" id="reasoningEffortSelector">
                             <span class="reasoning-effort-current">
                               <span class="reasoning-effort-label">思考</span>
-                              <span class="reasoning-effort-value" id="reasoningEffortValue">中</span>
+                              <span class="reasoning-effort-value" id="reasoningEffortValue">高</span>
                               <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 5 6 8 9 5"></polyline></svg>
                             </span>
                             <div class="reasoning-effort-dropdown" id="reasoningEffortDropdown">
                               <button type="button" data-value="none" data-label="关">关</button>
                               <button type="button" data-value="minimal" data-label="微">微</button>
                               <button type="button" data-value="low" data-label="低">低</button>
-                              <button type="button" data-value="medium" data-label="中" class="active">中</button>
-                              <button type="button" data-value="high" data-label="高">高</button>
+                              <button type="button" data-value="medium" data-label="中">中</button>
+                              <button type="button" data-value="high" data-label="高" class="active">高</button>
                               <button type="button" data-value="xhigh" data-label="极高">极高</button>
                             </div>
                           </div>
@@ -389,7 +411,7 @@
                     <div class="html-preview-stage">
                       <button
                         type="button"
-                        class="html-preview-close-btn html-preview-close-btn-floating"
+                        class="floating-action-btn html-preview-close-btn html-preview-close-btn-floating"
                         id="htmlPreviewCloseBtn"
                         aria-label="关闭 HTML 预览"
                       >
@@ -435,7 +457,7 @@
             </div>
             <button
               type="button"
-              class="btn btn-secondary btn-small config-close-corner-btn"
+              class="btn btn-secondary btn-small floating-action-btn config-close-corner-btn"
               id="closeConfigBtn"
               aria-label="关闭配置中心"
             >
@@ -544,6 +566,13 @@
                         测试连接
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-small service-detail-current-btn"
+                      id="setActiveServiceBtn"
+                    >
+                      设为当前
+                    </button>
                   </div>
                   <div class="form-group">
                     <label for="serviceNameInput">服务名称</label>
@@ -701,7 +730,7 @@
               <div class="web-config-layout">
                 <div class="web-config-main">
                   <div class="form-group" id="webSearchProviderGroup">
-                    <label for="webSearchProviderPickerInput">联网服务</label>
+                    <label for="webSearchProviderPickerInput">外部联网服务</label>
                     <select id="webSearchProvider" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="tavily">Tavily</option>
                       <option value="exa">Exa</option>
@@ -711,14 +740,14 @@
                         <input
                           type="text"
                           id="webSearchProviderPickerInput"
-                          placeholder="选择联网服务"
+                          placeholder="选择外部联网服务"
                           readonly
                         />
                         <button
                           type="button"
                           class="model-picker-btn"
                           id="webSearchProviderPickerBtn"
-                          aria-label="打开联网服务列表"
+                          aria-label="打开外部联网服务列表"
                           aria-expanded="false"
                         ></button>
                       </div>
@@ -852,7 +881,6 @@
                     <tr>
                       <th scope="col">操作</th>
                       <th scope="col">按键</th>
-                      <th scope="col">说明</th>
                     </tr>
                   </thead>
                   <tbody id="shortcutHelpList"></tbody>
@@ -902,7 +930,7 @@
         <div class="image-preview-stage">
           <button
             type="button"
-            class="image-preview-close-btn"
+            class="floating-action-btn image-preview-close-btn"
             id="imagePreviewCloseBtn"
             aria-label="关闭图片预览"
           >
@@ -913,7 +941,7 @@
           </button>
           <button
             type="button"
-            class="image-preview-save-btn"
+            class="floating-action-btn image-preview-save-btn"
             id="imagePreviewSaveBtn"
             aria-label="保存图片"
             title="保存图片"

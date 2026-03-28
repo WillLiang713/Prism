@@ -74,7 +74,7 @@
 }
 
 .chat-messages.scrollbar-active {
-  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .chat-messages::-webkit-scrollbar { width: 6px; }
@@ -85,9 +85,9 @@
   transition: background 0.3s ease;
 }
 .chat-messages.scrollbar-active::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--scrollbar-thumb);
 }
-.chat-messages::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
+.chat-messages::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 /* ---------- Messages ---------- */
 .turn {
@@ -148,7 +148,7 @@
 
 .user-bubble {
   max-width: 100%;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--bg-active);
   color: var(--text);
   padding: 10px 14px;
   border-radius: 16px;
@@ -195,7 +195,7 @@
 }
 
 .user-image-trigger:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.75);
+  outline: 2px solid var(--border-accent);
   outline-offset: 2px;
 }
 
@@ -226,7 +226,7 @@
 }
 
 .message-copy-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-hover);
   border-color: var(--border-accent);
   color: var(--text);
 }
@@ -326,19 +326,20 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: rgba(20, 20, 20, 0.96);
+  background: var(--bg-elev);
   z-index: -1;
   transition: background 0.24s ease;
+  opacity: 0.96;
 }
 
 .user-edit-panel:hover {
   border-color: var(--editable-panel-border-hover);
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--shadow-md);
 }
 
 .user-edit-panel:focus-within {
   border-color: var(--editable-panel-border-focus);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .user-edit-panel:focus-within::before {
@@ -346,7 +347,7 @@
 }
 
 .user-edit-panel:focus-within::after {
-  background: rgba(20, 20, 20, 0.96);
+  background: var(--bg-elev);
 }
 
 .user-edit-images {
@@ -375,7 +376,7 @@
 
 .user-edit-images:hover::-webkit-scrollbar-thumb,
 .user-edit-images:focus-within::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-strong);
 }
 
 .user-edit-image-item {
@@ -385,8 +386,8 @@
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: var(--bg-subtle);
+  box-shadow: var(--shadow-inset);
 }
 
 .user-edit-image {
@@ -421,23 +422,6 @@
   top: 14px;
   right: 14px;
   z-index: 2;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(15, 15, 18, 0.42);
-  color: rgba(248, 248, 249, 0.92);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex: 0 0 auto;
-  pointer-events: auto;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
-  transition: background 0.16s ease, border-color 0.16s ease;
 }
 
 .image-preview-save-btn {
@@ -445,47 +429,6 @@
   right: 14px;
   bottom: 14px;
   z-index: 2;
-}
-
-.image-preview-close-btn,
-.image-preview-save-btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(15, 15, 18, 0.42);
-  color: rgba(248, 248, 249, 0.92);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex: 0 0 auto;
-  pointer-events: auto;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
-  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
-}
-
-.image-preview-close-btn:hover,
-.image-preview-save-btn:hover {
-  background: rgba(20, 20, 24, 0.62);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-.image-preview-close-btn:focus-visible,
-.image-preview-save-btn:focus-visible {
-  outline: none;
-  box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.22),
-    0 0 0 2px rgba(255, 255, 255, 0.12);
-}
-
-.image-preview-close-btn svg,
-.image-preview-save-btn svg {
-  width: 14px;
-  height: 14px;
 }
 
 .image-preview-save-btn:disabled {
@@ -550,7 +493,7 @@
 }
 
 .user-edit-input.scrollbar-active {
-  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .user-edit-input:focus {
@@ -573,15 +516,15 @@
 }
 
 .user-edit-input.scrollbar-active::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--scrollbar-thumb);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.20),
+    0 0 0 1px var(--scrollbar-thumb-hover),
     0 0 10px rgba(160, 200, 255, 0.35);
 }
 
 .user-edit-input:hover::-webkit-scrollbar-thumb,
 .user-edit-input:focus::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--scrollbar-thumb);
 }
 
 .user-edit-input::placeholder {
@@ -620,7 +563,7 @@
   padding: 0 14px;
   border-radius: 10px;
   border: 1px solid var(--border-strong);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-subtle);
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
@@ -630,7 +573,7 @@
 }
 
 .user-edit-btn.secondary {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-subtle);
   color: var(--text-muted);
   border-color: var(--border-strong);
 }
@@ -638,7 +581,7 @@
 .user-edit-btn.secondary:hover {
   color: var(--text);
   border-color: var(--border-accent);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-hover);
 }
 
 .user-edit-btn.primary {
@@ -658,7 +601,7 @@
 }
 
 .user-edit-btn.secondary:active:not(:disabled) {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-subtle);
 }
 
 .user-edit-btn:disabled {

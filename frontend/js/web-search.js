@@ -1193,30 +1193,25 @@ export function updateWebSearchProviderUi() {
     elements.webSearchProvider?.value
   );
   const isExa = externalProvider === "exa";
-  const isAnthropicSearch = toolMode === "anthropic_search";
-  const isGeminiSearch = toolMode === "gemini_search";
-  const usesExternalSearch = toolMode === "tavily" || toolMode === "exa";
 
   renderWebSearchToolSelector();
   if (elements.webSearchProviderGroup) {
     elements.webSearchProviderGroup.style.display = "";
   }
   if (elements.webSearchMaxResultsGroup) {
-    elements.webSearchMaxResultsGroup.style.display = usesExternalSearch ? "" : "none";
+    elements.webSearchMaxResultsGroup.style.display = "";
   }
   if (elements.tavilyApiKeyGroup) {
-    elements.tavilyApiKeyGroup.style.display =
-      usesExternalSearch && !isExa ? "" : "none";
+    elements.tavilyApiKeyGroup.style.display = !isExa ? "" : "none";
   }
   if (elements.tavilySearchDepthGroup) {
-    elements.tavilySearchDepthGroup.style.display =
-      usesExternalSearch && !isExa ? "" : "none";
+    elements.tavilySearchDepthGroup.style.display = !isExa ? "" : "none";
   }
   if (elements.exaApiKeyGroup) {
-    elements.exaApiKeyGroup.style.display = usesExternalSearch && isExa ? "" : "none";
+    elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
   }
   if (elements.exaSearchTypeGroup) {
-    elements.exaSearchTypeGroup.style.display = usesExternalSearch && isExa ? "" : "none";
+    elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
   }
   updateConfigStatusStrip();
 }

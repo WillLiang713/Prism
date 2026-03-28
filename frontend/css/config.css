@@ -2,7 +2,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--modal-overlay);
   display: none;
   align-items: center;
   justify-content: center;
@@ -20,6 +20,12 @@
   width: min(720px, 96vw);
   max-height: 92vh;
   overflow: hidden;
+  position: relative;
+  isolation: isolate;
+  background: var(--modal-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--modal-border);
+  box-shadow: var(--modal-shadow);
 }
 
 .modal-content .config-panel {
@@ -39,15 +45,15 @@
 }
 
 .modal-content .config-content.scrollbar-active {
-  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 .modal-content .config-content::-webkit-scrollbar { width: 6px; }
 .modal-content .config-content::-webkit-scrollbar-track { background: transparent; }
 .modal-content .config-content::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 .modal-content .config-content.scrollbar-active::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--scrollbar-thumb);
 }
-.modal-content .config-content::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
+.modal-content .config-content::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 #configModal {
   padding: var(--app-shell-offset) var(--app-shell-side-padding);
@@ -58,11 +64,15 @@
   max-width: var(--app-shell-max-width);
   height: var(--app-shell-height);
   max-height: var(--app-shell-height);
+  border: 1px solid var(--modal-border);
+  box-shadow: var(--modal-shadow);
 }
 
 #configModal .config-panel {
   height: 100%;
   max-height: 100%;
+  background: var(--modal-surface-solid);
+  border: none;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-md);
 }
@@ -72,19 +82,21 @@
   align-items: center;
   justify-content: flex-start;
   padding: 22px 28px 14px;
-  background: var(--surface-solid);
+  background: var(--modal-surface-solid);
+  border-bottom: none;
 }
 
 #configModal .config-tabs {
   padding: 14px 28px 12px;
-  background: var(--surface-solid);
+  background: var(--modal-surface-solid);
+  border-bottom: none;
 }
 
 #configModal .config-content {
   flex: 1 1 auto;
   min-height: 0;
   padding: 20px 28px 18px;
-  background: var(--surface-solid);
+  background: var(--modal-surface-solid);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   -ms-overflow-style: auto;
@@ -101,9 +113,9 @@
 }
 
 #configModal .config-content.scrollbar-active::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--scrollbar-thumb);
 }
-#configModal .config-content::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
+#configModal .config-content::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 #configModal .config-tab-panel {
   width: min(1400px, 100%);
@@ -373,9 +385,9 @@
   min-width: 0;
   min-height: 0;
   height: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-subtle);
   padding: 16px;
   transition: border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
 }
@@ -389,6 +401,7 @@
 }
 
 #configModal .service-toolbar .btn,
+#configModal .service-detail-topbar .btn,
 #configModal .service-connectivity-inline .btn,
 #configModal .config-footer-actions .btn {
   appearance: none;
@@ -406,6 +419,7 @@
 }
 
 #configModal .service-toolbar .btn:hover,
+#configModal .service-detail-topbar .btn:hover,
 #configModal .service-connectivity-inline .btn:hover,
 #configModal .config-footer-actions .btn:hover {
   border-color: var(--border);
@@ -414,6 +428,7 @@
 }
 
 #configModal .service-toolbar .btn:focus-visible,
+#configModal .service-detail-topbar .btn:focus-visible,
 #configModal .service-connectivity-inline .btn:focus-visible,
 #configModal .config-footer-actions .btn:focus-visible {
   outline: none;
@@ -421,6 +436,7 @@
 }
 
 #configModal .service-toolbar .btn:disabled,
+#configModal .service-detail-topbar .btn:disabled,
 #configModal .service-connectivity-inline .btn:disabled,
 #configModal .config-footer-actions .btn:disabled {
   border-color: var(--border-strong);
@@ -451,7 +467,7 @@
 }
 
 #configModal .service-toolbar .btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-hover);
   border-color: var(--border-accent);
 }
 
@@ -460,28 +476,28 @@
 }
 
 #configModal .config-footer-actions #saveConfig {
-  border-color: transparent;
-  background: #e0e0e0;
-  color: #000;
+  border: 1px solid var(--border-strong);
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
 }
 
 #configModal .config-footer-actions #saveConfig:hover,
 #configModal .config-footer-actions #saveConfig:focus,
 #configModal .config-footer-actions #saveConfig:focus-visible {
-  border-color: transparent;
-  background: #e0e0e0;
-  color: #000;
+  border-color: var(--border-accent);
+  background: var(--text);
+  color: var(--text-on-accent);
 }
 
 #configModal .config-footer-actions #saveConfig:active {
-  border-color: transparent;
-  background: #d6d6d6;
-  color: #000;
+  border-color: var(--border-accent);
+  background: var(--text);
+  color: var(--text-on-accent);
 }
 
 #configModal .config-footer-actions #saveConfig:disabled {
-  border-color: transparent;
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border);
+  background: var(--bg-subtle);
   color: var(--text-dim);
   opacity: 1;
 }
@@ -529,44 +545,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  min-height: 24px;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
-}
-
-.service-connectivity-mini-card:has(#testServiceConnectionBtn[data-status="testing"]) {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.service-connectivity-mini-card:has(#testServiceConnectionBtn[data-status="success"]) {
-  border-color: rgba(78, 217, 193, 0.18);
-  background: rgba(78, 217, 193, 0.06);
-  box-shadow: inset 0 0 14px rgba(78, 217, 193, 0.04);
-}
-
-.service-connectivity-mini-card:has(#testServiceConnectionBtn[data-status="error"]) {
-  border-color: rgba(239, 68, 68, 0.16);
-  background: rgba(239, 68, 68, 0.05);
 }
 
 .service-list-card {
   position: relative;
+  isolation: isolate;
 }
 
 .service-list-item {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.015);
-  padding: 14px 128px 12px 16px;
+  background: var(--bg-subtle);
+  padding: 14px 16px 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -577,9 +568,9 @@
 }
 
 .service-list-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: var(--bg-hover);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
   color: var(--text);
 }
 
@@ -588,30 +579,28 @@
 }
 
 .service-list-item:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.2);
+  outline: 2px solid var(--border-accent);
   outline-offset: 2px;
 }
 
 .service-list-card.is-selected .service-list-item {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.05));
-  border-color: rgba(255, 255, 255, 0.14);
+  background: var(--bg-active);
+  border-color: var(--border);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.025),
-    0 8px 18px rgba(0, 0, 0, 0.12);
+    var(--shadow-inset),
+    var(--shadow-xs);
   color: var(--text);
 }
 
 .service-list-card.is-active-service:not(.is-selected) .service-list-item {
-  background: rgba(255, 255, 255, 0.026);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--bg-subtle);
+  border-color: var(--border);
   color: var(--text);
 }
 
 .service-list-card.is-active-service.is-selected .service-list-item {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.045));
-  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--bg-active);
+  border-color: var(--border);
 }
 
 .service-list-head {
@@ -637,8 +626,8 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  background: var(--bg-active);
   color: var(--text);
   font-size: 11px;
   font-weight: 600;
@@ -686,52 +675,25 @@
   opacity: 1;
 }
 
-.service-current-corner {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-dim);
-  cursor: pointer;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.service-detail-current-btn {
+  min-width: 88px;
+  min-height: 32px;
+  padding: 0 14px;
 }
 
-.service-current-corner-label {
-  max-width: 100%;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.4px;
-  white-space: nowrap;
-}
-
-.service-current-corner.is-action:hover,
-.service-current-corner.is-action:focus-visible {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-.service-current-corner.is-action:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.24);
-  outline-offset: 2px;
-}
-
-.service-current-corner.is-active {
+#configModal .service-detail-topbar .service-detail-current-btn.is-active {
   border-color: transparent;
-  background: #ffffff;
-  color: #000000;
+  background: var(--accent-strong);
+  color: var(--bg);
   cursor: default;
-  font-weight: 700;
-  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.15);
+  opacity: 1;
+}
+
+#configModal .service-detail-topbar .service-detail-current-btn.is-active:disabled {
+  border-color: transparent;
+  background: var(--accent-strong);
+  color: var(--bg);
+  opacity: 1;
 }
 
 /* ---------- Connectivity ---------- */
@@ -771,11 +733,11 @@
 
 /* --- Card state: testing --- */
 .service-detail-panel:has(#testServiceConnectionBtn[data-status="success"]) {
-  border-color: rgba(78, 217, 193, 0.25);
-  background: rgba(78, 217, 193, 0.035);
+  border-color: var(--success-tint-border);
+  background: var(--success-tint-surface);
   box-shadow:
-    inset 0 0 26px rgba(78, 217, 193, 0.04),
-    0 0 0 1px rgba(78, 217, 193, 0.08);
+    inset 0 0 26px var(--success-tint-inset),
+    0 0 0 1px var(--success-tint-shadow);
 }
 
 .service-connectivity-inline {
@@ -788,52 +750,81 @@
 }
 
 #configModal .service-connectivity-mini-card .btn {
-  min-height: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--text-muted);
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
-  transition: color 0.2s ease, opacity 0.2s ease;
-  opacity: 0.82;
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+  opacity: 1;
+  background-image: none;
+  background-repeat: no-repeat;
+  -webkit-text-fill-color: currentColor;
+  overflow: visible;
+  box-shadow: none;
 }
 
 #configModal .service-connectivity-mini-card .btn:hover {
-  background: transparent;
-  border-color: transparent;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border);
+  color: var(--text);
   opacity: 1;
 }
 
 #configModal .service-connectivity-mini-card .btn:disabled {
-  background: transparent;
-  border-color: transparent;
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
   color: var(--text-dim);
 }
 
 #configModal .service-connectivity-mini-card .btn[data-status="testing"] {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.24) 0%,
-    var(--accent-strong) 50%,
-    rgba(255, 255, 255, 0.24) 100%
-  );
-  background-size: 200% 100%;
+  border-color: var(--border-accent);
+  background: var(--bg-hover);
+  color: var(--text);
+  background-image: var(--connectivity-text-shimmer);
+  background-size: 220% 100%;
+  background-position: 200% 0;
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 3.5s linear infinite;
+  animation: shimmer 2.2s linear infinite;
+}
+
+#configModal .service-connectivity-mini-card .btn[data-status="testing"]::before {
+  content: none;
 }
 
 #configModal .service-connectivity-mini-card .btn[data-status="success"] {
+  border-color: var(--success-tint-border);
+  background: var(--success-tint-strong-surface);
   color: #8fd6a8;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
+  box-shadow: inset 0 0 14px var(--success-tint-inset);
 }
 
 #configModal .service-connectivity-mini-card .btn[data-status="error"] {
+  border-color: var(--danger-border);
+  background: var(--danger-surface);
   color: #f3b2b2;
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
 }
 
 /* --- Badge (status indicator) --- */
@@ -1116,7 +1107,7 @@
 }
 
 .shortcut-help-inline-body .shortcut-help-table th {
-  background: var(--surface-solid);
+  background: transparent;
 }
 
 .toggle-btn {
@@ -1644,16 +1635,20 @@
 }
 
 .model-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 .model-dropdown-item.is-active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--bg-active);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-weight: 600;
 }
 
 .model-dropdown-item.is-active:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--bg-active);
+  color: var(--text);
 }
 
 .model-dropdown-item:disabled,
@@ -1706,7 +1701,8 @@
 
 #configModal .config-footer {
   padding: 14px 28px;
-  background: var(--surface-solid);
+  background: var(--modal-surface-solid);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .config-footer-hint {

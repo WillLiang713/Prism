@@ -88,20 +88,7 @@ async function savePreviewImage() {
   }
 
   try {
-    const { blob, file, fileName } = await resolvePreviewImageFile(imageSrc);
-
-    if (
-      typeof navigator !== "undefined" &&
-      typeof navigator.share === "function" &&
-      typeof navigator.canShare === "function" &&
-      navigator.canShare({ files: [file] })
-    ) {
-      await navigator.share({
-        files: [file],
-        title: fileName,
-      });
-      return;
-    }
+    const { blob, fileName } = await resolvePreviewImageFile(imageSrc);
 
     triggerImageDownload(blob, fileName);
   } catch (error) {
@@ -205,13 +192,8 @@ export function renderShortcutHelpList() {
     const keysTd = document.createElement("td");
     keysTd.appendChild(createShortcutKeysElement(item.keys));
 
-    const noteTd = document.createElement("td");
-    noteTd.className = "shortcut-note";
-    noteTd.textContent = item.note || "";
-
     tr.appendChild(actionTd);
     tr.appendChild(keysTd);
-    tr.appendChild(noteTd);
     elements.shortcutHelpList.appendChild(tr);
   });
 }

@@ -45,19 +45,34 @@ body {
   --surface-muted: rgba(20, 20, 20, 0.7);
   --glass: rgba(20, 20, 20, 0.55);
   --glass-strong: rgba(20, 20, 20, 0.78);
+  --modal-overlay: rgba(6, 8, 12, 0.62);
+  --modal-surface: var(--bg-chat);
+  --modal-surface-solid: var(--bg-chat);
 
   /* Borders – minimal */
   --border: rgba(255, 255, 255, 0.05);
   --border-strong: rgba(255, 255, 255, 0.09);
   --border-accent: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.03);
+  --modal-border: rgba(255, 255, 255, 0.045);
+  --modal-outline: rgba(255, 255, 255, 0.016);
   --editable-panel-border: var(--border-strong);
   --editable-panel-border-hover: rgba(255, 255, 255, 0.12);
   --editable-panel-border-focus: var(--border-accent);
+
+  /* States & Effects */
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.08);
+  --bg-subtle: rgba(255, 255, 255, 0.03);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.20);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 
   /* Text */
   --text: #e4e4e4;
   --text-muted: #888888;
   --text-dim: #555555;
+  --text-on-accent: #ffffff;
 
   /* Shared panel text semantics */
   --panel-text-primary: var(--text);
@@ -85,12 +100,32 @@ body {
   --warm: #f97316;
   --warm-strong: #ea580c;
   --danger: #ef4444;
+  --danger-surface: rgba(239, 68, 68, 0.2);
+  --danger-border: rgba(239, 68, 68, 0.28);
+  --danger-text: #ffd3d3;
+  --success-tint-border: rgba(78, 217, 193, 0.25);
+  --success-tint-surface: rgba(78, 217, 193, 0.035);
+  --success-tint-strong-surface: rgba(78, 217, 193, 0.1);
+  --success-tint-shadow: rgba(78, 217, 193, 0.08);
+  --success-tint-inset: rgba(78, 217, 193, 0.04);
 
   /* Shadows */
   --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --modal-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
   --shadow-glow: none;
+  --shimmer-gradient: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  --connectivity-text-shimmer: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.98) 48%,
+    var(--accent-strong) 50%,
+    rgba(255, 255, 255, 0.98) 52%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
 
   /* Radius */
   --radius-xl: 20px;
@@ -124,6 +159,240 @@ body {
   --message-label-line-height: 1.25;
   --message-label-letter-spacing: 0;
   --message-label-color: var(--panel-text-secondary);
+}
+
+/* ---------- Theme Overrides ---------- */
+:root[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg-elev: #ffffff;
+  --bg-chat: #ffffff;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --surface-muted: rgba(255, 255, 255, 0.7);
+  --glass: rgba(255, 255, 255, 0.7);
+  --glass-strong: rgba(255, 255, 255, 0.88);
+  --modal-overlay: rgba(245, 247, 250, 0.82);
+  --modal-surface: var(--bg-chat);
+  --modal-surface-solid: var(--bg-chat);
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.12);
+  --border-accent: rgba(0, 0, 0, 0.18);
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --modal-border: rgba(15, 23, 42, 0.05);
+  --modal-outline: rgba(15, 23, 42, 0.014);
+  --editable-panel-border: var(--border-strong);
+  --editable-panel-border-hover: rgba(0, 0, 0, 0.12);
+  --editable-panel-border-focus: var(--border-accent);
+
+  /* States & Effects */
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-active: rgba(0, 0, 0, 0.08);
+  --bg-subtle: rgba(0, 0, 0, 0.025);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.20);
+  --shadow-inset: inset 0 1px 0 rgba(0, 0, 0, 0.02);
+
+  --text: #1d1d1f;
+  --text-muted: #86868b;
+  --text-dim: #b0b0b5;
+  --text-on-accent: #ffffff;
+
+  --accent: #424245;
+  --accent-strong: #1d1d1f;
+  --accent-glow: rgba(0, 0, 0, 0.04);
+
+  --violet: #6e5e7e;
+  --violet-glow: rgba(110, 94, 126, 0.08);
+
+  --cyan: #505055;
+  --cyan-glow: rgba(80, 80, 85, 0.06);
+
+  --danger-surface: rgba(239, 68, 68, 0.1);
+  --danger-border: rgba(239, 68, 68, 0.15);
+  --danger-text: #c02b1d;
+  --success-tint-border: rgba(22, 163, 74, 0.38);
+  --success-tint-surface: rgba(34, 197, 94, 0.08);
+  --success-tint-strong-surface: rgba(34, 197, 94, 0.12);
+  --success-tint-shadow: rgba(34, 197, 94, 0.18);
+  --success-tint-inset: rgba(34, 197, 94, 0.12);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.08);
+  --modal-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.72);
+  --shimmer-gradient: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.08) 50%, transparent 100%);
+  --connectivity-text-shimmer: linear-gradient(
+    90deg,
+    rgba(29, 29, 31, 0.34) 0%,
+    rgba(29, 29, 31, 0.92) 42%,
+    #111111 50%,
+    rgba(29, 29, 31, 0.92) 58%,
+    rgba(29, 29, 31, 0.34) 100%
+  );
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f5f5f7;
+    --bg-elev: #ffffff;
+    --bg-chat: #ffffff;
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-solid: #ffffff;
+    --surface-muted: rgba(255, 255, 255, 0.7);
+    --glass: rgba(255, 255, 255, 0.7);
+    --glass-strong: rgba(255, 255, 255, 0.88);
+    --modal-overlay: rgba(245, 247, 250, 0.82);
+    --modal-surface: var(--bg-chat);
+    --modal-surface-solid: var(--bg-chat);
+
+    --border: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.12);
+    --border-accent: rgba(0, 0, 0, 0.18);
+    --border-subtle: rgba(0, 0, 0, 0.04);
+    --modal-border: rgba(15, 23, 42, 0.05);
+    --modal-outline: rgba(15, 23, 42, 0.014);
+    --editable-panel-border: var(--border-strong);
+    --editable-panel-border-hover: rgba(0, 0, 0, 0.12);
+    --editable-panel-border-focus: var(--border-accent);
+
+    /* States & Effects */
+    --bg-hover: rgba(0, 0, 0, 0.05);
+    --bg-active: rgba(0, 0, 0, 0.08);
+    --bg-subtle: rgba(0, 0, 0, 0.025);
+    --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.20);
+    --shadow-inset: inset 0 1px 0 rgba(0, 0, 0, 0.02);
+
+    --text: #1d1d1f;
+    --text-muted: #86868b;
+    --text-dim: #b0b0b5;
+    --text-on-accent: #ffffff;
+
+    --accent: #424245;
+    --accent-strong: #1d1d1f;
+    --accent-glow: rgba(0, 0, 0, 0.04);
+
+    --violet: #6e5e7e;
+    --violet-glow: rgba(110, 94, 126, 0.08);
+
+    --cyan: #505055;
+    --cyan-glow: rgba(80, 80, 85, 0.06);
+
+    --danger-surface: rgba(239, 68, 68, 0.1);
+    --danger-border: rgba(239, 68, 68, 0.15);
+    --danger-text: #c02b1d;
+    --success-tint-border: rgba(22, 163, 74, 0.38);
+    --success-tint-surface: rgba(34, 197, 94, 0.08);
+    --success-tint-strong-surface: rgba(34, 197, 94, 0.12);
+    --success-tint-shadow: rgba(34, 197, 94, 0.18);
+    --success-tint-inset: rgba(34, 197, 94, 0.12);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.08);
+    --modal-shadow:
+      0 24px 60px rgba(15, 23, 42, 0.1),
+      0 0 0 1px rgba(255, 255, 255, 0.72);
+    --shimmer-gradient: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.08) 50%, transparent 100%);
+    --connectivity-text-shimmer: linear-gradient(
+      90deg,
+      rgba(29, 29, 31, 0.34) 0%,
+      rgba(29, 29, 31, 0.92) 42%,
+      #111111 50%,
+      rgba(29, 29, 31, 0.92) 58%,
+      rgba(29, 29, 31, 0.34) 100%
+    );
+  }
+  
+  :root[data-theme="dark"] {
+    /* Restore dark theme variables when explicitly set to dark even if system is light */
+    --bg: #000000;
+    --bg-elev: #0a0a0a;
+    --bg-chat: #161616;
+    --surface: rgba(20, 20, 20, 0.92);
+    --surface-solid: #141414;
+    --surface-muted: rgba(20, 20, 20, 0.7);
+    --glass: rgba(20, 20, 20, 0.55);
+    --glass-strong: rgba(20, 20, 20, 0.78);
+    --modal-overlay: rgba(6, 8, 12, 0.62);
+    --modal-surface: var(--bg-chat);
+    --modal-surface-solid: var(--bg-chat);
+    --border: rgba(255, 255, 255, 0.05);
+    --border-strong: rgba(255, 255, 255, 0.09);
+    --border-accent: rgba(255, 255, 255, 0.16);
+    --modal-border: rgba(255, 255, 255, 0.045);
+    --modal-outline: rgba(255, 255, 255, 0.016);
+    --text: #e4e4e4;
+    --text-muted: #888888;
+    --text-dim: #555555;
+    --accent: #a0a0a0;
+    --accent-strong: #d4d4d4;
+    --accent-glow: rgba(255, 255, 255, 0.06);
+    --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.6);
+    --modal-shadow:
+      0 28px 72px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+  }
+}
+
+/* ---------- Final Theme Overrides ---------- */
+html[data-theme="light"] .modal-content,
+html[data-theme="light"] .config-panel,
+html[data-theme="light"] .confirm-panel,
+html[data-theme="light"] .config-header,
+html[data-theme="light"] .config-tabs,
+html[data-theme="light"] .config-content,
+html[data-theme="light"] .config-footer {
+  background-color: #ffffff !important;
+}
+
+html[data-theme="light"] #configModal .modal-content {
+  border: 1px solid var(--modal-border);
+  box-shadow: var(--modal-shadow);
+}
+
+html[data-theme="light"] #configModal .config-panel {
+  border: 1px solid rgba(15, 23, 42, 0.045);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] #configModal .config-header,
+html[data-theme="light"] #configModal .config-tabs {
+  background-color: #fcfcfd !important;
+  border-bottom: none;
+}
+
+html[data-theme="light"] #configModal .config-content {
+  background-color: #ffffff !important;
+}
+
+html[data-theme="light"] #configModal .config-footer {
+  background-color: #fcfcfd !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .modal-overlay {
+  background-color: var(--modal-overlay) !important;
+}
+
+html[data-theme="light"] .confirm-title,
+html[data-theme="light"] .confirm-text,
+html[data-theme="light"] .config-header h2 {
+  color: #1d1d1f !important;
+}
+
+/* 强制浅色模式下的悬停效果，防止变黑 */
+html[data-theme="light"] .code-preview-btn:hover,
+html[data-theme="light"] .code-copy-btn:hover {
+  background-color: #f2f2f3 !important;
+  background: #f2f2f3 !important;
+  color: #1d1d1f !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
 /* ---------- Body ---------- */
