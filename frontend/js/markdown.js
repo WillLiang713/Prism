@@ -1,5 +1,6 @@
 import { isDesktopRuntime } from "./state.js";
 import { openHtmlPreview, openHtmlPreviewForSource } from "./html-preview.js";
+import { openImagePreview } from "./dialog.js";
 
 export function initMarkdown() {
   if (typeof marked === "undefined") return;
@@ -66,6 +67,7 @@ export function enhanceRenderedMarkdown(root) {
   }
 
   addCopyButtonsToCodeBlocks(root);
+  bindMarkdownImagePreview(root);
   // 为所有链接添加 target="_blank" 和 rel="noopener noreferrer"
   const links = root.querySelectorAll("a[href]");
   links.forEach((link) => {
@@ -97,6 +99,26 @@ function bindExternalLinkHandler(link) {
   });
 
   link.dataset.desktopExternalBound = "1";
+}
+
+function bindMarkdownImagePreview(root) {
+  const images = root.querySelectorAll("img");
+  images.forEach((img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.dataset.markdownPreviewBound === "1") return;
+
+    img.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openImagePreview({
+        src: img.currentSrc || img.src,
+        alt: img.alt || "图片预览",
+        trigger: img,
+      });
+    });
+
+    img.dataset.markdownPreviewBound = "1";
+  });
 }
 
 function isSupportedExternalHref(href) {

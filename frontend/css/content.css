@@ -23,7 +23,7 @@
   width: 100%;
   padding: 0;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
+  border-radius: var(--image-radius);
   overflow: hidden;
   background: rgba(255, 255, 255, 0.03);
 }
@@ -192,7 +192,7 @@
 }
 .response-content table th { background: rgba(255, 255, 255, 0.03); font-weight: 600; }
 .response-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
-.response-content img { max-width: 100%; height: auto; border-radius: 8px; }
+.response-content img { max-width: 100%; height: auto; border-radius: var(--image-radius); cursor: pointer; }
 
 /* Chat font size control */
 .chat-font-size-control {

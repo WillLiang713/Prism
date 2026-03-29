@@ -175,7 +175,7 @@
 
 .user-image-item {
   max-width: 100%;
-  border-radius: 10px;
+  border-radius: var(--image-radius);
   overflow: hidden;
   border: 1px solid var(--border-strong);
 }
@@ -383,7 +383,7 @@
   flex: 0 0 auto;
   width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: var(--image-radius);
   overflow: hidden;
   border: 1px solid var(--border-strong);
   background: var(--bg-subtle);
@@ -422,17 +422,18 @@
   top: 14px;
   right: 14px;
   z-index: 2;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(10, 10, 10, 0.78);
-  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(8, 10, 14, 0.9);
+  color: #ffffff;
   box-shadow:
-    0 10px 26px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 12px 30px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .image-preview-close-btn:hover {
-  background: rgba(18, 18, 18, 0.94);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(12, 14, 18, 0.98);
+  border-color: rgba(255, 255, 255, 0.4);
   color: #ffffff;
 }
 
@@ -444,11 +445,11 @@
 }
 
 .image-preview-close-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   opacity: 1;
   stroke: #ffffff;
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.3));
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
 }
 
 .image-preview-save-btn {
@@ -456,17 +457,18 @@
   right: 14px;
   bottom: 14px;
   z-index: 2;
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(10, 10, 10, 0.84);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(8, 10, 14, 0.92);
   color: #ffffff;
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 12px 30px rgba(0, 0, 0, 0.44),
+    0 0 0 1px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .image-preview-save-btn:hover {
-  background: rgba(18, 18, 18, 0.96);
-  border-color: rgba(120, 205, 164, 0.38);
+  background: rgba(12, 14, 18, 0.99);
+  border-color: rgba(120, 205, 164, 0.46);
   color: #ffffff;
 }
 
@@ -478,11 +480,11 @@
 }
 
 .image-preview-save-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   opacity: 1;
   stroke: #ffffff;
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.3));
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
 }
 
 .image-preview-save-btn:disabled {
@@ -607,7 +609,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 0;
+  border-radius: var(--image-radius);
   background: transparent;
 }
 
@@ -618,7 +620,7 @@
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: 18px;
+  border-radius: inherit;
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.34);
 }
 
@@ -807,7 +809,7 @@
   .user-edit-image-item {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: var(--image-radius);
   }
 
   .image-preview-modal {
@@ -819,12 +821,12 @@
   }
 
   .image-preview-stage {
-    border-radius: 0;
+    border-radius: var(--image-radius);
   }
 
   .image-preview-image {
     max-height: min(72vh, 640px);
-    border-radius: 14px;
+    border-radius: inherit;
   }
 
   .user-edit-footer {

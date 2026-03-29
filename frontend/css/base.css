@@ -48,6 +48,7 @@ body {
   --modal-overlay: rgba(6, 8, 12, 0.62);
   --modal-surface: var(--bg-chat);
   --modal-surface-solid: var(--bg-chat);
+  --image-radius: 16px;
 
   /* Borders – minimal */
   --border: rgba(255, 255, 255, 0.05);
