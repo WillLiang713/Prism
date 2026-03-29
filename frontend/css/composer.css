@@ -770,21 +770,8 @@
   display: block;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .scroll-to-bottom-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text);
-    border-color: var(--border-accent);
-  }
-}
-
 .scroll-to-bottom-btn:active {
   transform: translateX(-50%) scale(0.94);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
   color: var(--text);
-}
-
-.scroll-to-bottom-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
 }

@@ -535,7 +535,12 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s,
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .chat-actions .btn.btn-secondary.btn-settings svg {
@@ -544,21 +549,9 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
   stroke-width: 2.1;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  border-color: var(--border-accent);
-  text-decoration: none;
-}
-
 .chat-actions .btn.btn-secondary.btn-settings:active {
   transform: scale(0.92);
   color: var(--text);
-}
-
-.chat-actions .btn.btn-secondary.btn-settings:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 .chat-actions .btn.btn-secondary.btn-settings:disabled {

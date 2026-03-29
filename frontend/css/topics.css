@@ -68,19 +68,8 @@
   margin-bottom: 6px;
 }
 
-.topic-new-btn:hover {
-  background: var(--bg-subtle);
-  border-color: var(--border);
-  color: var(--text);
-}
-
 .topic-new-btn:active {
   transform: scale(0.98);
-}
-
-.topic-new-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 .topic-new-icon {

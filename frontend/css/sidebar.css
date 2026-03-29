@@ -100,11 +100,6 @@
   color: var(--text);
 }
 
-.sidebar-toggle-handle:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
-}
-
 .sidebar-collapsed .sidebar-toggle-handle {
   display: none;
 }
@@ -143,16 +138,3 @@
   color: var(--text);
 }
 
-.sidebar-expand-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sidebar-toggle-handle:hover,
-  .sidebar-expand-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text);
-    border-color: var(--border-accent);
-  }
-}

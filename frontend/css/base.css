@@ -350,6 +350,32 @@ body {
   }
 }
 
+/* ---------- Shared Tool Button States ---------- */
+@media (hover: hover) and (pointer: fine) {
+  .chat-actions .btn.btn-secondary.btn-settings:hover,
+  .sidebar-toggle-handle:hover,
+  .sidebar-expand-btn:hover,
+  .topic-new-btn:hover,
+  .scroll-to-bottom-btn:hover,
+  #configModal .config-close-corner-btn:hover,
+  .mobile-sidebar-expand-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    border-color: var(--border-accent);
+  }
+}
+
+.chat-actions .btn.btn-secondary.btn-settings:focus-visible,
+.sidebar-toggle-handle:focus-visible,
+.sidebar-expand-btn:focus-visible,
+.topic-new-btn:focus-visible,
+.scroll-to-bottom-btn:focus-visible,
+#configModal .config-close-corner-btn:focus-visible,
+.mobile-sidebar-expand-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
 /* ---------- Final Theme Overrides ---------- */
 html[data-theme="light"] .modal-content,
 html[data-theme="light"] .config-panel,

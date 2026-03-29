@@ -171,20 +171,23 @@
 }
 
 .config-close-corner-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.1;
 }
 
 #configModal .config-close-corner-btn {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-#configModal .config-close-corner-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 #configModal .config-close-corner-btn:active {
-  transform: translateY(-50%) scale(0.94);
+  transform: translateY(-50%) scale(0.92);
+  color: var(--text);
 }
 
 .config-header h2 {
