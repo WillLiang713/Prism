@@ -12,6 +12,8 @@
     "core:window:allow-toggle-maximize",
     "core:window:allow-close",
     "core:window:allow-start-dragging",
+    "dialog:allow-save",
+    "fs:allow-write-file",
     "shell:allow-open",
     {
       "identifier": "shell:allow-execute",

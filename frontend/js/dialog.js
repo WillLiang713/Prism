@@ -1,4 +1,10 @@
-import { state, elements, SHORTCUTS } from './state.js';
+import {
+  state,
+  elements,
+  SHORTCUTS,
+  isDesktopRuntime,
+  buildApiUrl,
+} from './state.js';
 
 let imagePreviewLastTrigger = null;
 
@@ -34,6 +40,24 @@ function blobFromDataUrl(dataUrl) {
   return new Blob([bytes], { type: mimeType });
 }
 
+function getDesktopDialogSave() {
+  if (!isDesktopRuntime()) return null;
+  return window.__TAURI__?.dialog?.save || null;
+}
+
+function getDesktopFsWriteFile() {
+  if (!isDesktopRuntime()) return null;
+  return window.__TAURI__?.fs?.writeFile || null;
+}
+
+function buildImageProxyUrl(src) {
+  const normalizedSrc = String(src || "").trim();
+  if (!/^https?:\/\//i.test(normalizedSrc)) {
+    return normalizedSrc;
+  }
+  return buildApiUrl(`/proxy/file?url=${encodeURIComponent(normalizedSrc)}`);
+}
+
 async function resolvePreviewImageFile(src) {
   const normalizedSrc = String(src || "").trim();
   if (!normalizedSrc) {
@@ -44,7 +68,7 @@ async function resolvePreviewImageFile(src) {
   if (normalizedSrc.startsWith("data:")) {
     blob = blobFromDataUrl(normalizedSrc);
   } else {
-    const response = await fetch(normalizedSrc);
+    const response = await fetch(buildImageProxyUrl(normalizedSrc));
     if (!response.ok) {
       throw new Error(`图片读取失败: HTTP ${response.status}`);
     }
@@ -52,13 +76,8 @@ async function resolvePreviewImageFile(src) {
   }
 
   const extension = inferPreviewImageExtension(normalizedSrc);
-  const mimeType = blob.type || `image/${extension}`;
   const fileName = `prism-image-${Date.now()}.${extension}`;
-  const file = new File([blob], fileName, {
-    type: mimeType,
-    lastModified: Date.now(),
-  });
-  return { blob, file, fileName };
+  return { blob, fileName, extension };
 }
 
 function triggerImageDownload(blob, fileName) {
@@ -75,6 +94,33 @@ function triggerImageDownload(blob, fileName) {
   }, 1000);
 }
 
+async function saveImageWithDesktopApi(blob, fileName, extension) {
+  const save = getDesktopDialogSave();
+  const writeFile = getDesktopFsWriteFile();
+  if (typeof save !== "function" || typeof writeFile !== "function") {
+    throw new Error("桌面保存接口不可用");
+  }
+
+  const normalizedExtension = String(extension || "png").trim().toLowerCase();
+  const filterExtension = normalizedExtension === "jpg" ? "jpeg" : normalizedExtension;
+  const savePath = await save({
+    defaultPath: fileName,
+    filters: [
+      {
+        name: "图片",
+        extensions: [filterExtension],
+      },
+    ],
+  });
+
+  if (!savePath) {
+    throw new Error("save cancelled");
+  }
+
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  await writeFile(savePath, bytes);
+}
+
 async function savePreviewImage() {
   const imageSrc = String(elements.imagePreviewImage?.src || "").trim();
   if (!imageSrc) {
@@ -88,9 +134,13 @@ async function savePreviewImage() {
   }
 
   try {
-    const { blob, fileName } = await resolvePreviewImageFile(imageSrc);
+    const { blob, fileName, extension } = await resolvePreviewImageFile(imageSrc);
 
-    triggerImageDownload(blob, fileName);
+    if (isDesktopRuntime()) {
+      await saveImageWithDesktopApi(blob, fileName, extension);
+    } else {
+      triggerImageDownload(blob, fileName);
+    }
   } catch (error) {
     const message = String(error?.message || "").trim();
     if (message && /abort|cancel|canceled/i.test(message)) {
