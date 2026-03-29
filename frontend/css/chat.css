@@ -22,7 +22,7 @@
   margin: 0;
   padding: 24px var(--chat-gutter);
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
   display: flex;
   flex-direction: column;
   align-items: center;
