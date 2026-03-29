@@ -1095,7 +1095,7 @@ export function renderWebSearchToolSelector() {
   buttonEl.classList.toggle("is-active", enabled);
   elements.webSearchControl?.classList.toggle("is-active", enabled);
   if (elements.webSearchSwitchText) {
-    elements.webSearchSwitchText.textContent = "联网";
+    elements.webSearchSwitchText.textContent = "搜索";
   }
 
   options.forEach((option) => {

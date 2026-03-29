@@ -338,9 +338,9 @@
                             class="web-search-tool-current"
                             id="webSearchToolCurrent"
                             aria-expanded="false"
-                            aria-label="选择联网方式"
+                            aria-label="选择搜索方式"
                           >
-                            <span class="switch-text" id="webSearchSwitchText">联网</span>
+                            <span class="switch-text" id="webSearchSwitchText">搜索</span>
                             <span class="web-search-tool-value" id="webSearchToolValue" hidden>Tavily</span>
                             <svg
                               viewBox="0 0 12 12"
@@ -499,7 +499,7 @@
               aria-selected="false"
               aria-controls="configPanelWeb"
             >
-              联网
+              搜索
             </button>
             <button
               type="button"
@@ -730,7 +730,7 @@
               <div class="web-config-layout">
                 <div class="web-config-main">
                   <div class="form-group" id="webSearchProviderGroup">
-                    <label for="webSearchProviderPickerInput">外部联网服务</label>
+                    <label for="webSearchProviderPickerInput">搜索服务</label>
                     <select id="webSearchProvider" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="tavily">Tavily</option>
                       <option value="exa">Exa</option>
@@ -740,14 +740,14 @@
                         <input
                           type="text"
                           id="webSearchProviderPickerInput"
-                          placeholder="选择外部联网服务"
+                          placeholder="选择搜索服务"
                           readonly
                         />
                         <button
                           type="button"
                           class="model-picker-btn"
                           id="webSearchProviderPickerBtn"
-                          aria-label="打开外部联网服务列表"
+                          aria-label="打开搜索服务列表"
                           aria-expanded="false"
                         ></button>
                       </div>
@@ -789,7 +789,7 @@
                 </div>
                 <div class="web-config-side">
                   <div class="form-group" id="webSearchMaxResultsGroup">
-                    <label for="tavilyMaxResults">结果数量</label>
+                    <label for="tavilyMaxResults">数量</label>
                     <input
                       type="number"
                       id="tavilyMaxResults"
