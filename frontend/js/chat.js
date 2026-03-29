@@ -346,11 +346,23 @@ function extractThinkingSummary(thinkingText) {
   return "";
 }
 
-function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = "") {
-  if (isComplete && String(thinkingText || "").trim()) return "思考完成";
+function buildThinkingLabel(
+  thinkingText,
+  isComplete = false,
+  previousLabel = "",
+  thinkingTimeSec = null
+) {
+  if (isComplete && String(thinkingText || "").trim()) {
+    return formatThinkingCompleteLabel(thinkingTimeSec);
+  }
   const summary = extractThinkingSummary(thinkingText);
   if (summary) return summary;
   return previousLabel || "思考中";
+}
+
+function formatThinkingCompleteLabel(thinkingTimeSec = null) {
+  if (!Number.isFinite(thinkingTimeSec)) return "思考完成";
+  return `思考完成，用时 ${thinkingTimeSec.toFixed(1)} 秒`;
 }
 
 export function isTopicRunning(topicId) {
@@ -1287,7 +1299,8 @@ export function createAssistantCard(
   const thinkingSummary = buildThinkingLabel(
     thinkingSnapshot,
     statusSnapshot === "complete" || thinkingCompleteSnapshot,
-    storedThinkingLabel
+    storedThinkingLabel,
+    turn?.models?.[side]?.thinkingTime
   );
   thinkingLabel.className = "thinking-summary";
   if (thinkingCompleteSnapshot || statusSnapshot === "complete") {

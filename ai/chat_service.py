@@ -3,6 +3,7 @@ from typing import Any, AsyncIterator
 
 import httpx
 
+from .compat import create_stream_compat_adapter
 from .models import ChatRequest
 from .providers import MessageBuilder, ProviderConfig
 from .stream_parser import (
@@ -372,6 +373,7 @@ class AIService:
         custom_tool_calls_enabled = AIService._custom_tool_calls_enabled(
             request, provider_mode
         )
+        compat_adapter = create_stream_compat_adapter(request, current_round)
 
         async for parsed in parse_sse_stream(response, provider_mode):
             if provider_mode == "anthropic" and parsed.get("completed_block"):
@@ -434,10 +436,35 @@ class AIService:
                 )
 
             if parsed.get("content"):
-                round_state["assistant_content"] += parsed["content"]
-                yield (
-                    f"data: {json.dumps({'type': 'content', 'data': parsed['content']})}\n\n"
-                )
+                if compat_adapter is None:
+                    round_state["assistant_content"] += parsed["content"]
+                    yield AIService._sse_chunk(
+                        "content",
+                        parsed["content"],
+                        ensure_ascii=False,
+                    )
+                else:
+                    compat_output = compat_adapter.process_content(parsed["content"])
+                    for thinking_chunk in compat_output["thinking"]:
+                        round_state["assistant_thinking"] += thinking_chunk
+                        yield AIService._sse_chunk(
+                            "thinking",
+                            thinking_chunk,
+                            ensure_ascii=False,
+                        )
+                    for web_search_event in compat_output["web_search"]:
+                        yield AIService._sse_chunk(
+                            "web_search",
+                            web_search_event,
+                            ensure_ascii=False,
+                        )
+                    for content_chunk in compat_output["content"]:
+                        round_state["assistant_content"] += content_chunk
+                        yield AIService._sse_chunk(
+                            "content",
+                            content_chunk,
+                            ensure_ascii=False,
+                        )
 
             if isinstance(parsed.get("images"), list):
                 fresh_images = AIService._append_assistant_images(
@@ -530,6 +557,29 @@ class AIService:
                                 )
                                 + "\n\n"
                             )
+
+        if compat_adapter is not None:
+            compat_flush = compat_adapter.flush()
+            for thinking_chunk in compat_flush["thinking"]:
+                round_state["assistant_thinking"] += thinking_chunk
+                yield AIService._sse_chunk(
+                    "thinking",
+                    thinking_chunk,
+                    ensure_ascii=False,
+                )
+            for web_search_event in compat_flush["web_search"]:
+                yield AIService._sse_chunk(
+                    "web_search",
+                    web_search_event,
+                    ensure_ascii=False,
+                )
+            for content_chunk in compat_flush["content"]:
+                round_state["assistant_content"] += content_chunk
+                yield AIService._sse_chunk(
+                    "content",
+                    content_chunk,
+                    ensure_ascii=False,
+                )
 
     @staticmethod
     async def chat_stream(request: ChatRequest) -> AsyncIterator[str]:
@@ -994,6 +1044,9 @@ class AIService:
                     response_id = ""
                     pending_function_calls: dict[str, dict[str, Any]] = {}
                     response_output_items: list[dict[str, Any]] = []
+                    compat_adapter = create_stream_compat_adapter(
+                        request, current_round
+                    )
 
                     async with client.stream(
                         method="POST",
@@ -1038,7 +1091,34 @@ class AIService:
                                 yield AIService._sse_chunk("thinking", parsed["thinking"])
 
                             if parsed.get("content"):
-                                yield AIService._sse_chunk("content", parsed["content"])
+                                if compat_adapter is None:
+                                    yield AIService._sse_chunk(
+                                        "content",
+                                        parsed["content"],
+                                        ensure_ascii=False,
+                                    )
+                                else:
+                                    compat_output = compat_adapter.process_content(
+                                        parsed["content"]
+                                    )
+                                    for thinking_chunk in compat_output["thinking"]:
+                                        yield AIService._sse_chunk(
+                                            "thinking",
+                                            thinking_chunk,
+                                            ensure_ascii=False,
+                                        )
+                                    for web_search_event in compat_output["web_search"]:
+                                        yield AIService._sse_chunk(
+                                            "web_search",
+                                            web_search_event,
+                                            ensure_ascii=False,
+                                        )
+                                    for content_chunk in compat_output["content"]:
+                                        yield AIService._sse_chunk(
+                                            "content",
+                                            content_chunk,
+                                            ensure_ascii=False,
+                                        )
 
                             call_id = str(parsed.get("call_id") or "").strip()
                             round_number = None
@@ -1096,6 +1176,27 @@ class AIService:
                                     if not resolved_call_id:
                                         continue
                                     pending_function_calls[resolved_call_id] = function_call
+
+                    if compat_adapter is not None:
+                        compat_flush = compat_adapter.flush()
+                        for thinking_chunk in compat_flush["thinking"]:
+                            yield AIService._sse_chunk(
+                                "thinking",
+                                thinking_chunk,
+                                ensure_ascii=False,
+                            )
+                        for web_search_event in compat_flush["web_search"]:
+                            yield AIService._sse_chunk(
+                                "web_search",
+                                web_search_event,
+                                ensure_ascii=False,
+                            )
+                        for content_chunk in compat_flush["content"]:
+                            yield AIService._sse_chunk(
+                                "content",
+                                content_chunk,
+                                ensure_ascii=False,
+                            )
 
                     if not pending_function_calls:
                         break

@@ -95,11 +95,23 @@ function extractThinkingSummary(thinkingText) {
   return "";
 }
 
-function buildThinkingLabel(thinkingText, isComplete = false, previousLabel = "") {
-  if (isComplete && String(thinkingText || "").trim()) return "思考完成";
+function buildThinkingLabel(
+  thinkingText,
+  isComplete = false,
+  previousLabel = "",
+  thinkingTimeSec = null
+) {
+  if (isComplete && String(thinkingText || "").trim()) {
+    return formatThinkingCompleteLabel(thinkingTimeSec);
+  }
   const summary = extractThinkingSummary(thinkingText);
   if (summary) return summary;
   return previousLabel || "思考中";
+}
+
+function formatThinkingCompleteLabel(thinkingTimeSec = null) {
+  if (!Number.isFinite(thinkingTimeSec)) return "思考完成";
+  return `思考完成，用时 ${thinkingTimeSec.toFixed(1)} 秒`;
 }
 
 function appendAssistantImages(existingImages, nextImages) {
@@ -594,8 +606,12 @@ export async function callModel(
             });
             if (thinkingStartTime && uiRef?.thinkingLabelEl) {
               turn.models.main.thinkingComplete = true;
-              uiRef.thinkingLabelEl.textContent = "思考完成";
-              uiRef.thinkingLabelEl.title = "思考完成";
+              const completeLabel = formatThinkingCompleteLabel(
+                turn.models.main.thinkingTime
+              );
+              turn.models.main.thinkingLabel = completeLabel;
+              uiRef.thinkingLabelEl.textContent = completeLabel;
+              uiRef.thinkingLabelEl.title = completeLabel;
               uiRef.thinkingLabelEl.classList.add("is-complete");
             }
             scheduleSaveChat();
@@ -626,8 +642,12 @@ export async function callModel(
             }
             if (thinkingStartTime && uiRef?.thinkingLabelEl) {
               turn.models.main.thinkingComplete = true;
-              uiRef.thinkingLabelEl.textContent = "思考完成";
-              uiRef.thinkingLabelEl.title = "思考完成";
+              const completeLabel = formatThinkingCompleteLabel(
+                turn.models.main.thinkingTime
+              );
+              turn.models.main.thinkingLabel = completeLabel;
+              uiRef.thinkingLabelEl.textContent = completeLabel;
+              uiRef.thinkingLabelEl.title = completeLabel;
               uiRef.thinkingLabelEl.classList.add("is-complete");
             }
             if (hasNewImages) {
@@ -747,8 +767,12 @@ export async function callModel(
     }
     if (turn.models.main.thinking && uiRef?.thinkingLabelEl) {
       turn.models.main.thinkingComplete = true;
-      uiRef.thinkingLabelEl.textContent = "思考完成";
-      uiRef.thinkingLabelEl.title = "思考完成";
+      const completeLabel = formatThinkingCompleteLabel(
+        turn.models.main.thinkingTime
+      );
+      turn.models.main.thinkingLabel = completeLabel;
+      uiRef.thinkingLabelEl.textContent = completeLabel;
+      uiRef.thinkingLabelEl.title = completeLabel;
       uiRef.thinkingLabelEl.classList.add("is-complete");
     }
 

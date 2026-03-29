@@ -824,41 +824,6 @@ def build_responses_web_search_event(
     }
 
 
-def build_web_search_event_from_sources(
-    sources: list[dict[str, str]] | None,
-    current_round: int = 0,
-) -> dict[str, Any] | None:
-    if not isinstance(sources, list):
-        return None
-
-    preview_results: list[dict[str, str]] = []
-    for source in sources:
-        if not isinstance(source, dict):
-            continue
-        title = str(source.get("title") or "").strip()
-        source_url = str(source.get("url") or "").strip()
-        if title or source_url:
-            preview_results.append(
-                {
-                    "title": title,
-                    "url": source_url,
-                    "content": "",
-                }
-            )
-
-    if not preview_results:
-        return None
-
-    return {
-        "status": "ready",
-        "round": current_round,
-        "name": "web_search",
-        "query": "",
-        "answer": "",
-        "totalResults": len(preview_results),
-        "results": preview_results[:8],
-    }
-
 def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
     """解析 OpenAI Responses API 流式事件。"""
     result: dict[str, Any] = {
@@ -1033,13 +998,6 @@ def parse_responses_chunk(chunk: dict[str, Any]) -> dict[str, Any]:
                     )
                 if deduped_sources:
                     result["sources"] = deduped_sources
-                    if result["web_search"] is None:
-                        synthetic_web_search = build_web_search_event_from_sources(
-                            deduped_sources,
-                            0,
-                        )
-                        if synthetic_web_search:
-                            result["web_search"] = synthetic_web_search
 
             usage = response.get("usage")
             if isinstance(usage, dict):

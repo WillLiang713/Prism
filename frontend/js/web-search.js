@@ -350,6 +350,12 @@ function createNormalizedWebSearchEvent(webSearchEvent) {
   };
 }
 
+function stripLegacySyntheticToolEvents(events) {
+  return (Array.isArray(events) ? events : []).filter(
+    (event) => event && typeof event === "object" && event.synthetic !== true
+  );
+}
+
 export function attachWebSearchToToolEvents(toolEvents, webSearchEvent) {
   const items = Array.isArray(toolEvents) ? toolEvents : [];
   const normalized = createNormalizedWebSearchEvent(webSearchEvent);
@@ -376,23 +382,13 @@ export function attachWebSearchToToolEvents(toolEvents, webSearchEvent) {
     return items;
   }
 
-  items.push({
-    callId: String(normalized.callId || "").trim(),
-    status: normalized.status === "error" ? "error" : "success",
-    round: normalized.round,
-    name: normalized.name,
-    resultSummary: normalized.query
-      ? `查询：${truncateText(normalized.query, 80)}`
-      : "Web Search",
-    webSearch: normalized,
-    synthetic: true,
-  });
   return items;
 }
 
 export function mergeToolEventsWithWebSearch(toolEvents, webSearchEvents) {
-  const merged = Array.isArray(toolEvents)
-    ? toolEvents.map((event) =>
+  const baseEvents = stripLegacySyntheticToolEvents(toolEvents);
+  const merged = baseEvents.length
+    ? baseEvents.map((event) =>
         event && typeof event === "object" ? { ...event } : event
       )
     : [];
@@ -437,7 +433,7 @@ function renderToolEventWebSearch(container, webSearchEvent) {
 
 export function renderToolEvents(sectionEl, listEl, events) {
   if (!sectionEl || !listEl) return;
-  const items = compactToolEvents(events);
+  const items = compactToolEvents(stripLegacySyntheticToolEvents(events));
 
   if (!items.length) {
     sectionEl.style.display = "none";
