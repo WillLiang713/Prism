@@ -249,6 +249,278 @@
     padding: 0;
   }
 
+  #configModal #configPanelServices .global-config {
+    padding-top: 0;
+  }
+
+  #configModal #configPanelServices .service-config-layout {
+    gap: 10px;
+  }
+
+  #configModal #configPanelServices .service-list-panel,
+  #configModal #configPanelServices .service-detail-panel {
+    gap: 10px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  #configModal #configPanelServices .service-toolbar {
+    gap: 6px;
+    margin-bottom: 0;
+  }
+
+  #configModal #configPanelServices .service-list {
+    gap: 6px;
+    max-height: min(104px, 22dvh);
+    padding-right: 2px;
+  }
+
+  #configModal #configPanelServices .service-list-item {
+    gap: 3px;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  #configModal #configPanelServices .service-list-title {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  #configModal #configPanelServices .service-list-meta {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  #configModal #configPanelServices .service-list-submeta {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  #configModal #configPanelServices .service-detail-form,
+  #configModal #configPanelServices .service-detail-main {
+    gap: 10px;
+  }
+
+  #configModal #configPanelServices .required-credentials-grid {
+    gap: 10px;
+  }
+
+  #configModal #configPanelServices .form-group {
+    margin-bottom: 10px;
+  }
+
+  #configModal #configPanelServices .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  #configModal #configPanelServices .form-group label {
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  #configModal #configPanelServices .form-group input[type="text"],
+  #configModal #configPanelServices .form-group input[type="password"],
+  #configModal #configPanelServices .form-group select,
+  #configModal #configPanelServices .form-group textarea {
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  #configModal #configPanelServices .key-input-wrapper input[type="text"],
+  #configModal #configPanelServices .key-input-wrapper input[type="password"] {
+    padding-right: 46px;
+  }
+
+  #configModal #configPanelServices .password-input-wrapper,
+  #configModal #configPanelServices .model-picker-row,
+  #configModal #configPanelServices .model-picker-btn {
+    min-height: 36px;
+  }
+
+  #configModal #configPanelServices .config-static-picker .model-picker-row {
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  #configModal #configPanelServices .config-static-picker .model-picker-row input[type="text"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #configModal #configPanelServices .config-static-picker .model-picker-btn {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    align-self: stretch;
+  }
+
+  #configModal #configPanelServices .config-static-picker .model-picker-row:has(input[type="text"]:focus),
+  #configModal #configPanelServices .config-static-picker:has(.model-picker-btn.open) .model-picker-row {
+    border-color: var(--accent);
+  }
+
+  #configModal #configPanelServices .model-picker-btn {
+    width: 36px;
+    min-width: 36px;
+    flex-basis: 36px;
+  }
+
+  #configModal #configPanelServices .key-input-wrapper .password-toggle-btn {
+    right: 8px;
+    width: 22px;
+    height: 22px;
+  }
+
+  #configModal #configPanelServices .key-input-wrapper .password-toggle-btn .eye-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  #configModal #configPanelModel .global-config,
+  #configModal #configPanelWeb .global-config {
+    padding-top: 0;
+  }
+
+  #configModal #configPanelModel .model-config-layout,
+  #configModal #configPanelWeb .web-config-layout {
+    gap: 10px;
+  }
+
+  #configModal #configPanelModel .model-config-main,
+  #configModal #configPanelModel .model-config-side,
+  #configModal #configPanelWeb .web-config-main,
+  #configModal #configPanelWeb .web-config-side {
+    gap: 10px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  #configModal #configPanelModel .form-group,
+  #configModal #configPanelWeb .form-group {
+    margin-bottom: 10px;
+  }
+
+  #configModal #configPanelModel .form-group:last-child,
+  #configModal #configPanelWeb .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  #configModal #configPanelModel .form-group label,
+  #configModal #configPanelWeb .form-group label {
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  #configModal #configPanelModel .form-group input[type="text"],
+  #configModal #configPanelModel .form-group input[type="password"],
+  #configModal #configPanelModel .form-group select,
+  #configModal #configPanelModel .form-group textarea,
+  #configModal #configPanelWeb .form-group input[type="text"],
+  #configModal #configPanelWeb .form-group input[type="password"],
+  #configModal #configPanelWeb .form-group input[type="number"],
+  #configModal #configPanelWeb .form-group select,
+  #configModal #configPanelWeb .form-group textarea {
+    min-height: 36px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  #configModal #configPanelModel .model-picker,
+  #configModal #configPanelWeb .model-picker {
+    gap: 6px;
+  }
+
+  #configModal #configPanelModel .model-picker-row,
+  #configModal #configPanelModel .model-picker-btn,
+  #configModal #configPanelWeb .password-input-wrapper,
+  #configModal #configPanelWeb .model-picker-row,
+  #configModal #configPanelWeb .model-picker-btn {
+    min-height: 36px;
+  }
+
+  #configModal #configPanelModel .model-picker-btn,
+  #configModal #configPanelWeb .model-picker-btn {
+    width: 36px;
+    min-width: 36px;
+    flex-basis: 36px;
+  }
+
+  #configModal #configPanelModel #roleSetting,
+  #configModal #configPanelModel #roleSettingPreview {
+    min-height: 156px;
+    max-height: 156px;
+  }
+
+  #configModal #configPanelModel .form-hint,
+  #configModal #configPanelWeb .form-hint {
+    margin-top: 4px;
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  #configModal #configPanelWeb .web-config-main,
+  #configModal #configPanelWeb .web-config-side {
+    gap: 10px;
+  }
+
+  #configModal #configPanelWeb .key-input-wrapper input[type="text"],
+  #configModal #configPanelWeb .key-input-wrapper input[type="password"] {
+    padding-right: 46px;
+  }
+
+  #configModal #configPanelWeb .key-input-wrapper .password-toggle-btn {
+    right: 8px;
+    width: 22px;
+    height: 22px;
+  }
+
+  #configModal #configPanelWeb .key-input-wrapper .password-toggle-btn .eye-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  #configModal #configPanelWeb .config-static-picker .model-picker-row {
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  #configModal #configPanelWeb .config-static-picker .model-picker-row input[type="text"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #configModal #configPanelWeb .config-static-picker .model-picker-btn {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    align-self: stretch;
+  }
+
+  #configModal #configPanelWeb .config-static-picker .model-picker-row:has(input[type="text"]:focus),
+  #configModal #configPanelWeb .config-static-picker:has(.model-picker-btn.open) .model-picker-row {
+    border-color: var(--accent);
+  }
+
+  #configModal #configPanelWeb .web-config-tips {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
   .container {
     max-width: none;
     margin: 0;
@@ -633,6 +905,130 @@
 }
 
 @media (max-width: 520px) {
+  #configModal .config-header {
+    padding: 10px 12px 8px;
+  }
+
+  #configModal .config-tabs {
+    padding: 8px 12px 8px;
+  }
+
+  #configModal .config-content {
+    padding: 10px 10px 12px;
+  }
+
+  #configModal #configPanelServices .service-config-layout {
+    gap: 8px;
+  }
+
+  #configModal #configPanelServices .service-list-panel,
+  #configModal #configPanelServices .service-detail-panel {
+    gap: 8px;
+    padding: 7px;
+  }
+
+  #configModal #configPanelServices .service-list {
+    max-height: min(96px, 20dvh);
+  }
+
+  #configModal #configPanelServices .service-list-item {
+    padding: 9px 10px;
+  }
+
+  #configModal #configPanelServices .form-group {
+    margin-bottom: 8px;
+  }
+
+  #configModal #configPanelServices .form-group label {
+    margin-bottom: 3px;
+  }
+
+  #configModal #configPanelServices .form-group input[type="text"],
+  #configModal #configPanelServices .form-group input[type="password"],
+  #configModal #configPanelServices .form-group select,
+  #configModal #configPanelServices .form-group textarea {
+    min-height: 34px;
+    padding: 7px 10px;
+  }
+
+  #configModal #configPanelServices .password-input-wrapper,
+  #configModal #configPanelServices .model-picker-row,
+  #configModal #configPanelServices .model-picker-btn {
+    min-height: 34px;
+  }
+
+  #configModal #configPanelServices .config-static-picker .model-picker-row {
+    border-radius: 10px;
+  }
+
+  #configModal #configPanelServices .model-picker-btn {
+    width: 34px;
+    min-width: 34px;
+    flex-basis: 34px;
+  }
+
+  #configModal #configPanelModel .model-config-layout,
+  #configModal #configPanelWeb .web-config-layout {
+    gap: 8px;
+  }
+
+  #configModal #configPanelModel .model-config-main,
+  #configModal #configPanelModel .model-config-side,
+  #configModal #configPanelWeb .web-config-main,
+  #configModal #configPanelWeb .web-config-side {
+    gap: 8px;
+    padding: 7px;
+  }
+
+  #configModal #configPanelModel .form-group,
+  #configModal #configPanelWeb .form-group {
+    margin-bottom: 8px;
+  }
+
+  #configModal #configPanelModel .form-group label,
+  #configModal #configPanelWeb .form-group label {
+    margin-bottom: 3px;
+  }
+
+  #configModal #configPanelModel .form-group input[type="text"],
+  #configModal #configPanelModel .form-group input[type="password"],
+  #configModal #configPanelModel .form-group select,
+  #configModal #configPanelModel .form-group textarea,
+  #configModal #configPanelWeb .form-group input[type="text"],
+  #configModal #configPanelWeb .form-group input[type="password"],
+  #configModal #configPanelWeb .form-group input[type="number"],
+  #configModal #configPanelWeb .form-group select,
+  #configModal #configPanelWeb .form-group textarea {
+    min-height: 34px;
+    padding: 7px 10px;
+  }
+
+  #configModal #configPanelModel .model-picker-row,
+  #configModal #configPanelModel .model-picker-btn,
+  #configModal #configPanelWeb .password-input-wrapper,
+  #configModal #configPanelWeb .model-picker-row,
+  #configModal #configPanelWeb .model-picker-btn {
+    min-height: 34px;
+  }
+
+  #configModal #configPanelModel .model-picker-btn,
+  #configModal #configPanelWeb .model-picker-btn {
+    width: 34px;
+    min-width: 34px;
+    flex-basis: 34px;
+  }
+
+  #configModal #configPanelModel #roleSetting,
+  #configModal #configPanelModel #roleSettingPreview {
+    min-height: 144px;
+    max-height: 144px;
+  }
+
+  #configModal #configPanelWeb .web-config-tips {
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
   .chat-main {
     overflow-x: hidden;
   }
