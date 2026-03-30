@@ -415,26 +415,35 @@
 
 .is-desktop-runtime .desktop-window-controls {
   display: inline-flex;
-  gap: 0;
-  margin-left: 10px;
+  gap: 2px;
+  margin-left: 12px;
   border-left: none;
   padding-left: 0;
 }
 
 .is-desktop-runtime .desktop-window-btn {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
+  width: 42px;
+  height: 32px;
+  min-width: 42px;
+  min-height: 32px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--desktop-window-icon);
+}
+
+.is-desktop-runtime .desktop-window-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 .is-desktop-runtime .desktop-window-btn:hover {
   background: var(--desktop-window-hover-bg);
   color: var(--text);
+}
+
+.is-desktop-runtime .desktop-window-btn:active {
+  transform: scale(0.97);
 }
 
 .is-desktop-runtime .desktop-window-btn-close:hover {
@@ -502,6 +511,17 @@
   margin-right: 2px;
 }
 
+.corner-actions {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 12;
+  pointer-events: auto;
+}
+
 /* 默认隐藏所有图标，根据 html[data-theme] 显示 */
 .theme-toggle-btn svg {
   display: none !important;
@@ -521,7 +541,8 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
   display: block !important;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings {
+.chat-actions .btn.btn-secondary.btn-settings,
+.corner-actions .btn.btn-secondary.btn-settings {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -541,19 +562,59 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
     border-color 0.2s,
     transform 0.12s ease,
     box-shadow 0.12s ease;
+  cursor: pointer;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings svg {
+.chat-actions .btn.btn-secondary.btn-settings svg,
+.corner-actions .btn.btn-secondary.btn-settings svg {
   width: 14px;
   height: 14px;
   stroke-width: 2.1;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:active {
+.chat-actions .btn.btn-secondary.btn-settings:active,
+.corner-actions .btn.btn-secondary.btn-settings:active {
   transform: scale(0.92);
   color: var(--text);
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:disabled {
+.chat-actions .btn.btn-secondary.btn-settings:disabled,
+.corner-actions .btn.btn-secondary.btn-settings:disabled {
   opacity: 0.4;
+}
+
+.is-desktop-runtime .corner-actions {
+  position: fixed;
+  right: 18px;
+  top: auto;
+  bottom: 22px;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 35;
+}
+
+.is-desktop-runtime .corner-actions .btn.btn-secondary.btn-settings {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--glass-strong);
+  color: var(--text-muted);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-sm);
+}
+
+.is-desktop-runtime .corner-actions .btn.btn-secondary.btn-settings:hover {
+  background: var(--surface);
+  border-color: var(--border-accent);
+  color: var(--text);
+}
+
+.is-desktop-runtime .corner-actions .btn.btn-secondary.btn-settings:focus-visible {
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 2px var(--accent-glow);
 }
