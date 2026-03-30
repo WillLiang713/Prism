@@ -791,9 +791,7 @@ export function renderTopicList() {
   // 清空列表
   elements.topicList.innerHTML = "";
 
-  const topics = [...state.chat.topics].sort(
-    (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
-  );
+  const topics = [...state.chat.topics];
   const onlyTopic = topics[0] || null;
   const hideDeleteForOnlyNewTopic =
     topics.length === 1 &&

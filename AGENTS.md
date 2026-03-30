@@ -31,10 +31,16 @@ Keep HTTP wiring inside `routes/`, model/provider orchestration inside `ai/`, to
 路由装配放在 `routes/`，模型与 Provider 编排放在 `ai/`，工具逻辑放在 `tools.py`，纯 UI 逻辑放在 `frontend/js/` 与 `frontend/css/`。
 
 ## Build, Test, and Development Commands
+- Prefer the existing repo-local virtual environment first. This repository already has `venv/` with the needed Python dependencies; before installing or running backend commands, check `.\venv\Scripts\python.exe` first and use it instead of the global `python` when available.
+- 优先复用仓库内现成的虚拟环境。本仓库已存在带依赖的 `venv/`；执行后端相关命令或安装依赖前，先检查并优先使用 `.\venv\Scripts\python.exe`，不要默认使用全局 `python`。
 - `pip install -r requirements.txt`: install Python runtime dependencies.
 - `pip install -r requirements.txt`：安装 Python 运行依赖。
+- `.\venv\Scripts\python.exe -m pip install -r requirements.txt`: use this only when the repo-local virtual environment is missing dependencies.
+- `.\venv\Scripts\python.exe -m pip install -r requirements.txt`：仅当仓库内虚拟环境缺少依赖时再执行。
 - `python server.py`: run the local web server (default `http://localhost:3000`).
 - `python server.py`：启动本地 Web 服务（默认地址 `http://localhost:3000`）。
+- `.\venv\Scripts\python.exe server.py`: preferred backend start command on Windows for this repo.
+- `.\venv\Scripts\python.exe server.py`：本仓库在 Windows 下优先使用的后端启动命令。
 - `python server.py --host 0.0.0.0 --port 3000`: run with explicit host/port.
 - `python server.py --host 0.0.0.0 --port 3000`：使用显式 host/port 启动服务。
 - `uvicorn server:app --host 0.0.0.0 --port 3000 --reload`: backend dev mode with auto-reload.
@@ -75,6 +81,10 @@ There is currently no committed, active automated test source in `tests/`; the d
 - 优先为改动过的接口添加路由级回归测试，例如 `/api/chat/stream`、`/api/responses/stream`、`/api/models/list` 与主题相关接口。
 - Run `python -m pytest` when test files are present.
 - 当存在测试文件时，使用 `python -m pytest` 执行测试。
+- For browser automation checks, first start the backend with `.\venv\Scripts\python.exe server.py`, wait until `http://127.0.0.1:3000/api/health` returns `{"status":"ok",...}`, then run browser automation against `http://127.0.0.1:3000/`. After verification, stop the temporary backend process.
+- 执行浏览器自动化验证时，先用 `.\venv\Scripts\python.exe server.py` 启动后端，确认 `http://127.0.0.1:3000/api/health` 返回 `{"status":"ok",...}` 后，再对 `http://127.0.0.1:3000/` 运行浏览器自动化；验证结束后记得停止临时启动的后端进程。
+- When running browser automation from PowerShell, prefer starting the backend as a background process with redirected logs so the test can continue in the same session.
+- 在 PowerShell 中做浏览器自动化时，优先把后端作为带日志重定向的后台进程启动，便于同一会话继续执行测试。
 - Minimum manual check before PR:
 - PR 前至少手动验证：
   1. Start the backend and open `http://localhost:3000`.
