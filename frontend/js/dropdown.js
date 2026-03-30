@@ -26,18 +26,11 @@ export function getConfigSelectPickerDefs() {
       dropdown: elements.webSearchProviderPickerDropdown,
     },
     {
-      key: "tavilySearchDepth",
-      select: elements.tavilySearchDepth,
-      input: elements.tavilySearchDepthPickerInput,
-      btn: elements.tavilySearchDepthPickerBtn,
-      dropdown: elements.tavilySearchDepthPickerDropdown,
-    },
-    {
-      key: "exaSearchType",
-      select: elements.exaSearchType,
-      input: elements.exaSearchTypePickerInput,
-      btn: elements.exaSearchTypePickerBtn,
-      dropdown: elements.exaSearchTypePickerDropdown,
+      key: "webSearchMode",
+      select: elements.webSearchMode,
+      input: elements.webSearchModePickerInput,
+      btn: elements.webSearchModePickerBtn,
+      dropdown: elements.webSearchModePickerDropdown,
     },
   ];
 }

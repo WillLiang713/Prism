@@ -198,10 +198,9 @@ if (-not $pythonCommand) {
   throw "Python 3.12+ was not found."
 }
 
-$sidecarDir = Join-Path $projectRoot "src-tauri\binaries"
-$sidecarTarget = Join-Path $sidecarDir "prism-backend-x86_64-pc-windows-msvc.exe"
-$pyInstallerBuildDir = Join-Path $projectRoot "build"
-$pyInstallerDistDir = Join-Path $projectRoot "dist"
+$runtimeResourceDir = Join-Path $projectRoot "src-tauri\runtime"
+$legacySidecarPath = Join-Path $projectRoot "src-tauri\binaries\prism-backend-x86_64-pc-windows-msvc.exe"
+$nuitkaOutputDir = Join-Path $projectRoot "build\nuitka"
 $tauriTargetDir = Join-Path $projectRoot "src-tauri\target"
 $packageJsonPath = Join-Path $projectRoot "package.json"
 $tauriConfigPath = Join-Path $projectRoot "src-tauri\tauri.conf.json"
@@ -222,26 +221,22 @@ Sync-VersionField `
   -Version $buildVersion `
   -Description "Cargo package version"
 
-if (-not (Test-Path $sidecarDir)) {
-  New-Item -ItemType Directory -Path $sidecarDir | Out-Null
-}
-
 Remove-BuildArtifact -Path $tauriTargetDir
 
 if (-not $SkipBackendBuild) {
-  Remove-BuildArtifact -Path $pyInstallerBuildDir
-  Remove-BuildArtifact -Path $pyInstallerDistDir
+  Remove-BuildArtifact -Path $nuitkaOutputDir
+  Remove-BuildArtifact -Path $runtimeResourceDir
 
-  if (Test-Path $sidecarTarget) {
-    Write-Host "Removing old backend sidecar: $sidecarTarget"
-    Remove-Item -Path $sidecarTarget -Force
+  if (Test-Path $legacySidecarPath) {
+    Write-Host "Removing legacy backend sidecar: $legacySidecarPath"
+    Remove-Item -Path $legacySidecarPath -Force
   }
 
   try {
     Invoke-NativeCommand `
       -FilePath $pythonCommand `
-      -Arguments ($pythonArgs + @("-m", "PyInstaller", "--version")) `
-      -FailureMessage "PyInstaller is required for the selected Python interpreter. Run: `"$pythonCommand`" $($pythonArgs -join ' ') -m pip install pyinstaller" `
+      -Arguments ($pythonArgs + @("-m", "nuitka", "--version")) `
+      -FailureMessage "Nuitka is required for the selected Python interpreter. Run: `"$pythonCommand`" $($pythonArgs -join ' ') -m pip install nuitka" `
       -SuppressOutput
   } catch {
     throw $_
@@ -251,32 +246,37 @@ if (-not $SkipBackendBuild) {
     -FilePath $pythonCommand `
     -Arguments ($pythonArgs + @(
       "-m",
-      "PyInstaller",
-      "--noconfirm",
-      "--clean",
-      "--onefile",
-      "--noconsole",
-      "--name",
-      "prism-backend",
-      "--add-data",
-      "tools.json;.",
-      "--hidden-import",
-      "uvicorn.logging",
-      "--hidden-import",
-      "uvicorn.loops.auto",
-      "--hidden-import",
-      "uvicorn.protocols.http.auto",
-      "--hidden-import",
-      "uvicorn.protocols.websockets.auto",
-      "--hidden-import",
-      "uvicorn.lifespan.on",
+      "nuitka",
+      "--mode=standalone",
+      "--assume-yes-for-downloads",
+      "--windows-console-mode=disable",
+      "--output-dir=$nuitkaOutputDir",
+      "--output-filename=prism-runtime.exe",
+      "--company-name=Prism",
+      "--product-name=Prism Desktop Runtime",
+      "--file-version=$buildVersion",
+      "--product-version=$buildVersion",
+      "--file-description=Prism Desktop Runtime",
+      ("--windows-icon-from-ico=" + (Join-Path $projectRoot "src-tauri\icons\icon.ico")),
+      ("--include-data-files=" + ((Join-Path $projectRoot "tools.json") + "=tools.json")),
+      ("--include-data-dir=" + ((Join-Path $projectRoot "frontend") + "=frontend")),
+      "--include-module=uvicorn.logging",
+      "--include-module=uvicorn.loops.auto",
+      "--include-module=uvicorn.protocols.http.auto",
+      "--include-module=uvicorn.protocols.websockets.auto",
+      "--include-module=uvicorn.lifespan.on",
       "server.py"
     )) `
-    -FailureMessage "PyInstaller build failed."
+    -FailureMessage "Nuitka build failed."
 
-  Copy-Item -Force `
-    (Join-Path $projectRoot "dist\prism-backend.exe") `
-    $sidecarTarget
+  $backendExe = Get-ChildItem -Path $nuitkaOutputDir -Recurse -Filter "prism-runtime.exe" -File | Select-Object -First 1
+  if (-not $backendExe) {
+    throw "Nuitka build finished but prism-runtime.exe was not found under $nuitkaOutputDir"
+  }
+
+  $backendDistDir = Split-Path -Parent $backendExe.FullName
+  New-Item -ItemType Directory -Path $runtimeResourceDir -Force | Out-Null
+  Copy-Item -Path (Join-Path $backendDistDir "*") -Destination $runtimeResourceDir -Recurse -Force
 }
 
 # 将 __BUILD__ 占位符替换为当前时间戳以破坏 WebView2 缓存

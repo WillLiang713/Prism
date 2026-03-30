@@ -91,8 +91,8 @@
 
 .brand-model-trigger {
   appearance: none;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-subtle);
+  border: 1px solid transparent;
+  background: transparent;
   color: inherit;
   display: inline-flex;
   align-items: center;
@@ -111,7 +111,7 @@
 
 .brand-model-trigger:hover {
   background: var(--bg-hover);
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 .brand-model-trigger:focus-visible {
@@ -138,6 +138,18 @@
 
 .brand-model-trigger.open .brand-model-caret {
   transform: rotate(180deg);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .brand-model-trigger:hover {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .brand-model-trigger:hover .brand-model-caret {
+    color: var(--text-muted);
+    opacity: 0.78;
+  }
 }
 
 .header-model-dropdown {
@@ -311,6 +323,12 @@
   z-index: 2;
 }
 
+.header-utility-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .desktop-window-controls {
   display: none;
   align-items: center;
@@ -387,7 +405,7 @@
 }
 
 .is-desktop-runtime .header-brand {
-  width: min(calc(100% - 244px), 720px);
+  width: min(calc(100% - 332px), 720px);
   gap: 0;
   pointer-events: auto;
 }
@@ -409,14 +427,39 @@
 }
 
 .is-desktop-runtime .chat-actions {
-  gap: 8px;
+  gap: 0;
   margin-right: -2px;
+}
+
+.is-desktop-runtime .header-utility-actions {
+  gap: 6px;
+}
+
+.is-desktop-runtime .header-utility-actions .btn.btn-secondary.btn-settings {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.is-desktop-runtime .header-utility-actions .btn.btn-secondary.btn-settings:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+.is-desktop-runtime .header-utility-actions .btn.btn-secondary.btn-settings:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-active);
 }
 
 .is-desktop-runtime .desktop-window-controls {
   display: inline-flex;
   gap: 2px;
-  margin-left: 12px;
+  margin-left: 8px;
   border-left: none;
   padding-left: 0;
 }
@@ -507,21 +550,6 @@
   opacity: 0.88;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings.theme-toggle-btn {
-  margin-right: 2px;
-}
-
-.corner-actions {
-  position: absolute;
-  top: 12px;
-  right: 18px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 12;
-  pointer-events: auto;
-}
-
 /* 默认隐藏所有图标，根据 html[data-theme] 显示 */
 .theme-toggle-btn svg {
   display: none !important;
@@ -541,8 +569,7 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
   display: block !important;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings,
-.corner-actions .btn.btn-secondary.btn-settings {
+.chat-actions .btn.btn-secondary.btn-settings {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -565,56 +592,38 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
   cursor: pointer;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings svg,
-.corner-actions .btn.btn-secondary.btn-settings svg {
+.chat-actions .btn.btn-secondary.btn-settings svg {
   width: 14px;
   height: 14px;
   stroke-width: 2.1;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:active,
-.corner-actions .btn.btn-secondary.btn-settings:active {
+.chat-actions .btn.btn-secondary.btn-settings:active {
   transform: scale(0.92);
   color: var(--text);
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:disabled,
-.corner-actions .btn.btn-secondary.btn-settings:disabled {
+.chat-actions .btn.btn-secondary.btn-settings:disabled {
   opacity: 0.4;
 }
 
-.is-desktop-runtime .corner-actions {
-  position: fixed;
-  right: 18px;
-  top: auto;
-  bottom: 22px;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 35;
-}
-
-.is-desktop-runtime .corner-actions .btn.btn-secondary.btn-settings {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  min-height: 38px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--glass-strong);
+body:not(.is-desktop-runtime) .header-utility-actions .btn.btn-secondary.btn-settings {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
   color: var(--text-muted);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
-.is-desktop-runtime .corner-actions .btn.btn-secondary.btn-settings:hover {
-  background: var(--surface);
-  border-color: var(--border-accent);
+body:not(.is-desktop-runtime) .header-utility-actions .btn.btn-secondary.btn-settings:hover {
+  background: transparent;
   color: var(--text);
 }
 
-.is-desktop-runtime .corner-actions .btn.btn-secondary.btn-settings:focus-visible {
-  box-shadow:
-    var(--shadow-sm),
-    0 0 0 2px var(--accent-glow);
+body:not(.is-desktop-runtime) .header-utility-actions .btn.btn-secondary.btn-settings:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-active);
 }

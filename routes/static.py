@@ -121,11 +121,7 @@ def _serve_versioned_js_asset(
     )
 
 
-def _render_index_html() -> str:
-    _ensure_frontend_asset(INDEX_HTML_PATH, "主页")
-    with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
-        html = f.read()
-    asset_version = _get_frontend_asset_version()
+def _inject_runtime_script(html: str) -> str:
     runtime_payload = {
         "platform": "desktop" if DESKTOP_MODE else "web",
     }
@@ -138,13 +134,25 @@ def _render_index_html() -> str:
         ");"
         "</script>"
     )
-    html = html.replace("</head>", f"{runtime_script}\n  </head>", 1)
+    return html.replace("</head>", f"{runtime_script}\n  </head>", 1)
+
+
+def _render_html_template(template_path: Path, label: str) -> str:
+    _ensure_frontend_asset(template_path, label)
+    with open(template_path, "r", encoding="utf-8") as f:
+        html = f.read()
+    html = _inject_runtime_script(html)
+    asset_version = _get_frontend_asset_version()
     html = re.sub(
         r'(href|src)="((?:css|js|libs|styles|app)/[^"?]+|style\.css|app\.js|favicon\.svg)(?:\?[^"]*)?"',
         lambda match: f'{match.group(1)}="{match.group(2)}?v={asset_version}"',
         html,
     )
     return html
+
+
+def _render_index_html() -> str:
+    return _render_html_template(INDEX_HTML_PATH, "主页")
 
 
 @router.get("/")

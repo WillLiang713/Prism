@@ -18,7 +18,7 @@ import {
   autoSaveManagedServiceDraft,
   normalizeApiUrlInputValue,
 } from './config.js';
-import { closeWebSearchToolSelector, isWebSearchEnabled, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { applyWebSearchApiKeyValue, applyWebSearchModeValue, closeWebSearchToolSelector, getCurrentWebSearchToolMode, isWebSearchEnabled, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown } from './models.js';
 import {
@@ -180,10 +180,17 @@ export function bindEvents() {
   elements.webSearchToolCurrent?.addEventListener("click", () => {
     toggleWebSearchToolSelector();
   });
-  elements.tavilyApiKey?.addEventListener("input", updateConfigStatusStrip);
-  elements.tavilyApiKey?.addEventListener("blur", autoSaveConfigDraft);
-  elements.exaApiKey?.addEventListener("input", updateConfigStatusStrip);
-  elements.exaApiKey?.addEventListener("blur", autoSaveConfigDraft);
+  elements.webSearchApiKey?.addEventListener("input", () => {
+    applyWebSearchApiKeyValue(elements.webSearchApiKey?.value);
+    updateConfigStatusStrip();
+  });
+  elements.webSearchApiKey?.addEventListener("blur", () => {
+    applyWebSearchApiKeyValue(elements.webSearchApiKey?.value);
+    autoSaveConfigDraft();
+  });
+  elements.webSearchMode?.addEventListener("change", () => {
+    applyWebSearchModeValue(elements.webSearchMode?.value);
+  });
   elements.exaSearchType?.addEventListener("change", () => {
     updateConfigStatusStrip();
     autoSaveConfigDraft();

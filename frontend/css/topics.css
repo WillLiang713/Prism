@@ -2,7 +2,7 @@
 .topic-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   overflow-y: auto;
   margin-right: 0;
   padding-right: 2px;
@@ -94,15 +94,16 @@
 .topic-item {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: var(--bg-subtle);
-  padding: 9px 11px 9px 17px;
+  padding: 4px 8px 4px 14px;
   cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .topic-item:focus-visible {
@@ -112,12 +113,12 @@
 
 .topic-item:hover {
   background: var(--bg-hover);
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 .topic-item.active {
   background: var(--bg-active);
-  border-color: var(--border-strong);
+  border-color: transparent;
   box-shadow: none;
 }
 
@@ -125,38 +126,42 @@
   display: none;
 }
 
-.topic-item.running .topic-meta {
-  color: var(--text-muted);
+.topic-item.running {
+  border-color: rgba(249, 115, 22, 0.18);
 }
 
 :root[data-theme="light"] .topic-item {
-  background: rgba(15, 23, 42, 0.032);
-  border-color: rgba(15, 23, 42, 0.045);
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(15, 23, 42, 0.04);
 }
 
 :root[data-theme="light"] .topic-item:hover {
   background: rgba(15, 23, 42, 0.048);
-  border-color: rgba(15, 23, 42, 0.065);
+  border-color: transparent;
 }
 
 :root[data-theme="light"] .topic-item.active {
-  background: rgba(15, 23, 42, 0.072);
-  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.056);
+  border-color: transparent;
 }
 
 :root[data-theme="dark"] .topic-item {
-  background: rgba(255, 255, 255, 0.032);
-  border-color: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.03);
 }
 
 :root[data-theme="dark"] .topic-item:hover {
-  background: rgba(255, 255, 255, 0.048);
-  border-color: rgba(255, 255, 255, 0.055);
+  background: rgba(255, 255, 255, 0.096);
+  border-color: transparent;
+}
+
+:root[data-theme="dark"] .topic-item:hover .topic-title {
+  color: #f2f2f2;
 }
 
 :root[data-theme="dark"] .topic-item.active {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.096);
+  border-color: transparent;
 }
 
 .topic-badge {
@@ -188,48 +193,58 @@
 .topic-content {
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
 }
 
 .topic-title {
-  font-size: var(--chat-font-size);
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
   color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.topic-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.topic-meta {
-  font-size: 11px;
-  color: var(--text-muted);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.topic-title-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 150;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--text);
+  box-shadow:
+    var(--shadow-md),
+    var(--shadow-inset);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  white-space: normal;
+  word-break: break-word;
+  pointer-events: none;
 }
 
 .topic-action-menu {
   position: relative;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .topic-action-trigger {
   border: none;
   background: transparent;
   color: var(--text-dim);
-  border-radius: 8px;
-  width: 24px;
-  height: 24px;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   cursor: pointer;
   opacity: 0;
@@ -244,14 +259,16 @@
 }
 
 .topic-action-trigger svg {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
+.topic-item:hover .topic-action-trigger,
 .topic-item.active .topic-action-trigger,
 .topic-item.topic-menu-open .topic-action-trigger,
-.topic-item.delete-pending .topic-action-trigger {
+.topic-item.delete-pending .topic-action-trigger,
+.topic-item:focus-within .topic-action-trigger {
   opacity: 1;
   pointer-events: auto;
 }

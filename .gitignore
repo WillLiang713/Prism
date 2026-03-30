@@ -10,6 +10,7 @@ wheels/
 node_modules/
 src-tauri/target/
 logs/
+src-tauri/runtime/
 src-tauri/binaries/prism-backend-*.exe
 
 # Virtual environments
@@ -22,4 +23,8 @@ venv
 .env
 .env.*
 !.env.example
-tmp
+
+*.log
+*.out
+*.err
+*.png

@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def get_resource_root() -> Path:
-    """返回运行时资源根目录，兼容 PyInstaller one-file。"""
+    """返回运行时资源根目录，兼容冻结后的目录式发布。"""
     if getattr(sys, "frozen", False):
         meipass = getattr(sys, "_MEIPASS", "")
         if meipass:

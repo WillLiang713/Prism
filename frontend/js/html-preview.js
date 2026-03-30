@@ -1,4 +1,5 @@
-import { elements } from "./state.js";
+import { buildApiUrl, elements, isDesktopRuntime } from "./state.js";
+import { isMobileLayout } from "./layout.js";
 
 const PREVIEW_CLOSE_DURATION_MS = 260;
 const INLINE_PREVIEW_MEDIA_QUERY = "(min-width: 901px)";
@@ -146,7 +147,7 @@ function buildPreviewDocument(markup) {
       return source.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
     }
 
-    if (/<html([\s>][\s\S]*?)>/i.test(source)) {
+    if (/<html([^>]*)>/i.test(source)) {
       return source.replace(/<html([^>]*)>/i, `<html$1><head>${baseTag}</head>`);
     }
 
@@ -168,10 +169,6 @@ function supportsFrameSrcdoc() {
   return !!elements.htmlPreviewFrame && "srcdoc" in elements.htmlPreviewFrame;
 }
 
-function shouldPreferSrcdocPreview() {
-  return supportsFrameSrcdoc();
-}
-
 function syncFrameContent(forceReload = false) {
   if (!elements.htmlPreviewFrame) return;
 
@@ -184,12 +181,6 @@ function syncFrameContent(forceReload = false) {
   revokeActiveObjectUrl();
   setFrameLoading(true);
   elements.htmlPreviewFrame.dataset.previewDocument = nextDocument;
-
-  if (shouldPreferSrcdocPreview()) {
-    elements.htmlPreviewFrame.removeAttribute("src");
-    elements.htmlPreviewFrame.srcdoc = nextDocument;
-    return;
-  }
 
   elements.htmlPreviewFrame.removeAttribute("srcdoc");
   elements.htmlPreviewFrame.src = "about:blank";
@@ -204,9 +195,74 @@ function syncFrameContent(forceReload = false) {
       return;
     }
 
-    // 兼容不支持 Blob URL 的环境，回退到 srcdoc。
-    elements.htmlPreviewFrame.srcdoc = nextDocument;
+    if (supportsFrameSrcdoc()) {
+      // 只把 srcdoc 当作兜底，避免移动端 WebView 在该路径下直接白屏。
+      elements.htmlPreviewFrame.removeAttribute("src");
+      elements.htmlPreviewFrame.srcdoc = nextDocument;
+      return;
+    }
+
+    setFrameLoading(false);
   });
+}
+
+async function createMobilePreviewSession(markup) {
+  const response = await fetch(buildApiUrl("/api/html-preview/sessions"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      document: buildPreviewDocument(markup),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`创建移动端预览失败（${response.status}）`);
+  }
+
+  return response.json();
+}
+
+function openMobilePreviewPage(markup, language = "html") {
+  const nextMarkup = String(markup || "");
+  if (!nextMarkup.trim()) return false;
+
+  const previewTab = window.open("", "_blank");
+
+  void createMobilePreviewSession(nextMarkup)
+    .then((payload) => {
+      const sessionId = String(payload?.id || "").trim();
+      if (!sessionId) {
+        throw new Error("预览会话创建成功，但未返回有效 ID");
+      }
+      const previewUrl = buildApiUrl(
+        `/api/html-preview/page/${encodeURIComponent(sessionId)}`
+      );
+
+      if (previewTab && !previewTab.closed) {
+        previewTab.location.replace(previewUrl);
+        return;
+      }
+
+      window.open(previewUrl, "_blank");
+    })
+    .catch((error) => {
+      console.error("移动端独立预览打开失败:", error);
+      if (previewTab && !previewTab.closed) {
+        previewTab.close();
+      }
+      initHtmlPreview();
+      applyPreviewContent(nextMarkup, language, { forceReload: true });
+      previewState.lastTrigger = null;
+      setPreviewSource();
+      if (!previewState.isOpen) {
+        previewState.isOpen = true;
+        showLayer();
+      }
+    });
+
+  return true;
 }
 
 function renderPreview(forceReload = false) {
@@ -234,7 +290,9 @@ function showLayer() {
   document.body.classList.add("has-html-preview");
 
   if (isInlinePreviewLayout()) {
-    elements.htmlPreviewLayer.classList.add("is-open");
+    window.requestAnimationFrame(() => {
+      elements.htmlPreviewLayer?.classList.add("is-open");
+    });
     return;
   }
 
@@ -321,6 +379,10 @@ export function openHtmlPreview({ markup = "", language = "html", trigger = null
   const nextMarkup = String(markup || "");
   if (!nextMarkup.trim()) return;
 
+  if (!isDesktopRuntime() && isMobileLayout()) {
+    if (openMobilePreviewPage(nextMarkup, language)) return;
+  }
+
   initHtmlPreview();
   applyPreviewContent(nextMarkup, language, { forceReload: true });
   previewState.lastTrigger = trigger instanceof HTMLElement ? trigger : null;
@@ -354,6 +416,10 @@ export function openHtmlPreviewForSource({
 } = {}) {
   const nextMarkup = String(markup || "");
   if (!nextMarkup.trim()) return;
+
+  if (!isDesktopRuntime() && isMobileLayout()) {
+    if (openMobilePreviewPage(nextMarkup, language)) return;
+  }
 
   initHtmlPreview();
   applyPreviewContent(nextMarkup, language, { forceReload: true });
@@ -391,7 +457,8 @@ export function syncHtmlPreviewForTurn(topicId, turn, options = {}) {
     }
   }
 
-  const shouldAutoOpen = options.autoOpen === true;
+  const shouldAutoOpen =
+    options.autoOpen === true && !(!isDesktopRuntime() && isMobileLayout());
   if (!shouldAutoOpen || turn?.models?.main?.previewAutoOpened === true) {
     return;
   }

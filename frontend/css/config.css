@@ -686,6 +686,25 @@
   padding: 0 14px;
 }
 
+#configModal .service-detail-topbar .service-detail-current-btn:not(.is-active) {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+#configModal .service-detail-topbar .service-detail-current-btn:not(.is-active):hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+#configModal .service-detail-topbar .service-detail-current-btn:not(.is-active):disabled {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-dim);
+}
+
 #configModal .service-detail-topbar .service-detail-current-btn.is-active {
   border-color: transparent;
   background: var(--accent-strong);
@@ -1056,24 +1075,29 @@
   grid-area: provider;
 }
 
+#webSearchApiKeyGroup {
+  grid-area: tavily;
+}
+
 #webSearchMaxResultsGroup {
   grid-area: results;
 }
 
-#tavilyApiKeyGroup {
-  grid-area: tavily;
+#webSearchModeGroup {
+  grid-area: depth;
 }
 
 #tavilySearchDepthGroup {
   grid-area: depth;
 }
 
-#exaApiKeyGroup {
-  grid-area: exaKey;
-}
-
 #exaSearchTypeGroup {
   grid-area: exaType;
+}
+
+.web-search-api-key-store,
+.web-search-mode-store {
+  display: none;
 }
 
 .web-config-tips {

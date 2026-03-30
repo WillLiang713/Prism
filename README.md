@@ -122,12 +122,12 @@ Notes:
 
 - Prefer `npm run desktop:build` over calling `npm run tauri:build` directly.
 - The build entry point is `scripts/build-tauri-windows.ps1`.
-- The script first packages the Python backend into `prism-backend.exe`, then runs the Tauri build.
+- The script first packages the Python runtime into `prism-runtime.exe`, then runs the Tauri build.
 - This is the path that ensures the desktop package includes the latest backend sidecar.
 
 Current desktop packaging behavior:
 
-- `prism-backend.exe` starts without opening a visible console window
+- `prism-runtime.exe` starts without opening a visible console window
 - the desktop UI appears first and becomes interactive after backend health checks pass
 - the app disables the input and send button while the backend is not ready
 - if the local backend fails to start, restart the app and check logs

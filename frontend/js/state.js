@@ -233,27 +233,18 @@ export const elements = {
   webSearchToolDropdown: document.getElementById("webSearchToolDropdown"),
   webSearchProvider: document.getElementById("webSearchProvider"),
   webSearchProviderGroup: document.getElementById("webSearchProviderGroup"),
+  webSearchApiKey: document.getElementById("webSearchApiKey"),
+  webSearchApiKeyGroup: document.getElementById("webSearchApiKeyGroup"),
+  webSearchMode: document.getElementById("webSearchMode"),
+  webSearchModeGroup: document.getElementById("webSearchModeGroup"),
+  webSearchModePickerInput: document.getElementById("webSearchModePickerInput"),
+  webSearchModePickerBtn: document.getElementById("webSearchModePickerBtn"),
+  webSearchModePickerDropdown: document.getElementById("webSearchModePickerDropdown"),
   tavilyApiKey: document.getElementById("tavilyApiKey"),
   exaApiKey: document.getElementById("exaApiKey"),
   exaSearchType: document.getElementById("exaSearchType"),
-  exaSearchTypePickerInput: document.getElementById("exaSearchTypePickerInput"),
-  exaSearchTypePickerBtn: document.getElementById("exaSearchTypePickerBtn"),
-  exaSearchTypePickerDropdown: document.getElementById("exaSearchTypePickerDropdown"),
   tavilyMaxResults: document.getElementById("tavilyMaxResults"),
   tavilySearchDepth: document.getElementById("tavilySearchDepth"),
-  tavilySearchDepthPickerInput: document.getElementById(
-    "tavilySearchDepthPickerInput"
-  ),
-  tavilySearchDepthPickerBtn: document.getElementById(
-    "tavilySearchDepthPickerBtn"
-  ),
-  tavilySearchDepthPickerDropdown: document.getElementById(
-    "tavilySearchDepthPickerDropdown"
-  ),
-  tavilyApiKeyGroup: document.getElementById("tavilyApiKeyGroup"),
-  exaApiKeyGroup: document.getElementById("exaApiKeyGroup"),
-  exaSearchTypeGroup: document.getElementById("exaSearchTypeGroup"),
-  tavilySearchDepthGroup: document.getElementById("tavilySearchDepthGroup"),
   webSearchMaxResultsGroup: document.getElementById("webSearchMaxResultsGroup"),
   closeToTrayOnClose: document.getElementById("closeToTrayOnClose"),
   desktopCloseToTrayGroup: document.getElementById("desktopCloseToTrayGroup"),

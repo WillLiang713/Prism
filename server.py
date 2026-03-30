@@ -13,6 +13,7 @@ from config import BUILD_ID, DESKTOP_MODE, DESKTOP_RELEASE_MODE, RUNTIME_ARGS
 from desktop_logging import init_desktop_release_logging
 
 from routes.chat import router as chat_router
+from routes.html_preview import router as html_preview_router
 from routes.models import router as models_router
 from routes.proxy import router as proxy_router
 from routes.responses import router as responses_router
@@ -45,6 +46,7 @@ async def health_check():
 
 
 app.include_router(static_router)
+app.include_router(html_preview_router)
 app.include_router(tools_router)
 app.include_router(search_router)
 app.include_router(models_router)

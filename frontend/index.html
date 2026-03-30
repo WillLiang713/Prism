@@ -30,10 +30,10 @@
     <link rel="stylesheet" href="css/html-preview.css" />
     <link rel="stylesheet" href="css/responsive.css" />
     <script>
-      // 样式版本号优先使用构建脚本替换后的 __BUILD__，开发态则自动生成，
+      // 样式版本号优先使用构建脚本替换后的 1774874359，开发态则自动生成，
       // 同时避免对已带 ?v= 的链接重复追加版本参数。
-      var PRISM_STYLE_BUILD_ID = "__BUILD__";
-      if (!PRISM_STYLE_BUILD_ID || PRISM_STYLE_BUILD_ID === "__BUILD__") {
+      var PRISM_STYLE_BUILD_ID = "1774874359";
+      if (!PRISM_STYLE_BUILD_ID || PRISM_STYLE_BUILD_ID === "1774874359") {
         PRISM_STYLE_BUILD_ID = String(Date.now());
       }
       document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
@@ -189,6 +189,37 @@
                   </div>
                 </div>
                 <div class="chat-actions">
+                  <div class="header-utility-actions" aria-label="界面操作">
+                    <button class="btn btn-secondary btn-settings no-drag theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题">
+                      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path d="M12 2v2"></path>
+                        <path d="M12 20v2"></path>
+                        <path d="m4.93 4.93 1.41 1.41"></path>
+                        <path d="m17.66 17.66 1.41 1.41"></path>
+                        <path d="M2 12h2"></path>
+                        <path d="M20 12h2"></path>
+                        <path d="m6.34 17.66-1.41 1.41"></path>
+                        <path d="m19.07 4.93-1.41 1.41"></path>
+                      </svg>
+                      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                      </svg>
+                      <svg class="icon-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
+                        <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                      </svg>
+                      <span class="sr-only">切换主题</span>
+                    </button>
+                    <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" aria-label="设置">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
+                      </svg>
+                      <span class="sr-only">设置</span>
+                    </button>
+                  </div>
                   <div class="desktop-window-controls" id="desktopWindowControls" aria-label="窗口控制">
                     <button
                       class="desktop-window-btn no-drag"
@@ -361,38 +392,6 @@
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div class="corner-actions" aria-label="界面操作">
-                <button class="btn btn-secondary btn-settings no-drag theme-toggle-btn corner-action-btn" id="themeToggleBtn" aria-label="切换主题">
-                  <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
-                    <circle cx="12" cy="12" r="4"></circle>
-                    <path d="M12 2v2"></path>
-                    <path d="M12 20v2"></path>
-                    <path d="m4.93 4.93 1.41 1.41"></path>
-                    <path d="m17.66 17.66 1.41 1.41"></path>
-                    <path d="M2 12h2"></path>
-                    <path d="M20 12h2"></path>
-                    <path d="m6.34 17.66-1.41 1.41"></path>
-                    <path d="m19.07 4.93-1.41 1.41"></path>
-                  </svg>
-                  <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
-                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-                  </svg>
-                  <svg class="icon-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
-                    <rect width="20" height="14" x="2" y="3" rx="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                  </svg>
-                  <span class="sr-only">切换主题</span>
-                </button>
-                <button class="btn btn-secondary btn-settings no-drag corner-action-btn" id="openConfigBtn" aria-label="设置">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
-                  </svg>
-                  <span class="sr-only">设置</span>
-                </button>
               </div>
 
               <section
@@ -761,38 +760,28 @@
                       ></div>
                     </div>
                   </div>
-                  <div class="form-group" id="tavilyApiKeyGroup">
-                    <label for="tavilyApiKey">API 密钥</label>
+                  <div class="form-group" id="webSearchApiKeyGroup">
+                    <label for="webSearchApiKey">API 密钥</label>
                     <div class="password-input-wrapper key-input-wrapper">
                     <input
                       type="password"
-                      id="tavilyApiKey"
+                      id="webSearchApiKey"
                       placeholder="输入API密钥"
                     />
-                    <button type="button" class="password-toggle-btn" data-target="tavilyApiKey" aria-label="显示/隐藏密钥">
+                    <button type="button" class="password-toggle-btn" data-target="webSearchApiKey" aria-label="显示/隐藏密钥">
                       <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                       <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     </button>
                     </div>
-                  </div>
-                  <div class="form-group" id="exaApiKeyGroup">
-                    <label for="exaApiKey">API 密钥</label>
-                    <div class="password-input-wrapper key-input-wrapper">
-                    <input
-                      type="password"
-                      id="exaApiKey"
-                      placeholder="输入API密钥"
-                    />
-                    <button type="button" class="password-toggle-btn" data-target="exaApiKey" aria-label="显示/隐藏密钥">
-                      <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                      <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    </button>
+                    <div class="web-search-api-key-store" hidden>
+                      <input type="password" id="tavilyApiKey" tabindex="-1" aria-hidden="true" />
+                      <input type="password" id="exaApiKey" tabindex="-1" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
                 <div class="web-config-side">
                   <div class="form-group" id="webSearchMaxResultsGroup">
-                    <label for="tavilyMaxResults">数量</label>
+                    <label for="tavilyMaxResults">搜索数量</label>
                     <input
                       type="number"
                       id="tavilyMaxResults"
@@ -802,67 +791,48 @@
                       class="input-compact"
                     />
                   </div>
-                  <div class="form-group" id="tavilySearchDepthGroup">
-                    <label for="tavilySearchDepthPickerInput">搜索模式</label>
-                    <select id="tavilySearchDepth" class="config-native-select" aria-hidden="true" tabindex="-1">
+                  <div class="form-group" id="webSearchModeGroup">
+                    <label for="webSearchModePickerInput" id="webSearchModeLabel">搜索模式</label>
+                    <select id="webSearchMode" class="config-native-select" aria-hidden="true" tabindex="-1">
                       <option value="basic">basic</option>
                       <option value="advanced">advanced</option>
                     </select>
-                    <div class="model-picker config-static-picker" data-picker="tavilySearchDepth">
+                    <div class="model-picker config-static-picker" data-picker="webSearchMode">
                       <div class="model-picker-row">
                         <input
                           type="text"
-                          id="tavilySearchDepthPickerInput"
+                          id="webSearchModePickerInput"
                           placeholder="选择搜索模式"
                           readonly
                         />
                         <button
                           type="button"
                           class="model-picker-btn"
-                          id="tavilySearchDepthPickerBtn"
+                          id="webSearchModePickerBtn"
                           aria-label="打开搜索模式列表"
                           aria-expanded="false"
                         ></button>
                       </div>
                       <div
                         class="model-dropdown"
-                        id="tavilySearchDepthPickerDropdown"
+                        id="webSearchModePickerDropdown"
                         hidden
                       ></div>
                     </div>
-                  </div>
-                  <div class="form-group" id="exaSearchTypeGroup">
-                    <label for="exaSearchTypePickerInput">搜索模式</label>
-                    <select id="exaSearchType" class="config-native-select" aria-hidden="true" tabindex="-1">
-                      <option value="neural">neural</option>
-                      <option value="fast">fast</option>
-                      <option value="auto">auto</option>
-                      <option value="deep">deep</option>
-                      <option value="deep-reasoning">deep-reasoning</option>
-                      <option value="deep-max">deep-max</option>
-                      <option value="instant">instant</option>
-                    </select>
-                    <div class="model-picker config-static-picker" data-picker="exaSearchType">
-                      <div class="model-picker-row">
-                        <input
-                          type="text"
-                          id="exaSearchTypePickerInput"
-                          placeholder="选择搜索模式"
-                          readonly
-                        />
-                        <button
-                          type="button"
-                          class="model-picker-btn"
-                          id="exaSearchTypePickerBtn"
-                          aria-label="打开搜索模式列表"
-                          aria-expanded="false"
-                        ></button>
-                      </div>
-                      <div
-                        class="model-dropdown"
-                        id="exaSearchTypePickerDropdown"
-                        hidden
-                      ></div>
+                    <div class="web-search-mode-store" hidden>
+                      <select id="tavilySearchDepth" class="config-native-select" aria-hidden="true" tabindex="-1">
+                        <option value="basic">basic</option>
+                        <option value="advanced">advanced</option>
+                      </select>
+                      <select id="exaSearchType" class="config-native-select" aria-hidden="true" tabindex="-1">
+                        <option value="neural">neural</option>
+                        <option value="fast">fast</option>
+                        <option value="auto">auto</option>
+                        <option value="deep">deep</option>
+                        <option value="deep-reasoning">deep-reasoning</option>
+                        <option value="deep-max">deep-max</option>
+                        <option value="instant">instant</option>
+                      </select>
                     </div>
                   </div>
                 </div>

@@ -123,12 +123,12 @@ npm run desktop:build
 - 不建议直接运行 `npm run tauri:build`
 - 推荐完整打包入口是 `npm run desktop:build`
 - 实际脚本入口为 `scripts/build-tauri-windows.ps1`
-- 该脚本会先把 Python 后端打成 `prism-backend.exe`，再执行 Tauri 构建
+- 该脚本会先把 Python 运行时打成 `prism-runtime.exe`，再执行 Tauri 构建
 - 走这条路径才能确保桌面安装包带上最新的后端 sidecar
 
 当前打包行为：
 
-- `prism-backend.exe` 以无控制台方式启动，不会额外弹出黑色命令行窗口
+- `prism-runtime.exe` 以无控制台方式启动，不会额外弹出黑色命令行窗口
 - 桌面主界面会先显示，待后端健康检查通过后进入可用状态
 - 后端未就绪前，输入框和发送按钮会被禁用
 - 如果本地后端启动失败，建议重启应用并查看日志

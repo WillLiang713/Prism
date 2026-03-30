@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS, createId, formatTime } from './state.js';
+import { state, elements, STORAGE_KEYS, createId } from './state.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
 import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
@@ -30,6 +30,172 @@ export function setRegenerateTopicTitle(fn) { _regenerateTopicTitle = fn; }
 let openTopicActionMenuId = null;
 let floatingTopicActionMenuEl = null;
 let floatingTopicActionTriggerEl = null;
+const TOPIC_TITLE_TOOLTIP_MEDIA_QUERY = "(hover: hover) and (pointer: fine)";
+const TOPIC_TITLE_TOOLTIP_DELAY_MS = 420;
+let topicTitleTooltipEl = null;
+let topicTitleTooltipAnchorEl = null;
+let topicTitleTooltipId = "";
+let topicTitleTooltipBound = false;
+let topicTitleTooltipTimer = 0;
+
+function canShowTopicTitleTooltip() {
+  if (typeof window === "undefined") return false;
+  if (isMobileLayout()) return false;
+  if (typeof window.matchMedia !== "function") return true;
+  return window.matchMedia(TOPIC_TITLE_TOOLTIP_MEDIA_QUERY).matches;
+}
+
+function bindTopicTitleTooltipEvents() {
+  if (topicTitleTooltipBound || typeof window === "undefined") return;
+  topicTitleTooltipBound = true;
+  window.addEventListener("resize", closeTopicTitleTooltip, { passive: true });
+  window.addEventListener("blur", closeTopicTitleTooltip);
+  window.visualViewport?.addEventListener("resize", closeTopicTitleTooltip, {
+    passive: true,
+  });
+  window.visualViewport?.addEventListener("scroll", closeTopicTitleTooltip, {
+    passive: true,
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeTopicTitleTooltip();
+    }
+  });
+  elements.topicList?.addEventListener("scroll", closeTopicTitleTooltip, {
+    passive: true,
+  });
+}
+
+function clearTopicTitleTooltipTimer() {
+  if (!topicTitleTooltipTimer || typeof window === "undefined") return;
+  window.clearTimeout(topicTitleTooltipTimer);
+  topicTitleTooltipTimer = 0;
+}
+
+function ensureTopicTitleTooltip() {
+  if (topicTitleTooltipEl instanceof HTMLElement) return topicTitleTooltipEl;
+  const tooltip = document.createElement("div");
+  topicTitleTooltipId = `topic-title-tooltip-${createId()}`;
+  tooltip.id = topicTitleTooltipId;
+  tooltip.className = "topic-title-tooltip";
+  tooltip.setAttribute("role", "tooltip");
+  tooltip.setAttribute("aria-hidden", "true");
+  tooltip.hidden = true;
+  document.body.appendChild(tooltip);
+  topicTitleTooltipEl = tooltip;
+  bindTopicTitleTooltipEvents();
+  return tooltip;
+}
+
+function positionTopicTitleTooltip() {
+  if (
+    !(topicTitleTooltipEl instanceof HTMLElement) ||
+    !(topicTitleTooltipAnchorEl instanceof HTMLElement)
+  ) {
+    return;
+  }
+
+  const anchorRect = topicTitleTooltipAnchorEl.getBoundingClientRect();
+  const viewportPadding = 12;
+  const gap = 8;
+  const maxWidth = Math.min(
+    320,
+    Math.max(180, window.innerWidth - viewportPadding * 2)
+  );
+
+  topicTitleTooltipEl.style.maxWidth = `${maxWidth}px`;
+  topicTitleTooltipEl.style.left = "0px";
+  topicTitleTooltipEl.style.top = "0px";
+  topicTitleTooltipEl.style.visibility = "hidden";
+  topicTitleTooltipEl.hidden = false;
+
+  const tooltipRect = topicTitleTooltipEl.getBoundingClientRect();
+  const topCandidate = anchorRect.top - tooltipRect.height - gap;
+  const bottomCandidate = anchorRect.bottom + gap;
+  const fitsAbove = topCandidate >= viewportPadding;
+  const fitsBelow =
+    bottomCandidate + tooltipRect.height <=
+    window.innerHeight - viewportPadding;
+  const left = Math.min(
+    Math.max(viewportPadding, Math.round(anchorRect.left)),
+    Math.max(
+      viewportPadding,
+      window.innerWidth - viewportPadding - tooltipRect.width
+    )
+  );
+
+  let top = topCandidate;
+  let side = "top";
+  if (!fitsAbove && fitsBelow) {
+    top = bottomCandidate;
+    side = "bottom";
+  } else {
+    top = Math.max(viewportPadding, topCandidate);
+  }
+
+  topicTitleTooltipEl.dataset.side = side;
+  topicTitleTooltipEl.style.left = `${left}px`;
+  topicTitleTooltipEl.style.top = `${Math.round(top)}px`;
+  topicTitleTooltipEl.style.visibility = "visible";
+}
+
+function showTopicTitleTooltip(titleEl, fullTitle) {
+  if (!canShowTopicTitleTooltip() || !(titleEl instanceof HTMLElement)) {
+    closeTopicTitleTooltip();
+    return;
+  }
+  const tooltip = ensureTopicTitleTooltip();
+  const text = String(fullTitle || "").trim();
+  if (!text) {
+    closeTopicTitleTooltip();
+    return;
+  }
+  if (
+    topicTitleTooltipAnchorEl === titleEl &&
+    tooltip.textContent === text &&
+    !tooltip.hidden
+  ) {
+    positionTopicTitleTooltip();
+    return;
+  }
+  if (
+    topicTitleTooltipAnchorEl instanceof HTMLElement &&
+    topicTitleTooltipAnchorEl !== titleEl
+  ) {
+    topicTitleTooltipAnchorEl.removeAttribute("aria-describedby");
+  }
+  topicTitleTooltipAnchorEl = titleEl;
+  topicTitleTooltipAnchorEl.setAttribute("aria-describedby", topicTitleTooltipId);
+  tooltip.textContent = text;
+  tooltip.hidden = false;
+  tooltip.setAttribute("aria-hidden", "false");
+  positionTopicTitleTooltip();
+}
+
+function scheduleTopicTitleTooltip(titleEl, fullTitle) {
+  clearTopicTitleTooltipTimer();
+  if (!canShowTopicTitleTooltip() || !(titleEl instanceof HTMLElement)) return;
+  topicTitleTooltipTimer = window.setTimeout(() => {
+    topicTitleTooltipTimer = 0;
+    showTopicTitleTooltip(titleEl, fullTitle);
+  }, TOPIC_TITLE_TOOLTIP_DELAY_MS);
+}
+
+export function closeTopicTitleTooltip() {
+  clearTopicTitleTooltipTimer();
+  if (topicTitleTooltipAnchorEl instanceof HTMLElement) {
+    topicTitleTooltipAnchorEl.removeAttribute("aria-describedby");
+  }
+  topicTitleTooltipAnchorEl = null;
+  if (!(topicTitleTooltipEl instanceof HTMLElement)) return;
+  topicTitleTooltipEl.hidden = true;
+  topicTitleTooltipEl.setAttribute("aria-hidden", "true");
+  topicTitleTooltipEl.style.left = "";
+  topicTitleTooltipEl.style.top = "";
+  topicTitleTooltipEl.style.maxWidth = "";
+  topicTitleTooltipEl.style.visibility = "";
+  delete topicTitleTooltipEl.dataset.side;
+}
 
 export function setEmptyThreadState(isEmpty) {
   const chatThread = document.querySelector(".chat-thread");
@@ -787,6 +953,7 @@ export function closeTopicActionMenu() {
 export function renderTopicList() {
   if (!elements.topicList) return;
   closeFloatingTopicActionMenu();
+  closeTopicTitleTooltip();
 
   // 清空列表
   elements.topicList.innerHTML = "";
@@ -820,26 +987,20 @@ export function renderTopicList() {
     const title = document.createElement("div");
     title.className = "topic-title";
     title.textContent = topicTitle;
-
-    const meta = document.createElement("div");
-    meta.className = "topic-meta";
-    meta.textContent = `${topic.turns?.length || 0} 条${
-      isGenerating ? " · 生成中" : ""
-    } · ${formatTime(
-      topic.updatedAt || topic.createdAt
-    )}`;
-
-    const footer = document.createElement("div");
-    footer.className = "topic-footer";
-    footer.appendChild(meta);
+    title.addEventListener("mouseenter", () => {
+      scheduleTopicTitleTooltip(title, topicTitle);
+    });
+    title.addEventListener("mouseleave", () => {
+      closeTopicTitleTooltip();
+    });
 
     const content = document.createElement("div");
     content.className = "topic-content";
     content.appendChild(title);
-    content.appendChild(footer);
 
+    let actionWrap = null;
     if (!hideDeleteForOnlyNewTopic) {
-      const actionWrap = document.createElement("div");
+      actionWrap = document.createElement("div");
       actionWrap.className = "topic-action-menu";
       actionWrap.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -948,10 +1109,12 @@ export function renderTopicList() {
       menu.appendChild(deleteBtn);
       actionWrap.appendChild(moreBtn);
       actionWrap.appendChild(menu);
-      footer.appendChild(actionWrap);
     }
 
     item.appendChild(content);
+    if (actionWrap) {
+      item.appendChild(actionWrap);
+    }
 
     const activateTopic = () => {
       const isAlreadyActive = topic.id === state.chat.activeTopicId;

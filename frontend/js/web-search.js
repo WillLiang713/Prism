@@ -4,6 +4,7 @@ import {
   unmountBodyDropdown,
   clearBodyDropdownPosition,
   positionBodyDropdown,
+  syncConfigSelectPicker,
 } from './dropdown.js';
 import { isMobileLayout } from './layout.js';
 
@@ -22,6 +23,21 @@ const WEB_SEARCH_TOOL_MODE_COMPACT_LABELS = {
   tavily: "Tavily",
   exa: "Exa",
 };
+
+const TAVILY_SEARCH_MODE_OPTIONS = [
+  { value: "basic", label: "basic" },
+  { value: "advanced", label: "advanced" },
+];
+
+const EXA_SEARCH_MODE_OPTIONS = [
+  { value: "auto", label: "auto" },
+  { value: "neural", label: "neural" },
+  { value: "fast", label: "fast" },
+  { value: "deep", label: "deep" },
+  { value: "deep-reasoning", label: "deep-reasoning" },
+  { value: "deep-max", label: "deep-max" },
+  { value: "instant", label: "instant" },
+];
 
 const TOOL_EVENT_DISPLAY_NAMES = {
   web_search: "OpenAI Web Search",
@@ -763,6 +779,95 @@ export function normalizeExaSearchType(value) {
   return allowed.has(normalized) ? normalized : "auto";
 }
 
+function getCurrentExternalWebSearchProvider() {
+  return normalizeExternalWebSearchProvider(elements.webSearchProvider?.value);
+}
+
+function getCurrentWebSearchApiKey(provider = getCurrentExternalWebSearchProvider()) {
+  return provider === "exa"
+    ? String(elements.exaApiKey?.value || "")
+    : String(elements.tavilyApiKey?.value || "");
+}
+
+export function syncWebSearchApiKeyInput(
+  provider = getCurrentExternalWebSearchProvider()
+) {
+  if (!elements.webSearchApiKey) return "";
+  const nextValue = getCurrentWebSearchApiKey(provider);
+  elements.webSearchApiKey.value = nextValue;
+  return nextValue;
+}
+
+export function applyWebSearchApiKeyValue(
+  value,
+  provider = getCurrentExternalWebSearchProvider()
+) {
+  const nextValue = String(value || "");
+  if (provider === "exa") {
+    if (elements.exaApiKey) elements.exaApiKey.value = nextValue;
+  } else if (elements.tavilyApiKey) {
+    elements.tavilyApiKey.value = nextValue;
+  }
+  if (elements.webSearchApiKey) {
+    elements.webSearchApiKey.value = nextValue;
+  }
+  return nextValue;
+}
+
+function getWebSearchModeOptions(provider = getCurrentExternalWebSearchProvider()) {
+  return provider === "exa"
+    ? EXA_SEARCH_MODE_OPTIONS
+    : TAVILY_SEARCH_MODE_OPTIONS;
+}
+
+function getCurrentWebSearchModeValue(provider = getCurrentExternalWebSearchProvider()) {
+  return provider === "exa"
+    ? normalizeExaSearchType(elements.exaSearchType?.value)
+    : normalizeTavilySearchDepth(elements.tavilySearchDepth?.value);
+}
+
+export function syncWebSearchModeSelect(
+  provider = getCurrentExternalWebSearchProvider()
+) {
+  if (!elements.webSearchMode) return "";
+  const options = getWebSearchModeOptions(provider);
+  const nextValue = getCurrentWebSearchModeValue(provider);
+  const currentMarkup = options
+    .map((item) => `<option value="${item.value}">${item.label}</option>`)
+    .join("");
+  if (elements.webSearchMode.innerHTML !== currentMarkup) {
+    elements.webSearchMode.innerHTML = currentMarkup;
+  }
+  elements.webSearchMode.value = nextValue;
+  syncConfigSelectPicker("webSearchMode");
+  return nextValue;
+}
+
+export function applyWebSearchModeValue(
+  value,
+  provider = getCurrentExternalWebSearchProvider(),
+  options = {}
+) {
+  const isExa = provider === "exa";
+  const nextValue = isExa
+    ? normalizeExaSearchType(value)
+    : normalizeTavilySearchDepth(value);
+  const targetSelect = isExa ? elements.exaSearchType : elements.tavilySearchDepth;
+  if (targetSelect && targetSelect.value !== nextValue) {
+    targetSelect.value = nextValue;
+    if (options.dispatch !== false) {
+      targetSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  } else if (options.dispatch !== false && targetSelect) {
+    targetSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  if (elements.webSearchMode) {
+    elements.webSearchMode.value = nextValue;
+  }
+  syncConfigSelectPicker("webSearchMode");
+  return nextValue;
+}
+
 export function normalizeEndpointMode(value) {
   return String(value || "").toLowerCase() === "responses"
     ? "responses"
@@ -1194,21 +1299,18 @@ export function updateWebSearchProviderUi() {
   if (elements.webSearchProviderGroup) {
     elements.webSearchProviderGroup.style.display = "";
   }
+  if (elements.webSearchApiKeyGroup) {
+    elements.webSearchApiKeyGroup.style.display = "";
+  }
   if (elements.webSearchMaxResultsGroup) {
     elements.webSearchMaxResultsGroup.style.display = "";
   }
-  if (elements.tavilyApiKeyGroup) {
-    elements.tavilyApiKeyGroup.style.display = !isExa ? "" : "none";
+  if (elements.webSearchModeGroup) {
+    elements.webSearchModeGroup.style.display = "";
   }
-  if (elements.tavilySearchDepthGroup) {
-    elements.tavilySearchDepthGroup.style.display = !isExa ? "" : "none";
-  }
-  if (elements.exaApiKeyGroup) {
-    elements.exaApiKeyGroup.style.display = isExa ? "" : "none";
-  }
-  if (elements.exaSearchTypeGroup) {
-    elements.exaSearchTypeGroup.style.display = isExa ? "" : "none";
-  }
+  syncConfigSelectPicker("webSearchProvider");
+  syncWebSearchApiKeyInput(externalProvider);
+  syncWebSearchModeSelect(externalProvider);
   updateConfigStatusStrip();
 }
 

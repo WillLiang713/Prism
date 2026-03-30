@@ -1,26 +1,35 @@
 use std::env;
 use std::net::TcpListener;
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use tauri::{
+    path::BaseDirectory,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, Theme, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri::webview::Color;
-use tauri_plugin_shell::{process::CommandChild, ShellExt};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 const WINDOW_LABEL: &str = "main";
 const DEV_API_BASE_ENV: &str = "PRISM_DESKTOP_API_BASE";
 const DEFAULT_DEV_API_BASE: &str = "http://127.0.0.1:33100";
-const SIDECAR_NAME: &str = "prism-backend";
+const BACKEND_RESOURCE_DIR: &str = "runtime";
+const BACKEND_EXECUTABLE_NAME: &str = "prism-runtime.exe";
 const TRAY_ID: &str = "main-tray";
 const TRAY_MENU_SHOW_ID: &str = "tray-show";
 const TRAY_MENU_QUIT_ID: &str = "tray-quit";
 
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 #[derive(Default)]
-struct SidecarState(Mutex<Option<CommandChild>>);
+struct BackendState(Mutex<Option<ManagedBackendProcess>>);
 
 #[derive(Default)]
 struct DesktopPreferencesState(Mutex<DesktopPreferences>);
@@ -49,9 +58,14 @@ struct DesktopRuntime {
     startup_error: String,
 }
 
+struct ManagedBackendProcess {
+    pid: u32,
+    child: Child,
+}
+
 struct PreparedRuntime {
     config: DesktopRuntime,
-    child: Option<CommandChild>,
+    backend_process: Option<ManagedBackendProcess>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -103,9 +117,29 @@ fn background_color_for_theme(theme: Theme) -> Color {
     }
 }
 
-fn spawn_release_sidecar(app: &tauri::AppHandle) -> Result<PreparedRuntime, String> {
+fn backend_resource_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .resolve(BACKEND_RESOURCE_DIR, BaseDirectory::Resource)
+        .map_err(|error| format!("解析后端资源目录失败: {error}"))
+}
+
+fn backend_executable_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(backend_resource_dir(app)?.join(BACKEND_EXECUTABLE_NAME))
+}
+
+fn spawn_release_backend(app: &tauri::AppHandle) -> Result<PreparedRuntime, String> {
     let port = pick_available_port()?;
     let api_base = format!("http://127.0.0.1:{port}");
+    let backend_dir = backend_resource_dir(app)?;
+    let backend_executable = backend_executable_path(app)?;
+
+    if !backend_executable.exists() {
+        return Err(format!(
+            "后端可执行文件不存在: {}",
+            backend_executable.display()
+        ));
+    }
+
     let args = [
         "--host".to_string(),
         "127.0.0.1".to_string(),
@@ -114,13 +148,21 @@ fn spawn_release_sidecar(app: &tauri::AppHandle) -> Result<PreparedRuntime, Stri
         "--desktop-mode".to_string(),
     ];
 
-    let (_rx, child) = app
-        .shell()
-        .sidecar(SIDECAR_NAME)
-        .map_err(|error| format!("创建 sidecar 命令失败: {error}"))?
+    let mut command = Command::new(&backend_executable);
+    command
+        .current_dir(&backend_dir)
         .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
+
+    let child = command
         .spawn()
-        .map_err(|error| format!("启动 sidecar 失败: {error}"))?;
+        .map_err(|error| format!("启动桌面后端失败: {error}"))?;
+    let pid = child.id();
 
     Ok(PreparedRuntime {
         config: DesktopRuntime {
@@ -129,7 +171,7 @@ fn spawn_release_sidecar(app: &tauri::AppHandle) -> Result<PreparedRuntime, Stri
             backend_managed_by_desktop: true,
             startup_error: String::new(),
         },
-        child: Some(child),
+        backend_process: Some(ManagedBackendProcess { pid, child }),
     })
 }
 
@@ -142,11 +184,11 @@ fn prepare_runtime(app: &tauri::AppHandle) -> PreparedRuntime {
                 backend_managed_by_desktop: false,
                 startup_error: String::new(),
             },
-            child: None,
+            backend_process: None,
         };
     }
 
-    match spawn_release_sidecar(app) {
+    match spawn_release_backend(app) {
         Ok(runtime) => runtime,
         Err(error) => PreparedRuntime {
             config: DesktopRuntime {
@@ -155,15 +197,39 @@ fn prepare_runtime(app: &tauri::AppHandle) -> PreparedRuntime {
                 backend_managed_by_desktop: true,
                 startup_error: error,
             },
-            child: None,
+            backend_process: None,
         },
     }
 }
 
-fn shutdown_sidecar(app: &tauri::AppHandle) {
-    let state = app.state::<SidecarState>();
-    if let Some(child) = state.0.lock().ok().and_then(|mut guard| guard.take()) {
-        let _ = child.kill();
+fn kill_process_tree(pid: u32) {
+    #[cfg(windows)]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW)
+            .status();
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = Command::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+}
+
+fn shutdown_backend(app: &tauri::AppHandle) {
+    let state = app.state::<BackendState>();
+    if let Some(mut backend_process) = state.0.lock().ok().and_then(|mut guard| guard.take()) {
+        kill_process_tree(backend_process.pid);
+        let _ = backend_process.child.try_wait();
     }
 }
 
@@ -266,7 +332,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
-        .manage(SidecarState::default())
+        .manage(BackendState::default())
         .manage(DesktopPreferencesState::default())
         .manage(ExitIntentState::default())
         .invoke_handler(tauri::generate_handler![update_desktop_preferences])
@@ -283,20 +349,20 @@ pub fn run() {
                 event,
                 tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
             ) {
-                shutdown_sidecar(&window.app_handle());
+                shutdown_backend(&window.app_handle());
             }
         })
         .setup(|app| {
             let runtime = prepare_runtime(app.handle());
 
-            if let Some(child) = runtime.child {
+            if let Some(backend_process) = runtime.backend_process {
                 {
-                    let state = app.state::<SidecarState>();
+                    let state = app.state::<BackendState>();
                     let mut guard = state
                         .0
                         .lock()
                         .map_err(|error| std::io::Error::other(error.to_string()))?;
-                    *guard = Some(child);
+                    *guard = Some(backend_process);
                 }
             }
 
@@ -304,7 +370,7 @@ pub fn run() {
                 .map_err(std::io::Error::other)?;
             let window = WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
                 .title("Prism")
-                .inner_size(1280.0, 800.0)
+                .inner_size(1440.0, 900.0)
                 .min_inner_size(1100.0, 760.0)
                 .background_color(Color(0, 0, 0, 255))
                 .visible(false)
@@ -332,7 +398,7 @@ pub fn run() {
             event,
             tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
         ) {
-            shutdown_sidecar(app_handle);
+            shutdown_backend(app_handle);
         }
     });
 }
