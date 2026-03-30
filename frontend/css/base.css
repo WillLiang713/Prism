@@ -144,7 +144,7 @@ body {
   --app-shell-offset: 3vh;
   --app-shell-height: 94vh;
   --app-panel-gap: 0px;
-  --sidebar-panel-width: 252px;
+  --sidebar-panel-width: 264px;
   --sidebar-collapsed-width: 68px;
   --sidebar-motion-duration: 420ms;
   --sidebar-motion-fade-duration: 300ms;
@@ -445,7 +445,7 @@ body {
 @media (max-width: 1280px) {
   :root {
     --app-panel-gap: 0px;
-    --sidebar-panel-width: 232px;
+    --sidebar-panel-width: 244px;
   }
 }
 
