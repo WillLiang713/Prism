@@ -8,7 +8,7 @@
   padding-right: 2px;
   flex: 1;
   min-height: 0;
-  scrollbar-gutter: auto;
+  scrollbar-gutter: stable both-edges;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   opacity: 1;

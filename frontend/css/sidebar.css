@@ -26,6 +26,8 @@
 .sidebar-section {
   --sidebar-section-inline-padding: 10px;
   --topic-list-align-offset: 8px;
+  --topic-list-align-start: 0px;
+  --topic-list-align-end: 0px;
   --sidebar-control-icon-size: 16px;
   --sidebar-control-icon-stroke-width: 1.9;
   padding: 12px var(--sidebar-section-inline-padding);
@@ -48,6 +50,9 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
+  padding-left: var(--topic-list-align-start);
+  padding-right: var(--topic-list-align-end);
+  box-sizing: border-box;
 }
 
 .sidebar-top-bar .topic-new-btn {
@@ -59,6 +64,8 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .sidebar-collapsed .sidebar-top-bar .topic-new-btn {

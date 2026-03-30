@@ -718,6 +718,8 @@
     flex-direction: row;
     gap: 8px;
     margin-bottom: 6px;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .sidebar-collapsed .sidebar-top-bar .topic-new-btn {

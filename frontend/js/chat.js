@@ -2,7 +2,7 @@ import { state, elements, STORAGE_KEYS, createId, formatTime } from './state.js'
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
 import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
-import { setSendButtonMode, applyStatus, scrollToBottom, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
+import { setSendButtonMode, applyStatus, scrollToBottom, syncTopicListHeaderAlignment, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
 import { showConfirm, openImagePreview } from './dialog.js';
 import { collapseSidebarForMobile, isMobileLayout } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
@@ -974,6 +974,7 @@ export function renderTopicList() {
   }
 
   syncTopicActionMenuUi();
+  syncTopicListHeaderAlignment();
   updateHeaderMeta();
 }
 

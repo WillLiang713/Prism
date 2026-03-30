@@ -29,7 +29,7 @@ import {
   clearBodyDropdownPosition,
   positionBodyDropdown,
 } from './dropdown.js';
-import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide, toggleTheme } from './ui.js';
+import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide, initTopicListHeaderAlignment, toggleTheme } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
 import { triggerCreateTopic, isTopicRunning, requestDeleteTopic, closeTopicActionMenu } from './chat.js';
 import { addImages } from './images.js';
@@ -142,6 +142,7 @@ function toggleReasoningDropdown() {
 
 export function bindEvents() {
   initScrollbarAutoHide();
+  initTopicListHeaderAlignment();
   const autoSaveConfigDraft = () => {
     void autoSaveManagedServiceDraft();
   };

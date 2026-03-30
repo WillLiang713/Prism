@@ -16,6 +16,9 @@ const SCROLLBAR_ACTIVE_CLASS = "scrollbar-active";
 const SCROLLBAR_HIDE_DELAY_MS = 900;
 const scrollbarHideTimers = new WeakMap();
 let scrollbarAutoHideBound = false;
+let topicListAlignmentBound = false;
+let topicListAlignmentFrame = 0;
+let topicListAlignmentResizeObserver = null;
 
 // Late-bound to avoid circular dependencies
 let _sendPrompt = () => {};
@@ -117,6 +120,64 @@ function activateScrollbar(container, keepVisibleMs = SCROLLBAR_HIDE_DELAY_MS) {
   if (!container) return;
   container.classList.add(SCROLLBAR_ACTIVE_CLASS);
   scheduleScrollbarHide(container, keepVisibleMs);
+}
+
+export function syncTopicListHeaderAlignment() {
+  const topicList = elements.topicList;
+  const sidebarSection = topicList?.closest(".sidebar-section");
+  if (!topicList || !sidebarSection) return;
+
+  if (
+    sidebarSection.closest(".sidebar-collapsed") ||
+    getComputedStyle(topicList).display === "none"
+  ) {
+    sidebarSection.style.setProperty("--topic-list-align-start", "0px");
+    sidebarSection.style.setProperty("--topic-list-align-end", "0px");
+    return;
+  }
+
+  const firstItem = topicList.querySelector(".topic-item");
+  if (!(firstItem instanceof HTMLElement)) {
+    sidebarSection.style.setProperty("--topic-list-align-start", "0px");
+    sidebarSection.style.setProperty("--topic-list-align-end", "0px");
+    return;
+  }
+
+  const listRect = topicList.getBoundingClientRect();
+  const itemRect = firstItem.getBoundingClientRect();
+  const alignStart = Math.max(0, Math.round((itemRect.left - listRect.left) * 100) / 100);
+  const alignEnd = Math.max(0, Math.round((listRect.right - itemRect.right) * 100) / 100);
+
+  sidebarSection.style.setProperty("--topic-list-align-start", `${alignStart}px`);
+  sidebarSection.style.setProperty("--topic-list-align-end", `${alignEnd}px`);
+}
+
+function scheduleTopicListHeaderAlignment() {
+  if (topicListAlignmentFrame) {
+    cancelAnimationFrame(topicListAlignmentFrame);
+  }
+  topicListAlignmentFrame = requestAnimationFrame(() => {
+    topicListAlignmentFrame = 0;
+    syncTopicListHeaderAlignment();
+  });
+}
+
+export function initTopicListHeaderAlignment() {
+  if (topicListAlignmentBound || typeof window === "undefined") return;
+  topicListAlignmentBound = true;
+
+  scheduleTopicListHeaderAlignment();
+  window.addEventListener("resize", scheduleTopicListHeaderAlignment, { passive: true });
+
+  if (
+    typeof ResizeObserver !== "undefined" &&
+    elements.topicList instanceof HTMLElement
+  ) {
+    topicListAlignmentResizeObserver = new ResizeObserver(() => {
+      scheduleTopicListHeaderAlignment();
+    });
+    topicListAlignmentResizeObserver.observe(elements.topicList);
+  }
 }
 
 export function initScrollbarAutoHide() {
