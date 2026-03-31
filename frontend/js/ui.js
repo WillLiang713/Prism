@@ -222,7 +222,7 @@ export function updateHeaderMeta() {
   const count = Array.isArray(topic?.turns) ? topic.turns.length : 0;
 
   if (elements.headerSessionInfo) {
-    elements.headerSessionInfo.textContent = `会话：${title} · ${count} 条`;
+    elements.headerSessionInfo.textContent = `话题：${title} · ${count} 条`;
   }
 }
 

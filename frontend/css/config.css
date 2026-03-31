@@ -1247,7 +1247,7 @@
 .form-group textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: none;
 }
 
 /* Keep browser autofill from overriding theme colors in config inputs */
@@ -1328,7 +1328,7 @@
 #configModal .model-picker[data-side="title"] .model-picker-row:has(input[type="text"]:focus),
 #configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) {
   border-radius: 10px;
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: none;
 }
 
 #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row input[type="text"],
@@ -1344,7 +1344,7 @@
 #configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-row,
 #configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row {
   border-radius: 10px;
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: none;
 }
 
 /* Config modal: make all dropdown-like controls visually match model picker */
@@ -1473,7 +1473,7 @@
 .form-group input[type="number"]:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-glow);
+  box-shadow: none;
 }
 
 .input-compact {

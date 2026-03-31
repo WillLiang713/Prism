@@ -891,7 +891,7 @@ export async function regenerateTopicTitle(topicId = state.chat.activeTopicId) {
 
   if (!hasEffectiveApiKey(resolvedTitleConfig) || !hasEffectiveModel(resolvedTitleConfig)) {
     await showAlert("请先在设置里补全标题生成模型配置", {
-      title: "无法生成话题",
+      title: "无法生成标题",
     });
     return false;
   }
@@ -904,7 +904,7 @@ export async function regenerateTopicTitle(topicId = state.chat.activeTopicId) {
     renderTopicList();
     return true;
   } catch (error) {
-    await showAlert(error?.message || "重新生成话题失败", {
+    await showAlert(error?.message || "重新生成标题失败", {
       title: "生成失败",
     });
     return false;
@@ -977,7 +977,7 @@ export async function generateTopicTitle(topicId, config) {
     }
 
     const data = await response.json();
-    return data.title || "新对话";
+    return data.title || "新话题";
   } finally {
     state.chat.generatingTitleTopicIds.delete(topicId);
     renderTopicList();
@@ -1010,5 +1010,5 @@ export function fallbackTopicTitleFromTurns(topic) {
     if (!normalized) continue;
     return normalized.slice(0, 24);
   }
-  return "新对话";
+  return "新话题";
 }

@@ -209,11 +209,11 @@ function createEmptyChatState() {
 
   const title = document.createElement("div");
   title.className = "empty-chat-title";
-  title.textContent = "从这里开始";
+  title.textContent = "开始新话题";
 
   const description = document.createElement("div");
   description.className = "empty-chat-description";
-  description.textContent = "输入一个问题、需求，或者直接贴一段内容。";
+  description.textContent = "输入问题、任务，或粘贴一段内容，我会直接处理。";
 
   empty.appendChild(title);
   empty.appendChild(description);
@@ -742,7 +742,7 @@ export async function requestDeleteTopic(topicId = state.chat.activeTopicId) {
     `确定要删除话题「${topic.title || "未命名话题"}」吗？`,
     {
       title: "删除话题",
-      okText: "删除",
+      okText: "确认",
       danger: true,
       hint: "",
     }
@@ -780,7 +780,7 @@ export async function requestDeleteTurn(turn, topicId = state.chat.activeTopicId
     : "这条消息";
   const confirmed = await showConfirm(`确定要删除${messageLabel}吗？`, {
     title: "删除消息",
-    okText: "删除",
+    okText: "确认",
     danger: true,
     hint: "",
   });
@@ -1067,7 +1067,7 @@ export function renderTopicList() {
           <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
           <path d="M21 3v6h-6"></path>
         </svg>
-        <span>${isGeneratingTitle ? "正在生成话题..." : "重新生成话题"}</span>
+        <span>${isGeneratingTitle ? "正在生成标题..." : "重新生成标题"}</span>
       `;
       regenerateBtn.addEventListener("click", async (e) => {
         e.preventDefault();
@@ -1758,14 +1758,14 @@ export async function clearActiveTopicMessages() {
     const stopThenClear = await showConfirm(
       "当前话题正在生成中，仍要清空并停止生成吗？",
       {
-        title: "清空会话",
+        title: "清空话题",
         okText: "继续",
       }
     );
     if (!stopThenClear) return;
   }
   const confirmed = await showConfirm("确定要清空当前话题的所有消息吗？", {
-    title: "清空会话",
+    title: "清空话题",
     okText: "清空",
     danger: true,
     hint: "",

@@ -234,7 +234,7 @@ function openMobilePreviewPage(markup, language = "html") {
     .then((payload) => {
       const sessionId = String(payload?.id || "").trim();
       if (!sessionId) {
-        throw new Error("预览会话创建成功，但未返回有效 ID");
+        throw new Error("预览话题创建成功，但未返回有效 ID");
       }
       const previewUrl = buildApiUrl(
         `/api/html-preview/page/${encodeURIComponent(sessionId)}`

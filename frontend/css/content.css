@@ -306,6 +306,26 @@
   box-shadow: none;
 }
 
+html[data-theme="light"] .confirm-footer .btn-danger {
+  background: #dcdfe4;
+  color: #111111;
+}
+
+html[data-theme="light"] .confirm-footer .btn-danger:hover {
+  background: #d1d5db;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .confirm-footer .btn-danger {
+    background: #dcdfe4;
+    color: #111111;
+  }
+
+  :root:not([data-theme="dark"]) .confirm-footer .btn-danger:hover {
+    background: #d1d5db;
+  }
+}
+
 /* ---------- Shortcut help content ---------- */
 .shortcut-help-body {
   max-height: min(62vh, 540px);
@@ -659,7 +679,7 @@
 .prompt-item-edit-form textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-glow);
+  box-shadow: none;
 }
 
 .prompt-item-edit-actions {
@@ -771,7 +791,7 @@
 .prompt-edit-form textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: none;
 }
 
 .prompt-edit-form textarea {

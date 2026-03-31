@@ -3,7 +3,7 @@ import { setSendButtonMode, autoGrowPromptInput } from './ui.js';
 import { updateModelHint, scheduleFetchModels } from './models.js';
 
 let promptLayoutSyncToken = 0;
-const PROMPT_PLACEHOLDER = "随便聊点什么吧";
+const PROMPT_PLACEHOLDER = "输入问题或粘贴内容";
 const DESKTOP_PREFERENCES_COMMAND = "update_desktop_preferences";
 
 function getTauriInvoke() {

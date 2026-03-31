@@ -1794,7 +1794,7 @@ export async function deleteService() {
   if (!service) return;
   const confirmed = await showConfirm(`确定要删除服务「${getServiceDisplayName(service)}」吗？`, {
     title: "删除服务",
-    okText: "删除",
+    okText: "确认",
     danger: true,
   });
   if (!confirmed) return;
@@ -1804,7 +1804,7 @@ export async function deleteService() {
       "该服务有未保存修改，删除后这些修改将丢失，是否继续？",
       {
         title: "放弃未保存修改",
-        okText: "继续删除",
+        okText: "确认",
         cancelText: "取消",
         danger: true,
       }

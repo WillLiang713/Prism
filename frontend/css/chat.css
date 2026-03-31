@@ -290,35 +290,13 @@
   background: transparent;
   border: 1px solid var(--editable-panel-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
   transition: border-color 0.24s ease, box-shadow 0.24s ease,
     transform 0.24s ease;
   display: flex;
   flex-direction: column;
   gap: 0;
   overflow: visible;
-}
-
-.user-edit-panel::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: calc(var(--radius-lg) + 1px);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.28),
-    rgba(255, 255, 255, 0.08),
-    rgba(255, 255, 255, 0.18),
-    rgba(255, 255, 255, 0.24)
-  );
-  background-size: 300% 300%;
-  z-index: -2;
-  opacity: 0;
-  transition: opacity 0.24s ease, filter 0.24s ease;
-  animation: gradient-rotate 8s ease infinite;
-  pointer-events: none;
-  will-change: background-position, opacity;
-  filter: saturate(1);
 }
 
 .user-edit-panel::after {
@@ -334,20 +312,116 @@
 
 .user-edit-panel:hover {
   border-color: var(--editable-panel-border-hover);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .user-edit-panel:focus-within {
-  border-color: var(--editable-panel-border-focus);
+  border-color: var(--editable-panel-border);
   box-shadow: var(--shadow-sm);
-}
-
-.user-edit-panel:focus-within::before {
-  opacity: 0;
 }
 
 .user-edit-panel:focus-within::after {
   background: var(--bg-elev);
+}
+
+:root[data-theme="light"] .user-edit-panel,
+:root[data-theme="light"] .user-edit-panel:focus-within {
+  border-color: rgba(15, 23, 42, 0.10);
+  box-shadow: none;
+}
+
+:root[data-theme="light"] .user-edit-panel:focus-within {
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="light"] .user-edit-panel::after,
+:root[data-theme="light"] .user-edit-panel:focus-within::after {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(252, 252, 253, 0.98) 100%
+    ),
+    #ffffff;
+  opacity: 1;
+}
+
+:root[data-theme="dark"] .user-edit-panel,
+:root[data-theme="dark"] .user-edit-panel:focus-within {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .user-edit-panel:focus-within {
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+:root[data-theme="dark"] .user-edit-panel::after,
+:root[data-theme="dark"] .user-edit-panel:focus-within::after {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.038) 100%
+    ),
+    #111214;
+  opacity: 1;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .user-edit-panel,
+  :root:not([data-theme="dark"]) .user-edit-panel:focus-within {
+    border-color: rgba(15, 23, 42, 0.10);
+    box-shadow: none;
+  }
+
+  :root:not([data-theme="dark"]) .user-edit-panel:focus-within {
+    box-shadow:
+      0 10px 28px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  :root:not([data-theme="dark"]) .user-edit-panel::after,
+  :root:not([data-theme="dark"]) .user-edit-panel:focus-within::after {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.98) 0%,
+        rgba(252, 252, 253, 0.98) 100%
+      ),
+      #ffffff;
+    opacity: 1;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .user-edit-panel,
+  :root:not([data-theme="light"]) .user-edit-panel:focus-within {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+  }
+
+  :root:not([data-theme="light"]) .user-edit-panel:focus-within {
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  }
+
+  :root:not([data-theme="light"]) .user-edit-panel::after,
+  :root:not([data-theme="light"]) .user-edit-panel:focus-within::after {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.055) 0%,
+        rgba(255, 255, 255, 0.038) 100%
+      ),
+      #111214;
+    opacity: 1;
+  }
 }
 
 .user-edit-images {

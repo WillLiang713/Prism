@@ -28,3 +28,4 @@ venv
 *.out
 *.err
 *.png
+tmp
