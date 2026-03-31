@@ -127,6 +127,8 @@ Recent history uses concise, type-led messages such as `feat(frontend): ...`, `s
 ## Difficult Bug Investigation
 复杂问题排查
 
+- When analyzing any problem, prioritize deep analysis to identify the root cause before proposing or implementing a fix; avoid stopping at surface symptoms when the underlying cause is still unclear.
+- 分析任何问题时，都要优先做深入分析，先找出问题的根本原因，再提出或实施修复；如果底层原因还不清楚，不要停留在表面现象上。
 - Prioritize Context7 for official framework/library docs, and GitHub Issues/Discussions/PRs for real-world reports and fixes; do not rely only on local intuition when symptoms are hard to explain.
 - 查资料时统一优先使用 Context7 获取框架或库的官方文档，使用 GitHub Issues / Discussions / PR 查真实案例与修复思路；当现象反直觉时，不要只凭本地经验判断。
 - When presenting the diagnosis, clearly separate confirmed facts, likely inferences, and external references that inspired the hypothesis.

@@ -151,6 +151,20 @@ class ProviderConfig:
 
         return headers
 
+    @staticmethod
+    def is_grok_proxy(api_url: str | None, model: str | None = None) -> bool:
+        normalized_url = str(api_url or "").strip().lower()
+        normalized_model = str(model or "").strip().lower()
+        return (
+            "grok2api" in normalized_url
+            or "grok.com" in normalized_url
+            or (
+                normalized_model.startswith("grok-")
+                and normalized_url
+                and "x.ai" not in normalized_url
+            )
+        )
+
 
 class MessageBuilder:
     """消息构建器"""
@@ -189,8 +203,67 @@ class MessageBuilder:
         return MessageBuilder._render_system_prompt_template(template, now)
 
     @staticmethod
+    def _trim_history_text(text: str, limit: int) -> str:
+        normalized = " ".join(str(text or "").split()).strip()
+        if len(normalized) <= limit:
+            return normalized
+        return normalized[:limit].rstrip() + "..."
+
+    @staticmethod
+    def build_grok_proxy_context_prompt(
+        history_turns: list[HistoryTurn],
+        current_prompt: str,
+        *,
+        max_turns: int = 3,
+    ) -> str:
+        """为 grok2api 构造轻量上下文，避免直接传原始多轮历史。"""
+        usable_turns: list[HistoryTurn] = []
+        for turn in history_turns or []:
+            if not isinstance(turn, HistoryTurn):
+                continue
+            if str(turn.prompt or "").strip():
+                usable_turns.append(turn)
+
+        if not usable_turns:
+            return current_prompt
+
+        selected_turns = usable_turns[-max_turns:]
+        context_lines: list[str] = []
+        for index, turn in enumerate(selected_turns, start=1):
+            user_text = MessageBuilder._trim_history_text(turn.prompt, 120)
+            if user_text:
+                context_lines.append(f"{index}. 用户问过：{user_text}")
+
+            model_data = turn.models.get("main", {}) if isinstance(turn.models, dict) else {}
+            assistant_text = ""
+            if isinstance(model_data, dict) and str(model_data.get("status") or "") == "complete":
+                assistant_text = MessageBuilder._trim_history_text(
+                    str(model_data.get("content") or ""),
+                    160,
+                )
+            if assistant_text:
+                context_lines.append(f"   已回答摘要：{assistant_text}")
+
+        if not context_lines:
+            return current_prompt
+
+        current_text = str(current_prompt or "").strip()
+        return (
+            "以下是本轮问题的对话背景，仅用于帮助理解上下文。\n"
+            "不要重复回答背景中的旧问题，不要复述背景里的旧答案，只回答最后这个问题。\n\n"
+            "背景：\n"
+            f"{chr(10).join(context_lines)}\n\n"
+            "现在只回答这个问题：\n"
+            f"{current_text}"
+        ).strip()
+
+    @staticmethod
     def convert_history_to_messages(
-        history_turns: list[HistoryTurn], side: str, provider_mode: str
+        history_turns: list[HistoryTurn],
+        side: str,
+        provider_mode: str,
+        *,
+        include_assistant_history: bool = True,
     ) -> list[dict]:
         """将历史turns转换为消息数组"""
         if not history_turns:
@@ -220,6 +293,9 @@ class MessageBuilder:
                 messages.append({"role": "user", "parts": user_content})
             else:
                 messages.append({"role": "user", "content": user_content})
+
+            if not include_assistant_history:
+                continue
 
             # 构建助手消息
             if provider_mode == "gemini":

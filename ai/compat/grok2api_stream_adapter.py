@@ -11,6 +11,8 @@ class Grok2ApiStreamAdapter:
 
     _THINK_START_TAG = "<think>"
     _THINK_END_TAG = "</think>"
+    _REPLAY_EXACT_MIN_CHARS = 24
+    _REPLAY_PREFIX_MIN_CHARS = 80
     _SEARCH_LABEL_RE = re.compile(
         r"^(?:\[[^\]]+\])?\[(WebSearch|SearchImage|AgentThink)\]\s*",
         re.IGNORECASE,
@@ -39,6 +41,13 @@ class Grok2ApiStreamAdapter:
         self._artifact_query = ""
         self._web_search_emitted = False
         self._call_id = f"grok_compat_{uuid.uuid4().hex[:10]}"
+        self._previous_assistant_content = self._extract_previous_assistant_content(
+            request
+        )
+        self._replay_buffer = ""
+        self._replay_resolved = not (
+            upstream_is_grok_proxy and self._previous_assistant_content
+        )
 
     @staticmethod
     def _suffix_prefix(text: str, tag: str) -> int:
@@ -112,6 +121,91 @@ class Grok2ApiStreamAdapter:
                 if query_value:
                     self._artifact_query = query_value
 
+    @staticmethod
+    def _extract_previous_assistant_content(request: ChatRequest) -> str:
+        history_turns = request.historyTurns if isinstance(request.historyTurns, list) else []
+        for turn in reversed(history_turns):
+            models = getattr(turn, "models", None)
+            if not isinstance(models, dict):
+                continue
+            model_data = models.get("main")
+            if not isinstance(model_data, dict):
+                continue
+            if str(model_data.get("status") or "").strip().lower() != "complete":
+                continue
+            assistant_content = str(model_data.get("content") or "")
+            if assistant_content:
+                return assistant_content
+        return ""
+
+    @staticmethod
+    def _common_prefix_length(left: str, right: str) -> int:
+        max_length = min(len(left), len(right))
+        index = 0
+        while index < max_length and left[index] == right[index]:
+            index += 1
+        return index
+
+    def _drain_replay_buffer(
+        self, result: dict[str, list[Any]], *, flush: bool = False
+    ) -> None:
+        if self._replay_resolved:
+            if self._replay_buffer:
+                result["content"].append(self._replay_buffer)
+                self._replay_buffer = ""
+            return
+
+        if not self._replay_buffer:
+            return
+
+        previous = self._previous_assistant_content
+        if not previous:
+            self._replay_resolved = True
+            result["content"].append(self._replay_buffer)
+            self._replay_buffer = ""
+            return
+
+        common = self._common_prefix_length(self._replay_buffer, previous)
+
+        # 仍然只是“旧答案前缀”的时候先继续观望，等后续 chunk 再判断。
+        if (
+            not flush
+            and common == len(self._replay_buffer)
+            and common <= len(previous)
+        ):
+            return
+
+        should_strip_replay = (
+            common == len(previous)
+            and len(previous) >= self._REPLAY_EXACT_MIN_CHARS
+            and len(self._replay_buffer) > len(previous)
+        ) or (
+            common >= self._REPLAY_PREFIX_MIN_CHARS
+            and len(self._replay_buffer) > common
+        )
+
+        if should_strip_replay:
+            remaining = self._replay_buffer[common:]
+            if remaining:
+                result["content"].append(remaining)
+        else:
+            result["content"].append(self._replay_buffer)
+
+        self._replay_buffer = ""
+        self._replay_resolved = True
+
+    def _append_visible_content(
+        self, result: dict[str, list[Any]], text: str, *, flush: bool = False
+    ) -> None:
+        if self._replay_resolved:
+            if text:
+                result["content"].append(text)
+            return
+
+        if text:
+            self._replay_buffer += text
+        self._drain_replay_buffer(result, flush=flush)
+
     def _emit_web_search_event(self, result: dict[str, list[Any]]) -> None:
         if self._web_search_emitted or not self._artifact_lines:
             return
@@ -169,7 +263,7 @@ class Grok2ApiStreamAdapter:
     ) -> None:
         if not self._prefix_mode:
             if self._prefix_buffer:
-                result["content"].append(self._prefix_buffer)
+                self._append_visible_content(result, self._prefix_buffer, flush=flush)
                 self._prefix_buffer = ""
             return
 
@@ -180,7 +274,9 @@ class Grok2ApiStreamAdapter:
             stripped = self._prefix_buffer.lstrip()
             if not stripped:
                 if flush:
-                    result["content"].append(self._prefix_buffer)
+                    self._append_visible_content(
+                        result, self._prefix_buffer, flush=True
+                    )
                     self._prefix_buffer = ""
                     self._prefix_mode = False
                 return
@@ -194,13 +290,13 @@ class Grok2ApiStreamAdapter:
 
             if flush or len(self._prefix_buffer) >= self._MAX_PREFIX_BUFFER:
                 self._emit_web_search_event(result)
-                result["content"].append(stripped)
+                self._append_visible_content(result, stripped, flush=flush)
                 self._prefix_buffer = ""
                 self._prefix_mode = False
                 return
 
             self._emit_web_search_event(result)
-            result["content"].append(stripped)
+            self._append_visible_content(result, stripped, flush=False)
             self._prefix_buffer = ""
             self._prefix_mode = False
             return
@@ -209,8 +305,7 @@ class Grok2ApiStreamAdapter:
         self, result: dict[str, list[Any]], text: str, *, flush: bool = False
     ) -> None:
         if not self._prefix_mode:
-            if text:
-                result["content"].append(text)
+            self._append_visible_content(result, text, flush=flush)
             return
 
         if text:

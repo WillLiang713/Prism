@@ -783,6 +783,64 @@ function getCurrentExternalWebSearchProvider() {
   return normalizeExternalWebSearchProvider(elements.webSearchProvider?.value);
 }
 
+function isConfigModalOpen() {
+  return elements.configModal?.classList.contains("open") === true;
+}
+
+function getRuntimeMainSourceServiceId() {
+  const runtimeConfig =
+    state.runtimeModelConfig && typeof state.runtimeModelConfig === "object"
+      ? state.runtimeModelConfig
+      : {};
+  const model = String(runtimeConfig.model || "").trim();
+  if (!model) return "";
+  return String(runtimeConfig.modelServiceId || "").trim();
+}
+
+function getFormProviderConfig() {
+  return resolveProviderSelection(elements.provider?.value);
+}
+
+function getServiceProviderConfig(service) {
+  return resolveProviderSelection(
+    service?.model?.providerSelection || service?.model?.provider,
+    service?.model?.endpointMode
+  );
+}
+
+function getRuntimeMainSourceProviderConfig() {
+  const mainSourceServiceId = getRuntimeMainSourceServiceId();
+  if (!mainSourceServiceId) {
+    return getFormProviderConfig();
+  }
+
+  if (
+    isConfigModalOpen() &&
+    String(state.serviceManagerSelectedId || "").trim() === mainSourceServiceId
+  ) {
+    return getFormProviderConfig();
+  }
+
+  const sourceService = state.services.find(
+    (service) => String(service?.id || "").trim() === mainSourceServiceId
+  );
+  if (sourceService) {
+    return getServiceProviderConfig(sourceService);
+  }
+
+  return getFormProviderConfig();
+}
+
+function resolveWebSearchCapabilityProviderConfig(configLike = {}) {
+  const baseConfig = getRuntimeMainSourceProviderConfig();
+  return resolveProviderSelection(
+    configLike.providerSelection ??
+      configLike.provider ??
+      baseConfig.selection,
+    configLike.endpointMode ?? baseConfig.endpointMode
+  );
+}
+
 function getCurrentWebSearchApiKey(provider = getCurrentExternalWebSearchProvider()) {
   return provider === "exa"
     ? String(elements.exaApiKey?.value || "")
@@ -875,12 +933,7 @@ export function normalizeEndpointMode(value) {
 }
 
 export function canUseBuiltinWebSearch(configLike = {}) {
-  const providerConfig = resolveProviderSelection(
-    configLike.providerSelection ??
-      configLike.provider ??
-      elements.provider?.value,
-    configLike.endpointMode
-  );
+  const providerConfig = resolveWebSearchCapabilityProviderConfig(configLike);
   const endpointMode = normalizeEndpointMode(
     configLike.endpointMode ?? providerConfig.endpointMode
   );
@@ -889,22 +942,12 @@ export function canUseBuiltinWebSearch(configLike = {}) {
 }
 
 export function canUseAnthropicWebSearch(configLike = {}) {
-  const providerConfig = resolveProviderSelection(
-    configLike.providerSelection ??
-      configLike.provider ??
-      elements.provider?.value,
-    configLike.endpointMode
-  );
+  const providerConfig = resolveWebSearchCapabilityProviderConfig(configLike);
   return String(providerConfig.provider || "").toLowerCase() === "anthropic";
 }
 
 export function canUseGeminiGoogleSearch(configLike = {}) {
-  const providerConfig = resolveProviderSelection(
-    configLike.providerSelection ??
-      configLike.provider ??
-      elements.provider?.value,
-    configLike.endpointMode
-  );
+  const providerConfig = resolveWebSearchCapabilityProviderConfig(configLike);
   return String(providerConfig.provider || "").toLowerCase() === "gemini";
 }
 

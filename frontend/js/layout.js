@@ -160,7 +160,6 @@ export function initLayout() {
   const storedSidebarCollapsed = localStorage.getItem(
     STORAGE_KEYS.isSidebarCollapsed
   );
-  localStorage.removeItem("aiPkIsWideMode");
   state.isSidebarCollapsed =
     storedSidebarCollapsed === null
       ? isMobileLayout()

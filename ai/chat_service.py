@@ -612,13 +612,26 @@ class AIService:
             headers = ProviderConfig.build_headers(request.apiKey, provider_mode)
 
             history_messages = []
+            is_grok_proxy = ProviderConfig.is_grok_proxy(
+                request.apiUrl, request.model
+            )
             if request.historyTurns:
-                history_messages = MessageBuilder.convert_history_to_messages(
-                    request.historyTurns, "main", provider_mode
+                if not is_grok_proxy:
+                    history_messages = MessageBuilder.convert_history_to_messages(
+                        request.historyTurns,
+                        "main",
+                        provider_mode,
+                    )
+
+            current_prompt = request.prompt
+            if is_grok_proxy and request.historyTurns:
+                current_prompt = MessageBuilder.build_grok_proxy_context_prompt(
+                    request.historyTurns,
+                    request.prompt,
                 )
 
             current_user_content = MessageBuilder._build_user_content(
-                request.prompt, request.images, provider_mode
+                current_prompt, request.images, provider_mode
             )
             body = MessageBuilder.build_request_body(
                 request, provider_mode, current_user_content, history_messages
@@ -994,15 +1007,26 @@ class AIService:
             headers = ProviderConfig.build_headers(request.apiKey, provider_mode)
 
             history_messages = []
+            is_grok_proxy = ProviderConfig.is_grok_proxy(
+                request.apiUrl, request.model
+            )
             if request.historyTurns:
-                history_messages = MessageBuilder.convert_history_to_messages(
+                if not is_grok_proxy:
+                    history_messages = MessageBuilder.convert_history_to_messages(
+                        request.historyTurns,
+                        "main",
+                        provider_mode,
+                    )
+
+            current_prompt = request.prompt
+            if is_grok_proxy and request.historyTurns:
+                current_prompt = MessageBuilder.build_grok_proxy_context_prompt(
                     request.historyTurns,
-                    "main",
-                    provider_mode,
+                    request.prompt,
                 )
 
             current_user_content = MessageBuilder._build_user_content(
-                request.prompt,
+                current_prompt,
                 request.images,
                 provider_mode,
             )

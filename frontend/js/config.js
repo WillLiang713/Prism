@@ -24,7 +24,6 @@ import {
 import { renderMarkdownToElement } from './markdown.js';
 import {
   getCurrentWebSearchToolMode,
-  getPreferredWebSearchToolMode,
   isWebSearchEnabled,
   normalizeExternalWebSearchProvider,
   normalizeWebSearchProvider,
@@ -148,6 +147,57 @@ function getRuntimeProviderDefaults() {
   return resolveProviderSelection();
 }
 
+function createDefaultRuntimeModelConfig() {
+  return {
+    model: "",
+    modelServiceId: "",
+    titleModel: "",
+    titleModelServiceId: "",
+    systemPrompt: "",
+    reasoningEffort: DEFAULT_REASONING_EFFORT,
+  };
+}
+
+function normalizeRuntimeModelConfig(rawConfig = {}, fallbackServiceId = "") {
+  const base = createDefaultRuntimeModelConfig();
+  const runtime = rawConfig && typeof rawConfig === "object" ? rawConfig : {};
+  const resolvedFallbackServiceId = String(fallbackServiceId || "").trim();
+  const model = String(runtime.model || "").trim();
+  const titleModel = String(runtime.titleModel || "").trim();
+  const modelServiceId = String(runtime.modelServiceId || "").trim();
+  const titleModelServiceId = String(runtime.titleModelServiceId || "").trim();
+  return {
+    model,
+    modelServiceId: model ? modelServiceId || resolvedFallbackServiceId : "",
+    titleModel,
+    titleModelServiceId: titleModel
+      ? titleModelServiceId || resolvedFallbackServiceId
+      : "",
+    systemPrompt: String(runtime.systemPrompt || runtime.roleSetting || "").trim(),
+    reasoningEffort: normalizeReasoningEffortValue(runtime.reasoningEffort || base.reasoningEffort),
+  };
+}
+
+function reconcileRuntimeModelConfig(runtimeConfig, services = []) {
+  const validServiceIds = new Set(
+    (Array.isArray(services) ? services : [])
+      .map((service) => String(service?.id || "").trim())
+      .filter(Boolean)
+  );
+  const normalized = normalizeRuntimeModelConfig(runtimeConfig);
+  const hasModelSource =
+    !normalized.modelServiceId || validServiceIds.has(normalized.modelServiceId);
+  const hasTitleSource =
+    !normalized.titleModelServiceId || validServiceIds.has(normalized.titleModelServiceId);
+  return {
+    ...normalized,
+    model: hasModelSource ? normalized.model : "",
+    modelServiceId: hasModelSource ? normalized.modelServiceId : "",
+    titleModel: hasTitleSource ? normalized.titleModel : "",
+    titleModelServiceId: hasTitleSource ? normalized.titleModelServiceId : "",
+  };
+}
+
 function createServiceTemplate(name = "") {
   const providerDefaults = getRuntimeProviderDefaults();
   const now = Date.now();
@@ -160,7 +210,9 @@ function createServiceTemplate(name = "") {
       endpointMode: providerDefaults.endpointMode,
       apiKey: "",
       model: "",
+      modelServiceId: "",
       titleModel: "",
+      titleModelServiceId: "",
       apiUrl: "",
       systemPrompt: "",
     },
@@ -177,42 +229,47 @@ function createDraftService() {
 
 function ensureServicesWithDraft(
   services = [],
-  activeServiceId = null,
-  serviceManagerSelectedId = null
+  serviceManagerSelectedId = null,
+  legacyActiveServiceId = null
 ) {
   const list = Array.isArray(services) ? services.filter(Boolean) : [];
   if (!list.length) {
     const draftService = createDraftService();
     return {
       services: [draftService],
-      activeServiceId: draftService.id,
       serviceManagerSelectedId: draftService.id,
       createdDraft: true,
     };
   }
 
-  const hasActiveService = list.some((service) => service.id === activeServiceId);
-  const resolvedActiveServiceId = hasActiveService ? activeServiceId : list[0].id;
-  const hasSelectedService = list.some(
-    (service) => service.id === serviceManagerSelectedId
-  );
+  const preferredId = String(serviceManagerSelectedId || legacyActiveServiceId || "").trim();
+  const hasSelectedService = list.some((service) => service.id === preferredId);
 
   return {
     services: list,
-    activeServiceId: resolvedActiveServiceId,
-    serviceManagerSelectedId: hasSelectedService
-      ? serviceManagerSelectedId
-      : resolvedActiveServiceId,
+    serviceManagerSelectedId: hasSelectedService ? preferredId : list[0].id,
     createdDraft: false,
   };
 }
 
 function createConfigStoreShape(rawConfig = {}, overrides = {}) {
+  const nextServices = Array.isArray(overrides.services) ? overrides.services : [];
+  const preferredServiceId =
+    overrides.serviceManagerSelectedId === undefined
+      ? rawConfig.serviceManagerSelectedId || rawConfig.activeServiceId || null
+      : overrides.serviceManagerSelectedId;
+  const runtimeSource =
+    overrides.runtime && typeof overrides.runtime === "object"
+      ? overrides.runtime
+      : rawConfig.runtime && typeof rawConfig.runtime === "object"
+      ? rawConfig.runtime
+      : {};
   return {
     version: CONFIG_STORE_VERSION,
-    activeServiceId:
-      overrides.activeServiceId === undefined ? null : overrides.activeServiceId,
-    services: Array.isArray(overrides.services) ? overrides.services : [],
+    serviceManagerSelectedId:
+      preferredServiceId === undefined ? null : preferredServiceId,
+    services: nextServices,
+    runtime: reconcileRuntimeModelConfig(runtimeSource, nextServices),
     webSearch:
       rawConfig.webSearch && typeof rawConfig.webSearch === "object"
         ? cloneValue(rawConfig.webSearch)
@@ -265,7 +322,9 @@ function normalizeService(service, index = 0) {
       endpointMode: providerConfig.endpointMode,
       apiKey: String(service?.model?.apiKey || ""),
       model: String(service?.model?.model || ""),
+      modelServiceId: String(service?.model?.modelServiceId || ""),
       titleModel: String(service?.model?.titleModel || ""),
+      titleModelServiceId: String(service?.model?.titleModelServiceId || ""),
       apiUrl: String(service?.model?.apiUrl || ""),
       systemPrompt: String(
         service?.model?.systemPrompt || service?.model?.roleSetting || ""
@@ -303,7 +362,9 @@ function migrateLegacyConfig(rawConfig = {}) {
         endpointMode: providerConfig.endpointMode,
         apiKey: legacyModelConfig.apiKey || "",
         model: legacyModelConfig.model || "",
+        modelServiceId: "",
         titleModel: legacyModelConfig.titleModel || rawConfig.titleModel || "",
+        titleModelServiceId: "",
         apiUrl: legacyModelConfig.apiUrl || "",
         systemPrompt:
           legacyModelConfig.systemPrompt || legacyModelConfig.roleSetting || "",
@@ -317,8 +378,18 @@ function migrateLegacyConfig(rawConfig = {}) {
     0
   );
   return createConfigStoreShape(rawConfig, {
-    activeServiceId: migratedService.id,
+    serviceManagerSelectedId: migratedService.id,
     services: [migratedService],
+    runtime: {
+      model: legacyModelConfig.model || "",
+      modelServiceId: legacyModelConfig.model ? migratedService.id : "",
+      titleModel: legacyModelConfig.titleModel || rawConfig.titleModel || "",
+      titleModelServiceId:
+        legacyModelConfig.titleModel || rawConfig.titleModel ? migratedService.id : "",
+      systemPrompt:
+        legacyModelConfig.systemPrompt || legacyModelConfig.roleSetting || "",
+      reasoningEffort: rawConfig.reasoningEffort || DEFAULT_REASONING_EFFORT,
+    },
   });
 }
 
@@ -327,12 +398,21 @@ function normalizeConfigStore(rawConfig = {}) {
     const services = rawConfig.services
       .map((service, index) => normalizeService(service, index))
       .filter((service) => !isEffectivelyEmptyService(service));
-    const activeExists =
-      rawConfig.activeServiceId &&
-      services.some((service) => service.id === rawConfig.activeServiceId);
+    const preferredServiceId =
+      rawConfig.serviceManagerSelectedId || rawConfig.activeServiceId || null;
+    const selectedExists =
+      preferredServiceId &&
+      services.some((service) => service.id === preferredServiceId);
+    const fallbackServiceId =
+      (selectedExists ? preferredServiceId : services[0]?.id) || null;
     return createConfigStoreShape(rawConfig, {
-      activeServiceId: activeExists ? rawConfig.activeServiceId : services[0]?.id || null,
+      serviceManagerSelectedId:
+        selectedExists ? preferredServiceId : services[0]?.id || null,
       services,
+      runtime: normalizeRuntimeModelConfig(
+        rawConfig.runtime,
+        fallbackServiceId
+      ),
     });
   }
   return migrateLegacyConfig(rawConfig);
@@ -532,10 +612,6 @@ function getEffectiveApiUrlValue() {
   );
 }
 
-function getEffectiveModelValue() {
-  return String(elements.model?.value || "").trim();
-}
-
 function getServiceModelRequestConfig(service) {
   const providerConfig = resolveProviderSelection(
     service?.model?.providerSelection || service?.model?.provider,
@@ -558,19 +634,6 @@ function getLiveServiceRequestConfigFromForm() {
   };
 }
 
-function getActiveServiceModelRequestConfig() {
-  const activeService = getActiveService();
-  const activeServiceIsManaged =
-    activeService &&
-    activeService.id === state.serviceManagerSelectedId &&
-    elements.configModal?.classList.contains("open");
-  if (activeServiceIsManaged) {
-    return getLiveServiceRequestConfigFromForm();
-  }
-
-  return getServiceModelRequestConfig(activeService);
-}
-
 function getManagedServiceModelRequestConfig() {
   const managedService = getManagedService();
   if (managedService && elements.configModal?.classList.contains("open")) {
@@ -584,7 +647,9 @@ function isEffectivelyEmptyService(service) {
     String(service?.name || "").trim() === LEGACY_DEFAULT_SERVICE_NAME &&
     String(service?.model?.apiKey || "").trim() === "" &&
     String(service?.model?.model || "").trim() === "" &&
+    String(service?.model?.modelServiceId || "").trim() === "" &&
     String(service?.model?.titleModel || "").trim() === "" &&
+    String(service?.model?.titleModelServiceId || "").trim() === "" &&
     String(service?.model?.apiUrl || "").trim() === "" &&
     String(service?.model?.systemPrompt || "").trim() === ""
   );
@@ -615,25 +680,22 @@ function getServiceById(serviceId) {
   return state.services.find((service) => service.id === serviceId) || null;
 }
 
-function getActiveService() {
-  return getServiceById(state.activeServiceId) || state.services[0] || null;
+function getEditingService() {
+  return getServiceById(state.serviceManagerSelectedId) || state.services[0] || null;
 }
 
 function getManagedService() {
-  return (
-    getServiceById(state.serviceManagerSelectedId) ||
-    getActiveService() ||
-    state.services[0] ||
-    null
-  );
+  return getEditingService();
 }
 
-function isEditingActiveService() {
-  return (
-    elements.configModal?.classList.contains("open") &&
-    !!state.activeServiceId &&
-    state.serviceManagerSelectedId === state.activeServiceId
-  );
+function isConfigModalOpen() {
+  return elements.configModal?.classList.contains("open") === true;
+}
+
+function isLiveEditingService(serviceId = "") {
+  const normalizedServiceId = String(serviceId || "").trim();
+  if (!normalizedServiceId || !isConfigModalOpen()) return false;
+  return String(getEditingService()?.id || "") === normalizedServiceId;
 }
 
 function setServiceFormDisabled(disabled) {
@@ -697,9 +759,6 @@ function getManagedServiceFormSnapshot() {
       elements.apiUrl?.value || "",
       getEffectiveProviderValue()
     ),
-    model: getActiveServiceModelFormValue(),
-    titleModel: getActiveServiceTitleModelFormValue(),
-    systemPrompt: getActiveRoleSettingFormValue(),
   };
 }
 
@@ -711,9 +770,6 @@ function getServiceFormStoreSnapshot(service) {
     endpointMode: String(service.model?.endpointMode || ""),
     apiKey: String(service.model?.apiKey || ""),
     apiUrl: String(service.model?.apiUrl || ""),
-    model: String(service.model?.model || ""),
-    titleModel: String(service.model?.titleModel || ""),
-    systemPrompt: String(service.model?.systemPrompt || ""),
   };
 }
 
@@ -721,37 +777,86 @@ function getActiveServiceModelFormValue() {
   return String(elements.model?.value || "");
 }
 
-function getActiveServiceModelStoreValue(service) {
-  return String(service?.model?.model || "");
+function getActiveServiceModelSourceIdFormValue() {
+  return String(elements.model?.dataset?.serviceId || "").trim();
 }
 
 function getActiveServiceTitleModelFormValue() {
   return String(elements.titleGenerationModel?.value || "");
 }
 
-function getActiveServiceTitleModelStoreValue(service) {
-  return String(service?.model?.titleModel || "");
+function getActiveServiceTitleModelSourceIdFormValue() {
+  return String(elements.titleGenerationModel?.dataset?.serviceId || "").trim();
 }
 
 function getActiveRoleSettingFormValue() {
   return String(elements.roleSetting?.value || "");
 }
 
-function getServiceRoleSettingStoreValue(service) {
-  return String(service?.model?.systemPrompt || "");
+function getRuntimeModelConfigFromForm() {
+  return reconcileRuntimeModelConfig({
+    model: getActiveServiceModelFormValue(),
+    modelServiceId:
+      getActiveServiceModelSourceIdFormValue() ||
+      String(state.serviceManagerSelectedId || "").trim(),
+    titleModel: getActiveServiceTitleModelFormValue(),
+    titleModelServiceId:
+      getActiveServiceTitleModelSourceIdFormValue() ||
+      String(state.serviceManagerSelectedId || "").trim(),
+    systemPrompt: getActiveRoleSettingFormValue(),
+    reasoningEffort: getReasoningEffortValue(),
+  }, state.services);
+}
+
+function getRuntimeModelConfigFromState() {
+  return reconcileRuntimeModelConfig(state.runtimeModelConfig, state.services);
+}
+
+export function getRuntimeModelConfig(preferLiveForm = true) {
+  if (preferLiveForm && isConfigModalOpen()) {
+    return getRuntimeModelConfigFromForm();
+  }
+  return getRuntimeModelConfigFromState();
+}
+
+function getRuntimeModelStoreSnapshot() {
+  const runtimeConfig = getRuntimeModelConfigFromState();
+  return {
+    model: runtimeConfig.model,
+    modelServiceId: runtimeConfig.modelServiceId,
+    titleModel: runtimeConfig.titleModel,
+    titleModelServiceId: runtimeConfig.titleModelServiceId,
+    systemPrompt: runtimeConfig.systemPrompt,
+    reasoningEffort: runtimeConfig.reasoningEffort,
+  };
 }
 
 function hasUnsavedManagedServiceChanges() {
   const managedService = getManagedService();
-  if (!managedService) return false;
-  return (
+  const hasServiceChanges = managedService
+    ? (
     JSON.stringify(getManagedServiceFormSnapshot()) !==
-    JSON.stringify(getServiceFormStoreSnapshot(managedService))
-  );
+      JSON.stringify(getServiceFormStoreSnapshot(managedService))
+    )
+    : false;
+  const hasRuntimeChanges =
+    JSON.stringify(getRuntimeModelConfigFromForm()) !==
+    JSON.stringify(getRuntimeModelStoreSnapshot());
+  return hasServiceChanges || hasRuntimeChanges;
 }
 
 function hasUnsavedConfigChanges() {
   return hasUnsavedManagedServiceChanges();
+}
+
+function setModelSourceInputServiceId(inputEl, serviceId) {
+  if (!(inputEl instanceof HTMLElement)) return;
+  const nextId = String(serviceId || "").trim();
+  if (nextId) {
+    inputEl.dataset.serviceId = nextId;
+  } else {
+    delete inputEl.dataset.serviceId;
+  }
 }
 
 function applyManagedServiceConnectionToForm(service) {
@@ -773,17 +878,29 @@ function applyManagedServiceConnectionToForm(service) {
   updateProviderUi();
 }
 
-function applyActiveRoleSettingToForm(service) {
-  if (!service) return;
+function applyRuntimeModelConfigToForm(runtimeConfig = null) {
+  const resolvedRuntimeConfig = reconcileRuntimeModelConfig(
+    runtimeConfig || state.runtimeModelConfig,
+    state.services
+  );
   if (elements.model) {
-    elements.model.value = service.model?.model || "";
+    elements.model.value = resolvedRuntimeConfig.model || "";
+    setModelSourceInputServiceId(
+      elements.model,
+      resolvedRuntimeConfig.modelServiceId || ""
+    );
   }
   if (elements.titleGenerationModel) {
-    elements.titleGenerationModel.value = service.model?.titleModel || "";
+    elements.titleGenerationModel.value = resolvedRuntimeConfig.titleModel || "";
+    setModelSourceInputServiceId(
+      elements.titleGenerationModel,
+      resolvedRuntimeConfig.titleModelServiceId || ""
+    );
   }
   if (elements.roleSetting) {
-    elements.roleSetting.value = service.model?.systemPrompt || "";
+    elements.roleSetting.value = resolvedRuntimeConfig.systemPrompt || "";
   }
+  setReasoningEffortValue(resolvedRuntimeConfig.reasoningEffort);
   syncRoleSettingPreview(true);
   updateModelHint("main");
   updateModelHint("Title");
@@ -809,13 +926,16 @@ function applyEmptyServiceStateToForm() {
   }
   if (elements.model) {
     elements.model.value = "";
+    setModelSourceInputServiceId(elements.model, "");
   }
   if (elements.titleGenerationModel) {
     elements.titleGenerationModel.value = "";
+    setModelSourceInputServiceId(elements.titleGenerationModel, "");
   }
   if (elements.roleSetting) {
     elements.roleSetting.value = "";
   }
+  setReasoningEffortValue(DEFAULT_REASONING_EFFORT);
 
   syncConfigSelectPicker("provider");
   syncRoleSettingPreview(false);
@@ -828,23 +948,22 @@ function readManagedServiceConnectionFromForm(existingService = null) {
   const base = existingService ? cloneValue(existingService) : createServiceTemplate();
   const providerConfig = getEffectiveProviderConfig();
   const updatedAt = Date.now();
+  const baseModelConfig = cloneValue(base.model || {});
   return normalizeService(
     {
       ...base,
       name: getNormalizedManagedServiceName(base),
       updatedAt,
       model: {
+        ...baseModelConfig,
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
         apiKey: String(elements.apiKey?.value || ""),
-        model: getActiveServiceModelFormValue(),
-        titleModel: getActiveServiceTitleModelFormValue(),
         apiUrl: normalizeApiUrlForProvider(
           elements.apiUrl?.value || "",
           providerConfig.provider
         ),
-        systemPrompt: getActiveRoleSettingFormValue(),
       },
       reasoningEffort: base.reasoningEffort,
       connectivity: base.connectivity || createConnectivityState(),
@@ -862,14 +981,21 @@ export async function autoSaveManagedServiceDraft() {
 
 function getConfigStoreForWrite(overrides = {}) {
   const persisted = normalizeConfigStore(readRawConfigStore());
+  const nextServices = cloneValue(overrides.services ?? state.services ?? persisted.services);
   return {
     ...persisted,
     version: CONFIG_STORE_VERSION,
-    activeServiceId:
-      overrides.activeServiceId ??
-      state.activeServiceId ??
-      persisted.activeServiceId,
-    services: cloneValue(overrides.services ?? state.services ?? persisted.services),
+    serviceManagerSelectedId:
+      overrides.serviceManagerSelectedId ??
+      state.serviceManagerSelectedId ??
+      persisted.serviceManagerSelectedId ??
+      persisted.activeServiceId ??
+      null,
+    services: nextServices,
+    runtime: reconcileRuntimeModelConfig(
+      cloneValue(overrides.runtime ?? state.runtimeModelConfig ?? persisted.runtime ?? {}),
+      nextServices
+    ),
     webSearch: cloneValue(overrides.webSearch ?? persisted.webSearch ?? {}),
     desktop: cloneValue(overrides.desktop ?? persisted.desktop ?? {}),
   };
@@ -879,9 +1005,10 @@ function persistState(overrides = {}) {
   const store = getConfigStoreForWrite(overrides);
   writeConfigStore(store);
   state.services = cloneValue(store.services);
-  state.activeServiceId = store.activeServiceId;
+  state.serviceManagerSelectedId = store.serviceManagerSelectedId;
+  state.runtimeModelConfig = reconcileRuntimeModelConfig(store.runtime, state.services);
   if (!getServiceById(state.serviceManagerSelectedId)) {
-    state.serviceManagerSelectedId = state.activeServiceId;
+    state.serviceManagerSelectedId = state.services[0]?.id || null;
   }
   return store;
 }
@@ -945,23 +1072,6 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
   }
 }
 
-function renderSetActiveServiceButton(service) {
-  if (!elements.setActiveServiceBtn) return;
-  const hasService = !!service;
-  const isActive = hasService && service.id === state.activeServiceId;
-  elements.setActiveServiceBtn.textContent = isActive ? "当前使用" : "设为当前";
-  elements.setActiveServiceBtn.disabled = !hasService || isActive;
-  elements.setActiveServiceBtn.classList.toggle("is-active", isActive);
-  elements.setActiveServiceBtn.setAttribute(
-    "aria-label",
-    !hasService
-      ? "当前没有可设为默认的服务"
-      : isActive
-        ? "当前使用的服务"
-        : `将 ${getServiceDisplayName(service)} 设为当前服务`
-  );
-}
-
 function syncServiceDetailPanel(options = {}) {
   const { preserveConnectionForm = false } = options;
   const service = getManagedService();
@@ -973,14 +1083,13 @@ function syncServiceDetailPanel(options = {}) {
     resetModelFetchState("main");
     resetModelFetchState("Title");
     applyManagedServiceConnectionToForm(service);
-    applyActiveRoleSettingToForm(service);
+    applyRuntimeModelConfigToForm();
     scheduleFetchModels("main", 0);
     scheduleFetchModels("Title", 0);
   } else if (!service && !preserveConnectionForm) {
     applyEmptyServiceStateToForm();
   }
   renderServiceSummary(service);
-  renderSetActiveServiceButton(service);
   renderServiceConnectivityState(service?.connectivity, !!service);
   if (elements.duplicateServiceBtn) {
     elements.duplicateServiceBtn.disabled = !service;
@@ -1002,12 +1111,9 @@ function renderServiceList() {
   }
   const fragment = document.createDocumentFragment();
   state.services.forEach((service) => {
-    const isSelected = service.id === state.serviceManagerSelectedId;
-    const isActive = service.id === state.activeServiceId;
+    const isCurrent = service.id === state.serviceManagerSelectedId;
     const card = document.createElement("div");
-    card.className = `service-list-card${isSelected ? " is-selected" : ""}${
-      isActive ? " is-active-service" : ""
-    }`;
+    card.className = `service-list-card${isCurrent ? " is-current" : ""}`;
     card.dataset.serviceId = service.id;
     card.dataset.provider = service.model?.provider || "";
 
@@ -1076,13 +1182,39 @@ function focusServiceNameInput() {
   });
 }
 
+function syncWebSearchStateWithRuntime(options = {}) {
+  const runtimeState = getResolvedRuntimeRequestState(
+    options.preferLiveForm !== false
+  );
+  const preferredWebSearchState = resolvePreferredWebSearchState(
+    runtimeState.mainSourceConfig,
+    {
+      currentMode: state.webSearch?.toolMode,
+      currentEnabled: isWebSearchEnabled(),
+    }
+  );
+
+  setWebSearchToolMode(preferredWebSearchState.toolMode, {
+    persist: options.persist !== false,
+  });
+  setWebSearchEnabled(preferredWebSearchState.enabled, {
+    persist: options.persist !== false,
+  });
+}
+
 function setManagedServiceLocally(serviceId, options = {}) {
   const { refreshModelList = true } = options;
   const targetService = getServiceById(serviceId);
   if (!targetService) return false;
   state.serviceManagerSelectedId = targetService.id;
+  persistState({
+    services: state.services,
+    serviceManagerSelectedId: targetService.id,
+  });
   renderServiceManagementUi();
   syncAllConfigSelectPickers();
+  syncWebSearchStateWithRuntime();
+  updateModelNames();
   updateConfigStatusStrip();
   if (refreshModelList) {
     scheduleFetchModels("main", 0);
@@ -1148,10 +1280,11 @@ async function persistCurrentServiceForm(options = {}) {
       return readManagedServiceConnectionFromForm(service);
     });
   }
+  state.runtimeModelConfig = getRuntimeModelConfigFromForm();
 
   persistState({
-    activeServiceId: state.activeServiceId,
     services: state.services,
+    runtime: state.runtimeModelConfig,
     webSearch: {
       enabled: isWebSearchEnabled(),
       toolMode: getWebSearchConfig().toolMode,
@@ -1169,11 +1302,7 @@ async function persistCurrentServiceForm(options = {}) {
   renderServiceManagementUi({
     preserveConnectionForm: true,
   });
-  if (managedService) {
-    applyActiveRoleSettingToForm(getManagedService());
-  } else {
-    applyEmptyServiceStateToForm();
-  }
+  applyRuntimeModelConfigToForm();
   updateModelNames();
   updateConfigStatusStrip();
   await syncDesktopPreferences({
@@ -1190,51 +1319,10 @@ async function persistCurrentServiceForm(options = {}) {
   return true;
 }
 
-function setActiveServiceLocally(serviceId, options = {}) {
-  const {
-    persist = true,
-    syncManagerSelection = true,
-    refreshModelList = true,
-  } = options;
-  const targetService = getServiceById(serviceId);
-  if (!targetService) return false;
-  state.activeServiceId = targetService.id;
-  if (syncManagerSelection) {
-    state.serviceManagerSelectedId = targetService.id;
-  }
-  if (persist) {
-    persistState({
-      activeServiceId: targetService.id,
-      services: state.services,
-    });
-  }
-  const preferredWebSearchState = resolvePreferredWebSearchState(
-    targetService.model,
-    {
-      currentMode: state.webSearch?.toolMode,
-      currentEnabled: state.webSearch?.enabled === true,
-    }
-  );
-  renderServiceManagementUi();
-  syncAllConfigSelectPickers();
-  updateModelNames();
-  setWebSearchToolMode(preferredWebSearchState.toolMode, {
-    persist,
-  });
-  setWebSearchEnabled(preferredWebSearchState.enabled, {
-    persist,
-  });
-  updateConfigStatusStrip();
-  if (refreshModelList) {
-    scheduleFetchModels("main", 0);
-  }
-  return true;
-}
-
 export async function applyHeaderModelSelection(serviceId, modelId) {
-  const targetServiceId = String(serviceId || "").trim();
+  const sourceServiceId = String(serviceId || "").trim();
   const nextModelId = String(modelId || "").trim();
-  if (!targetServiceId || !nextModelId) return false;
+  if (!sourceServiceId || !nextModelId) return false;
 
   if (hasUnsavedConfigChanges()) {
     const saved = await persistCurrentServiceForm({
@@ -1246,23 +1334,27 @@ export async function applyHeaderModelSelection(serviceId, modelId) {
     }
   }
 
-  const targetService = getServiceById(targetServiceId);
-  if (!targetService) return false;
-
-  replaceService({
-    ...cloneValue(targetService),
-    updatedAt: Date.now(),
-    model: {
-      ...cloneValue(targetService.model || {}),
+  const runtimeConfig = getRuntimeModelConfigFromState();
+  state.runtimeModelConfig = reconcileRuntimeModelConfig(
+    {
+      ...runtimeConfig,
       model: nextModelId,
+      modelServiceId: sourceServiceId,
     },
+    state.services
+  );
+
+  persistState({
+    serviceManagerSelectedId: state.serviceManagerSelectedId,
+    services: state.services,
+    runtime: state.runtimeModelConfig,
   });
 
-  return setActiveServiceLocally(targetServiceId, {
-    persist: true,
-    syncManagerSelection: true,
-    refreshModelList: true,
-  });
+  applyRuntimeModelConfigToForm();
+  syncWebSearchStateWithRuntime({ preferLiveForm: false });
+  updateModelNames();
+  updateConfigStatusStrip();
+  return true;
 }
 
 export function getConfigFromForm(side) {
@@ -1341,6 +1433,7 @@ export function closeConfigModal() {
   elements.configModal.setAttribute("aria-hidden", "true");
   syncBodyScrollLock();
   closeModelDropdown("main");
+  closeModelDropdown("Title");
   closeAllConfigSelectPickers();
 }
 
@@ -1428,30 +1521,16 @@ export function resolveModelDisplayName(modelId) {
 }
 
 export function updateModelNames() {
-  const activeService = getActiveService();
-  const liveModelValue = isEditingActiveService()
-    ? getEffectiveModelValue()
-    : String(activeService?.model?.model || "").trim();
-  const modelId = liveModelValue;
+  const runtimeConfig = getRuntimeModelConfig();
+  const modelId = String(runtimeConfig.model || "").trim();
   const displayName = resolveModelDisplayName(modelId);
-  const serviceName = activeService
-    ? getServiceDisplayName(activeService)
-    : "当前服务";
   elements.modelName.textContent = displayName || "选择模型";
   elements.modelName.classList.toggle("is-placeholder", !displayName);
 
   if (elements.serviceNameLabel) {
-    if (activeService) {
-      elements.serviceNameLabel.textContent = serviceName;
-      elements.serviceNameLabel.style.display = "";
-      if (elements.serviceModelDivider) {
-        elements.serviceModelDivider.style.display = "";
-      }
-    } else {
-      elements.serviceNameLabel.style.display = "none";
-      if (elements.serviceModelDivider) {
-        elements.serviceModelDivider.style.display = "none";
-      }
+    elements.serviceNameLabel.style.display = "none";
+    if (elements.serviceModelDivider) {
+      elements.serviceModelDivider.style.display = "none";
     }
   }
   const modelLine = elements.modelName.closest(".brand-model");
@@ -1463,57 +1542,88 @@ export function updateModelNames() {
   }
 }
 
+function getRuntimeSourceService(sourceServiceId) {
+  const normalizedSourceId = String(sourceServiceId || "").trim();
+  return normalizedSourceId ? getServiceById(normalizedSourceId) : null;
+}
+
+function getRuntimeSourceRequestConfig(sourceServiceId) {
+  const sourceService = getRuntimeSourceService(sourceServiceId);
+  if (!sourceService) {
+    return getServiceModelRequestConfig(null);
+  }
+  if (isLiveEditingService(sourceService.id)) {
+    return getLiveServiceRequestConfigFromForm();
+  }
+  return getServiceModelRequestConfig(sourceService);
+}
+
+function getRuntimeSourceServiceName(sourceServiceId) {
+  const sourceService = getRuntimeSourceService(sourceServiceId);
+  return sourceService ? getServiceDisplayName(sourceService) : "";
+}
+
+export function getResolvedRuntimeRequestState(preferLiveForm = true) {
+  const runtimeConfig = getRuntimeModelConfig(preferLiveForm);
+  const mainModel = String(runtimeConfig.model || "").trim();
+  const mainSourceServiceId = mainModel
+    ? String(runtimeConfig.modelServiceId || "").trim()
+    : "";
+  const explicitTitleModel = String(runtimeConfig.titleModel || "").trim();
+  const titleModel = explicitTitleModel || mainModel;
+  const titleSourceServiceId = explicitTitleModel
+    ? String(runtimeConfig.titleModelServiceId || mainSourceServiceId || "").trim()
+    : mainSourceServiceId;
+
+  return {
+    runtimeConfig,
+    mainModel,
+    mainSourceServiceId,
+    mainSourceConfig: getRuntimeSourceRequestConfig(mainSourceServiceId),
+    mainServiceName: getRuntimeSourceServiceName(mainSourceServiceId),
+    titleModel,
+    titleSourceServiceId,
+    titleSourceConfig: getRuntimeSourceRequestConfig(titleSourceServiceId),
+    titleServiceName: getRuntimeSourceServiceName(
+      titleSourceServiceId || mainSourceServiceId
+    ),
+  };
+}
+
 export function getConfig(side) {
-  const activeService = getActiveService();
-  const activeServiceRequestConfig = getActiveServiceModelRequestConfig();
-  const usingLiveActiveServiceForm = isEditingActiveService();
-  const liveModelValue =
-    usingLiveActiveServiceForm
-      ? getEffectiveModelValue()
-      : String(activeService?.model?.model || "").trim();
-  const liveRoleSetting =
-    usingLiveActiveServiceForm
-      ? String(elements.roleSetting?.value || activeService?.model?.systemPrompt || "")
-      : String(activeService?.model?.systemPrompt || "");
-  const liveTitleModelValue =
-    usingLiveActiveServiceForm
-      ? String(
-          elements.titleGenerationModel
-            ? elements.titleGenerationModel.value
-            : activeService?.model?.titleModel || ""
-        )
-      : String(activeService?.model?.titleModel || "");
+  const runtimeState = getResolvedRuntimeRequestState();
 
   if (side === "Title") {
     return {
-      provider: activeServiceRequestConfig.provider,
-      endpointMode: activeServiceRequestConfig.endpointMode,
-      apiKey: activeServiceRequestConfig.apiKey || "",
-      model: liveTitleModelValue,
-      serviceName: activeService ? getServiceDisplayName(activeService) : "当前服务",
-      apiUrl: String(activeServiceRequestConfig.apiUrl || "").trim(),
+      provider: runtimeState.titleSourceConfig.provider,
+      endpointMode: runtimeState.titleSourceConfig.endpointMode,
+      apiKey: runtimeState.titleSourceConfig.apiKey || "",
+      model: runtimeState.titleModel,
+      serviceName: runtimeState.titleServiceName,
+      apiUrl: String(runtimeState.titleSourceConfig.apiUrl || "").trim(),
       systemPrompt: "",
       reasoningEffort: "none",
     };
   }
 
   return {
-    provider: activeServiceRequestConfig.provider,
-    endpointMode: activeServiceRequestConfig.endpointMode,
-    apiKey: activeServiceRequestConfig.apiKey || "",
-    model: liveModelValue,
-    serviceName: activeService ? getServiceDisplayName(activeService) : "当前服务",
-    apiUrl: String(activeServiceRequestConfig.apiUrl || "").trim(),
-    systemPrompt: liveRoleSetting,
-    reasoningEffort: getReasoningEffortValue(),
+    provider: runtimeState.mainSourceConfig.provider,
+    endpointMode: runtimeState.mainSourceConfig.endpointMode,
+    apiKey: runtimeState.mainSourceConfig.apiKey || "",
+    model: runtimeState.mainModel,
+    serviceName: runtimeState.mainServiceName,
+    apiUrl: String(runtimeState.mainSourceConfig.apiUrl || "").trim(),
+    systemPrompt: runtimeState.runtimeConfig.systemPrompt,
+    reasoningEffort: runtimeState.runtimeConfig.reasoningEffort,
   };
 }
 
 export function getWebSearchConfig() {
   const toolMode = getCurrentWebSearchToolMode();
+  const runtimeState = getResolvedRuntimeRequestState();
   const maxResults = parseInt(elements.tavilyMaxResults?.value, 10);
   return {
-    endpointMode: getEffectiveEndpointModeValue(),
+    endpointMode: runtimeState.mainSourceConfig.endpointMode,
     toolMode,
     enabled: isWebSearchEnabled(),
     provider:
@@ -1541,17 +1651,21 @@ export function loadConfig() {
   try {
     const ensuredServices = ensureServicesWithDraft(
       cloneValue(store.services),
-      store.activeServiceId,
+      store.serviceManagerSelectedId || store.activeServiceId,
       store.activeServiceId
     );
     state.services = ensuredServices.services;
-    state.activeServiceId = ensuredServices.activeServiceId;
     state.serviceManagerSelectedId = ensuredServices.serviceManagerSelectedId;
+    state.runtimeModelConfig = reconcileRuntimeModelConfig(
+      store.runtime,
+      state.services
+    );
 
     if (ensuredServices.createdDraft) {
       persistState({
         services: state.services,
-        activeServiceId: state.activeServiceId,
+        serviceManagerSelectedId: state.serviceManagerSelectedId,
+        runtime: state.runtimeModelConfig,
         webSearch: store.webSearch,
         desktop: store.desktop,
       });
@@ -1602,13 +1716,13 @@ export function loadConfig() {
 
     if (getManagedService()) {
       applyManagedServiceConnectionToForm(getManagedService());
-      applyActiveRoleSettingToForm(getManagedService());
+      applyRuntimeModelConfigToForm(store.runtime);
     } else {
       applyEmptyServiceStateToForm();
     }
-    const activeService = getActiveService();
+    const runtimeState = getResolvedRuntimeRequestState(false);
     const preferredWebSearchState = resolvePreferredWebSearchState(
-      activeService?.model || {},
+      runtimeState.mainSourceConfig,
       {
         currentMode: pendingWebSearchToolMode,
         currentEnabled: pendingWebSearchEnabled,
@@ -1617,11 +1731,10 @@ export function loadConfig() {
 
     setWebSearchToolMode(
       preferredWebSearchState.toolMode ||
-        getPreferredWebSearchToolMode(activeService?.model || {}) ||
         pendingWebSearchToolMode ||
         "tavily",
       {
-      persist: false,
+        persist: false,
       }
     );
     setWebSearchEnabled(preferredWebSearchState.enabled, { persist: false });
@@ -1650,8 +1763,8 @@ export async function clearConfig() {
 
   const ensuredServices = ensureServicesWithDraft([]);
   state.services = ensuredServices.services;
-  state.activeServiceId = ensuredServices.activeServiceId;
   state.serviceManagerSelectedId = ensuredServices.serviceManagerSelectedId;
+  state.runtimeModelConfig = createDefaultRuntimeModelConfig();
 
   setWebSearchEnabled(false, { persist: false });
   if (elements.webSearchProvider) elements.webSearchProvider.value = "tavily";
@@ -1667,7 +1780,8 @@ export async function clearConfig() {
 
   persistState({
     services: state.services,
-    activeServiceId: state.activeServiceId,
+    serviceManagerSelectedId: state.serviceManagerSelectedId,
+    runtime: state.runtimeModelConfig,
     webSearch: {
       enabled: false,
       toolMode: "tavily",
@@ -1697,73 +1811,13 @@ export async function clearConfig() {
   closeConfigModal();
 }
 
-export async function handleCurrentServiceChange(nextServiceId, options = {}) {
-  const nextId = String(nextServiceId || "");
-  const syncManagerSelection = options.syncManagerSelection !== false;
-  if (!nextId || nextId === state.activeServiceId) {
-    return false;
-  }
-
-  // 如果目标服务就是当前正在管理的（选中）的服务，
-  // 并且它是新建的草稿（或者没有任何表单修改），则直接激活，跳过“未保存”确认弹窗。
-  const isCurrentlyManaging = nextId === state.serviceManagerSelectedId;
-  if (isCurrentlyManaging && !hasUnsavedManagedServiceChanges()) {
-    return setActiveServiceLocally(nextId, {
-      syncManagerSelection,
-      refreshModelList: false,
-    });
-  }
-
-  if (!hasUnsavedManagedServiceChanges()) {
-    return setActiveServiceLocally(nextId, {
-      syncManagerSelection,
-      refreshModelList: false,
-    });
-  }
-
-  const shouldSave = await showConfirm("当前编辑服务有未保存修改，是否先保存？", {
-    title: "未保存修改",
-    okText: "保存并切换",
-    cancelText: "继续切换",
-    hint: "继续切换会进入下一步确认。",
-  });
-  if (shouldSave) {
-    const saved = await persistCurrentServiceForm({
-      showFeedback: false,
-      closeAfterSave: false,
-    });
-    if (!saved) {
-      return false;
-    }
-    return setActiveServiceLocally(nextId, {
-      syncManagerSelection,
-      refreshModelList: false,
-    });
-  }
-
-  const shouldDiscard = await showConfirm("切换后将丢失当前编辑中的未保存修改，是否继续？", {
-    title: "放弃修改",
-    okText: "继续切换",
-    cancelText: "取消",
-    danger: true,
-  });
-  if (!shouldDiscard) {
-    return false;
-  }
-
-  return setActiveServiceLocally(nextId, {
-    syncManagerSelection,
-    refreshModelList: false,
-  });
-}
-
 export async function createService() {
   const service = createDraftService();
   state.services = [service, ...state.services];
   // 取消自动选中，让用户手动点击卡片进行编辑
   persistState({
     services: state.services,
-    activeServiceId: state.activeServiceId || service.id,
+    serviceManagerSelectedId: state.serviceManagerSelectedId || service.id,
   });
   renderServiceManagementUi();
 }
@@ -1783,7 +1837,7 @@ export async function duplicateService() {
   state.serviceManagerSelectedId = duplicated.id;
   persistState({
     services: state.services,
-    activeServiceId: state.activeServiceId,
+    serviceManagerSelectedId: duplicated.id,
   });
   renderServiceManagementUi();
   focusServiceNameInput();
@@ -1815,17 +1869,15 @@ export async function deleteService() {
   state.services = state.services.filter((item) => item.id !== service.id);
   const ensuredServices = ensureServicesWithDraft(
     state.services,
-    state.activeServiceId === service.id ? null : state.activeServiceId,
     state.serviceManagerSelectedId === service.id
       ? null
       : state.serviceManagerSelectedId
   );
   state.services = ensuredServices.services;
-  state.activeServiceId = ensuredServices.activeServiceId;
   state.serviceManagerSelectedId = ensuredServices.serviceManagerSelectedId;
   persistState({
     services: state.services,
-    activeServiceId: state.activeServiceId,
+    serviceManagerSelectedId: state.serviceManagerSelectedId,
   });
   renderServiceManagementUi();
   scheduleFetchModels("main", 0);
@@ -1848,7 +1900,7 @@ function updateServiceConnectivity(serviceId, payload) {
   });
   persistState({
     services: state.services,
-    activeServiceId: state.activeServiceId,
+    serviceManagerSelectedId: state.serviceManagerSelectedId,
   });
   renderServiceManagementUi();
   scheduleServiceConnectivityAutoHide(serviceId, nextConnectivity);

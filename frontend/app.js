@@ -12,7 +12,7 @@ import { setSendButtonMode, autoGrowPromptInput, startHeaderClock, setConversati
 import { initLayout } from './js/layout.js';
 import { initDesktopWindowShell, syncDesktopBackendUi, beginDesktopBackendBootstrap } from './js/desktop.js';
 import { closeModelDropdown, setConfigFns } from './js/models.js';
-import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm, autoSaveManagedServiceDraft, applyHeaderModelSelection, getServiceDisplayName } from './js/config.js';
+import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm, getRuntimeModelConfig, autoSaveManagedServiceDraft, applyHeaderModelSelection, getServiceDisplayName } from './js/config.js';
 import { updateConfigStatusStrip } from './js/web-search.js';
 import { initChat, renderAll, getActiveTopic, isTopicRunning, setStopGeneration, setRegenerateTurn, setSubmitTurnEdit, setRegenerateTopicTitle } from './js/chat.js';
 import { sendPrompt, stopGeneration, regenerateTurn, submitTurnEdit, regenerateTopicTitle } from './js/conversation.js';
@@ -22,6 +22,7 @@ setCloseModelDropdown(closeModelDropdown);
 setConfigFns({
   updateModelNames,
   getConfigFromForm,
+  getRuntimeModelConfig,
   autoSaveManagedServiceDraft,
   applyHeaderModelSelection,
   getServiceDisplayName,

@@ -6,7 +6,7 @@ import { setSendButtonMode, applyStatus, scrollToBottom, syncTopicListHeaderAlig
 import { showConfirm, openImagePreview } from './dialog.js';
 import { collapseSidebarForMobile, isMobileLayout } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
-import { resolveModelDisplayName } from './config.js';
+import { resolveModelDisplayName, getRuntimeModelConfig, getServiceDisplayName } from './config.js';
 import { estimateTokensFromText } from './state.js';
 import {
   rememberDropdownOrigin,
@@ -37,6 +37,46 @@ let topicTitleTooltipAnchorEl = null;
 let topicTitleTooltipId = "";
 let topicTitleTooltipBound = false;
 let topicTitleTooltipTimer = 0;
+
+function getCurrentActiveServiceName() {
+  const runtimeConfig = getRuntimeModelConfig(false);
+  const activeService = state.services.find(
+    (service) => service.id === runtimeConfig.modelServiceId
+  );
+  return activeService ? getServiceDisplayName(activeService) : "";
+}
+
+function renderAssistantModelName(el, displayModel, displayService) {
+  if (!(el instanceof HTMLElement)) return;
+  const normalizedModel = String(displayModel || "").trim() || "未配置";
+  const normalizedService = String(displayService || "").trim();
+  const currentServiceName = getCurrentActiveServiceName();
+  const shouldShowService =
+    !!normalizedService &&
+    (!!currentServiceName ? normalizedService !== currentServiceName : true);
+
+  el.innerHTML = "";
+  if (!shouldShowService) {
+    el.textContent = normalizedModel;
+    return;
+  }
+
+  const sName = document.createElement("span");
+  sName.className = "assistant-service-name";
+  sName.textContent = normalizedService;
+
+  const divider = document.createElement("span");
+  divider.className = "assistant-model-divider";
+  divider.textContent = " / ";
+
+  const mName = document.createElement("span");
+  mName.className = "assistant-model-id";
+  mName.textContent = normalizedModel;
+
+  el.appendChild(sName);
+  el.appendChild(divider);
+  el.appendChild(mName);
+}
 
 function canShowTopicTitleTooltip() {
   if (typeof window === "undefined") return false;
@@ -1416,28 +1456,7 @@ export function createAssistantCard(
   modelName.className = "assistant-model-name";
   const displayModel = modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || "未配置";
   const displayService = turn?.models?.main?.serviceName || "";
-  
-  if (displayService) {
-    const sName = document.createElement("span");
-    sName.className = "assistant-service-name";
-    sName.textContent = displayService;
-    
-    const divider = document.createElement("span");
-    divider.className = "assistant-model-divider";
-    divider.textContent = " / ";
-    
-    const mName = document.createElement("span");
-    mName.className = "assistant-model-id";
-    mName.textContent = displayModel;
-    
-    modelName.appendChild(sName);
-    modelName.appendChild(divider);
-    modelName.appendChild(mName);
-  } else {
-    modelName.textContent = displayModel;
-  }
-
-
+  renderAssistantModelName(modelName, displayModel, displayService);
 
   const statusEl = document.createElement("span");
   statusEl.className = "status";

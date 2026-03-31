@@ -588,24 +588,13 @@
   outline-offset: 2px;
 }
 
-.service-list-card.is-selected .service-list-item {
+.service-list-card.is-current .service-list-item {
   background: var(--bg-active);
   border-color: var(--border);
   box-shadow:
     var(--shadow-inset),
     var(--shadow-xs);
   color: var(--text);
-}
-
-.service-list-card.is-active-service:not(.is-selected) .service-list-item {
-  background: var(--bg-subtle);
-  border-color: var(--border);
-  color: var(--text);
-}
-
-.service-list-card.is-active-service.is-selected .service-list-item {
-  background: var(--bg-active);
-  border-color: var(--border);
 }
 
 .service-list-head {
@@ -640,7 +629,7 @@
 }
 
 .service-list-item:hover .service-list-tag,
-.service-list-card.is-selected .service-list-tag {
+.service-list-card.is-current .service-list-tag {
   background: rgba(255, 255, 255, 0.14);
 }
 
@@ -676,49 +665,10 @@
 }
 
 .service-list-item:hover .service-list-submeta,
-.service-list-card.is-selected .service-list-submeta {
+.service-list-card.is-current .service-list-submeta {
   opacity: 1;
 }
 
-.service-detail-current-btn {
-  min-width: 88px;
-  min-height: 32px;
-  padding: 0 14px;
-}
-
-#configModal .service-detail-topbar .service-detail-current-btn:not(.is-active) {
-  border-color: var(--border-strong);
-  background: var(--bg-subtle);
-  color: var(--text-muted);
-  box-shadow: none;
-}
-
-#configModal .service-detail-topbar .service-detail-current-btn:not(.is-active):hover {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: var(--border);
-  color: var(--text);
-}
-
-#configModal .service-detail-topbar .service-detail-current-btn:not(.is-active):disabled {
-  background: var(--bg-subtle);
-  border-color: var(--border-strong);
-  color: var(--text-dim);
-}
-
-#configModal .service-detail-topbar .service-detail-current-btn.is-active {
-  border-color: transparent;
-  background: var(--accent-strong);
-  color: var(--bg);
-  cursor: default;
-  opacity: 1;
-}
-
-#configModal .service-detail-topbar .service-detail-current-btn.is-active:disabled {
-  border-color: transparent;
-  background: var(--accent-strong);
-  color: var(--bg);
-  opacity: 1;
-}
 
 /* ---------- Connectivity ---------- */
 .service-summary-card {

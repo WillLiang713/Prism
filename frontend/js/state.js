@@ -1,10 +1,48 @@
 export const STORAGE_KEYS = {
-  config: "aiPkConfig",
-  topics: "aiPkTopicsV1",
-  activeTopicId: "aiPkActiveTopicId",
-  isSidebarCollapsed: "aiPkIsSidebarCollapsed",
-  theme: "aiPkTheme",
+  config: "prismConfig",
+  topics: "prismTopicsV1",
+  activeTopicId: "prismActiveTopicId",
+  isSidebarCollapsed: "prismIsSidebarCollapsed",
+  theme: "prismTheme",
 };
+
+const LEGACY_STORAGE_PREFIX = "aiPk";
+const LEGACY_STORAGE_KEYS = {
+  config: `${LEGACY_STORAGE_PREFIX}Config`,
+  topics: `${LEGACY_STORAGE_PREFIX}TopicsV1`,
+  activeTopicId: `${LEGACY_STORAGE_PREFIX}ActiveTopicId`,
+  isSidebarCollapsed: `${LEGACY_STORAGE_PREFIX}IsSidebarCollapsed`,
+  theme: `${LEGACY_STORAGE_PREFIX}Theme`,
+  isWideMode: `${LEGACY_STORAGE_PREFIX}IsWideMode`,
+};
+
+function migrateLegacyStorageKeys() {
+  if (typeof window === "undefined" || !window.localStorage) return;
+
+  try {
+    Object.entries(STORAGE_KEYS).forEach(([name, nextKey]) => {
+      const legacyKey = LEGACY_STORAGE_KEYS[name];
+      if (!legacyKey) return;
+
+      const nextValue = localStorage.getItem(nextKey);
+      const legacyValue = localStorage.getItem(legacyKey);
+
+      if (nextValue === null && legacyValue !== null) {
+        localStorage.setItem(nextKey, legacyValue);
+      }
+
+      if (legacyValue !== null) {
+        localStorage.removeItem(legacyKey);
+      }
+    });
+
+    localStorage.removeItem(LEGACY_STORAGE_KEYS.isWideMode);
+  } catch (_error) {
+    // 忽略本地存储不可用场景，保持界面可继续初始化
+  }
+}
+
+migrateLegacyStorageKeys();
 
 export const MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 900px)";
 export const DESKTOP_DEFAULT_API_BASE = "http://127.0.0.1:33100";
@@ -220,8 +258,15 @@ export const state = {
   isSidebarCollapsed: false,
   theme: localStorage.getItem(STORAGE_KEYS.theme) || "system", // 'light', 'dark', 'system'
   services: [],
-  activeServiceId: null,
   serviceManagerSelectedId: null,
+  runtimeModelConfig: {
+    model: "",
+    modelServiceId: "",
+    titleModel: "",
+    titleModelServiceId: "",
+    systemPrompt: "",
+    reasoningEffort: "high",
+  },
   headerModelFetchSlots: new Map(),
 };
 
@@ -302,7 +347,6 @@ export const elements = {
   createServiceBtn: document.getElementById("createServiceBtn"),
   duplicateServiceBtn: document.getElementById("duplicateServiceBtn"),
   deleteServiceBtn: document.getElementById("deleteServiceBtn"),
-  setActiveServiceBtn: document.getElementById("setActiveServiceBtn"),
   testServiceConnectionBtn: document.getElementById("testServiceConnectionBtn"),
   provider: document.getElementById("provider"),
   providerPickerInput: document.getElementById("providerPickerInput"),

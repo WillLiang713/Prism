@@ -4,6 +4,7 @@ import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPicker
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
 let _updateModelNames = () => {};
 let _getConfigFromForm = () => ({});
+let _getRuntimeModelConfig = () => ({});
 let _autoSaveManagedServiceDraft = async () => false;
 let _applyHeaderModelSelection = async () => false;
 let _getServiceDisplayName = (service) =>
@@ -17,6 +18,7 @@ const PRESS_START_EVENT =
 export function setConfigFns(fns) {
   if (fns.updateModelNames) _updateModelNames = fns.updateModelNames;
   if (fns.getConfigFromForm) _getConfigFromForm = fns.getConfigFromForm;
+  if (fns.getRuntimeModelConfig) _getRuntimeModelConfig = fns.getRuntimeModelConfig;
   if (fns.autoSaveManagedServiceDraft) {
     _autoSaveManagedServiceDraft = fns.autoSaveManagedServiceDraft;
   }
@@ -163,6 +165,23 @@ function pruneHeaderModelFetchSlots() {
 }
 
 function getServiceModelFetchConfig(service) {
+  const serviceId = String(service?.id || "");
+  const isEditingManagedService =
+    !!serviceId &&
+    serviceId === String(state.serviceManagerSelectedId || "") &&
+    elements.configModal?.classList.contains("open");
+  if (isEditingManagedService) {
+    const liveConfig = _getConfigFromForm("main");
+    return {
+      provider: liveConfig?.provider || service?.model?.provider || "openai",
+      endpointMode:
+        liveConfig?.endpointMode ||
+        service?.model?.endpointMode ||
+        "chat_completions",
+      apiKey: String(liveConfig?.apiKey || "").trim(),
+      apiUrl: String(liveConfig?.apiUrl || "").trim(),
+    };
+  }
   return {
     provider: service?.model?.provider || "openai",
     endpointMode: service?.model?.endpointMode || "chat_completions",
@@ -184,30 +203,24 @@ function getHeaderServiceFetchKey(service) {
   return `${providerMode}|${base}|k`;
 }
 
-function syncHeaderSlotFromMainModelCache() {
-  const activeService = state.services.find(
-    (service) => service.id === state.activeServiceId
-  );
-  if (!activeService) return;
-  const headerSlot = getHeaderModelFetchSlot(activeService.id);
-  const mainSlot = state.modelFetch.main;
-  const fetchKey = getHeaderServiceFetchKey(activeService);
-  if (!fetchKey || mainSlot.lastKey !== fetchKey) return;
-  if (!Array.isArray(mainSlot.models) || !mainSlot.models.length) return;
-  headerSlot.models = [...mainSlot.models];
+function syncHeaderSlotFromSideModelCache(serviceId, side) {
+  const resolvedId = String(serviceId || "");
+  const sideSlot = state.modelFetch[side];
+  const service = state.services.find((item) => item.id === resolvedId);
+  if (!resolvedId || !sideSlot || !service) return;
+  const headerSlot = getHeaderModelFetchSlot(resolvedId);
+  const fetchKey = getHeaderServiceFetchKey(service);
+  if (!fetchKey || sideSlot.lastKey !== fetchKey) return;
+  if (!Array.isArray(sideSlot.models) || !sideSlot.models.length) return;
+  headerSlot.models = [...sideSlot.models];
   headerSlot.lastKey = fetchKey;
-  headerSlot.lastFetchedAt = mainSlot.lastFetchedAt;
+  headerSlot.lastFetchedAt = sideSlot.lastFetchedAt;
   headerSlot.error = "";
 }
 
-function getActiveHeaderService() {
+function getHeaderServices() {
   pruneHeaderModelFetchSlots();
-  syncHeaderSlotFromMainModelCache();
-  return (
-    state.services.find((service) => service.id === state.activeServiceId) ||
-    state.services[0] ||
-    null
-  );
+  return Array.isArray(state.services) ? state.services.filter(Boolean) : [];
 }
 
 async function fetchHeaderModelsForService(service, options = {}) {
@@ -267,6 +280,18 @@ async function fetchHeaderModelsForService(service, options = {}) {
     if (slot.requestToken === requestToken) {
       slot.inFlight = false;
     }
+    if (isModelDropdownOpen("main")) {
+      renderModelDropdown(
+        "main",
+        getModelDropdownQuery("main", elements.model?.value || "")
+      );
+    }
+    if (isModelDropdownOpen("Title")) {
+      renderModelDropdown(
+        "Title",
+        getModelDropdownQuery("Title", elements.titleGenerationModel?.value || "")
+      );
+    }
     if (isHeaderModelDropdownOpen()) {
       renderHeaderModelDropdown();
     }
@@ -275,10 +300,62 @@ async function fetchHeaderModelsForService(service, options = {}) {
   return slot.models;
 }
 
-function prefetchHeaderModels() {
-  const activeService = getActiveHeaderService();
-  if (!activeService || !canFetchServiceModels(activeService)) return;
-  void fetchHeaderModelsForService(activeService);
+function prefetchAllServiceModels(options = {}) {
+  const services = getHeaderServices().filter((service) => canFetchServiceModels(service));
+  for (const service of services) {
+    void fetchHeaderModelsForService(service, options);
+  }
+}
+
+function getCurrentProfileServiceId() {
+  const preferredId = state.serviceManagerSelectedId;
+  return String(
+    preferredId || state.services[0]?.id || ""
+  ).trim();
+}
+
+function getCurrentBoundServiceId(side) {
+  const inputEl = side === "Title" ? elements.titleGenerationModel : elements.model;
+  const rawId = String(inputEl?.dataset?.serviceId || "").trim();
+  if (rawId) return rawId;
+  if (side === "Title" && !String(inputEl?.value || "").trim()) {
+    return "";
+  }
+  return getCurrentProfileServiceId();
+}
+
+function getAggregatedModelOptions() {
+  const options = [];
+  for (const service of getHeaderServices()) {
+    const serviceId = String(service?.id || "");
+    const serviceName = _getServiceDisplayName(service);
+    const slot = getHeaderModelFetchSlot(serviceId);
+    for (const modelId of Array.isArray(slot.models) ? slot.models : []) {
+      options.push({
+        serviceId,
+        serviceName,
+        modelId,
+        searchText: `${serviceName} ${modelId}`.toLowerCase(),
+      });
+    }
+  }
+  return options;
+}
+
+function getFilteredModelOptions(filterText = "") {
+  const q = String(filterText || "").trim().toLowerCase();
+  const all = getAggregatedModelOptions();
+  if (!q) return all;
+  return all.filter((option) => option.searchText.includes(q));
+}
+
+function hasAnyServiceModelFetchInFlight() {
+  for (const service of getHeaderServices()) {
+    if (getHeaderModelFetchSlot(service.id)?.inFlight) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function increaseModelDropdownLimit(side, delta = 200) {
@@ -346,8 +423,8 @@ export function renderHeaderModelDropdown() {
   if (!dropdownEl) return;
 
   dropdownEl.innerHTML = "";
-  const activeService = getActiveHeaderService();
-  if (!activeService) {
+  const services = getHeaderServices();
+  if (!services.length) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
     empty.textContent = "暂无可用服务，请先在设置中添加服务";
@@ -355,70 +432,102 @@ export function renderHeaderModelDropdown() {
     return;
   }
 
-  const activeServiceId = String(state.activeServiceId || "");
-  const activeModelId =
-    String(elements.model?.value || "").trim() ||
-    String(
-      state.services.find((service) => service.id === activeServiceId)?.model?.model || ""
-    ).trim();
-  const slot = getHeaderModelFetchSlot(activeService.id);
+  const runtimeConfig = _getRuntimeModelConfig();
+  const activeModelId = String(runtimeConfig?.model || "").trim();
+  const activeModelServiceId = activeModelId
+    ? String(runtimeConfig?.modelServiceId || "").trim()
+    : "";
   const heading = document.createElement("div");
   heading.className = "header-model-summary";
+  const totalModelCount = getAggregatedModelOptions().length;
 
   const title = document.createElement("span");
   title.className = "header-model-summary-title";
-  title.textContent = _getServiceDisplayName(activeService);
+  title.textContent = `已发现 ${totalModelCount} 个模型`;
   heading.appendChild(title);
 
   const meta = document.createElement("span");
   meta.className = "header-model-summary-meta";
-  meta.textContent = canFetchServiceModels(activeService)
-    ? createHeaderGroupStatusText(slot)
-    : "未配置";
+  meta.textContent = `${services.length} 个连接`;
   heading.appendChild(meta);
 
   dropdownEl.appendChild(heading);
 
-  if (!canFetchServiceModels(activeService)) {
+  const hasAnyOptions = getAggregatedModelOptions().length > 0;
+  if (!hasAnyOptions && !hasAnyServiceModelFetchInFlight()) {
     const empty = document.createElement("div");
     empty.className = "header-model-empty";
-    empty.textContent = "当前服务未配置 API Key 或 API 地址";
+    empty.textContent = "暂无可选模型，请先配置至少一个可拉取模型的连接";
     dropdownEl.appendChild(empty);
     return;
   }
 
-  if (!slot.models.length) {
-    const empty = document.createElement("div");
-    empty.className = "header-model-empty";
-    empty.textContent = slot.inFlight
-      ? "正在获取模型列表…"
-      : slot.error || "当前服务还没有可选模型";
-    dropdownEl.appendChild(empty);
-    return;
-  }
+  for (const service of services) {
+    const slot = getHeaderModelFetchSlot(service.id);
+    const group = document.createElement("div");
+    group.className = "header-model-group";
 
-  for (const id of slot.models) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "model-dropdown-item";
-    if (id === activeModelId) {
-      btn.classList.add("is-active");
-      btn.setAttribute("aria-selected", "true");
+    const groupHead = document.createElement("div");
+    groupHead.className = "header-model-summary";
+
+    const groupTitle = document.createElement("span");
+    groupTitle.className = "header-model-summary-title";
+    groupTitle.textContent = _getServiceDisplayName(service);
+    groupHead.appendChild(groupTitle);
+
+    const groupMeta = document.createElement("span");
+    groupMeta.className = "header-model-summary-meta";
+    groupMeta.textContent = canFetchServiceModels(service)
+      ? createHeaderGroupStatusText(slot)
+      : "未配置";
+    groupHead.appendChild(groupMeta);
+    group.appendChild(groupHead);
+
+    if (!canFetchServiceModels(service)) {
+      const empty = document.createElement("div");
+      empty.className = "header-model-empty";
+      empty.textContent = "未配置 API Key 或 API 地址";
+      group.appendChild(empty);
+      dropdownEl.appendChild(group);
+      continue;
     }
-    btn.dataset.value = id;
-    btn.dataset.serviceId = activeService.id;
-    btn.textContent = id;
-    btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      const applied = await _applyHeaderModelSelection(activeService.id, id);
-      if (applied) {
-        closeHeaderModelDropdown();
-        return;
+
+    if (!slot.models.length) {
+      const empty = document.createElement("div");
+      empty.className = "header-model-empty";
+      empty.textContent = slot.inFlight
+        ? "正在获取模型列表…"
+        : slot.error || "当前连接还没有可选模型";
+      group.appendChild(empty);
+      dropdownEl.appendChild(group);
+      continue;
+    }
+
+    for (const modelId of slot.models) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "model-dropdown-item";
+      if (modelId === activeModelId && String(service.id || "") === activeModelServiceId) {
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-selected", "true");
       }
-      btn.disabled = false;
-    });
-    dropdownEl.appendChild(btn);
+      btn.dataset.value = modelId;
+      btn.dataset.serviceId = service.id;
+      btn.textContent = modelId;
+      btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        const applied = await _applyHeaderModelSelection(service.id, modelId);
+        if (applied) {
+          closeHeaderModelDropdown();
+          return;
+        }
+        btn.disabled = false;
+      });
+      group.appendChild(btn);
+    }
+
+    dropdownEl.appendChild(group);
   }
 }
 
@@ -430,7 +539,7 @@ export function openHeaderModelDropdown() {
   closeModelDropdown("main");
   closeModelDropdown("Title");
   closeAllConfigSelectPickers();
-  prefetchHeaderModels();
+  prefetchAllServiceModels();
   renderHeaderModelDropdown();
   openFloatingDropdown(dropdownEl, triggerEl, { host: document.body });
   setHeaderModelDropdownButtonState(true);
@@ -462,20 +571,17 @@ export function renderModelDropdown(side, filterText = null) {
     side === "Title" ? elements.titleGenerationModel : elements.model;
   if (!dropdownEl) return;
 
-  const slot = state.modelFetch[side];
-  const isLoading = !!slot?.inFlight;
-  const all = getCachedModelIds(side);
-  const q = filterText == null
-    ? ""
-    : String(filterText || "").trim().toLowerCase();
-  const models = q ? all.filter((m) => m.toLowerCase().includes(q)) : all;
+  const allOptions = getAggregatedModelOptions();
+  const options = getFilteredModelOptions(filterText == null ? "" : filterText);
   const limit = getModelDropdownLimit(side);
   const currentValue = String(inputEl?.value || "").trim();
+  const currentServiceId = getCurrentBoundServiceId(side);
 
   dropdownEl.innerHTML = "";
   if (
     side === "Title" &&
-    (!q || "跟随主模型".toLowerCase().includes(q))
+    (!String(filterText || "").trim() ||
+      "跟随主模型".toLowerCase().includes(String(filterText || "").trim().toLowerCase()))
   ) {
     const followBtn = document.createElement("button");
     followBtn.type = "button";
@@ -490,6 +596,7 @@ export function renderModelDropdown(side, filterText = null) {
     followBtn.addEventListener("click", () => {
       if (inputEl) {
         inputEl.value = "";
+        delete inputEl.dataset.serviceId;
         inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       }
       closeModelDropdown(side);
@@ -498,33 +605,39 @@ export function renderModelDropdown(side, filterText = null) {
     dropdownEl.appendChild(followBtn);
   }
 
-  if (!models.length && !dropdownEl.childElementCount) {
+  if (!options.length && !dropdownEl.childElementCount) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
-    empty.textContent = all.length
+    empty.textContent = allOptions.length
       ? "无匹配模型，可继续输入"
-      : isLoading
+      : hasAnyServiceModelFetchInFlight()
       ? "正在获取模型列表…"
-      : "暂无模型列表，请先配置Key/地址";
+      : "暂无模型列表，请先配置至少一个连接";
     dropdownEl.appendChild(empty);
     return;
   }
 
-  const shown = models.slice(0, limit);
-  for (const id of shown) {
+  const shown = options.slice(0, limit);
+  for (const option of shown) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "model-dropdown-item";
-    if (id === currentValue) {
+    if (option.modelId === currentValue && option.serviceId === currentServiceId) {
       btn.classList.add("is-active");
       btn.setAttribute("aria-selected", "true");
     }
-    btn.textContent = id;
-    btn.dataset.value = id;
+    btn.textContent = `${option.serviceName} / ${option.modelId}`;
+    btn.dataset.value = option.modelId;
+    btn.dataset.serviceId = option.serviceId;
     btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     btn.addEventListener("click", () => {
       if (inputEl) {
-        inputEl.value = id;
+        inputEl.value = option.modelId;
+        if (option.serviceId) {
+          inputEl.dataset.serviceId = option.serviceId;
+        } else {
+          delete inputEl.dataset.serviceId;
+        }
         inputEl.dispatchEvent(new Event("input", { bubbles: true }));
       }
       if (side !== "Title") _updateModelNames();
@@ -534,12 +647,12 @@ export function renderModelDropdown(side, filterText = null) {
     dropdownEl.appendChild(btn);
   }
 
-  if (models.length > shown.length) {
+  if (options.length > shown.length) {
     const more = document.createElement("button");
     more.type = "button";
     more.className = "model-dropdown-item";
     more.style.fontFamily = "inherit";
-    more.textContent = `加载更多（已显示 ${shown.length}/${models.length}）`;
+    more.textContent = `加载更多（已显示 ${shown.length}/${options.length}）`;
     more.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     more.addEventListener("click", () => {
       increaseModelDropdownLimit(side, 240);
@@ -556,6 +669,7 @@ export function openModelDropdown(side) {
   if (!dropdownEl || !inputEl) return;
 
   setModelDropdownQuery(side, null);
+  prefetchAllServiceModels();
   renderModelDropdown(side, null);
   const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
   openFloatingDropdown(dropdownEl, anchorEl);
@@ -565,11 +679,9 @@ export function openModelDropdown(side) {
     const remaining =
       dropdownEl.scrollHeight - dropdownEl.scrollTop - dropdownEl.clientHeight;
     if (remaining > 40) return;
-    const all = getCachedModelIds(side);
     const activeQuery = getModelDropdownQuery(side, inputEl.value);
-    const q = (activeQuery || "").toString().trim().toLowerCase();
-    const models = q ? all.filter((m) => m.toLowerCase().includes(q)) : all;
-    if (getModelDropdownLimit(side) >= models.length) return;
+    const options = getFilteredModelOptions(activeQuery || "");
+    if (getModelDropdownLimit(side) >= options.length) return;
     increaseModelDropdownLimit(side, 240);
     renderModelDropdown(side, activeQuery);
   };
@@ -605,8 +717,8 @@ export function updateModelDropdownFilter(side) {
     if (side === "Title") {
       return;
     }
-    const models = getCachedModelIds(side);
-    if (models.length) {
+    const options = getAggregatedModelOptions();
+    if (options.length) {
       resetModelDropdownLimit(side);
       renderModelDropdown(side, nextQuery);
       const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
@@ -759,11 +871,18 @@ export async function fetchAndUpdateModels(side) {
   const config = _getConfigFromForm(side);
   const apiKey = (config.apiKey || "").trim();
   const apiUrl = (config.apiUrl || "").trim();
+  const targetServiceId = getCurrentProfileServiceId();
   if (!apiKey || !apiUrl) {
     slot.models = [];
     closeModelDropdown(side);
-    if (side === "main" && isHeaderModelDropdownOpen()) {
-      syncHeaderSlotFromMainModelCache();
+    if (targetServiceId) {
+      const headerSlot = getHeaderModelFetchSlot(targetServiceId);
+      headerSlot.models = [];
+      headerSlot.error = "";
+      headerSlot.lastKey = "";
+      headerSlot.lastFetchedAt = 0;
+    }
+    if (isHeaderModelDropdownOpen()) {
       renderHeaderModelDropdown();
     }
     if (side !== "Title") updateModelHint();
@@ -790,8 +909,8 @@ export async function fetchAndUpdateModels(side) {
       return;
     }
     slot.models = ids;
-    if (side === "main") {
-      syncHeaderSlotFromMainModelCache();
+    if (targetServiceId) {
+      syncHeaderSlotFromSideModelCache(targetServiceId, side);
     }
     if (side !== "Title") {
       if (connectivityMode === "messages_probe") {
@@ -814,7 +933,7 @@ export async function fetchAndUpdateModels(side) {
           : elements.model;
       renderModelDropdown(side, getModelDropdownQuery(side, inputEl?.value || ""));
     }
-    if (side === "main" && isHeaderModelDropdownOpen()) {
+    if (isHeaderModelDropdownOpen()) {
       renderHeaderModelDropdown();
     }
     slot.lastKey = fetchKey;
@@ -826,8 +945,14 @@ export async function fetchAndUpdateModels(side) {
     console.warn(`模型列表获取失败:`, e?.message || e);
     slot.models = [];
     closeModelDropdown(side);
-    if (side === "main" && isHeaderModelDropdownOpen()) {
-      syncHeaderSlotFromMainModelCache();
+    if (targetServiceId) {
+      const headerSlot = getHeaderModelFetchSlot(targetServiceId);
+      headerSlot.models = [];
+      headerSlot.error = e?.message || "获取模型列表失败";
+      headerSlot.lastKey = fetchKey;
+      headerSlot.lastFetchedAt = Date.now();
+    }
+    if (isHeaderModelDropdownOpen()) {
       renderHeaderModelDropdown();
     }
     if (side !== "Title") {

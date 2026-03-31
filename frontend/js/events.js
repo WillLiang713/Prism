@@ -13,10 +13,10 @@ import {
   createService,
   duplicateService,
   deleteService,
-  handleCurrentServiceChange,
   testSelectedServiceConnection,
   autoSaveManagedServiceDraft,
   normalizeApiUrlInputValue,
+  getResolvedRuntimeRequestState,
 } from './config.js';
 import { applyWebSearchApiKeyValue, applyWebSearchModeValue, closeWebSearchToolSelector, getCurrentWebSearchToolMode, isWebSearchEnabled, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
@@ -285,10 +285,6 @@ export function bindEvents() {
   elements.deleteServiceBtn?.addEventListener("click", () => {
     void deleteService();
   });
-  elements.setActiveServiceBtn?.addEventListener("click", () => {
-    if (!state.serviceManagerSelectedId) return;
-    void handleCurrentServiceChange(state.serviceManagerSelectedId);
-  });
   elements.testServiceConnectionBtn?.addEventListener("click", () => {
     void testSelectedServiceConnection();
   });
@@ -411,10 +407,9 @@ export function bindEvents() {
 
   // 监听接口类型变化，更新 API 地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
+    const runtimeState = getResolvedRuntimeRequestState();
     const preferredWebSearchState = resolvePreferredWebSearchState(
-      {
-        providerSelection: elements.provider?.value,
-      },
+      runtimeState.mainSourceConfig,
       {
         currentMode: state.webSearch?.toolMode,
         currentEnabled: isWebSearchEnabled(),
@@ -473,6 +468,10 @@ export function bindEvents() {
 
   // 监听模型名称变化
   elements.model.addEventListener("input", () => {
+    const modelValue = String(elements.model?.value || "").trim();
+    if (!modelValue) {
+      delete elements.model.dataset.serviceId;
+    }
     updateModelNames();
     updateConfigStatusStrip();
     updateModelDropdownFilter("main");
@@ -497,6 +496,10 @@ export function bindEvents() {
     toggleHeaderModelDropdown()
   );
   elements.titleGenerationModel?.addEventListener("input", () => {
+    const titleModelValue = String(elements.titleGenerationModel?.value || "").trim();
+    if (!titleModelValue) {
+      delete elements.titleGenerationModel.dataset.serviceId;
+    }
     updateConfigStatusStrip();
     updateModelDropdownFilter("Title");
   });
