@@ -174,6 +174,44 @@
     font-size: 16px;
   }
 
+  /* 移动端取消所有表单控件和选择器的 focus / open 边框高亮与发光 */
+  #configModal .form-group input[type="text"]:focus,
+  #configModal .form-group input[type="password"]:focus,
+  #configModal .form-group input[type="number"]:focus,
+  #configModal .form-group select:focus,
+  #configModal .form-group textarea:focus,
+  #configModal .model-picker-row input[type="text"]:focus,
+  #configModal #configPanelServices .form-group input[type="text"]:focus,
+  #configModal #configPanelServices .form-group input[type="password"]:focus,
+  #configModal #configPanelServices .form-group select:focus,
+  #configModal #configPanelServices .form-group textarea:focus {
+    border-color: var(--border-strong);
+    outline: none;
+    box-shadow: none;
+  }
+
+  #configModal .config-static-picker .model-picker-row:has(input[type="text"]:focus),
+  #configModal .model-picker[data-side="main"] .model-picker-row:has(input[type="text"]:focus),
+  #configModal .model-picker[data-side="title"] .model-picker-row:has(input[type="text"]:focus),
+  #configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within),
+  #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row,
+  #configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-row,
+  #configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row {
+    box-shadow: none;
+  }
+
+  #configModal .config-static-picker .model-picker-row input[type="text"]:focus + .model-picker-btn,
+  #configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus + .model-picker-btn,
+  #configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) .model-picker-btn,
+  #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row input[type="text"],
+  #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-btn,
+  #configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-row input[type="text"],
+  #configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-btn,
+  #configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row input[type="text"],
+  #configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-btn {
+    border-color: var(--border-strong);
+  }
+
   /* 移动端下显式重置联网面板布局，避免桌面网格/area 规则在部分 WebView 中叠层 */
   #configModal .web-config-layout {
     display: flex;
@@ -361,7 +399,8 @@
 
   #configModal #configPanelServices .config-static-picker .model-picker-row:has(input[type="text"]:focus),
   #configModal #configPanelServices .config-static-picker:has(.model-picker-btn.open) .model-picker-row {
-    border-color: var(--accent);
+    border-color: var(--border-strong);
+    box-shadow: none;
   }
 
   #configModal #configPanelServices .model-picker-btn {
@@ -451,6 +490,34 @@
     flex-basis: 36px;
   }
 
+  #configModal #configPanelModel .model-picker[data-side="title"] .model-picker-row {
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  #configModal #configPanelModel .model-picker[data-side="title"] .model-picker-row input[type="text"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #configModal #configPanelModel .model-picker[data-side="title"] .model-picker-btn {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    align-self: stretch;
+  }
+
+  #configModal #configPanelModel .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within),
+  #configModal #configPanelModel .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row {
+    border-color: var(--border-strong);
+    box-shadow: none;
+  }
+
   #configModal #configPanelModel #roleSetting,
   #configModal #configPanelModel #roleSettingPreview {
     min-height: 156px;
@@ -509,7 +576,8 @@
 
   #configModal #configPanelWeb .config-static-picker .model-picker-row:has(input[type="text"]:focus),
   #configModal #configPanelWeb .config-static-picker:has(.model-picker-btn.open) .model-picker-row {
-    border-color: var(--accent);
+    border-color: var(--border-strong);
+    box-shadow: none;
   }
 
   #configModal #configPanelWeb .web-config-tips {
@@ -560,23 +628,23 @@
   }
 
   .header-brand {
-    grid-column: 2;
-    position: static;
-    left: auto;
-    top: auto;
-    transform: none;
-    max-width: none;
+    grid-column: 1 / -1;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 160px);
     width: auto;
     min-width: 0;
-    pointer-events: auto;
-    z-index: 0;
-    justify-self: stretch;
+    pointer-events: none;
+    z-index: 1;
+    justify-self: center;
   }
 
   .header-brand .brand-meta {
     width: 100%;
     min-width: 0;
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .header-brand .brand-model,
@@ -599,7 +667,7 @@
     flex: 0 1 auto;
     gap: 6px;
     padding: 4px 8px;
-    justify-content: flex-start;
+    justify-content: center;
     overflow: hidden;
   }
 
@@ -683,7 +751,7 @@
     border: 0;
     margin: 0;
     padding: 0;
-    background: rgba(0, 0, 0, 0.66);
+    background: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     opacity: 0;
@@ -697,6 +765,10 @@
   .chat-layout:not(.sidebar-collapsed) .sidebar-scrim {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .chat-layout:not(.sidebar-collapsed) .chat-side {
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
   }
 
   .sidebar-scrim:focus-visible {
