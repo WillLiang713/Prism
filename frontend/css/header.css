@@ -405,7 +405,7 @@
 }
 
 .is-desktop-runtime .header-brand {
-  width: min(calc(100% - 332px), 720px);
+  width: min(calc(100% - 352px), 720px);
   gap: 0;
   pointer-events: auto;
 }
@@ -432,28 +432,54 @@
 }
 
 .is-desktop-runtime .header-utility-actions {
-  gap: 6px;
+  gap: 2px;
 }
 
-.is-desktop-runtime .header-utility-actions .btn.btn-secondary.btn-settings {
-  width: 32px;
+.titlebar-action-btn {
+  width: 42px;
   height: 32px;
-  min-width: 32px;
+  min-width: 42px;
   min-height: 32px;
-  border-radius: 10px;
+  border-radius: 6px;
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--text-muted);
   box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+  cursor: pointer;
 }
 
-.is-desktop-runtime .header-utility-actions .btn.btn-secondary.btn-settings:hover {
-  background: transparent;
+.titlebar-action-btn:hover {
+  background: var(--desktop-window-hover-bg);
   color: var(--text);
 }
 
-.is-desktop-runtime .header-utility-actions .btn.btn-secondary.btn-settings:focus-visible {
-  box-shadow: 0 0 0 2px var(--bg-active);
+.titlebar-action-btn:active {
+  transform: scale(0.97);
+}
+
+.titlebar-action-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--desktop-window-focus-ring);
+}
+
+.titlebar-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.header-utility-actions .titlebar-action-btn {
+  color: var(--text-muted);
 }
 
 .is-desktop-runtime .desktop-window-controls {
@@ -465,37 +491,17 @@
 }
 
 .is-desktop-runtime .desktop-window-btn {
-  width: 42px;
-  height: 32px;
-  min-width: 42px;
-  min-height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
   color: var(--desktop-window-icon);
 }
 
-.is-desktop-runtime .desktop-window-btn svg {
+.titlebar-action-btn svg {
   width: 14px;
   height: 14px;
-}
-
-.is-desktop-runtime .desktop-window-btn:hover {
-  background: var(--desktop-window-hover-bg);
-  color: var(--text);
-}
-
-.is-desktop-runtime .desktop-window-btn:active {
-  transform: scale(0.97);
 }
 
 .is-desktop-runtime .desktop-window-btn-close:hover {
   background: #c42b1c;
   color: #ffffff;
-}
-
-.is-desktop-runtime .desktop-window-btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--desktop-window-focus-ring);
 }
 
 .is-desktop-runtime .container {
@@ -569,61 +575,3 @@ html[data-theme="system"] .theme-toggle-btn .icon-auto {
   display: block !important;
 }
 
-.chat-actions .btn.btn-secondary.btn-settings {
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
-  border-radius: 50%;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  transition:
-    background 0.2s,
-    color 0.2s,
-    border-color 0.2s,
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
-  cursor: pointer;
-}
-
-.chat-actions .btn.btn-secondary.btn-settings svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.1;
-}
-
-.chat-actions .btn.btn-secondary.btn-settings:active {
-  transform: scale(0.92);
-  color: var(--text);
-}
-
-.chat-actions .btn.btn-secondary.btn-settings:disabled {
-  opacity: 0.4;
-}
-
-body:not(.is-desktop-runtime) .header-utility-actions .btn.btn-secondary.btn-settings {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  box-shadow: none;
-}
-
-body:not(.is-desktop-runtime) .header-utility-actions .btn.btn-secondary.btn-settings:hover {
-  background: transparent;
-  color: var(--text);
-}
-
-body:not(.is-desktop-runtime) .header-utility-actions .btn.btn-secondary.btn-settings:focus-visible {
-  box-shadow: 0 0 0 2px var(--bg-active);
-}

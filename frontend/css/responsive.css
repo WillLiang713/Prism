@@ -595,7 +595,7 @@
 
   .header-brand .brand-model-trigger {
     width: auto;
-    max-width: min(100%, 160px);
+    max-width: min(100%, 200px);
     flex: 0 1 auto;
     gap: 6px;
     padding: 4px 8px;
@@ -637,13 +637,6 @@
     box-shadow: none;
     position: relative;
     z-index: 2;
-  }
-
-  .chat-actions .btn.btn-secondary.btn-settings {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
   }
 
   .shortcut-help-table th,

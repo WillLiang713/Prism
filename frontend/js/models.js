@@ -350,7 +350,7 @@ export function renderHeaderModelDropdown() {
   if (!activeService) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
-    empty.textContent = "暂无可用服务，请先在配置中心添加服务";
+    empty.textContent = "暂无可用服务，请先在设置中添加服务";
     dropdownEl.appendChild(empty);
     return;
   }

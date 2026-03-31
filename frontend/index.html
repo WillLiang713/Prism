@@ -190,7 +190,7 @@
                 </div>
                 <div class="chat-actions">
                   <div class="header-utility-actions" aria-label="界面操作">
-                    <button class="btn btn-secondary btn-settings no-drag theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题">
+                    <button class="titlebar-action-btn no-drag theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题">
                       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none;">
                         <circle cx="12" cy="12" r="4"></circle>
                         <path d="M12 2v2"></path>
@@ -212,7 +212,7 @@
                       </svg>
                       <span class="sr-only">切换主题</span>
                     </button>
-                    <button class="btn btn-secondary btn-settings no-drag" id="openConfigBtn" aria-label="设置">
+                    <button class="titlebar-action-btn no-drag" id="openConfigBtn" aria-label="设置">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.02a1.65 1.65 0 0 0 .98-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .98 1.51h.02a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.02a1.65 1.65 0 0 0 1.51.98H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.98z"></path>
@@ -222,7 +222,7 @@
                   </div>
                   <div class="desktop-window-controls" id="desktopWindowControls" aria-label="窗口控制">
                     <button
-                      class="desktop-window-btn no-drag"
+                      class="desktop-window-btn titlebar-action-btn no-drag"
                       id="windowMinimizeBtn"
                       type="button"
                       aria-label="最小化"
@@ -232,7 +232,7 @@
                       </svg>
                     </button>
                     <button
-                      class="desktop-window-btn no-drag"
+                      class="desktop-window-btn titlebar-action-btn no-drag"
                       id="windowMaximizeBtn"
                       type="button"
                       aria-label="最大化"
@@ -246,7 +246,7 @@
                       </svg>
                     </button>
                     <button
-                      class="desktop-window-btn desktop-window-btn-close no-drag"
+                      class="desktop-window-btn desktop-window-btn-close titlebar-action-btn no-drag"
                       id="windowCloseBtn"
                       type="button"
                       aria-label="关闭"
@@ -455,13 +455,13 @@
         <div class="config-panel" id="configPanel">
           <div class="config-header">
             <div class="config-header-title">
-              <h2>配置中心</h2>
+              <h2>设置</h2>
             </div>
             <button
               type="button"
               class="btn btn-secondary btn-small floating-action-btn config-close-corner-btn"
               id="closeConfigBtn"
-              aria-label="关闭配置中心"
+              aria-label="关闭设置"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
                 <path d="M6 6l12 12"></path>

@@ -31,7 +31,15 @@ import {
 } from './dropdown.js';
 import { setSendButtonMode, autoGrowPromptInput, updateScrollToBottomButton, scrollToBottom, isNearBottom, onSendButtonClick, initScrollbarAutoHide, initTopicListHeaderAlignment, toggleTheme } from './ui.js';
 import { sendPrompt, stopGeneration } from './conversation.js';
-import { triggerCreateTopic, isTopicRunning, requestDeleteTopic, closeTopicActionMenu } from './chat.js';
+import {
+  triggerCreateTopic,
+  isTopicRunning,
+  requestDeleteTopic,
+  closeTopicActionMenu,
+  getActiveTopic,
+  setActiveTopic,
+  renderAll,
+} from './chat.js';
 import { addImages } from './images.js';
 import {
   toggleSidebar,
@@ -64,6 +72,27 @@ function bindStableDropdownToggle(button, onToggle) {
     e.preventDefault();
     onToggle();
   });
+}
+
+function getActiveConfigTabName() {
+  const activeTab = document.querySelector('.config-tab.is-active[data-tab]');
+  return String(activeTab?.dataset?.tab || "").trim() || "services";
+}
+
+function toggleConfigModalTab(tabName = "services") {
+  const targetTab = typeof tabName === "string" ? tabName : "services";
+  const isOpen = !!elements.configModal?.classList.contains("open");
+  if (!isOpen) {
+    openConfigModal(targetTab);
+    return;
+  }
+
+  if (getActiveConfigTabName() === targetTab) {
+    closeConfigModal();
+    return;
+  }
+
+  openConfigModal(targetTab);
 }
 
 function isReasoningDropdownOpen() {
@@ -311,32 +340,60 @@ export function bindEvents() {
 
   elements.newTopicBtn.addEventListener("click", triggerCreateTopic);
 
-  // 新建话题快捷键：Ctrl+Shift+O
+  // 新建话题快捷键：Ctrl+Alt+O
   document.addEventListener("keydown", (e) => {
     if (!isNewTopicShortcut(e)) return;
     e.preventDefault();
     triggerCreateTopic();
   });
 
-  // 删除当前话题快捷键：Ctrl+Shift+Backspace
+  // 删除当前话题快捷键：Ctrl+Alt+Backspace
   document.addEventListener("keydown", async (e) => {
     if (!isDeleteCurrentTopicShortcut(e)) return;
     e.preventDefault();
     await requestDeleteTopic();
   });
 
-  // 收起/展开话题栏快捷键：Ctrl+B
+  // 切换到上一个话题：Ctrl+Alt+[
+  document.addEventListener("keydown", (e) => {
+    if (!isPreviousTopicShortcut(e)) return;
+    e.preventDefault();
+    switchTopicByOffset(-1);
+  });
+
+  // 切换到下一个话题：Ctrl+Alt+]
+  document.addEventListener("keydown", (e) => {
+    if (!isNextTopicShortcut(e)) return;
+    e.preventDefault();
+    switchTopicByOffset(1);
+  });
+
+  // 切换话题栏：Ctrl+B
   document.addEventListener("keydown", (e) => {
     if (!isToggleSidebarShortcut(e)) return;
     e.preventDefault();
     toggleSidebar();
   });
 
-  // 打开快捷键页：Shift+/
+  // 切换主题：Ctrl+Alt+T
+  document.addEventListener("keydown", (e) => {
+    if (!isToggleThemeShortcut(e)) return;
+    e.preventDefault();
+    toggleTheme();
+  });
+
+  // 打开设置：Ctrl+Alt+S
+  document.addEventListener("keydown", (e) => {
+    if (!isOpenSettingsShortcut(e)) return;
+    e.preventDefault();
+    toggleConfigModalTab("services");
+  });
+
+  // 查看快捷键：Ctrl+Alt+K
   document.addEventListener("keydown", (e) => {
     if (!isShortcutHelpShortcut(e)) return;
     e.preventDefault();
-    openConfigModal("shortcuts");
+    toggleConfigModalTab("shortcuts");
   });
 
   // 密钥输入框明文切换
@@ -680,11 +737,10 @@ export function isNewTopicShortcut(e) {
   if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
-  const hasShift = !!e.shiftKey;
 
-  if (e.metaKey || e.altKey) return false;
-  if (!e.ctrlKey) return false;
-  return key === "o" && hasShift;
+  if (e.metaKey || e.shiftKey) return false;
+  if (!e.ctrlKey || !e.altKey) return false;
+  return key === "o";
 }
 
 export function isEditableKeyboardTarget(target) {
@@ -709,11 +765,10 @@ function shouldBlockGlobalShortcutForTarget(target) {
 export function isShortcutHelpShortcut(e) {
   if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
   if (isPromptConfirmDialogOpen()) return false;
-  if (elements.configModal?.classList.contains("open")) return false;
-  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
-  if (e.ctrlKey || e.metaKey || e.altKey) return false;
+  if (e.metaKey || e.shiftKey) return false;
+  if (!e.ctrlKey || !e.altKey) return false;
   const key = (e.key || "").toLowerCase();
-  return e.shiftKey && (key === "?" || key === "/");
+  return key === "k";
 }
 
 export function isDeleteCurrentTopicShortcut(e) {
@@ -723,11 +778,33 @@ export function isDeleteCurrentTopicShortcut(e) {
   if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
 
   const key = (e.key || "").toLowerCase();
-  const hasShift = !!e.shiftKey;
 
-  if (e.metaKey || e.altKey) return false;
-  if (!e.ctrlKey) return false;
-  return key === "backspace" && hasShift;
+  if (e.metaKey || e.shiftKey) return false;
+  if (!e.ctrlKey || !e.altKey) return false;
+  return key === "backspace";
+}
+
+function isTopicSwitchShortcutBase(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (elements.configModal?.classList.contains("open")) return false;
+  if (shouldBlockGlobalShortcutForTarget(e.target)) return false;
+  if (e.metaKey || e.shiftKey) return false;
+  return !!e.ctrlKey && !!e.altKey;
+}
+
+export function isPreviousTopicShortcut(e) {
+  if (!isTopicSwitchShortcutBase(e)) return false;
+  const key = (e.key || "").toLowerCase();
+  const code = e.code || "";
+  return code === "BracketLeft" || key === "[";
+}
+
+export function isNextTopicShortcut(e) {
+  if (!isTopicSwitchShortcutBase(e)) return false;
+  const key = (e.key || "").toLowerCase();
+  const code = e.code || "";
+  return code === "BracketRight" || key === "]";
 }
 
 export function isToggleSidebarShortcut(e) {
@@ -741,4 +818,40 @@ export function isToggleSidebarShortcut(e) {
   if (e.metaKey || e.altKey || e.shiftKey) return false;
   if (!e.ctrlKey) return false;
   return key === "b";
+}
+
+export function isToggleThemeShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (e.metaKey || e.shiftKey) return false;
+  if (!e.ctrlKey || !e.altKey) return false;
+
+  const key = (e.key || "").toLowerCase();
+  return key === "t";
+}
+
+export function isOpenSettingsShortcut(e) {
+  if (!e || e.defaultPrevented || e.repeat || e.isComposing) return false;
+  if (isPromptConfirmDialogOpen()) return false;
+  if (e.metaKey || e.shiftKey) return false;
+  if (!e.ctrlKey || !e.altKey) return false;
+
+  const key = (e.key || "").toLowerCase();
+  return key === "s";
+}
+
+function switchTopicByOffset(offset) {
+  const topics = Array.isArray(state.chat.topics) ? state.chat.topics : [];
+  if (topics.length < 2) return;
+
+  const activeTopic = getActiveTopic();
+  const currentIndex = topics.findIndex((topic) => topic.id === activeTopic?.id);
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+  const nextIndex = (safeCurrentIndex + offset + topics.length) % topics.length;
+  const nextTopic = topics[nextIndex] || null;
+  if (!nextTopic || nextTopic.id === activeTopic?.id) return;
+
+  closeTopicActionMenu();
+  setActiveTopic(nextTopic.id);
+  renderAll();
 }

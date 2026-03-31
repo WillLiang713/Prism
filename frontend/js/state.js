@@ -13,34 +13,54 @@ export const BOOTSTRAP_HEALTH_INTERVAL_MS = 100;
 
 export const SHORTCUTS = [
   {
-    action: "新建话题",
-    keys: ["Ctrl", "Shift", "O"],
-    note: "聊天输入框聚焦时也可用",
-  },
-  {
-    action: "打开快捷键页",
-    keys: ["Shift", "?"],
-    note: "聊天输入框聚焦时也可用，会打开配置中心",
-  },
-  {
-    action: "删除当前话题",
-    keys: ["Ctrl", "Shift", "Backspace"],
-    note: "聊天输入框聚焦时也可用，会弹出确认",
-  },
-  {
-    action: "收起或展开话题栏",
-    keys: ["Ctrl", "B"],
-    note: "聊天输入框聚焦时也可用",
-  },
-  {
     action: "发送消息",
     keys: ["Enter"],
     note: "输入框聚焦时",
   },
   {
-    action: "换行",
+    action: "插入换行",
     keys: ["Shift", "Enter"],
     note: "输入框聚焦时",
+  },
+  {
+    action: "新建话题",
+    keys: ["Ctrl", "Alt", "O"],
+    note: "聊天输入框聚焦时也可用",
+  },
+  {
+    action: "上一话题",
+    keys: ["Ctrl", "Alt", "["],
+    note: "聊天输入框聚焦时也可用",
+  },
+  {
+    action: "下一话题",
+    keys: ["Ctrl", "Alt", "]"],
+    note: "聊天输入框聚焦时也可用",
+  },
+  {
+    action: "删除当前话题",
+    keys: ["Ctrl", "Alt", "Backspace"],
+    note: "聊天输入框聚焦时也可用，会弹出确认",
+  },
+  {
+    action: "切换话题栏",
+    keys: ["Ctrl", "B"],
+    note: "聊天输入框聚焦时也可用",
+  },
+  {
+    action: "打开设置",
+    keys: ["Ctrl", "Alt", "S"],
+    note: "聊天输入框聚焦时也可用",
+  },
+  {
+    action: "切换主题",
+    keys: ["Ctrl", "Alt", "T"],
+    note: "聊天输入框聚焦时也可用",
+  },
+  {
+    action: "查看快捷键",
+    keys: ["Ctrl", "Alt", "K"],
+    note: "聊天输入框聚焦时也可用，会打开设置",
   },
 ];
 

@@ -352,7 +352,6 @@ body {
 
 /* ---------- Shared Tool Button States ---------- */
 @media (hover: hover) and (pointer: fine) {
-  .chat-actions .btn.btn-secondary.btn-settings:hover,
   .sidebar-toggle-handle:hover,
   .sidebar-expand-btn:hover,
   .topic-new-btn:hover,
@@ -365,7 +364,6 @@ body {
   }
 }
 
-.chat-actions .btn.btn-secondary.btn-settings:focus-visible,
 .sidebar-toggle-handle:focus-visible,
 .sidebar-expand-btn:focus-visible,
 .topic-new-btn:focus-visible,
