@@ -3,3 +3,4 @@ httpx>=0.28.1
 uvicorn>=0.38.0
 tzdata>=2024.1
 python-dotenv>=1.0.0
+nuitka
