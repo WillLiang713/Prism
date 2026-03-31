@@ -1196,7 +1196,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--border-strong);
   box-shadow: none;
 }
 
@@ -1255,22 +1255,22 @@
 #configModal .config-static-picker .model-picker-row input[type="text"]:focus,
 #configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus,
 #configModal .model-picker[data-side="title"] .model-picker-row input[type="text"]:focus {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
   box-shadow: none;
 }
 
 #configModal .config-static-picker .model-picker-row input[type="text"]:focus + .model-picker-btn,
 #configModal .model-picker[data-side="main"] .model-picker-row input[type="text"]:focus + .model-picker-btn,
 #configModal .model-picker[data-side="title"] .model-picker-row input[type="text"]:focus + .model-picker-btn {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 #configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) .model-picker-btn {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 #configModal .model-picker[data-side="title"] .model-picker-row:has(.model-picker-input-wrap:focus-within) input[type="text"] {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 #configModal .config-static-picker .model-picker-row:has(input[type="text"]:focus),
@@ -1287,7 +1287,7 @@
 #configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-row input[type="text"],
 #configModal .model-picker[data-side="main"]:has(.model-picker-btn.open) .model-picker-btn,
 #configModal .model-picker[data-side="title"]:has(.model-picker-btn.open) .model-picker-btn {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 #configModal .config-static-picker:has(.model-picker-btn.open) .model-picker-row,
@@ -1325,12 +1325,13 @@
 
 #configModal .form-group select:focus,
 #configModal .form-group input[list]:focus {
+  border-color: var(--border-strong);
   background-image:
     linear-gradient(
       to right,
       transparent calc(100% - 38px),
-      var(--accent) calc(100% - 38px),
-      var(--accent) calc(100% - 37px),
+      var(--border-strong) calc(100% - 38px),
+      var(--border-strong) calc(100% - 37px),
       transparent calc(100% - 37px)
     ),
     linear-gradient(
@@ -1405,7 +1406,7 @@
 
 .form-group .checkbox-label input[type="checkbox"]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  box-shadow: none;
 }
 
 .form-group .checkbox-label input[type="checkbox"]:active {
@@ -1422,7 +1423,7 @@
 
 .form-group input[type="number"]:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--border-strong);
   box-shadow: none;
 }
 
@@ -1454,7 +1455,7 @@
 
 .role-setting-preview:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 .role-setting-preview p:last-child { margin-bottom: 0; }
@@ -1494,7 +1495,7 @@
 
 .model-picker-row input[type="text"]:focus,
 .model-picker-row select:focus {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
   box-shadow: none;
 }
 
@@ -1534,7 +1535,7 @@
 
 .model-picker-row input[type="text"]:focus + .model-picker-btn,
 .model-picker-row select:focus + .model-picker-btn {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -1573,7 +1574,7 @@
   background: var(--surface-solid);
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
   max-height: 260px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1621,7 +1622,7 @@
 .model-dropdown-item.is-active {
   background: var(--bg-active);
   color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--border);
+  box-shadow: none;
   font-weight: 600;
 }
 

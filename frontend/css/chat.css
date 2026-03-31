@@ -191,7 +191,7 @@
 
 .user-image-trigger:hover {
   border-color: var(--border-accent);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 
 .user-image-trigger:focus-visible {
@@ -317,7 +317,7 @@
 
 .user-edit-panel:focus-within {
   border-color: var(--editable-panel-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .user-edit-panel:focus-within::after {
@@ -331,9 +331,7 @@
 }
 
 :root[data-theme="light"] .user-edit-panel:focus-within {
-  box-shadow:
-    0 10px 28px rgba(15, 23, 42, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: none;
 }
 
 :root[data-theme="light"] .user-edit-panel::after,
@@ -355,9 +353,7 @@
 }
 
 :root[data-theme="dark"] .user-edit-panel:focus-within {
-  box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  box-shadow: none;
 }
 
 :root[data-theme="dark"] .user-edit-panel::after,
@@ -380,9 +376,7 @@
   }
 
   :root:not([data-theme="dark"]) .user-edit-panel:focus-within {
-    box-shadow:
-      0 10px 28px rgba(15, 23, 42, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    box-shadow: none;
   }
 
   :root:not([data-theme="dark"]) .user-edit-panel::after,
@@ -406,9 +400,7 @@
   }
 
   :root:not([data-theme="light"]) .user-edit-panel:focus-within {
-    box-shadow:
-      0 10px 28px rgba(0, 0, 0, 0.32),
-      inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    box-shadow: none;
   }
 
   :root:not([data-theme="light"]) .user-edit-panel::after,
@@ -491,74 +483,72 @@
   padding: 0;
 }
 
-.image-preview-close-btn {
+.floating-action-btn.image-preview-close-btn {
   position: absolute;
   top: 14px;
   right: 14px;
   z-index: 2;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(8, 10, 14, 0.9);
-  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(10, 10, 10, 0.78);
+  color: rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.42),
-    0 0 0 1px rgba(0, 0, 0, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 10px 26px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.image-preview-close-btn:hover {
-  background: rgba(12, 14, 18, 0.98);
-  border-color: rgba(255, 255, 255, 0.4);
+.floating-action-btn.image-preview-close-btn:hover {
+  background: rgba(18, 18, 18, 0.94);
+  border-color: rgba(255, 255, 255, 0.3);
   color: #ffffff;
 }
 
-.image-preview-close-btn:focus-visible {
+.floating-action-btn.image-preview-close-btn:focus-visible {
   box-shadow:
     0 10px 26px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
-.image-preview-close-btn svg {
-  width: 18px;
-  height: 18px;
+.floating-action-btn.image-preview-close-btn svg {
+  width: 16px;
+  height: 16px;
   opacity: 1;
   stroke: #ffffff;
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.3));
 }
 
-.image-preview-save-btn {
+.floating-action-btn.image-preview-save-btn {
   position: absolute;
   right: 14px;
   bottom: 14px;
   z-index: 2;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(8, 10, 14, 0.92);
-  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(10, 10, 10, 0.78);
+  color: rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.44),
-    0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 10px 26px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.image-preview-save-btn:hover {
-  background: rgba(12, 14, 18, 0.99);
-  border-color: rgba(120, 205, 164, 0.46);
+.floating-action-btn.image-preview-save-btn:hover {
+  background: rgba(18, 18, 18, 0.94);
+  border-color: rgba(255, 255, 255, 0.3);
   color: #ffffff;
 }
 
-.image-preview-save-btn:focus-visible {
+.floating-action-btn.image-preview-save-btn:focus-visible {
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 2px rgba(120, 205, 164, 0.22);
+    0 10px 26px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
-.image-preview-save-btn svg {
-  width: 18px;
-  height: 18px;
+.floating-action-btn.image-preview-save-btn svg {
+  width: 16px;
+  height: 16px;
   opacity: 1;
   stroke: #ffffff;
-  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.3));
 }
 
 .image-preview-save-btn:disabled {

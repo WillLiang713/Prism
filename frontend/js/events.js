@@ -20,7 +20,7 @@ import {
 } from './config.js';
 import { applyWebSearchApiKeyValue, applyWebSearchModeValue, closeWebSearchToolSelector, getCurrentWebSearchToolMode, isWebSearchEnabled, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
-import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown } from './models.js';
+import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown, syncTitleModelFollowPresentation } from './models.js';
 import {
   closeAllConfigSelectPickers,
   repositionOpenFloatingDropdowns,
@@ -502,6 +502,7 @@ export function bindEvents() {
     }
     updateConfigStatusStrip();
     updateModelDropdownFilter("Title");
+    syncTitleModelFollowPresentation();
   });
   elements.titleGenerationModel?.addEventListener("blur", () => {
     window.setTimeout(() => {
@@ -512,6 +513,7 @@ export function bindEvents() {
       if (!keepDropdownOpen) {
         closeModelDropdown("Title");
       }
+      syncTitleModelFollowPresentation();
       autoSaveConfigDraft();
     }, 0);
   });
@@ -830,7 +832,8 @@ export function isToggleThemeShortcut(e) {
   if (!e.ctrlKey || !e.altKey) return false;
 
   const key = (e.key || "").toLowerCase();
-  return key === "t";
+  const code = e.code || "";
+  return key === "t" || code === "KeyT";
 }
 
 export function isOpenSettingsShortcut(e) {

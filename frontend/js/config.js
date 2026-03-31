@@ -20,6 +20,7 @@ import {
   fetchModelsOnce,
   isHeaderModelDropdownOpen,
   renderHeaderModelDropdown,
+  syncTitleModelFollowPresentation,
 } from './models.js';
 import { renderMarkdownToElement } from './markdown.js';
 import {
@@ -904,6 +905,7 @@ function applyRuntimeModelConfigToForm(runtimeConfig = null) {
   syncRoleSettingPreview(true);
   updateModelHint("main");
   updateModelHint("Title");
+  syncTitleModelFollowPresentation();
 }
 
 function applyEmptyServiceStateToForm() {
@@ -942,6 +944,7 @@ function applyEmptyServiceStateToForm() {
   updateProviderUi();
   updateModelHint("main");
   updateModelHint("Title");
+  syncTitleModelFollowPresentation();
 }
 
 function readManagedServiceConnectionFromForm(existingService = null) {
@@ -1540,6 +1543,7 @@ export function updateModelNames() {
   if (isHeaderModelDropdownOpen()) {
     renderHeaderModelDropdown();
   }
+  syncTitleModelFollowPresentation();
 }
 
 function getRuntimeSourceService(sourceServiceId) {

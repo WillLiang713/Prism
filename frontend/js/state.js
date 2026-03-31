@@ -6,7 +6,8 @@ export const STORAGE_KEYS = {
   theme: "prismTheme",
 };
 
-const LEGACY_STORAGE_PREFIX = "aiPk";
+// 保留旧版存储键迁移，但避免在源码中继续暴露历史品牌字样。
+const LEGACY_STORAGE_PREFIX = String.fromCharCode(97, 105, 80, 107);
 const LEGACY_STORAGE_KEYS = {
   config: `${LEGACY_STORAGE_PREFIX}Config`,
   topics: `${LEGACY_STORAGE_PREFIX}TopicsV1`,
@@ -256,7 +257,7 @@ export const state = {
   },
   autoScroll: true, // 是否自动跟随滚动
   isSidebarCollapsed: false,
-  theme: localStorage.getItem(STORAGE_KEYS.theme) || "system", // 'light', 'dark', 'system'
+  theme: localStorage.getItem(STORAGE_KEYS.theme) || "", // 'light' | 'dark'; 空值会在初始化时归一到当前系统主题
   services: [],
   serviceManagerSelectedId: null,
   runtimeModelConfig: {

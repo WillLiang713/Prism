@@ -285,19 +285,33 @@ export function applyStatus(statusEl, status) {
 }
 
 export function updateTheme(theme) {
-  state.theme = theme;
-  localStorage.setItem(STORAGE_KEYS.theme, theme);
-  document.documentElement.setAttribute('data-theme', theme);
+  const nextTheme = theme === "dark" ? "dark" : "light";
+  state.theme = nextTheme;
+  localStorage.setItem(STORAGE_KEYS.theme, nextTheme);
+  document.documentElement.setAttribute("data-theme", nextTheme);
+}
+
+function resolveSystemTheme() {
+  if (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return "dark";
+  }
+  return "light";
 }
 
 export function toggleTheme() {
-  const themes = ['light', 'dark', 'system'];
-  const currentIndex = themes.indexOf(state.theme);
-  const nextIndex = (currentIndex + 1) % themes.length;
-  updateTheme(themes[nextIndex]);
+  updateTheme(state.theme === "dark" ? "light" : "dark");
 }
 
 export function initTheme() {
-  updateTheme(state.theme);
+  const savedTheme = state.theme;
+  const initialTheme =
+    savedTheme === "light" || savedTheme === "dark"
+      ? savedTheme
+      : resolveSystemTheme();
+  updateTheme(initialTheme);
 }
 

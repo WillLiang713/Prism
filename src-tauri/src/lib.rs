@@ -370,7 +370,7 @@ pub fn run() {
                 .map_err(std::io::Error::other)?;
             let window = WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
                 .title("Prism")
-                .inner_size(1440.0, 900.0)
+                .inner_size(1280.0, 820.0)
                 .min_inner_size(1100.0, 760.0)
                 .background_color(Color(0, 0, 0, 255))
                 .visible(false)

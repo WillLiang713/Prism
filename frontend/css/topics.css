@@ -2,10 +2,10 @@
 .topic-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   overflow-y: auto;
   margin-right: 0;
-  padding-right: 2px;
+  padding-right: 1px;
   flex: 1;
   min-height: 0;
   scrollbar-gutter: stable;
@@ -48,7 +48,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   background: transparent;
-  padding: 7px 14px;
+  padding: 6px 13px;
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -65,7 +65,7 @@
   letter-spacing: 0.2px;
   color: var(--text-muted);
   font-family: inherit;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .topic-new-btn:active {
@@ -96,11 +96,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 38px;
+  min-height: 36px;
   border: 1px solid transparent;
   border-radius: 999px;
-  background: var(--bg-subtle);
-  padding: 4px 8px 4px 14px;
+  background: transparent;
+  padding: 3px 8px 3px 12px;
   cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   margin-bottom: 0;
@@ -131,8 +131,8 @@
 }
 
 :root[data-theme="light"] .topic-item {
-  background: rgba(15, 23, 42, 0.04);
-  border-color: rgba(15, 23, 42, 0.04);
+  background: transparent;
+  border-color: transparent;
 }
 
 :root[data-theme="light"] .topic-item:hover {
@@ -141,13 +141,13 @@
 }
 
 :root[data-theme="light"] .topic-item.active {
-  background: rgba(15, 23, 42, 0.056);
+  background: rgba(15, 23, 42, 0.05);
   border-color: transparent;
 }
 
 :root[data-theme="dark"] .topic-item {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.03);
+  background: transparent;
+  border-color: transparent;
 }
 
 :root[data-theme="dark"] .topic-item:hover {
@@ -160,7 +160,7 @@
 }
 
 :root[data-theme="dark"] .topic-item.active {
-  background: rgba(255, 255, 255, 0.096);
+  background: rgba(255, 255, 255, 0.078);
   border-color: transparent;
 }
 
@@ -182,7 +182,7 @@
 
 .topic-item:hover .topic-badge,
 .topic-item.active .topic-badge {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.11);
 }
 
 .topic-item.running .topic-badge {
@@ -195,11 +195,11 @@
   flex: 1;
   display: flex;
   align-items: center;
-  min-height: 28px;
+  min-height: 26px;
 }
 
 .topic-title {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
   line-height: 1.2;
   color: var(--text);
@@ -243,8 +243,8 @@
   background: transparent;
   color: var(--text-dim);
   border-radius: 999px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   cursor: pointer;
   opacity: 0;
@@ -344,6 +344,13 @@
   outline: none;
   background: var(--bg-hover);
   box-shadow: 0 0 0 2px var(--border-subtle) inset;
+}
+
+:root[data-theme="dark"] .topic-action-item:not(.danger):hover,
+:root[data-theme="dark"] .topic-action-item:not(.danger):focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f2f2f2;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .topic-action-item:disabled {

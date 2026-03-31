@@ -15,6 +15,8 @@ const PRESS_START_EVENT =
     ? "pointerdown"
     : "mousedown";
 
+const DEFAULT_TITLE_MODEL_PLACEHOLDER = "选择模型或手动输入";
+
 export function setConfigFns(fns) {
   if (fns.updateModelNames) _updateModelNames = fns.updateModelNames;
   if (fns.getConfigFromForm) _getConfigFromForm = fns.getConfigFromForm;
@@ -37,6 +39,47 @@ export function setModelHint(side, text) {
       : elements.modelHint;
   if (!el) return;
   el.textContent = text || "";
+}
+
+function getTitleFollowDisplayText() {
+  const runtimeConfig = _getRuntimeModelConfig(true) || {};
+  const mainModel = String(runtimeConfig.model || "").trim();
+  const mainServiceId = String(runtimeConfig.modelServiceId || "").trim();
+  const sourceService = state.services.find(
+    (service) => String(service?.id || "").trim() === mainServiceId
+  );
+  const serviceName = sourceService ? _getServiceDisplayName(sourceService) : "";
+
+  if (!mainModel) {
+    return "当前主模型未设置";
+  }
+
+  return serviceName
+    ? `${serviceName} / ${mainModel}`
+    : `${mainModel}`;
+}
+
+export function syncTitleModelFollowPresentation() {
+  const inputEl = elements.titleGenerationModel;
+  if (!inputEl) return;
+
+  const runtimeConfig = _getRuntimeModelConfig(true) || {};
+  const explicitTitleModel = String(runtimeConfig.titleModel || "").trim();
+  const isFollowingMainModel = !explicitTitleModel;
+  const displayText = isFollowingMainModel
+    ? getTitleFollowDisplayText()
+    : DEFAULT_TITLE_MODEL_PLACEHOLDER;
+
+  if (isFollowingMainModel) {
+    inputEl.dataset.followMode = "main";
+  } else {
+    delete inputEl.dataset.followMode;
+  }
+
+  if (!String(inputEl.value || "").trim()) {
+    inputEl.placeholder = displayText;
+  }
+  inputEl.title = isFollowingMainModel ? displayText : "";
 }
 
 export function updateModelHint(side) {
@@ -707,6 +750,9 @@ export function updateModelDropdownFilter(side) {
 
   const nextQuery = inputEl.value || "";
   setModelDropdownQuery(side, nextQuery);
+  if (side === "Title") {
+    syncTitleModelFollowPresentation();
+  }
 
   if (side === "Title" && !nextQuery.trim()) {
     closeModelDropdown(side);

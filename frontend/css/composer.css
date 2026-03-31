@@ -45,7 +45,7 @@
 }
 
 .composer-box:focus-within {
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 :root[data-theme="light"] .composer-box,
@@ -55,9 +55,7 @@
 }
 
 :root[data-theme="light"] .composer-box:focus-within {
-  box-shadow:
-    0 10px 28px rgba(15, 23, 42, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: none;
 }
 
 :root[data-theme="light"] .composer-box::after,
@@ -79,9 +77,7 @@
 }
 
 :root[data-theme="dark"] .composer-box:focus-within {
-  box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  box-shadow: none;
 }
 
 :root[data-theme="dark"] .composer-box::after,
@@ -104,9 +100,7 @@
   }
 
   :root:not([data-theme="dark"]) .composer-box:focus-within {
-    box-shadow:
-      0 10px 28px rgba(15, 23, 42, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    box-shadow: none;
   }
 
   :root:not([data-theme="dark"]) .composer-box::after,
@@ -130,9 +124,7 @@
   }
 
   :root:not([data-theme="light"]) .composer-box:focus-within {
-    box-shadow:
-      0 10px 28px rgba(0, 0, 0, 0.32),
-      inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    box-shadow: none;
   }
 
   :root:not([data-theme="light"]) .composer-box::after,
@@ -348,7 +340,7 @@
 
 .web-search-tool-current:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
+  box-shadow: none;
 }
 
 .web-search-control.is-open {
@@ -357,7 +349,7 @@
 
 .web-search-control.is-open .web-search-tool-current {
   border-color: var(--border-accent);
-  box-shadow: 0 4px 16px var(--accent-glow);
+  box-shadow: none;
 }
 
 .switch-text,
@@ -402,7 +394,7 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   padding: 6px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
   z-index: 2000;
   min-width: 108px;
   backdrop-filter: blur(16px);
@@ -587,7 +579,7 @@
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   padding: 6px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
   z-index: 2000;
   min-width: 68px;
   backdrop-filter: blur(16px);
@@ -607,7 +599,7 @@
 
 .reasoning-effort-selector.open .reasoning-effort-current {
   border-color: var(--border-accent);
-  box-shadow: 0 4px 16px var(--accent-glow);
+  box-shadow: none;
 }
 
 .reasoning-effort-selector.open {
@@ -645,7 +637,7 @@
 
 .reasoning-effort-dropdown button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--accent-glow);
+  box-shadow: none;
 }
 
 .reasoning-effort-dropdown button.active {
