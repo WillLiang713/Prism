@@ -983,17 +983,10 @@ export function resolvePreferredWebSearchState(
   const currentMode = String(options.currentMode || "").toLowerCase();
   const currentEnabled = options.currentEnabled === true;
 
-  if (toolMode === "builtin") {
-    return {
-      toolMode,
-      enabled: currentMode === "builtin" ? currentEnabled : true,
-    };
-  }
-
   if (isNativeWebSearchToolMode(toolMode)) {
     return {
       toolMode,
-      enabled: currentEnabled,
+      enabled: currentMode === toolMode ? currentEnabled : true,
     };
   }
 
