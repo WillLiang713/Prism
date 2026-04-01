@@ -508,7 +508,11 @@ function normalizeThinkingText(thinkingText) {
   return String(thinkingText || "")
     .replace(/\r/g, "")
     .replace(/\*\*\*\*/g, "**\n\n**")
-    .replace(/____/g, "__\n\n__");
+    .replace(/____/g, "__\n\n__")
+    .replace(
+      /([.!?。！？])(\*\*[^*\n]+\*\*|__[^_\n]+__|#{1,6}\s+[^\n]+)/g,
+      "$1\n\n$2"
+    );
 }
 
 function extractThinkingSummary(thinkingText) {

@@ -23,7 +23,11 @@ function normalizeThinkingText(thinkingText) {
   return String(thinkingText || "")
     .replace(/\r/g, "")
     .replace(/\*\*\*\*/g, "**\n\n**")
-    .replace(/____/g, "__\n\n__");
+    .replace(/____/g, "__\n\n__")
+    .replace(
+      /([.!?。！？])(\*\*[^*\n]+\*\*|__[^_\n]+__|#{1,6}\s+[^\n]+)/g,
+      "$1\n\n$2"
+    );
 }
 
 function isStandaloneThinkingChunk(text) {
@@ -41,6 +45,9 @@ function appendThinkingChunk(existingText, nextChunk) {
   const next = String(nextChunk || "");
   if (!prev) return next;
   if (!next) return prev;
+  if (isStandaloneThinkingChunk(next) && !/\n\s*$/.test(prev)) {
+    return `${prev}\n\n${next}`;
+  }
   if (/[\s\n]$/.test(prev) || /^[\s\n]/.test(next)) return prev + next;
   if (isStandaloneThinkingChunk(prev) && isStandaloneThinkingChunk(next)) {
     return `${prev}\n\n${next}`;
@@ -679,18 +686,38 @@ export async function callModel(
               turn.models.main.thinking,
               chunk.data
             );
+            const hasAssistantOutputStarted =
+              Boolean(String(turn.models.main.content || "").trim()) ||
+              (Array.isArray(turn.models.main.images) &&
+                turn.models.main.images.length > 0);
+            const shouldKeepThinkingComplete =
+              turn.models.main.thinkingComplete || hasAssistantOutputStarted;
+            if (shouldKeepThinkingComplete && !thinkingEndTime) {
+              thinkingEndTime = Date.now();
+            }
             if (uiRef?.thinkingSectionEl) {
               scheduleThinkingRender();
               if (uiRef.thinkingLabelEl) {
-                const summary = buildThinkingLabel(
-                  turn.models.main.thinking,
-                  false,
-                  turn.models.main.thinkingLabel
-                );
-                turn.models.main.thinkingLabel = summary;
-                uiRef.thinkingLabelEl.textContent = summary;
-                uiRef.thinkingLabelEl.title = summary;
-                uiRef.thinkingLabelEl.classList.remove("is-complete");
+                if (shouldKeepThinkingComplete) {
+                  turn.models.main.thinkingComplete = true;
+                  const completeLabel = formatThinkingCompleteLabel(
+                    turn.models.main.thinkingTime
+                  );
+                  turn.models.main.thinkingLabel = completeLabel;
+                  uiRef.thinkingLabelEl.textContent = completeLabel;
+                  uiRef.thinkingLabelEl.title = completeLabel;
+                  uiRef.thinkingLabelEl.classList.add("is-complete");
+                } else {
+                  const summary = buildThinkingLabel(
+                    turn.models.main.thinking,
+                    false,
+                    turn.models.main.thinkingLabel
+                  );
+                  turn.models.main.thinkingLabel = summary;
+                  uiRef.thinkingLabelEl.textContent = summary;
+                  uiRef.thinkingLabelEl.title = summary;
+                  uiRef.thinkingLabelEl.classList.remove("is-complete");
+                }
               }
             }
             scheduleSaveChat();

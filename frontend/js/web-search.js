@@ -986,7 +986,7 @@ export function resolvePreferredWebSearchState(
   if (isNativeWebSearchToolMode(toolMode)) {
     return {
       toolMode,
-      enabled: true,
+      enabled: currentEnabled,
     };
   }
 

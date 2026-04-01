@@ -1,12 +1,10 @@
-from .chat_service import AIService
 from .models import ChatRequest, HistoryTurn, ImageContent, StreamChunk
-from .providers import ProviderConfig
+from .services import AIService
 
 __all__ = [
     "AIService",
     "ChatRequest",
     "HistoryTurn",
     "ImageContent",
-    "ProviderConfig",
     "StreamChunk",
 ]
