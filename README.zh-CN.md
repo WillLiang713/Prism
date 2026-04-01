@@ -76,10 +76,17 @@ npm install
 npm run desktop:dev
 ```
 
+如果桌面端本地缓存或窗口状态异常，可直接执行：
+
+```bash
+npm run desktop:reset-dev
+```
+
 这套流程会自动：
 
 - 在 `127.0.0.1:33100` 启动本地 Python 后端
 - 等待健康检查通过
+- 让 Tauri 开发壳直接加载后端提供的首页与静态资源，避免桌面端单独缓存旧前端
 - 启动 Tauri 桌面壳
 - 在 Tauri 退出后停止后端进程
 
@@ -100,7 +107,8 @@ npm run tauri:dev
 说明：
 
 - 日常开发优先使用 `npm run desktop:dev`
-- `npm run tauri:dev` 不会自动帮你启动 Python 后端
+- `npm run desktop:reset-dev` 会先关闭桌面进程、清空 `LOCALAPPDATA\\com.prism.desktop`，再重新拉起开发环境
+- `npm run tauri:dev` 仍不会自动帮你启动 Python 后端；现在它也依赖后端首页可访问
 - 如果你已经激活了虚拟环境，优先用 `python`，不要用 `py -3`，避免绕过当前环境
 - 桌面版默认连接到 `http://127.0.0.1:33100`，如果要改后端地址，可设置 `PRISM_DESKTOP_API_BASE`
 

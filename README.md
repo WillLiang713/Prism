@@ -76,10 +76,17 @@ npm install
 npm run desktop:dev
 ```
 
+If the desktop cache or window state gets stuck, run:
+
+```bash
+npm run desktop:reset-dev
+```
+
 This workflow will:
 
 - start the local Python backend automatically on `127.0.0.1:33100`
 - wait for the health check to pass
+- load the desktop dev window from the backend-served page and static assets to avoid stale desktop-only frontend cache
 - launch the Tauri shell
 - stop the backend process when Tauri exits
 
@@ -100,7 +107,8 @@ npm run tauri:dev
 Notes:
 
 - `npm run desktop:dev` is the recommended daily workflow.
-- `npm run tauri:dev` does not start the Python backend for you.
+- `npm run desktop:reset-dev` closes the desktop process, clears `LOCALAPPDATA\\com.prism.desktop`, and starts the dev workflow again.
+- `npm run tauri:dev` still does not start the Python backend for you, and now also depends on the backend page being reachable.
 - If you already activated a virtual environment, prefer `python` over `py -3` so you do not bypass the active environment.
 - The desktop frontend connects to `http://127.0.0.1:33100` by default. Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL.
 
