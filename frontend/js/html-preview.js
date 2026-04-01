@@ -20,6 +20,7 @@ const previewState = {
   sourceTurnCreatedAt: 0,
   frameLoadPending: false,
   frameLoadFailsafeTimer: 0,
+  pendingRevokeObjectUrl: "",
 };
 
 function normalizeLanguage(language) {
@@ -78,12 +79,16 @@ function resolvePreviewBlock(blocks, blockIndex = -1) {
   return blocks[Math.min(blockIndex, blocks.length - 1)] || blocks[0];
 }
 
-function applyPreviewContent(markup, language, { forceReload = true } = {}) {
+function applyPreviewContent(
+  markup,
+  language,
+  { forceReload = true, preserveDuringLoad = false } = {}
+) {
   const nextMarkup = String(markup || "");
   if (!nextMarkup.trim()) return;
   previewState.markup = nextMarkup;
   previewState.language = normalizeLanguage(language) || "html";
-  renderPreview(forceReload);
+  renderPreview(forceReload, { preserveDuringLoad });
 }
 
 function isInlinePreviewLayout() {
@@ -110,6 +115,16 @@ function revokeActiveObjectUrl() {
     // 忽略已失效或浏览器不支持的场景
   }
   previewState.activeObjectUrl = "";
+}
+
+function revokePendingObjectUrl() {
+  if (!previewState.pendingRevokeObjectUrl) return;
+  try {
+    URL.revokeObjectURL(previewState.pendingRevokeObjectUrl);
+  } catch (_error) {
+    // 忽略已失效或浏览器不支持的场景
+  }
+  previewState.pendingRevokeObjectUrl = "";
 }
 
 function clearFrameLoadFailsafeTimer() {
@@ -169,21 +184,32 @@ function supportsFrameSrcdoc() {
   return !!elements.htmlPreviewFrame && "srcdoc" in elements.htmlPreviewFrame;
 }
 
-function syncFrameContent(forceReload = false) {
+function syncFrameContent(forceReload = false, options = {}) {
   if (!elements.htmlPreviewFrame) return;
 
   const nextMarkup = previewState.markup || "";
   const nextDocument = buildPreviewDocument(nextMarkup);
+  const preserveDuringLoad = options.preserveDuringLoad === true;
   if (!forceReload && elements.htmlPreviewFrame.dataset.previewDocument === nextDocument) {
     return;
   }
 
-  revokeActiveObjectUrl();
-  setFrameLoading(true);
+  const previousObjectUrl = previewState.activeObjectUrl;
+  const hasExistingDocument = !!String(
+    elements.htmlPreviewFrame.dataset.previewDocument || ""
+  ).trim();
+  const useSoftRefresh = preserveDuringLoad && hasExistingDocument;
+
+  if (!useSoftRefresh) {
+    revokeActiveObjectUrl();
+    setFrameLoading(true);
+  }
   elements.htmlPreviewFrame.dataset.previewDocument = nextDocument;
 
-  elements.htmlPreviewFrame.removeAttribute("srcdoc");
-  elements.htmlPreviewFrame.src = "about:blank";
+  if (!useSoftRefresh) {
+    elements.htmlPreviewFrame.removeAttribute("srcdoc");
+    elements.htmlPreviewFrame.src = "about:blank";
+  }
 
   window.requestAnimationFrame(() => {
     if (!elements.htmlPreviewFrame) return;
@@ -191,11 +217,16 @@ function syncFrameContent(forceReload = false) {
     if (typeof Blob === "function" && window.URL && typeof URL.createObjectURL === "function") {
       const blob = new Blob([nextDocument], { type: "text/html;charset=utf-8" });
       previewState.activeObjectUrl = URL.createObjectURL(blob);
+      previewState.pendingRevokeObjectUrl = useSoftRefresh ? previousObjectUrl : "";
       elements.htmlPreviewFrame.src = previewState.activeObjectUrl;
       return;
     }
 
     if (supportsFrameSrcdoc()) {
+      revokePendingObjectUrl();
+      if (!useSoftRefresh) {
+        setFrameLoading(true);
+      }
       // 只把 srcdoc 当作兜底，避免移动端 WebView 在该路径下直接白屏。
       elements.htmlPreviewFrame.removeAttribute("src");
       elements.htmlPreviewFrame.srcdoc = nextDocument;
@@ -265,7 +296,7 @@ function openMobilePreviewPage(markup, language = "html") {
   return true;
 }
 
-function renderPreview(forceReload = false) {
+function renderPreview(forceReload = false, options = {}) {
   const hasMarkup = !!String(previewState.markup || "").trim();
 
   elements.htmlPreviewDrawer?.classList.toggle("has-content", hasMarkup);
@@ -273,7 +304,7 @@ function renderPreview(forceReload = false) {
     elements.htmlPreviewEmpty.hidden = hasMarkup;
   }
 
-  syncFrameContent(forceReload);
+  syncFrameContent(forceReload, options);
 }
 
 function clearHideTimer() {
@@ -358,10 +389,12 @@ export function initHtmlPreview() {
   renderPreview(true);
 
   elements.htmlPreviewFrame.addEventListener("load", () => {
+    revokePendingObjectUrl();
     if (!previewState.frameLoadPending) return;
     setFrameLoading(false);
   });
   elements.htmlPreviewFrame.addEventListener("error", () => {
+    revokePendingObjectUrl();
     setFrameLoading(false);
   });
 
@@ -402,6 +435,7 @@ export function closeHtmlPreview() {
   if (!previewState.isOpen) return;
   previewState.isOpen = false;
   revokeActiveObjectUrl();
+  revokePendingObjectUrl();
   hideLayer(true);
 }
 
@@ -452,6 +486,7 @@ export function syncHtmlPreviewForTurn(topicId, turn, options = {}) {
     if (nextBlock?.markup) {
       applyPreviewContent(nextBlock.markup, nextBlock.language, {
         forceReload: options.forceReload !== false,
+        preserveDuringLoad: options.preserveDuringLoad === true,
       });
       previewState.sourceTurnCreatedAt = Number(turn?.createdAt) || previewState.sourceTurnCreatedAt;
     }

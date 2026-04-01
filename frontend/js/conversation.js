@@ -158,6 +158,10 @@ function createMainModelState(config) {
   };
 }
 
+const STREAM_CONTENT_RENDER_INTERVAL_MS = 16;
+const STREAM_THINKING_RENDER_INTERVAL_MS = 24;
+const STREAM_PREVIEW_INTERVAL_MS = 250;
+
 function hasEffectiveApiKey(config) {
   return !!String(config?.apiKey || "").trim();
 }
@@ -405,6 +409,123 @@ export async function callModel(
 
   let thinkingStartTime = null;
   let thinkingEndTime = null;
+  let contentRenderTimer = null;
+  let thinkingRenderTimer = null;
+  let previewSyncTimer = null;
+  let lastContentRenderAt = 0;
+  let lastThinkingRenderAt = 0;
+  let lastPreviewSyncAt = 0;
+  let lastRenderedContent = "";
+  let lastRenderedThinking = "";
+  let streamRenderSkipCodeHighlight = true;
+  let lastThinkingRenderSkipCodeHighlight = true;
+  let lastContentRenderSkipCodeHighlight = true;
+
+  const flushThinkingRender = ({ force = false } = {}) => {
+    if (thinkingRenderTimer) {
+      clearTimeout(thinkingRenderTimer);
+      thinkingRenderTimer = null;
+    }
+    const uiRef = resolveUi();
+    if (!uiRef?.thinkingSectionEl || !uiRef?.thinkingContentEl) return;
+    const normalizedThinking = normalizeThinkingText(turn.models.main.thinking);
+    if (
+      !force &&
+      normalizedThinking === lastRenderedThinking &&
+      streamRenderSkipCodeHighlight === lastThinkingRenderSkipCodeHighlight
+    ) {
+      return;
+    }
+    uiRef.thinkingSectionEl.style.display = "block";
+    renderMarkdownToElement(uiRef.thinkingContentEl, normalizedThinking, {
+      skipCodeHighlight: streamRenderSkipCodeHighlight,
+    });
+    lastRenderedThinking = normalizedThinking;
+    lastThinkingRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+    lastThinkingRenderAt = Date.now();
+  };
+
+  const scheduleThinkingRender = () => {
+    const elapsed = Date.now() - lastThinkingRenderAt;
+    if (elapsed >= STREAM_THINKING_RENDER_INTERVAL_MS) {
+      flushThinkingRender();
+      return;
+    }
+    if (thinkingRenderTimer) return;
+    thinkingRenderTimer = setTimeout(
+      flushThinkingRender,
+      STREAM_THINKING_RENDER_INTERVAL_MS - elapsed
+    );
+  };
+
+  const flushContentRender = ({ force = false } = {}) => {
+    if (contentRenderTimer) {
+      clearTimeout(contentRenderTimer);
+      contentRenderTimer = null;
+    }
+    const uiRef = resolveUi();
+    if (!uiRef?.responseEl) return;
+    const nextContent = turn.models.main.content;
+    if (
+      !force &&
+      nextContent === lastRenderedContent &&
+      streamRenderSkipCodeHighlight === lastContentRenderSkipCodeHighlight
+    ) {
+      return;
+    }
+    uiRef.responseEl.dataset.topicId = String(topicId || "");
+    uiRef.responseEl.dataset.turnId = String(turn?.id || "");
+    uiRef.responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
+    renderMarkdownToElement(uiRef.responseEl, nextContent, {
+      skipCodeHighlight: streamRenderSkipCodeHighlight,
+    });
+    const tokens = estimateTokensFromText(nextContent);
+    if (uiRef.tokenEl) {
+      uiRef.tokenEl.textContent = `${tokens} tokens`;
+    }
+    lastRenderedContent = nextContent;
+    lastContentRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+    lastContentRenderAt = Date.now();
+  };
+
+  const scheduleContentRender = () => {
+    const elapsed = Date.now() - lastContentRenderAt;
+    if (elapsed >= STREAM_CONTENT_RENDER_INTERVAL_MS) {
+      flushContentRender();
+      return;
+    }
+    if (contentRenderTimer) return;
+    contentRenderTimer = setTimeout(
+      flushContentRender,
+      STREAM_CONTENT_RENDER_INTERVAL_MS - elapsed
+    );
+  };
+
+  const flushPreviewSync = (autoOpen = true) => {
+    if (previewSyncTimer) {
+      clearTimeout(previewSyncTimer);
+      previewSyncTimer = null;
+    }
+    syncHtmlPreviewForTurn(topicId, turn, {
+      autoOpen,
+      forceReload: false,
+      preserveDuringLoad: true,
+    });
+    lastPreviewSyncAt = Date.now();
+  };
+
+  const schedulePreviewSync = (autoOpen = true) => {
+    const elapsed = Date.now() - lastPreviewSyncAt;
+    if (elapsed >= STREAM_PREVIEW_INTERVAL_MS) {
+      flushPreviewSync(autoOpen);
+      return;
+    }
+    if (previewSyncTimer) return;
+    previewSyncTimer = setTimeout(
+      () => flushPreviewSync(autoOpen),
+      STREAM_PREVIEW_INTERVAL_MS - elapsed
+    );
+  };
 
   const updateTime = () => {
     const elapsed = (Date.now() - startTime) / 1000;
@@ -559,11 +680,7 @@ export async function callModel(
               chunk.data
             );
             if (uiRef?.thinkingSectionEl) {
-              uiRef.thinkingSectionEl.style.display = "block";
-              renderMarkdownToElement(
-                uiRef.thinkingContentEl,
-                normalizeThinkingText(turn.models.main.thinking)
-              );
+              scheduleThinkingRender();
               if (uiRef.thinkingLabelEl) {
                 const summary = buildThinkingLabel(
                   turn.models.main.thinking,
@@ -592,18 +709,8 @@ export async function callModel(
             if (thinkingStartTime && !thinkingEndTime)
               thinkingEndTime = Date.now();
             turn.models.main.content += chunk.data;
-            if (uiRef?.responseEl) {
-              uiRef.responseEl.dataset.topicId = String(topicId || "");
-              uiRef.responseEl.dataset.turnId = String(turn?.id || "");
-              uiRef.responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
-              renderMarkdownToElement(uiRef.responseEl, turn.models.main.content);
-              const tokens = estimateTokensFromText(turn.models.main.content);
-              uiRef.tokenEl.textContent = `${tokens} tokens`;
-            }
-            syncHtmlPreviewForTurn(topicId, turn, {
-              autoOpen: true,
-              forceReload: true,
-            });
+            scheduleContentRender();
+            schedulePreviewSync(true);
             if (thinkingStartTime && uiRef?.thinkingLabelEl) {
               turn.models.main.thinkingComplete = true;
               const completeLabel = formatThinkingCompleteLabel(
@@ -744,6 +851,9 @@ export async function callModel(
       }
     }
 
+    streamRenderSkipCodeHighlight = false;
+    flushThinkingRender({ force: true });
+    flushContentRender({ force: true });
     updateTime();
     turn.models.main.status = "complete";
     const uiRef = resolveUi();
@@ -802,11 +912,11 @@ export async function callModel(
       }
     }
 
-    syncHtmlPreviewForTurn(topicId, turn, {
-      autoOpen: true,
-      forceReload: true,
-    });
+    flushPreviewSync(true);
   } catch (error) {
+    streamRenderSkipCodeHighlight = false;
+    flushThinkingRender({ force: true });
+    flushContentRender({ force: true });
     const uiRef = resolveUi();
     if (error?.name === "AbortError") {
       turn.models.main.status = "stopped";
@@ -823,13 +933,13 @@ export async function callModel(
       }
       if (uiRef?.statusEl) applyStatus(uiRef.statusEl, "error");
     }
-    syncHtmlPreviewForTurn(topicId, turn, {
-      autoOpen: false,
-      forceReload: true,
-    });
+    flushPreviewSync(false);
   } finally {
     if (timeTimer) clearInterval(timeTimer);
     timeTimer = null;
+    if (contentRenderTimer) clearTimeout(contentRenderTimer);
+    if (thinkingRenderTimer) clearTimeout(thinkingRenderTimer);
+    if (previewSyncTimer) clearTimeout(previewSyncTimer);
     unmarkTopicRunning(topicId, abortController);
   }
 }

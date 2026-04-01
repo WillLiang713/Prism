@@ -136,8 +136,18 @@
 
 .thinking-content .code-block .code-lang {
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-family: var(--font-mono);
+}
+
+:root[data-theme="light"] .thinking-content .code-block .code-lang {
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .thinking-content .code-block .code-lang {
+    color: var(--text);
+  }
 }
 
 .thinking-content .code-block .code-actions {

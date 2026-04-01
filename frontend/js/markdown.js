@@ -5,32 +5,35 @@ import { openImagePreview } from "./dialog.js";
 export function initMarkdown() {
   if (typeof marked === "undefined") return;
   marked.setOptions({
-    highlight: function (code, lang) {
-      if (typeof hljs !== "undefined") {
-        try {
-          // 如果指定了语言且该语言已注册，则使用指定语言高亮
-          if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-          }
-          // 否则尝试自动检测语言
-          return hljs.highlightAuto(code).value;
-        } catch (e) {
-          console.error("代码高亮失败:", e);
-        }
-      }
-      return code;
-    },
+    highlight: MARKDOWN_HIGHLIGHTER,
     breaks: true,
     gfm: true,
   });
 }
 
-export function renderMarkdownToElement(element, text) {
+const MARKDOWN_HIGHLIGHTER = function (code, lang) {
+  if (typeof hljs !== "undefined") {
+    try {
+      if (lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, { language: lang }).value;
+      }
+      return hljs.highlightAuto(code).value;
+    } catch (e) {
+      console.error("代码高亮失败:", e);
+    }
+  }
+  return code;
+};
+
+export function renderMarkdownToElement(element, text, options = {}) {
   if (!element) return;
+  const skipCodeHighlight = options?.skipCodeHighlight === true;
   if (typeof marked !== "undefined") {
     try {
-      element.innerHTML = marked.parse(text || "");
-      enhanceRenderedMarkdown(element);
+      element.innerHTML = marked.parse(text || "", {
+        highlight: skipCodeHighlight ? null : MARKDOWN_HIGHLIGHTER,
+      });
+      enhanceRenderedMarkdown(element, options);
       return;
     } catch (e) {
       console.error("Markdown渲染失败:", e);
@@ -39,11 +42,12 @@ export function renderMarkdownToElement(element, text) {
   element.textContent = text || "";
 }
 
-export function enhanceRenderedMarkdown(root) {
+export function enhanceRenderedMarkdown(root, options = {}) {
   if (!root) return;
+  const skipCodeHighlight = options?.skipCodeHighlight === true;
 
   // 手动高亮所有代码块
-  if (typeof hljs !== "undefined") {
+  if (!skipCodeHighlight && typeof hljs !== "undefined") {
     const codeBlocks = root.querySelectorAll("pre code");
     codeBlocks.forEach((block) => {
       try {
