@@ -315,7 +315,12 @@ function markActiveTopicTurnsWithoutAnimation() {
 
 function resizeTurnEditor(editorEl) {
   if (!editorEl) return;
-  const fixedHeight = 72;
+  const computedMinHeight = Number.parseFloat(
+    window.getComputedStyle(editorEl).minHeight
+  );
+  const fixedHeight = Number.isFinite(computedMinHeight)
+    ? computedMinHeight
+    : 72;
   editorEl.style.height = `${fixedHeight}px`;
   const hasOverflow = editorEl.scrollHeight > fixedHeight;
   editorEl.style.overflowY = hasOverflow ? "auto" : "hidden";
