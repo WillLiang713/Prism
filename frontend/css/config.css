@@ -68,6 +68,13 @@
   box-shadow: var(--modal-shadow);
 }
 
+.is-desktop-runtime #configModal .modal-content {
+  max-width: min(
+    var(--desktop-config-modal-max-width),
+    calc(100vw - (var(--app-shell-side-padding) * 2))
+  );
+}
+
 #configModal .config-panel {
   height: 100%;
   max-height: 100%;
