@@ -24,6 +24,38 @@ function Stop-ProcessTree {
   }
 }
 
+function Stop-PrismDesktopProcess {
+  $desktopProcesses = Get-Process -Name "prism_desktop" -ErrorAction SilentlyContinue
+  if (-not $desktopProcesses) {
+    return
+  }
+
+  foreach ($process in $desktopProcesses) {
+    Stop-ProcessTree -ProcessId $process.Id
+  }
+}
+
+function Stop-PrismBackendProcess {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ProjectRoot
+  )
+
+  $escapedProjectRoot = [Regex]::Escape($ProjectRoot)
+  $backendProcesses = Get-CimInstance Win32_Process | Where-Object {
+    $commandLine = $_.CommandLine
+    if (-not $commandLine) {
+      return $false
+    }
+
+    return $commandLine -match "server\.py" -and $commandLine -match $escapedProjectRoot
+  }
+
+  foreach ($process in $backendProcesses) {
+    Stop-ProcessTree -ProcessId $process.ProcessId
+  }
+}
+
 function Stop-LockingProcesses {
   param(
     [Parameter(Mandatory = $true)]
@@ -112,6 +144,58 @@ function Write-Utf8NoBom {
   [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
 }
 
+function Remove-PythonCacheArtifacts {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ProjectRoot
+  )
+
+  $cacheDirs = Get-ChildItem -Path $ProjectRoot -Recurse -Directory -Filter "__pycache__" -ErrorAction SilentlyContinue
+  foreach ($dir in $cacheDirs) {
+    Remove-BuildArtifact -Path $dir.FullName
+  }
+
+  $cacheFiles = Get-ChildItem -Path $ProjectRoot -Recurse -File -Include "*.pyc", "*.pyo" -ErrorAction SilentlyContinue
+  foreach ($file in $cacheFiles) {
+    if (Test-Path $file.FullName) {
+      Remove-Item -LiteralPath $file.FullName -Force
+    }
+  }
+}
+
+function Resolve-PythonFromPyLauncher {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PyLauncherPath
+  )
+
+  try {
+    $resolved = & $PyLauncherPath -3 -c "import sys; print(sys.executable)" 2>$null
+    $resolved = ($resolved | Select-Object -First 1).ToString().Trim()
+    if ($resolved -and (Test-Path $resolved)) {
+      return $resolved
+    }
+  } catch {
+    # ignore resolution failure and let caller decide fallback
+  }
+
+  return $null
+}
+
+function Resolve-NpmCommand {
+  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+  if ($npmCommand) {
+    return $npmCommand.Source
+  }
+
+  $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
+  if ($npmCommand) {
+    return $npmCommand.Source
+  }
+
+  throw "npm was not found."
+}
+
 function Get-PackageVersion {
   param(
     [Parameter(Mandatory = $true)]
@@ -189,8 +273,13 @@ if (-not $pythonCommand) {
 if (-not $pythonCommand) {
   $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
   if ($pyLauncher) {
-    $pythonCommand = $pyLauncher.Source
-    $pythonArgs = @("-3")
+    $resolvedPython = Resolve-PythonFromPyLauncher -PyLauncherPath $pyLauncher.Source
+    if ($resolvedPython) {
+      $pythonCommand = $resolvedPython
+    } else {
+      $pythonCommand = $pyLauncher.Source
+      $pythonArgs = @("-3")
+    }
   }
 }
 
@@ -198,6 +287,7 @@ if (-not $pythonCommand) {
   throw "Python 3.12+ was not found."
 }
 
+$npmCommand = Resolve-NpmCommand
 $runtimeResourceDir = Join-Path $projectRoot "src-tauri\runtime"
 $legacySidecarPath = Join-Path $projectRoot "src-tauri\binaries\prism-backend-x86_64-pc-windows-msvc.exe"
 $nuitkaOutputDir = Join-Path $projectRoot "build\nuitka"
@@ -205,7 +295,44 @@ $tauriTargetDir = Join-Path $projectRoot "src-tauri\target"
 $packageJsonPath = Join-Path $projectRoot "package.json"
 $tauriConfigPath = Join-Path $projectRoot "src-tauri\tauri.conf.json"
 $cargoTomlPath = Join-Path $projectRoot "src-tauri\Cargo.toml"
+$requirementsPath = Join-Path $projectRoot "requirements.txt"
 $buildVersion = Get-PackageVersion -PackageJsonPath $packageJsonPath
+
+Write-Host "Stopping Prism desktop and backend processes before full rebuild..."
+Stop-PrismDesktopProcess
+Stop-PrismBackendProcess -ProjectRoot $projectRoot
+
+$pathsToRebuild = @(
+  (Join-Path $projectRoot "node_modules"),
+  $tauriTargetDir,
+  (Join-Path $projectRoot "build"),
+  (Join-Path $projectRoot "dist"),
+  (Join-Path $projectRoot "logs"),
+  (Join-Path $projectRoot "tmp"),
+  (Join-Path $projectRoot ".tmp"),
+  (Join-Path $projectRoot ".pytest_cache"),
+  (Join-Path $projectRoot "edge-cdp-profile"),
+  (Join-Path $projectRoot "edge-cdp-profile-test")
+)
+
+if (-not $SkipBackendBuild) {
+  $pathsToRebuild += $runtimeResourceDir
+}
+
+foreach ($path in $pathsToRebuild) {
+  Remove-BuildArtifact -Path $path
+}
+
+Remove-PythonCacheArtifacts -ProjectRoot $projectRoot
+
+foreach ($path in @(
+  (Join-Path $projectRoot "tmp-server.out.log"),
+  (Join-Path $projectRoot "tmp-server.err.log")
+)) {
+  if (Test-Path $path) {
+    Remove-Item -LiteralPath $path -Force
+  }
+}
 
 Sync-VersionField `
   -Path $tauriConfigPath `
@@ -221,15 +348,17 @@ Sync-VersionField `
   -Version $buildVersion `
   -Description "Cargo package version"
 
-Remove-BuildArtifact -Path $tauriTargetDir
-
 if (-not $SkipBackendBuild) {
-  Remove-BuildArtifact -Path $nuitkaOutputDir
-  Remove-BuildArtifact -Path $runtimeResourceDir
-
   if (Test-Path $legacySidecarPath) {
     Write-Host "Removing legacy backend sidecar: $legacySidecarPath"
     Remove-Item -Path $legacySidecarPath -Force
+  }
+
+  if (Test-Path $requirementsPath) {
+    Invoke-NativeCommand `
+      -FilePath $pythonCommand `
+      -Arguments ($pythonArgs + @("-m", "pip", "install", "-r", $requirementsPath)) `
+      -FailureMessage "Python dependency install failed."
   }
 
   try {
@@ -287,12 +416,12 @@ $stampedContent = $originalContent -replace '__BUILD__', $buildStamp
 Write-Utf8NoBom -Path $indexHtml -Content $stampedContent
 
 Invoke-NativeCommand `
-  -FilePath "npm" `
+  -FilePath $npmCommand `
   -Arguments @("install") `
   -FailureMessage "npm install failed."
 try {
   Invoke-NativeCommand `
-    -FilePath "npm" `
+    -FilePath $npmCommand `
     -Arguments @("run", "tauri:build") `
     -FailureMessage "Tauri build failed."
 } finally {

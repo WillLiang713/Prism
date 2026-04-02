@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "desktop:dev": "powershell -ExecutionPolicy Bypass -File .\\scripts\\dev-tauri-windows.ps1",
+    "desktop:rebuild-dev": "powershell -ExecutionPolicy Bypass -File .\\scripts\\rebuild-desktop-dev-windows.ps1",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "desktop:build": "powershell -ExecutionPolicy Bypass -File .\\scripts\\build-tauri-windows.ps1"

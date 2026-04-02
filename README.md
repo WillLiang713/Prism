@@ -14,13 +14,13 @@ Prism is a lightweight AI chat client with a Python backend and a static fronten
 ## Highlights
 
 - Streaming chat responses
-- OpenAI-compatible and Anthropic-compatible API support
+- OpenAI-compatible, Anthropic-compatible, and Gemini API support
 - Web search integration with Tavily and Exa
 - Topic-based conversation management with local history
 - Reasoning effort controls and reasoning display
 - Markdown rendering and code highlighting
 - Image upload support
-- Quick new-topic shortcut: `Ctrl/Cmd + Alt + N`
+- Quick new-topic shortcut: `Ctrl + Alt + O`
 
 ## Quick Start
 
@@ -32,10 +32,22 @@ Prism is a lightweight AI chat client with a Python backend and a static fronten
 pip install -r requirements.txt
 ```
 
+If the repo already includes `venv/`, Windows users should preferably reuse it:
+
+```bash
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
 2. Start the server:
 
 ```bash
 python server.py
+```
+
+Preferred on Windows:
+
+```bash
+.\venv\Scripts\python.exe server.py
 ```
 
 3. Open the app in your browser:
@@ -76,10 +88,10 @@ npm install
 npm run desktop:dev
 ```
 
-If the desktop cache or window state gets stuck, run:
+If you want a full rebuild of desktop runtime data, Node dependencies, Rust/Tauri build outputs, backend logs, and Python cache before starting again, run:
 
 ```bash
-npm run desktop:reset-dev
+npm run desktop:rebuild-dev
 ```
 
 This workflow will:
@@ -107,7 +119,7 @@ npm run tauri:dev
 Notes:
 
 - `npm run desktop:dev` is the recommended daily workflow.
-- `npm run desktop:reset-dev` closes the desktop process, clears `LOCALAPPDATA\\com.prism.desktop`, and starts the dev workflow again.
+- `npm run desktop:rebuild-dev` additionally removes `node_modules`, `src-tauri\\target`, repo logs, and Python cache, then reinstalls dependencies before starting.
 - `npm run tauri:dev` still does not start the Python backend for you, and now also depends on the backend page being reachable.
 - If you already activated a virtual environment, prefer `python` over `py -3` so you do not bypass the active environment.
 - The desktop frontend connects to `http://127.0.0.1:33100` by default. Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL.
@@ -118,7 +130,7 @@ Before the first build, install:
 
 - Rust / Cargo
 - Visual Studio Build Tools with MSVC and Windows SDK
-- PyInstaller
+- Nuitka
 
 Build command:
 
@@ -130,6 +142,7 @@ Notes:
 
 - Prefer `npm run desktop:build` over calling `npm run tauri:build` directly.
 - The build entry point is `scripts/build-tauri-windows.ps1`.
+- The script now performs a full local rebuild by clearing `node_modules`, `src-tauri\\target`, `build`, `dist`, repo logs, and Python cache before reinstalling dependencies.
 - The script first packages the Python runtime into `prism-runtime.exe`, then runs the Tauri build.
 - This is the path that ensures the desktop package includes the latest backend sidecar.
 
@@ -186,19 +199,25 @@ Notes:
 ## Tech Stack
 
 - Frontend: HTML, CSS, JavaScript, marked.js, highlight.js
-- Backend: FastAPI, httpx
+- Backend: FastAPI, httpx, Nuitka
 - Desktop: Tauri 2
 
 ## Project Structure
 
 ```text
 Prism/
+├── ai/                    # AI orchestration, provider adapters, parsers, and services
 ├── frontend/              # Static UI assets
-├── src-tauri/             # Tauri desktop shell
+├── routes/                # FastAPI route modules
 ├── scripts/               # Desktop dev/build scripts
-├── server.py              # FastAPI entry point and routes
-├── ai_service.py          # Model orchestration and streaming
-├── tools.py               # Web search tool implementations
+├── src-tauri/             # Tauri desktop shell and packaging config
+├── tests/                 # Reserved pytest-style test directory
+├── server.py              # FastAPI entry point
+├── tools.py               # Local tool execution logic
+├── tools.json             # Tool definition metadata
+├── config.py              # Runtime argument parsing
+├── runtime_paths.py       # Runtime path resolution
+├── desktop_logging.py     # Desktop logging bootstrap
 ├── docker-compose.yml     # Container setup
 ├── .env.example           # Environment variable template
 └── README.md
