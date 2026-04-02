@@ -1,7 +1,7 @@
 import { state, elements, STORAGE_KEYS, createId } from './state.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
 import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
-import { renderWebSearchSection, renderToolEvents, mergeToolEventsWithWebSearch, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
+import { renderToolEvents, mergeToolEventsWithWebSearch, renderSourcesStatus } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, syncTopicListHeaderAlignment, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
 import { showConfirm, openImagePreview } from './dialog.js';
 import { collapseSidebarForMobile, isMobileLayout } from './layout.js';
@@ -488,14 +488,6 @@ function createIconActionButton({
   svg.innerHTML = path;
   button.appendChild(svg);
   return button;
-}
-
-function setSourcesPanelExpanded(panelEl, buttonEl, expanded) {
-  if (!panelEl || !buttonEl) return;
-  panelEl.hidden = !expanded;
-  panelEl.dataset.expanded = expanded ? "1" : "0";
-  buttonEl.setAttribute("aria-expanded", expanded ? "true" : "false");
-  buttonEl.classList.toggle("is-active", expanded);
 }
 
 function stripMarkdownForThinkingSummary(text) {
@@ -1399,13 +1391,6 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
     state.chat.turnIdsWithoutAnimation.delete(turn.id);
   }
 
-  let webSearchEl = null;
-  if (turn.webSearch) {
-    webSearchEl = document.createElement("div");
-    webSearchEl.className = "web-search";
-    renderWebSearchSection(webSearchEl, turn.webSearch);
-  }
-
   const assistants = document.createElement("div");
   assistants.className = "turn-assistants single-model";
 
@@ -1418,10 +1403,9 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
   }
 
   if (userWrap) turnEl.appendChild(userWrap);
-  if (webSearchEl) turnEl.appendChild(webSearchEl);
   turnEl.appendChild(assistants);
 
-  return { el: turnEl, cards, webSearchEl };
+  return { el: turnEl, cards };
 }
 
 export function createAssistantCard(
@@ -1525,14 +1509,18 @@ export function createAssistantCard(
     }
   });
 
+  const thinkingDetail = document.createElement("div");
+  thinkingDetail.className = "thinking-detail";
+
   const thinkingContent = document.createElement("div");
   thinkingContent.className = "thinking-content";
   if (thinkingSnapshot) {
     renderMarkdownToElement(thinkingContent, thinkingSnapshot);
   }
 
+  thinkingDetail.appendChild(thinkingContent);
   thinkingSection.appendChild(thinkingHeader);
-  thinkingSection.appendChild(thinkingContent);
+  thinkingSection.appendChild(thinkingDetail);
 
   if (thinkingSnapshot) {
     thinkingSection.style.display = "block";
@@ -1589,9 +1577,14 @@ export function createAssistantCard(
   sourcesStatus.hidden = true;
   renderSourcesStatus(sourcesStatus, sourcesSnapshot);
 
+  const sourcesStatusRow = document.createElement("div");
+  sourcesStatusRow.className = "sources-status-row";
+  sourcesStatusRow.hidden = sourcesStatus.hidden;
+  sourcesStatusRow.appendChild(sourcesStatus);
+
   content.appendChild(thinkingSection);
   content.appendChild(toolCallsSection);
-  content.appendChild(sourcesStatus);
+  content.appendChild(sourcesStatusRow);
   content.appendChild(responseSection);
 
   // 底部：元数据 + 操作按钮
@@ -1632,13 +1625,6 @@ export function createAssistantCard(
   metaInfo.appendChild(tokenEl);
   metaInfo.appendChild(timeEl);
   metaInfo.appendChild(speedEl);
-
-  const sourcesToggleBtn = document.createElement("button");
-  sourcesToggleBtn.type = "button";
-  sourcesToggleBtn.className = "source-toggle-btn";
-  sourcesToggleBtn.hidden = true;
-  sourcesToggleBtn.setAttribute("aria-expanded", "false");
-  renderSourcesToggle(sourcesToggleBtn, sourcesSnapshot);
 
   const actions = document.createElement("div");
   actions.className = "message-actions";
@@ -1692,25 +1678,11 @@ export function createAssistantCard(
   actions.appendChild(deleteBtn);
 
   footer.appendChild(metaInfo);
-  footer.appendChild(sourcesToggleBtn);
   footer.appendChild(actions);
-
-  const sourcesPanel = document.createElement("div");
-  sourcesPanel.className = "sources-section sources-panel";
-  sourcesPanel.hidden = true;
-  sourcesPanel.dataset.expanded = "0";
-  renderSources(sourcesPanel, sourcesSnapshot);
-
-  sourcesToggleBtn.addEventListener("click", () => {
-    if (sourcesToggleBtn.hidden || sourcesToggleBtn.disabled) return;
-    const expanded = sourcesPanel.dataset.expanded === "1";
-    setSourcesPanelExpanded(sourcesPanel, sourcesToggleBtn, !expanded);
-  });
 
   message.appendChild(header);
   message.appendChild(content);
   message.appendChild(footer);
-  message.appendChild(sourcesPanel);
   applyStatus(statusEl, statusSnapshot);
 
   if (
@@ -1743,8 +1715,7 @@ export function createAssistantCard(
     regenerateBtn,
     deleteBtn,
     sourcesStatusEl: sourcesStatus,
-    sourcesToggleBtnEl: sourcesToggleBtn,
-    sourcesSectionEl: sourcesPanel,
+    sourcesStatusRowEl: sourcesStatusRow,
     turn: turn,
     side: side,
   };

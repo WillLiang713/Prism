@@ -564,6 +564,15 @@
   line-height: 1.2;
 }
 
+.reasoning-effort-caret {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--message-label-color);
+  opacity: 0.8;
+  transition: transform 0.2s ease, opacity 0.18s ease;
+}
+
 .reasoning-effort-selector.is-off .reasoning-effort-value {
   color: var(--text-muted);
 }
@@ -600,6 +609,15 @@
 .reasoning-effort-selector.open .reasoning-effort-current {
   border-color: var(--border-accent);
   box-shadow: none;
+}
+
+.reasoning-effort-current:hover .reasoning-effort-caret,
+.reasoning-effort-selector.open .reasoning-effort-caret {
+  opacity: 1;
+}
+
+.reasoning-effort-selector.open .reasoning-effort-caret {
+  transform: rotate(180deg);
 }
 
 .reasoning-effort-selector.open {

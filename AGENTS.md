@@ -15,3 +15,9 @@
 - 查资料时统一优先使用 Context7 获取框架或库的官方文档，使用 GitHub Issues / Discussions / PR 查真实案例与修复思路；当现象反直觉时，不要只凭本地经验判断。
 - When presenting the diagnosis, clearly separate confirmed facts, likely inferences, and external references that inspired the hypothesis.
 - 输出诊断结论时，要明确区分：已经确认的事实、基于证据的推断，以及作为启发来源的外部案例。
+
+## Test Cleanup
+测试清理
+
+- After completing tests, clean up any cache files, temporary artifacts, and test output created during the run; do not leave junk in the repository.
+- 测试完成后，清理本次运行产生的缓存文件、临时产物和测试输出，不要把垃圾文件留在仓库里。

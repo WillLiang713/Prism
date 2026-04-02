@@ -52,6 +52,26 @@ const TOOL_EVENT_DISPLAY_NAMES = {
 const WEB_SEARCH_DISABLED_LABEL = "关闭联网";
 const WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH = 108;
 
+function createCollapseArrowSvg(className = "") {
+  const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  arrow.setAttribute("class", className);
+  arrow.setAttribute("viewBox", "0 0 24 24");
+  arrow.setAttribute("fill", "none");
+  arrow.setAttribute("stroke", "currentColor");
+  arrow.setAttribute("stroke-width", "2");
+  arrow.setAttribute("stroke-linecap", "round");
+  arrow.setAttribute("stroke-linejoin", "round");
+
+  const polyline = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "polyline"
+  );
+  polyline.setAttribute("points", "6 9 12 15 18 9");
+  arrow.appendChild(polyline);
+
+  return arrow;
+}
+
 function mountWebSearchToolDropdown(dropdownEl = elements.webSearchToolDropdown) {
   if (!(dropdownEl instanceof HTMLElement)) return;
   mountBodyDropdown(dropdownEl);
@@ -128,6 +148,11 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
     header.appendChild(status);
   }
 
+  const hasHeaderContent = header.childElementCount > 0;
+  if (allowToggle && hasHeaderContent) {
+    header.appendChild(createCollapseArrowSvg("web-search-header-arrow"));
+  }
+
   const body = document.createElement("div");
   body.className = "web-search-body";
 
@@ -192,17 +217,21 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
     }
   }
 
-  if (allowToggle && header.childElementCount > 0) {
+  if (allowToggle && hasHeaderContent) {
     // 绑定折叠/展开事件
     header.addEventListener("click", () => {
       container.classList.toggle("collapsed");
       container.classList.toggle("expanded");
       // 用户手动操作后，标记为已手动操作，取消自动折叠
       container.dataset.userToggled = "1";
+      header.setAttribute(
+        "aria-expanded",
+        container.classList.contains("expanded") ? "true" : "false"
+      );
     });
   }
 
-  if (header.childElementCount > 0) {
+  if (hasHeaderContent) {
     container.appendChild(header);
   }
   container.appendChild(body);
@@ -213,6 +242,13 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
   } else {
     container.classList.remove("collapsed");
     container.classList.add("expanded");
+  }
+
+  if (allowToggle && hasHeaderContent) {
+    header.setAttribute(
+      "aria-expanded",
+      container.classList.contains("expanded") ? "true" : "false"
+    );
   }
 }
 
@@ -472,9 +508,11 @@ export function renderToolEvents(sectionEl, listEl, events) {
   if (!sectionEl.querySelector(".tool-calls-header")) {
     const header = document.createElement("div");
     header.className = "tool-calls-header";
+    header.appendChild(createCollapseArrowSvg("tool-calls-header-arrow"));
 
-    header.innerHTML = `
-      <span class="tool-calls-header-text"></span>`;
+    const headerText = document.createElement("span");
+    headerText.className = "tool-calls-header-text";
+    header.appendChild(headerText);
 
     // Wrap list in detail container
     const detail = document.createElement("div");
@@ -489,6 +527,10 @@ export function renderToolEvents(sectionEl, listEl, events) {
     header.addEventListener("click", () => {
       sectionEl.dataset.userToggled = "1";
       sectionEl.classList.toggle("tc-expanded");
+      header.setAttribute(
+        "aria-expanded",
+        sectionEl.classList.contains("tc-expanded") ? "true" : "false"
+      );
       sectionEl.dispatchEvent(
         new CustomEvent("toolcalls-toggle", {
           detail: {
@@ -504,6 +546,13 @@ export function renderToolEvents(sectionEl, listEl, events) {
   if (headerText) {
     const count = items.length;
     headerText.textContent = `工具调用 · ${count} 步`;
+  }
+  const header = sectionEl.querySelector(".tool-calls-header");
+  if (header) {
+    header.setAttribute(
+      "aria-expanded",
+      sectionEl.classList.contains("tc-expanded") ? "true" : "false"
+    );
   }
 
   // Render items
@@ -559,11 +608,11 @@ export function renderWebSearchEvents(sectionEl, events) {
   if (!sectionEl.querySelector(".search-preview-header") || !list) {
     const header = document.createElement("div");
     header.className = "search-preview-header";
-    header.innerHTML = `
-      <span class="search-preview-header-text"></span>
-      <svg class="search-preview-header-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>`;
+
+    const headerText = document.createElement("span");
+    headerText.className = "search-preview-header-text";
+    header.appendChild(headerText);
+    header.appendChild(createCollapseArrowSvg("search-preview-header-arrow"));
 
     const detail = document.createElement("div");
     detail.className = "search-preview-detail";
@@ -579,6 +628,10 @@ export function renderWebSearchEvents(sectionEl, events) {
     header.addEventListener("click", () => {
       sectionEl.dataset.userToggled = "1";
       sectionEl.classList.toggle("sp-expanded");
+      header.setAttribute(
+        "aria-expanded",
+        sectionEl.classList.contains("sp-expanded") ? "true" : "false"
+      );
     });
   }
 
@@ -586,6 +639,13 @@ export function renderWebSearchEvents(sectionEl, events) {
   if (headerText) {
     const roundCount = items.length;
     headerText.textContent = `联网结果 · ${roundCount} 次`;
+  }
+  const header = sectionEl.querySelector(".search-preview-header");
+  if (header) {
+    header.setAttribute(
+      "aria-expanded",
+      sectionEl.classList.contains("sp-expanded") ? "true" : "false"
+    );
   }
 
   list.innerHTML = "";
@@ -630,6 +690,8 @@ function getSourceItems(sources) {
   return Array.isArray(sources) ? sources.filter((item) => item?.url) : [];
 }
 
+const SOURCES_STATUS_DOMAIN_LIMIT = 3;
+
 export function renderSourcesStatus(statusEl, sources) {
   if (!statusEl) return;
   const items = getSourceItems(sources);
@@ -639,81 +701,59 @@ export function renderSourcesStatus(statusEl, sources) {
     return;
   }
 
+  const summaryItems = [];
+  const seenDomains = new Set();
+  items.forEach((item) => {
+    const hostname = getSourceHostname(item.url);
+    const domainKey = hostname || item.url;
+    if (!domainKey || seenDomains.has(domainKey)) return;
+    seenDomains.add(domainKey);
+    summaryItems.push({
+      url: item.url,
+      label: hostname || item.title || item.url,
+    });
+  });
+
   statusEl.hidden = false;
   statusEl.innerHTML = "";
 
-  const text = document.createElement("span");
-  text.className = "sources-status-text";
-  text.textContent = `已核对 ${items.length} 个来源`;
-  statusEl.appendChild(text);
-}
+  const label = document.createElement("span");
+  label.className = "sources-status-label";
+  label.textContent = `已核对 ${summaryItems.length} 个站点`;
+  statusEl.appendChild(label);
 
-export function renderSourcesToggle(buttonEl, sources) {
-  if (!buttonEl) return;
-  const items = getSourceItems(sources);
-  if (!items.length) {
-    buttonEl.hidden = true;
-    buttonEl.disabled = true;
-    buttonEl.classList.remove("is-active");
-    buttonEl.setAttribute("aria-expanded", "false");
-    buttonEl.textContent = "来源";
-    buttonEl.setAttribute("aria-label", "暂无来源");
-    return;
-  }
+  const divider = document.createElement("span");
+  divider.className = "sources-status-divider";
+  divider.textContent = "·";
+  statusEl.appendChild(divider);
 
-  buttonEl.hidden = false;
-  buttonEl.disabled = false;
-  buttonEl.textContent = `来源 ${items.length}`;
-  buttonEl.setAttribute("aria-label", `查看 ${items.length} 个来源`);
-}
+  const domains = document.createElement("span");
+  domains.className = "sources-status-domains";
 
-export function renderSources(sectionEl, sources) {
-  if (!sectionEl) return;
-  const items = getSourceItems(sources);
-  if (!items.length) {
-    sectionEl.hidden = true;
-    sectionEl.innerHTML = "";
-    return;
-  }
-
-  sectionEl.innerHTML = "";
-
-  const list = document.createElement("div");
-  list.className = "sources-list";
-
-  items.forEach((s, index) => {
-    const chip = document.createElement("a");
-    chip.className = "source-chip";
-    chip.href = s.url || "#";
-    chip.target = "_blank";
-    chip.rel = "noopener noreferrer";
-
-    const hostname = getSourceHostname(s.url);
-
-    const order = document.createElement("span");
-    order.className = "source-chip-index";
-    order.textContent = String(index + 1).padStart(2, "0");
-
-    const body = document.createElement("div");
-    body.className = "source-chip-body";
-
-    const label = document.createElement("span");
-    label.className = "source-chip-label";
-    label.textContent = s.title || hostname || s.url;
-
-    const urlLine = document.createElement("span");
-    urlLine.className = "source-chip-url";
-    urlLine.textContent = hostname || s.url;
-
-    body.appendChild(label);
-    body.appendChild(urlLine);
-
-    chip.appendChild(order);
-    chip.appendChild(body);
-    list.appendChild(chip);
+  const visibleSummaryItems = summaryItems.slice(0, SOURCES_STATUS_DOMAIN_LIMIT);
+  visibleSummaryItems.forEach((item) => {
+    const link = document.createElement("a");
+    link.className = "sources-status-domain";
+    link.href = item.url || "#";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = item.label;
+    domains.appendChild(link);
   });
 
-  sectionEl.appendChild(list);
+  const hiddenDomainCount = summaryItems.length - visibleSummaryItems.length;
+  if (hiddenDomainCount > 0) {
+    const more = document.createElement("span");
+    more.className = "sources-status-more";
+    more.textContent = `+${hiddenDomainCount}`;
+    domains.appendChild(more);
+  }
+
+  statusEl.appendChild(domains);
+  statusEl.setAttribute(
+    "aria-label",
+    `已核对 ${summaryItems.length} 个站点：${summaryItems.map((item) => item.label).join("、")}`,
+  );
 }
 
 export function buildPromptWithWebSearch(originalPrompt, webSearch) {

@@ -164,6 +164,10 @@ body {
   --message-label-line-height: 1.25;
   --message-label-letter-spacing: 0;
   --message-label-color: var(--panel-text-secondary);
+  --expand-motion-duration: 400ms;
+  --expand-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --expand-indicator-duration: 320ms;
+  --expand-indicator-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ---------- Theme Overrides ---------- */

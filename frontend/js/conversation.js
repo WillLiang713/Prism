@@ -2,7 +2,7 @@ import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, esti
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
-import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSources, renderSourcesStatus, renderSourcesToggle } from './web-search.js';
+import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSourcesStatus } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
 import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState, renderAssistantImages } from './chat.js';
 import { clearImages } from './images.js';
@@ -436,6 +436,14 @@ export async function callModel(
     const uiRef = resolveUi();
     if (!uiRef?.thinkingSectionEl || !uiRef?.thinkingContentEl) return;
     const normalizedThinking = normalizeThinkingText(turn.models.main.thinking);
+    if (!normalizedThinking.trim()) {
+      uiRef.thinkingSectionEl.style.display = "none";
+      uiRef.thinkingContentEl.textContent = "";
+      lastRenderedThinking = "";
+      lastThinkingRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+      lastThinkingRenderAt = Date.now();
+      return;
+    }
     if (
       !force &&
       normalizedThinking === lastRenderedThinking &&
@@ -888,11 +896,12 @@ export async function callModel(
       applyStatus(uiRef.statusEl, "complete");
     }
 
-    // 响应完成后再渲染来源入口与详情，避免来源先于内容显示
+    // 响应完成后再渲染来源摘要，避免来源先于内容显示
     if (Array.isArray(turn.models.main.sources)) {
       renderSourcesStatus(uiRef?.sourcesStatusEl, turn.models.main.sources);
-      renderSourcesToggle(uiRef?.sourcesToggleBtnEl, turn.models.main.sources);
-      renderSources(uiRef?.sourcesSectionEl, turn.models.main.sources);
+      if (uiRef?.sourcesStatusRowEl) {
+        uiRef.sourcesStatusRowEl.hidden = !!uiRef?.sourcesStatusEl?.hidden;
+      }
     }
 
     if (

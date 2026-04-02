@@ -128,32 +128,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.source-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-dim);
-  font-size: 11px;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: color 0.18s ease;
-  font-variant-numeric: tabular-nums;
-}
-
-.source-toggle-btn:hover {
-  color: var(--text);
-}
-
-.source-toggle-btn.is-active {
-  color: var(--text);
-}
-
 .message-actions {
   display: flex;
   margin-left: auto;

@@ -2,19 +2,27 @@
 /* -- Tool calls: collapsible search card -- */
 .tool-calls-section {
   margin: 0 0 10px;
-  padding: 0;
+  padding: 8px 0;
   border-radius: 0;
   background: transparent;
   border: none;
   overflow: visible;
-  transition: none;
+  transition: all 0.2s ease;
 }
 
 .tool-calls-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 0;
+  gap: 6px;
+  padding: 0;
+  font-size: var(--message-label-font-size);
+  font-weight: var(--message-label-font-weight);
+  color: var(--message-label-color);
+  opacity: 0.88;
+  letter-spacing: var(--message-label-letter-spacing);
+  line-height: var(--message-label-line-height);
+  position: relative;
+  padding-left: 20px;
   cursor: pointer;
   user-select: none;
   transition: background 0.15s;
@@ -22,6 +30,8 @@
 
 .tool-calls-header:hover {
   background: transparent;
+  color: var(--text);
+  opacity: 1;
 }
 
 .tool-calls-header:active {
@@ -32,17 +42,46 @@
   flex: 1;
   display: inline-flex;
   align-items: center;
-  font-size: var(--message-label-font-size);
-  font-weight: var(--message-label-font-weight);
-  color: var(--message-label-color);
-  letter-spacing: var(--message-label-letter-spacing);
-  line-height: var(--message-label-line-height);
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+.tool-calls-header-arrow {
+  width: 14px;
+  height: 14px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  color: currentColor;
+  opacity: 0.8;
+  transform: translateY(-50%);
+  transition: transform var(--expand-indicator-duration) var(--expand-indicator-ease),
+    opacity var(--expand-indicator-duration) var(--expand-indicator-ease);
+}
+
+.tool-calls-header:hover .tool-calls-header-arrow {
+  opacity: 1;
+}
+
+.tool-calls-section.tc-expanded .tool-calls-header-arrow {
+  opacity: 1;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.tool-calls-section:not(.tc-expanded) {
+  padding: 6px 0;
 }
 
 .tool-calls-detail {
   max-height: 0;
+  border-left: 1px solid var(--border-strong);
+  margin-left: 0;
   overflow: hidden;
-  transition: max-height 0.25s ease;
+  padding-left: 12px;
+  transition: max-height var(--expand-motion-duration) var(--expand-motion-ease);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
@@ -80,7 +119,7 @@
 
 .tool-calls-list {
   margin: 0;
-  padding: 2px 0 4px;
+  padding: 12px 0 4px;
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -216,7 +255,7 @@
 .code-execution-detail {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.25s ease;
+  transition: max-height var(--expand-motion-duration) var(--expand-motion-ease);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;

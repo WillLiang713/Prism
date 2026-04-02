@@ -3,8 +3,8 @@
   background: transparent;
   border: none;
   border-radius: 0;
-  padding: 10px 0;
-  margin-bottom: 12px;
+  padding: 8px 0;
+  margin-bottom: 10px;
   transition: all 0.2s ease;
 }
 
@@ -12,12 +12,15 @@
   font-size: var(--message-label-font-size);
   font-weight: var(--message-label-font-weight);
   color: var(--message-label-color);
+  opacity: 0.88;
   line-height: var(--message-label-line-height);
   letter-spacing: var(--message-label-letter-spacing);
-  margin-bottom: 10px;
+  margin-bottom: 0;
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative;
+  padding-left: 20px;
   cursor: pointer;
   user-select: none;
 }
@@ -29,14 +32,22 @@
   min-width: 0;
 }
 
+.thinking-header:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
 .thinking-header-arrow {
   width: 14px;
   height: 14px;
-  flex: 0 0 auto;
-  order: -1;
+  position: absolute;
+  left: 0;
+  top: 50%;
   color: currentColor;
   opacity: 0.8;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transform: translateY(-50%);
+  transition: transform var(--expand-indicator-duration) var(--expand-indicator-ease),
+    opacity var(--expand-indicator-duration) var(--expand-indicator-ease);
 }
 
 .thinking-header:hover .thinking-header-arrow {
@@ -53,21 +64,31 @@
 }
 
 .thinking-section.collapsed { padding: 6px 0; }
-.thinking-section.collapsed .thinking-header { margin-bottom: 0; }
-.thinking-section.collapsed .thinking-content { display: none; }
-.thinking-section:not(.collapsed) .thinking-header-arrow { transform: rotate(180deg); }
-.thinking-section:not(.collapsed) .thinking-content {
+.thinking-section:not(.collapsed) .thinking-header-arrow {
+  opacity: 1;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.thinking-detail {
+  max-height: 0;
   border-left: 1px solid var(--border-strong);
   margin-left: 0;
+  overflow: hidden;
   padding-left: 12px;
+  transition: max-height var(--expand-motion-duration) var(--expand-motion-ease);
+}
+
+.thinking-section:not(.collapsed) .thinking-detail {
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .thinking-content {
   font-size: 13px;
   color: var(--panel-text-secondary);
   line-height: 1.6;
+  padding: 10px 0 0;
   word-wrap: break-word;
-  padding-left: 0;
 }
 
 /* Thinking content markdown */
