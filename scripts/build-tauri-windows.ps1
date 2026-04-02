@@ -323,8 +323,6 @@ foreach ($path in $pathsToRebuild) {
   Remove-BuildArtifact -Path $path
 }
 
-Remove-PythonCacheArtifacts -ProjectRoot $projectRoot
-
 foreach ($path in @(
   (Join-Path $projectRoot "tmp-server.out.log"),
   (Join-Path $projectRoot "tmp-server.err.log")
