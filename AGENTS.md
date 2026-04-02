@@ -19,5 +19,7 @@
 ## Test Cleanup
 测试清理
 
+- Always run browser-based tests in headless mode unless the user explicitly requests otherwise.
+- 涉及浏览器的测试默认一律使用 headless 模式运行，除非用户明确要求使用有界面模式。
 - After completing tests, clean up any cache files, temporary artifacts, and test output created during the run; do not leave junk in the repository.
 - 测试完成后，清理本次运行产生的缓存文件、临时产物和测试输出，不要把垃圾文件留在仓库里。
