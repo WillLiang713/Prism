@@ -109,7 +109,8 @@
     box-shadow 0.18s ease, transform 0.14s ease;
 }
 
-.brand-model-trigger:hover {
+.brand-model-trigger:hover,
+.brand-model-trigger.open {
   background: var(--bg-hover);
   border-color: transparent;
 }
@@ -117,6 +118,10 @@
 .brand-model-trigger:focus-visible {
   outline: none;
   box-shadow: none;
+}
+
+.brand-model-trigger:active {
+  transform: scale(0.98);
 }
 
 .brand-model-caret {
@@ -147,6 +152,11 @@
   .brand-model-trigger:hover .brand-model-caret {
     color: var(--text-muted);
     opacity: 0.78;
+  }
+
+  .brand-model-trigger:active {
+    background: var(--bg-hover);
+    border-color: transparent;
   }
 }
 
@@ -456,18 +466,36 @@
   cursor: pointer;
 }
 
-.titlebar-action-btn:hover {
-  background: var(--desktop-window-hover-bg);
-  color: var(--text);
+@media (hover: hover) and (pointer: fine) {
+  .titlebar-action-btn:hover {
+    background: var(--desktop-window-hover-bg);
+    color: var(--text);
+  }
 }
 
 .titlebar-action-btn:active {
   transform: scale(0.97);
 }
 
+@media (hover: none), (pointer: coarse) {
+  .titlebar-action-btn:hover {
+    background: transparent;
+  }
+
+  .header-utility-actions .titlebar-action-btn:hover {
+    color: var(--text-muted);
+  }
+}
+
 .titlebar-action-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--desktop-window-focus-ring);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .titlebar-action-btn:focus-visible {
+    box-shadow: none;
+  }
 }
 
 .titlebar-action-btn:disabled {
