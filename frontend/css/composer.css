@@ -310,6 +310,7 @@
   align-items: center;
   gap: 5px;
   height: 34px;
+  min-width: 0;
   padding: 0 9px;
   border-radius: 10px;
   border: 1px solid var(--border-strong);
@@ -369,12 +370,12 @@
 }
 
 .web-search-tool-value {
-  max-width: 80px;
+  flex: 0 1 auto;
   color: var(--text);
   font-size: 12px;
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .web-search-tool-current:not(.is-active) .web-search-tool-value {

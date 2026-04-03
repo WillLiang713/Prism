@@ -1171,10 +1171,6 @@
     gap: 4px;
   }
 
-  .composer-toolbar .web-search-tool-value {
-    max-width: clamp(42px, 19vw, 74px);
-  }
-
   .composer-toolbar .reasoning-effort-current {
     min-width: 0;
     max-width: 100%;

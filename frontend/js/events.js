@@ -18,7 +18,7 @@ import {
   normalizeApiUrlInputValue,
   getResolvedRuntimeRequestState,
 } from './config.js';
-import { applyWebSearchApiKeyValue, applyWebSearchModeValue, closeWebSearchToolSelector, getCurrentWebSearchToolMode, isWebSearchEnabled, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { applyWebSearchApiKeyValue, applyWebSearchModeValue, closeWebSearchToolSelector, getCurrentWebSearchToolMode, isWebSearchEnabled, renderWebSearchToolSelector, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown, syncTitleModelFollowPresentation } from './models.js';
 import {
@@ -553,6 +553,7 @@ export function bindEvents() {
     closeTopicActionMenu();
   });
   window.addEventListener("resize", () => {
+    renderWebSearchToolSelector();
     repositionOpenFloatingDropdowns();
     positionWebSearchToolSelector();
     positionReasoningDropdown();
