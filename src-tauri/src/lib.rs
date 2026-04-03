@@ -3,18 +3,31 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
+#[cfg(windows)]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use serde::{Deserialize, Serialize};
+use tauri::webview::Color;
 use tauri::{
-    path::BaseDirectory,
     menu::{Menu, MenuItem},
+    path::BaseDirectory,
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, Theme, WebviewUrl, WebviewWindowBuilder,
 };
-use tauri::webview::Color;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+#[cfg(windows)]
+use windows::Win32::{
+    Foundation::{HWND, LPARAM, LRESULT, WPARAM},
+    UI::{
+        Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
+        WindowsAndMessaging::{WM_ENDSESSION, WM_NCDESTROY, WM_QUERYENDSESSION},
+    },
+};
 
 const WINDOW_LABEL: &str = "main";
 const DEV_API_BASE_ENV: &str = "PRISM_DESKTOP_API_BASE";
@@ -24,6 +37,8 @@ const BACKEND_EXECUTABLE_NAME: &str = "prism-runtime.exe";
 const TRAY_ID: &str = "main-tray";
 const TRAY_MENU_SHOW_ID: &str = "tray-show";
 const TRAY_MENU_QUIT_ID: &str = "tray-quit";
+#[cfg(windows)]
+const SESSION_END_SUBCLASS_ID: usize = 0x5052_4953_4D;
 
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -36,6 +51,8 @@ struct DesktopPreferencesState(Mutex<DesktopPreferences>);
 
 #[derive(Default)]
 struct ExitIntentState(Mutex<bool>);
+#[cfg(windows)]
+struct WindowsSessionEndState(Arc<AtomicBool>);
 
 struct DesktopPreferences {
     close_to_tray: bool,
@@ -46,6 +63,13 @@ impl Default for DesktopPreferences {
         Self {
             close_to_tray: true,
         }
+    }
+}
+
+#[cfg(windows)]
+impl Default for WindowsSessionEndState {
+    fn default() -> Self {
+        Self(Arc::new(AtomicBool::new(false)))
     }
 }
 
@@ -90,8 +114,8 @@ fn pick_available_port() -> Result<u16, String> {
 }
 
 fn build_runtime_script(config: &DesktopRuntime) -> Result<String, String> {
-    let runtime_json = serde_json::to_string(config)
-        .map_err(|error| format!("序列化桌面运行时失败: {error}"))?;
+    let runtime_json =
+        serde_json::to_string(config).map_err(|error| format!("序列化桌面运行时失败: {error}"))?;
 
     Ok(format!(
         r#"
@@ -257,11 +281,77 @@ fn is_exit_requested(app: &tauri::AppHandle) -> bool {
         .unwrap_or(false)
 }
 
+#[cfg(windows)]
+fn is_windows_session_ending(app: &tauri::AppHandle) -> bool {
+    app.state::<WindowsSessionEndState>()
+        .0
+        .load(Ordering::Relaxed)
+}
+
+#[cfg(not(windows))]
+fn is_windows_session_ending(_app: &tauri::AppHandle) -> bool {
+    false
+}
+
 fn request_exit(app: &tauri::AppHandle) {
     if let Ok(mut guard) = app.state::<ExitIntentState>().0.lock() {
         *guard = true;
     }
     app.exit(0);
+}
+
+#[cfg(windows)]
+unsafe extern "system" fn handle_session_end_subclass(
+    hwnd: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    subclass_id: usize,
+    ref_data: usize,
+) -> LRESULT {
+    let flag = ref_data as *const AtomicBool;
+    if !flag.is_null() {
+        match message {
+            WM_QUERYENDSESSION => unsafe {
+                (*flag).store(true, Ordering::Relaxed);
+            },
+            WM_ENDSESSION => unsafe {
+                (*flag).store(wparam.0 != 0, Ordering::Relaxed);
+            },
+            WM_NCDESTROY => unsafe {
+                (*flag).store(false, Ordering::Relaxed);
+                let _ = RemoveWindowSubclass(hwnd, Some(handle_session_end_subclass), subclass_id);
+            },
+            _ => {}
+        }
+    }
+
+    unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
+}
+
+#[cfg(windows)]
+fn install_windows_session_end_monitor(
+    app: &tauri::AppHandle,
+    window: &tauri::WebviewWindow,
+) -> Result<(), String> {
+    let hwnd = window
+        .hwnd()
+        .map_err(|error| format!("读取桌面窗口句柄失败: {error}"))?;
+    let flag = app.state::<WindowsSessionEndState>().0.clone();
+    let installed = unsafe {
+        SetWindowSubclass(
+            hwnd,
+            Some(handle_session_end_subclass),
+            SESSION_END_SUBCLASS_ID,
+            Arc::as_ptr(&flag) as usize,
+        )
+    };
+
+    if !installed.as_bool() {
+        return Err("注册 Windows 关机会话监听失败".to_string());
+    }
+
+    Ok(())
 }
 
 fn create_tray(app: &tauri::AppHandle) -> Result<(), String> {
@@ -320,7 +410,7 @@ fn update_desktop_preferences(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             // 已有实例运行时，聚焦到已有窗口
             if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
@@ -334,11 +424,17 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(BackendState::default())
         .manage(DesktopPreferencesState::default())
-        .manage(ExitIntentState::default())
+        .manage(ExitIntentState::default());
+    #[cfg(windows)]
+    let builder = builder.manage(WindowsSessionEndState::default());
+    let app = builder
         .invoke_handler(tauri::generate_handler![update_desktop_preferences])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if should_close_to_tray(&window.app_handle()) && !is_exit_requested(&window.app_handle()) {
+                if should_close_to_tray(&window.app_handle())
+                    && !is_exit_requested(&window.app_handle())
+                    && !is_windows_session_ending(&window.app_handle())
+                {
                     api.prevent_close();
                     let _ = window.hide();
                     return;
@@ -366,25 +462,30 @@ pub fn run() {
                 }
             }
 
-            let init_script = build_runtime_script(&runtime.config)
-                .map_err(std::io::Error::other)?;
-            let window = WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
-                .title("Prism")
-                .inner_size(1280.0, 820.0)
-                .min_inner_size(1100.0, 760.0)
-                .background_color(Color(0, 0, 0, 255))
-                .visible(false)
-                .decorations(false)
-                .center()
-                .initialization_script(init_script)
-                .build()
-                .map_err(std::io::Error::other)?;
+            let init_script =
+                build_runtime_script(&runtime.config).map_err(std::io::Error::other)?;
+            let window =
+                WebviewWindowBuilder::new(app, WINDOW_LABEL, WebviewUrl::App("index.html".into()))
+                    .title("Prism")
+                    .inner_size(1280.0, 820.0)
+                    .min_inner_size(1100.0, 760.0)
+                    .background_color(Color(0, 0, 0, 255))
+                    .visible(false)
+                    .decorations(false)
+                    .center()
+                    .initialization_script(init_script)
+                    .build()
+                    .map_err(std::io::Error::other)?;
 
             let theme = window.theme().unwrap_or(Theme::Dark);
             window
                 .set_background_color(Some(background_color_for_theme(theme)))
                 .map_err(std::io::Error::other)?;
             window.show().map_err(std::io::Error::other)?;
+
+            #[cfg(windows)]
+            install_windows_session_end_monitor(app.handle(), &window)
+                .map_err(std::io::Error::other)?;
 
             create_tray(app.handle()).map_err(std::io::Error::other)?;
 
