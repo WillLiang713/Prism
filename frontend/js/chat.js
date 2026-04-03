@@ -6,7 +6,7 @@ import { setSendButtonMode, applyStatus, scrollToBottom, syncTopicListHeaderAlig
 import { showConfirm, openImagePreview } from './dialog.js';
 import { collapseSidebarForMobile, isMobileLayout } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
-import { resolveModelDisplayName, getRuntimeModelConfig, getServiceDisplayName } from './config.js';
+import { resolveModelDisplayName } from './config.js';
 import { estimateTokensFromText } from './state.js';
 import {
   rememberDropdownOrigin,
@@ -38,44 +38,12 @@ let topicTitleTooltipId = "";
 let topicTitleTooltipBound = false;
 let topicTitleTooltipTimer = 0;
 
-function getCurrentActiveServiceName() {
-  const runtimeConfig = getRuntimeModelConfig(false);
-  const activeService = state.services.find(
-    (service) => service.id === runtimeConfig.modelServiceId
-  );
-  return activeService ? getServiceDisplayName(activeService) : "";
-}
-
-function renderAssistantModelName(el, displayModel, displayService) {
+function renderAssistantModelName(el, displayModel) {
   if (!(el instanceof HTMLElement)) return;
   const normalizedModel = String(displayModel || "").trim() || "未配置";
-  const normalizedService = String(displayService || "").trim();
-  const currentServiceName = getCurrentActiveServiceName();
-  const shouldShowService =
-    !!normalizedService &&
-    (!!currentServiceName ? normalizedService !== currentServiceName : true);
 
   el.innerHTML = "";
-  if (!shouldShowService) {
-    el.textContent = normalizedModel;
-    return;
-  }
-
-  const sName = document.createElement("span");
-  sName.className = "assistant-service-name";
-  sName.textContent = normalizedService;
-
-  const divider = document.createElement("span");
-  divider.className = "assistant-model-divider";
-  divider.textContent = " / ";
-
-  const mName = document.createElement("span");
-  mName.className = "assistant-model-id";
-  mName.textContent = normalizedModel;
-
-  el.appendChild(sName);
-  el.appendChild(divider);
-  el.appendChild(mName);
+  el.textContent = normalizedModel;
 }
 
 function canShowTopicTitleTooltip() {
@@ -1448,8 +1416,7 @@ export function createAssistantCard(
   const modelName = document.createElement("span");
   modelName.className = "assistant-model-name";
   const displayModel = modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || "未配置";
-  const displayService = turn?.models?.main?.serviceName || "";
-  renderAssistantModelName(modelName, displayModel, displayService);
+  renderAssistantModelName(modelName, displayModel);
 
   const statusEl = document.createElement("span");
   statusEl.className = "status";
