@@ -25,7 +25,9 @@ use windows::Win32::{
     Foundation::{HWND, LPARAM, LRESULT, WPARAM},
     UI::{
         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
-        WindowsAndMessaging::{WM_ENDSESSION, WM_NCDESTROY, WM_QUERYENDSESSION},
+        WindowsAndMessaging::{
+            PostMessageW, WM_CLOSE, WM_ENDSESSION, WM_NCDESTROY, WM_QUERYENDSESSION,
+        },
     },
 };
 
@@ -314,6 +316,7 @@ unsafe extern "system" fn handle_session_end_subclass(
         match message {
             WM_QUERYENDSESSION => unsafe {
                 (*flag).store(true, Ordering::Relaxed);
+                let _ = PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
             },
             WM_ENDSESSION => unsafe {
                 (*flag).store(wparam.0 != 0, Ordering::Relaxed);
