@@ -9,6 +9,11 @@ import { syncDesktopBackendUi } from './desktop.js';
 import { resolveModelDisplayName } from './config.js';
 import { estimateTokensFromText } from './state.js';
 import {
+  buildThinkingLabel,
+  formatThinkingCompleteLabel,
+  normalizeThinkingText,
+} from './thinking.js';
+import {
   rememberDropdownOrigin,
   restoreDropdownOrigin,
   clearBodyDropdownPosition,
@@ -456,88 +461,6 @@ function createIconActionButton({
   svg.innerHTML = path;
   button.appendChild(svg);
   return button;
-}
-
-function stripMarkdownForThinkingSummary(text) {
-  return String(text || "")
-    .replace(/\r/g, "")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[`*_~>#-]+/g, " ")
-    .replace(/<\/?[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeThinkingText(thinkingText) {
-  return String(thinkingText || "")
-    .replace(/\r/g, "")
-    .replace(/\*\*\*\*/g, "**\n\n**")
-    .replace(/____/g, "__\n\n__")
-    .replace(
-      /([.!?。！？])(\*\*[^*\n]+\*\*|__[^_\n]+__|#{1,6}\s+[^\n]+)/g,
-      "$1\n\n$2"
-    );
-}
-
-function extractThinkingSummary(thinkingText) {
-  const normalizedText = normalizeThinkingText(thinkingText);
-  const raw = normalizedText.trim();
-  if (!raw) return "";
-  const hasTrailingNewline = /\n\s*$/.test(normalizedText);
-
-  const lines = raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  let latestTitle = "";
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const isLastLine = index === lines.length - 1;
-    if (isLastLine && !hasTrailingNewline) continue;
-    if (line.startsWith("```")) continue;
-
-    let candidate = "";
-    if (/^#{1,6}\s+/.test(line)) {
-      candidate = line.replace(/^#{1,6}\s+/, "");
-    } else if (/^\*\*[^*]+\*\*$/.test(line) || /^__[^_]+__$/.test(line)) {
-      candidate = line.replace(/^\*\*|\*\*$|^__|__$/g, "");
-    } else {
-      const plain = stripMarkdownForThinkingSummary(line);
-      const looksLikeTitle =
-        plain.length >= 4 &&
-        plain.length <= 72 &&
-        !/[。！？.!?：:]$/.test(plain);
-      if (looksLikeTitle) candidate = plain;
-    }
-
-    candidate = stripMarkdownForThinkingSummary(candidate);
-    if (!candidate) continue;
-    latestTitle = candidate;
-  }
-
-  if (latestTitle) return latestTitle;
-  return "";
-}
-
-function buildThinkingLabel(
-  thinkingText,
-  isComplete = false,
-  previousLabel = "",
-  thinkingTimeSec = null
-) {
-  if (isComplete && String(thinkingText || "").trim()) {
-    return formatThinkingCompleteLabel(thinkingTimeSec);
-  }
-  const summary = extractThinkingSummary(thinkingText);
-  if (summary) return summary;
-  return previousLabel || "思考中";
-}
-
-function formatThinkingCompleteLabel(thinkingTimeSec = null) {
-  if (!Number.isFinite(thinkingTimeSec)) return "思考完成";
-  return `思考完成，用时 ${thinkingTimeSec.toFixed(1)} 秒`;
 }
 
 export function isTopicRunning(topicId) {

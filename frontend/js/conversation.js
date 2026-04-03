@@ -7,119 +7,13 @@ import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyS
 import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState, renderAssistantImages } from './chat.js';
 import { clearImages } from './images.js';
 import { syncHtmlPreviewForTurn } from './html-preview.js';
-
-function stripMarkdownForThinkingSummary(text) {
-  return String(text || "")
-    .replace(/\r/g, "")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[`*_~>#-]+/g, " ")
-    .replace(/<\/?[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeThinkingText(thinkingText) {
-  return String(thinkingText || "")
-    .replace(/\r/g, "")
-    .replace(/\*\*\*\*/g, "**\n\n**")
-    .replace(/____/g, "__\n\n__")
-    .replace(
-      /([.!?。！？])(\*\*[^*\n]+\*\*|__[^_\n]+__|#{1,6}\s+[^\n]+)/g,
-      "$1\n\n$2"
-    );
-}
-
-function isStandaloneThinkingChunk(text) {
-  const trimmed = String(text || "").trim();
-  if (!trimmed) return false;
-  return (
-    /^\*\*[^*]+\*\*$/.test(trimmed) ||
-    /^__[^_]+__$/.test(trimmed) ||
-    /^#{1,6}\s+.+$/.test(trimmed)
-  );
-}
-
-function appendThinkingChunk(existingText, nextChunk) {
-  const prev = String(existingText || "");
-  const next = String(nextChunk || "");
-  if (!prev) return next;
-  if (!next) return prev;
-  if (isStandaloneThinkingChunk(next) && !/\n\s*$/.test(prev)) {
-    return `${prev}\n\n${next}`;
-  }
-  if (/[\s\n]$/.test(prev) || /^[\s\n]/.test(next)) return prev + next;
-  if (isStandaloneThinkingChunk(prev) && isStandaloneThinkingChunk(next)) {
-    return `${prev}\n\n${next}`;
-  }
-  if (
-    (prev.endsWith("**") && next.startsWith("**")) ||
-    (prev.endsWith("__") && next.startsWith("__"))
-  ) {
-    return `${prev}\n\n${next}`;
-  }
-  return prev + next;
-}
-
-function extractThinkingSummary(thinkingText) {
-  const normalizedText = normalizeThinkingText(thinkingText);
-  const raw = normalizedText.trim();
-  if (!raw) return "";
-  const hasTrailingNewline = /\n\s*$/.test(normalizedText);
-
-  const lines = raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  let latestTitle = "";
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const isLastLine = index === lines.length - 1;
-    if (isLastLine && !hasTrailingNewline) continue;
-    if (line.startsWith("```")) continue;
-
-    let candidate = "";
-    if (/^#{1,6}\s+/.test(line)) {
-      candidate = line.replace(/^#{1,6}\s+/, "");
-    } else if (/^\*\*[^*]+\*\*$/.test(line) || /^__[^_]+__$/.test(line)) {
-      candidate = line.replace(/^\*\*|\*\*$|^__|__$/g, "");
-    } else {
-      const plain = stripMarkdownForThinkingSummary(line);
-      const looksLikeTitle =
-        plain.length >= 4 &&
-        plain.length <= 72 &&
-        !/[。！？.!?：:]$/.test(plain);
-      if (looksLikeTitle) candidate = plain;
-    }
-
-    candidate = stripMarkdownForThinkingSummary(candidate);
-    if (!candidate) continue;
-    latestTitle = candidate;
-  }
-
-  if (latestTitle) return latestTitle;
-  return "";
-}
-
-function buildThinkingLabel(
-  thinkingText,
-  isComplete = false,
-  previousLabel = "",
-  thinkingTimeSec = null
-) {
-  if (isComplete && String(thinkingText || "").trim()) {
-    return formatThinkingCompleteLabel(thinkingTimeSec);
-  }
-  const summary = extractThinkingSummary(thinkingText);
-  if (summary) return summary;
-  return previousLabel || "思考中";
-}
-
-function formatThinkingCompleteLabel(thinkingTimeSec = null) {
-  if (!Number.isFinite(thinkingTimeSec)) return "思考完成";
-  return `思考完成，用时 ${thinkingTimeSec.toFixed(1)} 秒`;
-}
+import { streamJsonSse } from './stream-client.js';
+import {
+  appendThinkingChunk,
+  buildThinkingLabel,
+  formatThinkingCompleteLabel,
+  normalizeThinkingText,
+} from './thinking.js';
 
 function appendAssistantImages(existingImages, nextImages) {
   const target = Array.isArray(existingImages) ? existingImages : [];
@@ -647,45 +541,16 @@ export async function callModel(
       tavilySearchDepth: webSearchConfig?.searchDepth || "basic",
     };
 
-    // 调用后端接口
-    const response = await fetch(
+    await streamJsonSse(
       buildApiUrl(
         useResponsesEndpoint ? "/api/responses/stream" : "/api/chat/stream"
       ),
       {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-      signal: abortController.signal,
-      }
-    );
-
-    if (!response.ok)
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-
-    // 处理流式响应
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (!line.trim() || line.startsWith(":")) continue;
-        if (!line.startsWith("data: ")) continue;
-
-        const data = line.slice(6);
-        if (data === "[DONE]") continue;
-
-        try {
-          const chunk = JSON.parse(data);
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+        signal: abortController.signal,
+        onChunk(chunk) {
           const uiRef = resolveUi();
 
           if (chunk.type === "thinking" && chunk.data) {
@@ -730,19 +595,18 @@ export async function callModel(
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
-            // 首次收到思考内容时，移除loading类以显示body和footer
             const message = uiRef?.statusEl?.closest(".assistant-message");
             if (message && message.classList.contains("loading")) {
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            // 如果启用了自动滚动，则跟随内容滚动
             if (state.autoScroll && topicId === state.chat.activeTopicId) {
               scrollToBottom(elements.chatMessages, false);
             }
           } else if (chunk.type === "content" && chunk.data) {
-            if (thinkingStartTime && !thinkingEndTime)
+            if (thinkingStartTime && !thinkingEndTime) {
               thinkingEndTime = Date.now();
+            }
             turn.models.main.content += chunk.data;
             scheduleContentRender();
             schedulePreviewSync(true);
@@ -758,13 +622,11 @@ export async function callModel(
             }
             scheduleSaveChat();
             updateScrollToBottomButton();
-            // 首次收到内容时，移除loading类以显示body和footer
             const message = uiRef?.statusEl?.closest(".assistant-message");
             if (message && message.classList.contains("loading")) {
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            // 如果启用了自动滚动，则跟随内容滚动
             if (state.autoScroll && topicId === state.chat.activeTopicId) {
               scrollToBottom(elements.chatMessages, false);
             }
@@ -818,9 +680,7 @@ export async function callModel(
             }
             turn.models.main.toolEvents.push(payload);
             if (turn.models.main.toolEvents.length > 50) {
-              turn.models.main.toolEvents = turn.models.main.toolEvents.slice(
-                -50
-              );
+              turn.models.main.toolEvents = turn.models.main.toolEvents.slice(-50);
             }
             if (uiRef?.toolCallsSectionEl && uiRef?.toolCallsListEl) {
               renderToolEvents(
@@ -868,23 +728,17 @@ export async function callModel(
               turn.models.main.sources = [];
             }
             for (const s of chunk.data) {
-              if (s?.url && !turn.models.main.sources.some(x => x.url === s.url)) {
+              if (s?.url && !turn.models.main.sources.some((x) => x.url === s.url)) {
                 turn.models.main.sources.push(s);
               }
             }
-            // 不在流式过程中渲染来源，等响应完成后再显示
             scheduleSaveChat();
           } else if (chunk.type === "error") {
             throw new Error(chunk.data);
           }
-        } catch (e) {
-          if (e.message && e.message !== data) {
-            throw e;
-          }
-          console.error(`解析响应失败:`, e, data);
-        }
+        },
       }
-    }
+    );
 
     streamRenderSkipCodeHighlight = false;
     flushThinkingRender({ force: true });
