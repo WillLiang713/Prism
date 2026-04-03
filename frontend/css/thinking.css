@@ -16,10 +16,11 @@
   line-height: var(--message-label-line-height);
   letter-spacing: var(--message-label-letter-spacing);
   margin-bottom: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   position: relative;
+  max-width: 100%;
   padding-left: 20px;
   cursor: pointer;
   user-select: none;
@@ -30,11 +31,6 @@
   align-items: center;
   flex: 0 1 auto;
   min-width: 0;
-}
-
-.thinking-header:hover {
-  color: var(--text);
-  opacity: 1;
 }
 
 .thinking-header-arrow {
