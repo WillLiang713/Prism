@@ -254,7 +254,14 @@ fn kill_process_tree(pid: u32) {
 fn shutdown_backend(app: &tauri::AppHandle) {
     let state = app.state::<BackendState>();
     if let Some(mut backend_process) = state.0.lock().ok().and_then(|mut guard| guard.take()) {
-        kill_process_tree(backend_process.pid);
+        if is_windows_session_ending(app) {
+            // During Windows shutdown, avoid spawning taskkill which may block
+            // indefinitely. TerminateProcess is instant and Windows will clean
+            // up remaining child processes when the session ends.
+            let _ = backend_process.child.kill();
+        } else {
+            kill_process_tree(backend_process.pid);
+        }
         let _ = backend_process.child.try_wait();
     }
 }
@@ -319,7 +326,13 @@ unsafe extern "system" fn handle_session_end_subclass(
                 let _ = PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
             },
             WM_ENDSESSION => unsafe {
-                (*flag).store(wparam.0 != 0, Ordering::Relaxed);
+                let ending = wparam.0 != 0;
+                (*flag).store(ending, Ordering::Relaxed);
+                if ending {
+                    // Reinforce the close request in case the WM_CLOSE posted
+                    // from WM_QUERYENDSESSION was already consumed or lost.
+                    let _ = PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0));
+                }
             },
             WM_NCDESTROY => unsafe {
                 (*flag).store(false, Ordering::Relaxed);
