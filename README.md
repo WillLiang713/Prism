@@ -222,3 +222,7 @@ Prism/
 ├── .env.example           # Environment variable template
 └── README.md
 ```
+
+## License
+
+MIT

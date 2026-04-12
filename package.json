@@ -2,6 +2,7 @@
   "name": "prism-desktop",
   "private": true,
   "version": "0.5.5",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "desktop:dev": "powershell -ExecutionPolicy Bypass -File .\\scripts\\dev-tauri-windows.ps1",

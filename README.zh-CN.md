@@ -223,3 +223,7 @@ Prism/
 ├── .env.example           # 环境变量模板
 └── README.zh-CN.md
 ```
+
+## 开源许可
+
+MIT
