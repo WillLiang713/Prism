@@ -1,5 +1,7 @@
 # Prism
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 [简体中文](./README.zh-CN.md)
 
 Prism is a lightweight AI chat client with a Python backend and a static frontend. It provides unified model access, web search tools, local topic management, and a Windows desktop build powered by Tauri.
@@ -225,4 +227,4 @@ Prism/
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.

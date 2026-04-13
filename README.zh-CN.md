@@ -1,5 +1,7 @@
 # Prism
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 [English](./README.md)
 
 Prism 是一个轻量级 AI 对话客户端，采用 Python 后端和静态前端，提供统一模型接入、联网搜索、话题管理，以及基于 Tauri 的 Windows 桌面版。
@@ -226,4 +228,4 @@ Prism/
 
 ## 开源许可
 
-MIT
+本项目基于 MIT License 开源，详见 [LICENSE](./LICENSE) 文件。
