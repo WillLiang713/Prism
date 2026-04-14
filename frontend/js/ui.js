@@ -1,4 +1,5 @@
 import { state, elements, estimateTokensFromText, STORAGE_KEYS } from './state.js';
+import { t } from './i18n.js';
 import { renderMarkdownToElement } from './markdown.js';
 
 const SCROLLBAR_INTERACTIVE_SELECTOR = [
@@ -19,6 +20,7 @@ let scrollbarAutoHideBound = false;
 let topicListAlignmentBound = false;
 let topicListAlignmentFrame = 0;
 let topicListAlignmentResizeObserver = null;
+const DEFAULT_TOPIC_TITLE = "新话题";
 
 // Late-bound to avoid circular dependencies
 let _sendPrompt = () => {};
@@ -28,6 +30,19 @@ let _isTopicRunning = () => false;
 
 export function setConversationFns(sendFn, stopFn) { _sendPrompt = sendFn; _stopGeneration = stopFn; }
 export function setChatFns(getActiveTopicFn, isTopicRunningFn) { _getActiveTopic = getActiveTopicFn; _isTopicRunning = isTopicRunningFn; }
+
+function getDisplayTopicTitle(title) {
+  const normalized = String(title || "").trim();
+  if (!normalized) return t("未命名话题");
+  if (
+    normalized === DEFAULT_TOPIC_TITLE ||
+    /^新话题\s*\d+$/u.test(normalized) ||
+    /^new topic\s*\d+$/iu.test(normalized)
+  ) {
+    return t("新话题");
+  }
+  return normalized;
+}
 
 export function autoGrowPromptInput() {
   const el = elements.promptInput;
@@ -51,9 +66,9 @@ export function setSendButtonMode(mode) {
   const nextMode = mode === "stop" ? "stop" : "send";
   elements.sendBtn.dataset.mode = nextMode;
   if (nextMode === "stop") {
-    elements.sendBtn.setAttribute("aria-label", "停止生成");
+    elements.sendBtn.setAttribute("aria-label", t("停止"));
   } else {
-    elements.sendBtn.setAttribute("aria-label", "发送");
+    elements.sendBtn.setAttribute("aria-label", t("发送"));
   }
 }
 
@@ -218,11 +233,14 @@ export function initScrollbarAutoHide() {
 
 export function updateHeaderMeta() {
   const topic = _getActiveTopic();
-  const title = (topic?.title || "未命名话题").trim() || "未命名话题";
+  const title = getDisplayTopicTitle(topic?.title);
   const count = Array.isArray(topic?.turns) ? topic.turns.length : 0;
 
   if (elements.headerSessionInfo) {
-    elements.headerSessionInfo.textContent = `话题：${title} · ${count} 条`;
+    elements.headerSessionInfo.textContent = t("话题：{title} · {count} 条", {
+      title,
+      count,
+    });
   }
 }
 
@@ -232,11 +250,11 @@ export function startHeaderClock() {
 
 export function applyStatus(statusEl, status) {
   const map = {
-    ready: { cls: "ready", text: "就绪" },
-    loading: { cls: "loading", text: "生成中..." },
-    complete: { cls: "complete", text: "完成" },
-    error: { cls: "error", text: "错误" },
-    stopped: { cls: "ready", text: "已停止" },
+    ready: { cls: "ready", text: t("就绪") },
+    loading: { cls: "loading", text: t("生成中...") },
+    complete: { cls: "complete", text: t("完成") },
+    error: { cls: "error", text: t("错误") },
+    stopped: { cls: "ready", text: t("已停止") },
   };
   const next = map[status] || map.ready;
   statusEl.className = `status ${next.cls}`;
@@ -314,4 +332,3 @@ export function initTheme() {
       : resolveSystemTheme();
   updateTheme(initialTheme);
 }
-

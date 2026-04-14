@@ -1,4 +1,5 @@
 import { buildApiUrl, elements, isDesktopRuntime } from "./state.js";
+import { getCurrentLanguage } from "./i18n.js";
 import { isMobileLayout } from "./layout.js";
 
 const PREVIEW_CLOSE_DURATION_MS = 260;
@@ -170,7 +171,7 @@ function buildPreviewDocument(markup) {
   }
 
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="${getCurrentLanguage() === "en" ? "en" : "zh-CN"}">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

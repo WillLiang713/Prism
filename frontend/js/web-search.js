@@ -1,4 +1,5 @@
 import { state, elements, STORAGE_KEYS, truncateText, buildApiUrl, isDesktopRuntime, resolveProviderSelection } from './state.js';
+import { t } from './i18n.js';
 import {
   mountBodyDropdown,
   unmountBodyDropdown,
@@ -122,7 +123,7 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
   if (showTitle) {
     const title = document.createElement("span");
     title.className = "web-search-title";
-    title.textContent = "联网搜索";
+    title.textContent = t("联网搜索");
     header.appendChild(title);
   }
 
@@ -139,10 +140,10 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
     const statusText = document.createElement("span");
     statusText.textContent = customStatusText || (
       webSearch.status === "loading"
-        ? "搜索中"
+        ? t("搜索中")
         : webSearch.status === "error"
-        ? "搜索失败"
-        : "联网搜索"
+        ? t("搜索失败")
+        : t("联网搜索")
     );
     status.appendChild(statusText);
     header.appendChild(status);
@@ -159,12 +160,12 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
   if (webSearch.status === "loading") {
     const hint = document.createElement("div");
     hint.className = "web-search-hint";
-    hint.textContent = "搜索中…";
+    hint.textContent = t("搜索中…");
     body.appendChild(hint);
   } else if (webSearch.status === "error") {
     const err = document.createElement("div");
     err.className = "web-search-error";
-    err.textContent = webSearch.error || "联网搜索失败";
+    err.textContent = webSearch.error || t("联网搜索失败");
     body.appendChild(err);
   } else {
     if (webSearch.answer) {
@@ -187,7 +188,7 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
         link.href = r.url || "#";
         link.target = "_blank";
         link.rel = "noopener noreferrer";
-        link.textContent = r.title || r.url || "(无标题)";
+        link.textContent = r.title || r.url || t("(无标题)");
         item.appendChild(link);
 
         if (r.url) {
@@ -212,7 +213,7 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
     } else {
       const empty = document.createElement("div");
       empty.className = "web-search-hint";
-      empty.textContent = "未返回结果。";
+      empty.textContent = t("未返回结果。");
       body.appendChild(empty);
     }
   }
@@ -254,14 +255,14 @@ export function renderWebSearchSection(container, webSearch, options = {}) {
 
 export function formatToolEventDisplay(event) {
   if (!event || typeof event !== "object") {
-    return {
-      title: "未知工具",
+      return {
+      title: t("未知工具"),
       body: "",
     };
   }
 
   const rawName = (event.name || "未知工具").trim();
-  const name = TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName;
+  const name = t(TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName);
   const status = event.status || "info";
   const rawArgs = event.arguments;
   const normalizedArgs = rawArgs && typeof rawArgs === "object"
@@ -284,21 +285,23 @@ export function formatToolEventDisplay(event) {
   if (status === "start") {
     return {
       title: name,
-      body: args ? `参数：${truncateText(args, 180)}` : "等待工具返回结果",
+      body: args
+        ? t("参数：{args}", { args: truncateText(args, 180) })
+        : t("等待工具返回结果"),
     };
   }
 
   if (status === "error") {
     return {
       title: name,
-      body: event.resultSummary || event.error || "未知错误",
+      body: event.resultSummary || event.error || t("未知错误"),
     };
   }
 
   if (status === "success") {
     return {
       title: name,
-      body: event.resultSummary || "调用完成",
+      body: event.resultSummary || t("调用完成"),
     };
   }
 
@@ -460,8 +463,8 @@ function renderToolEventWebSearch(container, webSearchEvent) {
   card.className = "web-search expanded tool-call-search-preview";
 
   const answerParts = [];
-  if (normalized.query) answerParts.push(`查询：${normalized.query}`);
-  if (normalized.answer) answerParts.push(`摘要：${normalized.answer}`);
+  if (normalized.query) answerParts.push(t("查询：{query}", { query: normalized.query }));
+  if (normalized.answer) answerParts.push(t("摘要：{answer}", { answer: normalized.answer }));
 
   renderWebSearchSection(
     card,
@@ -545,7 +548,7 @@ export function renderToolEvents(sectionEl, listEl, events) {
   const headerText = sectionEl.querySelector(".tool-calls-header-text");
   if (headerText) {
     const count = items.length;
-    headerText.textContent = `工具调用 · ${count} 步`;
+    headerText.textContent = t("工具调用 · {count} 步", { count });
   }
   const header = sectionEl.querySelector(".tool-calls-header");
   if (header) {
@@ -638,7 +641,7 @@ export function renderWebSearchEvents(sectionEl, events) {
   const headerText = sectionEl.querySelector(".search-preview-header-text");
   if (headerText) {
     const roundCount = items.length;
-    headerText.textContent = `联网结果 · ${roundCount} 次`;
+    headerText.textContent = t("联网结果 · {count} 次", { count: roundCount });
   }
   const header = sectionEl.querySelector(".search-preview-header");
   if (header) {
@@ -657,8 +660,8 @@ export function renderWebSearchEvents(sectionEl, events) {
     const queryText = (event?.query || "").trim();
     const answerText = (event?.answer || "").trim();
     const answerParts = [];
-    if (queryText) answerParts.push(`查询：${queryText}`);
-    if (answerText) answerParts.push(`摘要：${answerText}`);
+    if (queryText) answerParts.push(t("查询：{query}", { query: queryText }));
+    if (answerText) answerParts.push(t("摘要：{answer}", { answer: answerText }));
 
     renderWebSearchSection(card, {
       status: event?.status || "ready",
@@ -719,7 +722,9 @@ export function renderSourcesStatus(statusEl, sources) {
 
   const label = document.createElement("span");
   label.className = "sources-status-label";
-  label.textContent = `已核对 ${summaryItems.length} 个站点`;
+  label.textContent = t("已核对 {count} 个站点", {
+    count: summaryItems.length,
+  });
   statusEl.appendChild(label);
 
   const divider = document.createElement("span");
@@ -752,7 +757,10 @@ export function renderSourcesStatus(statusEl, sources) {
   statusEl.appendChild(domains);
   statusEl.setAttribute(
     "aria-label",
-    `已核对 ${summaryItems.length} 个站点：${summaryItems.map((item) => item.label).join("、")}`,
+    t("已核对 {count} 个站点：{domains}", {
+      count: summaryItems.length,
+      domains: summaryItems.map((item) => item.label).join("、"),
+    }),
   );
 }
 
@@ -1123,7 +1131,7 @@ export function getAvailableWebSearchToolModes() {
   const items = [
     {
       value: "off",
-      label: WEB_SEARCH_DISABLED_LABEL,
+      label: t(WEB_SEARCH_DISABLED_LABEL),
     },
   ];
   if (supportsBuiltin) {
@@ -1276,14 +1284,14 @@ export function renderWebSearchToolSelector() {
   const enabled = isWebSearchEnabled();
   const options = getAvailableWebSearchToolModes();
   currentEl.hidden = false;
-  const fullLabel = enabled ? getWebSearchToolModeLabel(toolMode) : "关";
-  currentEl.textContent = enabled ? getWebSearchToolButtonLabel(toolMode) : "关";
+  const fullLabel = enabled ? getWebSearchToolModeLabel(toolMode) : t("关");
+  currentEl.textContent = enabled ? getWebSearchToolButtonLabel(toolMode) : t("关");
   currentEl.title = fullLabel;
   dropdownEl.innerHTML = "";
   buttonEl.classList.toggle("is-active", enabled);
   elements.webSearchControl?.classList.toggle("is-active", enabled);
   if (elements.webSearchSwitchText) {
-    elements.webSearchSwitchText.textContent = "搜索";
+    elements.webSearchSwitchText.textContent = t("搜索");
   }
 
   options.forEach((option) => {
@@ -1342,8 +1350,11 @@ export function updateConfigStatusStrip() {
   const modelName = String(elements.model?.value || "").trim();
   const modelReady = hasApiKey && hasApiUrl && !!modelName;
   const modelText = modelReady
-    ? `模型：${providerConfig.label} · ${modelName}`
-    : "模型：待完成（需 Key + 地址 + 模型）";
+    ? t("模型：{provider} · {model}", {
+        provider: providerConfig.label,
+        model: modelName,
+      })
+    : t("模型：待完成（需 Key + 地址 + 模型）");
   setStatusPillState(elements.modelStatusPill, modelReady, modelText);
 
   const maxResults = Math.max(
@@ -1353,16 +1364,22 @@ export function updateConfigStatusStrip() {
   const depth = normalizeTavilySearchDepth(elements.tavilySearchDepth?.value);
   const exaType = normalizeExaSearchType(elements.exaSearchType?.value);
   const webText = !webSearchEnabled
-    ? "联网：关闭"
+    ? t("联网：关闭")
     : toolMode === "builtin"
-      ? "联网：OpenAI Web Search"
+      ? t("联网：OpenAI Web Search")
       : toolMode === "anthropic_search"
-      ? "联网：Anthropic Web Search"
+      ? t("联网：Anthropic Web Search")
       : toolMode === "gemini_search"
-      ? "联网：Google Search"
+      ? t("联网：Google Search")
       : toolMode === "exa"
-      ? `联网：Exa · ${exaType} · ${maxResults} 条`
-      : `联网：Tavily · ${depth} · ${maxResults} 条`;
+      ? t("联网：Exa · {type} · {count} 条", {
+          type: exaType,
+          count: maxResults,
+        })
+      : t("联网：Tavily · {depth} · {count} 条", {
+          depth,
+          count: maxResults,
+        });
   setStatusPillState(elements.webStatusPill, true, webText);
 }
 
@@ -1405,7 +1422,7 @@ export async function tavilySearch(
 ) {
   if (!isDesktopRuntime() && window.location.protocol === "file:") {
     throw new Error(
-      "当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000"
+      t("当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000")
     );
   }
 

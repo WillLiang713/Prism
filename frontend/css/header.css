@@ -508,6 +508,32 @@
   color: var(--text-muted);
 }
 
+.language-toggle-btn {
+  width: auto;
+  min-width: 54px;
+  padding: 0 10px;
+  gap: 2px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.language-toggle-option {
+  opacity: 0.42;
+  transition: opacity 0.18s ease, color 0.18s ease;
+}
+
+.language-toggle-btn[data-language="zh-CN"] .option-zh,
+.language-toggle-btn[data-language="en"] .option-en {
+  opacity: 1;
+  color: var(--text);
+}
+
+.language-toggle-separator {
+  opacity: 0.48;
+}
+
 .is-desktop-runtime .desktop-window-controls {
   display: inline-flex;
   gap: 2px;
@@ -600,4 +626,3 @@ html:not([data-theme]) .theme-toggle-btn .icon-auto,
 html[data-theme="system"] .theme-toggle-btn .icon-auto {
   display: block !important;
 }
-

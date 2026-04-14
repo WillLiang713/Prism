@@ -6,6 +6,7 @@ import {
   createId,
   formatTime,
 } from './state.js';
+import { t } from './i18n.js';
 import { showAlert, showConfirm, syncBodyScrollLock } from './dialog.js';
 import {
   syncAllConfigSelectPickers,
@@ -443,7 +444,7 @@ function writeConfigStore(store) {
 }
 
 function getUniqueServiceName(baseName, excludeId = "") {
-  const normalizedBase = String(baseName || "").trim() || "新服务";
+  const normalizedBase = String(baseName || "").trim() || t("新服务");
   const existingNames = new Set(
     state.services
       .filter((service) => service.id !== excludeId)
@@ -461,7 +462,7 @@ function getUniqueServiceName(baseName, excludeId = "") {
 export function getServiceDisplayName(serviceOrName) {
   const rawName =
     typeof serviceOrName === "string" ? serviceOrName : serviceOrName?.name;
-  return String(rawName || "").trim() || UNNAMED_SERVICE_LABEL;
+  return String(rawName || "").trim() || t(UNNAMED_SERVICE_LABEL);
 }
 
 function getNormalizedManagedServiceName(existingService = null) {
@@ -662,7 +663,7 @@ function hasEffectiveApiKeyValue() {
 
 function syncApiKeyPlaceholder() {
   if (!elements.apiKey) return;
-  elements.apiKey.placeholder = "输入API密钥";
+  elements.apiKey.placeholder = t("输入API密钥");
 }
 
 export function normalizeApiUrlInputValue() {
@@ -1018,10 +1019,10 @@ function persistState(overrides = {}) {
 
 function getConnectivityLabel(status) {
   const normalized = String(status || "idle").toLowerCase();
-  if (normalized === "testing") return "连接中";
-  if (normalized === "success") return "连接成功";
-  if (normalized === "error") return "连接失败";
-  return "未测试";
+  if (normalized === "testing") return t("连接中");
+  if (normalized === "success") return t("连接成功");
+  if (normalized === "error") return t("连接失败");
+  return t("未测试");
 }
 
 function renderServiceSummary(service) {
@@ -1035,14 +1036,14 @@ function renderServiceSummary(service) {
     service.model?.endpointMode
   );
   const apiKeyHint = (service.model?.apiKey || "").trim()
-    ? "已配置密钥"
-    : "未配置密钥";
+    ? t("已配置密钥")
+    : t("未配置密钥");
   const rows = [
-    ["接口类型", providerConfig.label],
-    ["默认模型", service.model?.model || "未填写"],
-    ["API 地址", service.model?.apiUrl || "未填写"],
-    ["密钥状态", apiKeyHint],
-    ["更新时间", formatTime(service.updatedAt)],
+    [t("接口类型"), providerConfig.label],
+    [t("默认模型"), service.model?.model || t("未填写")],
+    [t("API 地址"), service.model?.apiUrl || t("未填写")],
+    [t("密钥状态"), apiKeyHint],
+    [t("更新时间"), formatTime(service.updatedAt)],
   ];
   elements.serviceSummary.innerHTML = rows
     .map(
@@ -1063,7 +1064,7 @@ function renderServiceConnectivityState(connectivity, hasService = true) {
   const normalizedStatus = String(nextConnectivity.status || "idle").toLowerCase();
   const buttonLabel =
     normalizedStatus === "idle"
-      ? "测试连接"
+      ? t("测试连接")
       : getConnectivityLabel(nextConnectivity.status);
 
   if (elements.testServiceConnectionBtn) {
@@ -1108,7 +1109,7 @@ function renderServiceList() {
   if (!state.services.length) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
-    empty.textContent = "暂无服务，点击上方“新建”开始配置。";
+    empty.textContent = t("暂无服务，点击上方“新建”开始配置。");
     elements.serviceList.appendChild(empty);
     return;
   }
@@ -1152,7 +1153,7 @@ function renderServiceList() {
       resolveProviderSelection(
         service.model?.providerSelection || service.model?.provider,
         service.model?.endpointMode
-      ).label || "未配置";
+      ).label || t("未配置");
 
     const subMeta = document.createElement("div");
     subMeta.className = "service-list-submeta";
@@ -1236,11 +1237,11 @@ async function handleManagedServiceSelectionChange(nextServiceId) {
     return setManagedServiceLocally(nextId);
   }
 
-  const shouldSave = await showConfirm("当前编辑服务有未保存修改，是否先保存？", {
-    title: "未保存修改",
-    okText: "保存并切换",
-    cancelText: "继续切换",
-    hint: "继续切换会进入下一步确认。",
+  const shouldSave = await showConfirm(t("当前编辑服务有未保存修改，是否先保存？"), {
+    title: t("未保存修改"),
+    okText: t("保存并切换"),
+    cancelText: t("继续切换"),
+    hint: t("继续切换会进入下一步确认。"),
   });
   if (shouldSave) {
     const saved = await persistCurrentServiceForm({
@@ -1253,10 +1254,10 @@ async function handleManagedServiceSelectionChange(nextServiceId) {
     return setManagedServiceLocally(nextId);
   }
 
-  const shouldDiscard = await showConfirm("切换后将丢失当前编辑中的未保存修改，是否继续？", {
-    title: "放弃修改",
-    okText: "继续切换",
-    cancelText: "取消",
+  const shouldDiscard = await showConfirm(t("切换后将丢失当前编辑中的未保存修改，是否继续？"), {
+    title: t("放弃修改"),
+    okText: t("继续切换"),
+    cancelText: t("取消"),
     danger: true,
   });
   if (!shouldDiscard) {
@@ -1312,8 +1313,8 @@ async function persistCurrentServiceForm(options = {}) {
     closeToTray: getCloseToTrayOnCloseValue(),
   });
   if (showFeedback) {
-    await showAlert("配置已保存", {
-      title: "保存成功",
+    await showAlert(t("配置已保存"), {
+      title: t("保存成功"),
     });
   }
   if (closeAfterSave) {
@@ -1484,16 +1485,16 @@ export function updateProviderUi() {
     );
     if (selection === "openai_responses") {
       endpointHintEl.textContent =
-        "使用 OpenAI /v1/responses。API 地址建议只填根地址，版本和接口路径会自动补全。";
+        t("使用 OpenAI /v1/responses。API 地址建议只填根地址，版本和接口路径会自动补全。");
     } else if (selection === "gemini") {
       endpointHintEl.textContent =
-        "使用 Gemini 原生接口。API 地址建议只填根地址，v1beta 等版本路径会自动处理。";
+        t("使用 Gemini 原生接口。API 地址建议只填根地址，v1beta 等版本路径会自动处理。");
     } else if (selection === "anthropic") {
       endpointHintEl.textContent =
-        "使用 Anthropic /v1/messages。API 地址建议只填根地址，接口路径会自动补全。";
+        t("使用 Anthropic /v1/messages。API 地址建议只填根地址，接口路径会自动补全。");
     } else {
       endpointHintEl.textContent =
-        "使用 OpenAI /v1/chat/completions。API 地址建议只填根地址，版本和接口路径会自动补全。";
+        t("使用 OpenAI /v1/chat/completions。API 地址建议只填根地址，版本和接口路径会自动补全。");
     }
   }
 
@@ -1508,15 +1509,14 @@ export function updateApiUrlPlaceholder() {
   if (!urlInput) return;
   const providerConfig = getEffectiveProviderConfig();
   if (providerConfig.provider === "gemini") {
-    urlInput.placeholder =
-      "填写根地址，如 https://generativelanguage.googleapis.com";
+    urlInput.placeholder = t("填写根地址，如 https://generativelanguage.googleapis.com");
     return;
   }
   if (providerConfig.provider === "anthropic") {
-    urlInput.placeholder = "填写根地址，如 https://api.anthropic.com";
+    urlInput.placeholder = t("填写根地址，如 https://api.anthropic.com");
     return;
   }
-  urlInput.placeholder = "填写根地址，如 https://api.openai.com";
+  urlInput.placeholder = t("填写根地址，如 https://api.openai.com");
 }
 
 export function resolveModelDisplayName(modelId) {
@@ -1527,7 +1527,7 @@ export function updateModelNames() {
   const runtimeConfig = getRuntimeModelConfig();
   const modelId = String(runtimeConfig.model || "").trim();
   const displayName = resolveModelDisplayName(modelId);
-  elements.modelName.textContent = displayName || "选择模型";
+  elements.modelName.textContent = displayName || t("选择模型");
   elements.modelName.classList.toggle("is-placeholder", !displayName);
 
   if (elements.serviceNameLabel) {
@@ -1757,11 +1757,11 @@ export function loadConfig() {
 }
 
 export async function clearConfig() {
-  const confirmed = await showConfirm("确定要清除所有配置吗？", {
-    title: "清除配置",
-    okText: "清除",
+  const confirmed = await showConfirm(t("确定要清除所有配置吗？"), {
+    title: t("清除配置"),
+    okText: t("清空"),
     danger: true,
-    hint: "此操作会重置当前页面所有本地配置",
+    hint: t("此操作会重置当前页面所有本地配置"),
   });
   if (!confirmed) return;
 
@@ -1809,8 +1809,8 @@ export async function clearConfig() {
   await syncDesktopPreferences({
     closeToTray: DEFAULT_CLOSE_TO_TRAY_ON_CLOSE,
   });
-  await showAlert("配置已清除", {
-    title: "操作完成",
+  await showAlert(t("配置已清除"), {
+    title: t("操作完成"),
   });
   closeConfigModal();
 }
@@ -1832,7 +1832,9 @@ export async function duplicateService() {
   const duplicated = normalizeService({
     ...cloneValue(service),
     id: createId(),
-    name: getUniqueServiceName(`${getServiceDisplayName(service)} 副本`),
+    name: getUniqueServiceName(
+      t("{name} 副本", { name: getServiceDisplayName(service) })
+    ),
     connectivity: createConnectivityState(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -1850,20 +1852,22 @@ export async function duplicateService() {
 export async function deleteService() {
   const service = getManagedService();
   if (!service) return;
-  const confirmed = await showConfirm(`确定要删除服务「${getServiceDisplayName(service)}」吗？`, {
-    title: "删除服务",
-    okText: "确认",
+  const confirmed = await showConfirm(t("确定要删除服务「{name}」吗？", {
+    name: getServiceDisplayName(service),
+  }), {
+    title: t("删除服务"),
+    okText: t("确认"),
     danger: true,
   });
   if (!confirmed) return;
 
   if (service.id === state.serviceManagerSelectedId && hasUnsavedManagedServiceChanges()) {
     const shouldDiscard = await showConfirm(
-      "该服务有未保存修改，删除后这些修改将丢失，是否继续？",
+      t("该服务有未保存修改，删除后这些修改将丢失，是否继续？"),
       {
-        title: "放弃未保存修改",
-        okText: "确认",
-        cancelText: "取消",
+        title: t("放弃未保存修改"),
+        okText: t("确认"),
+        cancelText: t("取消"),
         danger: true,
       }
     );
@@ -1915,7 +1919,7 @@ export async function testSelectedServiceConnection() {
   if (!service) {
     clearTransientConnectivityHideTimer();
     renderServiceConnectivityState(
-      createConnectivityState("idle", "请先选择或新建一个服务，再测试连接。", 0),
+      createConnectivityState("idle", t("请先选择或新建一个服务，再测试连接。"), 0),
       true
     );
     return;
@@ -1928,7 +1932,7 @@ export async function testSelectedServiceConnection() {
   if (hasDraftChanges) {
     const transientTestingState = createConnectivityState(
       "testing",
-      "正在尝试拉取模型列表…",
+      t("正在尝试拉取模型列表…"),
       0
     );
     clearTransientConnectivityHideTimer();
@@ -1936,7 +1940,7 @@ export async function testSelectedServiceConnection() {
   } else {
     updateServiceConnectivity(service.id, {
       status: "testing",
-      message: "正在尝试拉取模型列表…",
+      message: t("正在尝试拉取模型列表…"),
     });
   }
 
@@ -1946,8 +1950,8 @@ export async function testSelectedServiceConnection() {
     );
     const successMessage =
       connectivityMode === "messages_probe"
-        ? message || "模型列表接口不可用，但已通过 Messages 接口验证连接。"
-        : `成功拉取 ${ids.length} 个模型。`;
+        ? message || t("模型列表接口不可用，但已通过 Messages 接口验证连接。")
+        : t("成功拉取 {count} 个模型。", { count: ids.length });
     if (hasDraftChanges) {
       const transientSuccessState = createConnectivityState(
         "success",
@@ -1967,7 +1971,7 @@ export async function testSelectedServiceConnection() {
     if (hasDraftChanges) {
       const transientErrorState = createConnectivityState(
         "error",
-        error?.message || "测试失败",
+        error?.message || t("测试失败"),
         Date.now()
       );
       renderServiceConnectivityState(transientErrorState, true);
@@ -1975,7 +1979,7 @@ export async function testSelectedServiceConnection() {
     } else {
       updateServiceConnectivity(service.id, {
         status: "error",
-        message: error?.message || "测试失败",
+        message: error?.message || t("测试失败"),
         testedAt: Date.now(),
       });
     }

@@ -1,4 +1,5 @@
 import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl } from './state.js';
+import { t } from './i18n.js';
 import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPickers } from './dropdown.js';
 
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
@@ -8,7 +9,7 @@ let _getRuntimeModelConfig = () => ({});
 let _autoSaveManagedServiceDraft = async () => false;
 let _applyHeaderModelSelection = async () => false;
 let _getServiceDisplayName = (service) =>
-  String(service?.name || "").trim() || "未命名服务";
+  String(service?.name || "").trim() || t("未命名服务");
 
 const PRESS_START_EVENT =
   typeof window !== "undefined" && "PointerEvent" in window
@@ -51,7 +52,7 @@ function getTitleFollowDisplayText() {
   const serviceName = sourceService ? _getServiceDisplayName(sourceService) : "";
 
   if (!mainModel) {
-    return "当前主模型未设置";
+    return t("当前主模型未设置");
   }
 
   return serviceName
@@ -68,7 +69,7 @@ export function syncTitleModelFollowPresentation() {
   const isFollowingMainModel = !explicitTitleModel;
   const displayText = isFollowingMainModel
     ? getTitleFollowDisplayText()
-    : DEFAULT_TITLE_MODEL_PLACEHOLDER;
+    : t(DEFAULT_TITLE_MODEL_PLACEHOLDER);
 
   if (isFollowingMainModel) {
     inputEl.dataset.followMode = "main";
@@ -97,7 +98,7 @@ export function updateModelHint(side) {
   if (!hasApiKey) {
     setModelHint(
       resolvedSide,
-      "先填写 API Key、API 地址，再拉取模型列表"
+      t("先填写 API Key、API 地址，再拉取模型列表")
     );
     return;
   }
@@ -105,7 +106,7 @@ export function updateModelHint(side) {
   if (!apiUrl) {
     setModelHint(
       resolvedSide,
-      "先填写 API 地址，再拉取模型列表"
+      t("先填写 API 地址，再拉取模型列表")
     );
     return;
   }
@@ -121,8 +122,12 @@ export function updateModelHint(side) {
     setModelHint(
       resolvedSide,
       resolvedSide === "Title"
-        ? `已获取 ${slot.models.length} 个模型ID，可下拉选或手动输入`
-        : `已获取 ${slot.models.length} 个模型ID，可下拉选或手动输入`
+        ? t("已获取 {count} 个模型ID，可下拉选或手动输入", {
+            count: slot.models.length,
+          })
+        : t("已获取 {count} 个模型ID，可下拉选或手动输入", {
+            count: slot.models.length,
+          })
     );
     return;
   }
@@ -130,8 +135,8 @@ export function updateModelHint(side) {
   setModelHint(
     resolvedSide,
     resolvedSide === "Title"
-      ? "可独立指定；也可选择“跟随主模型”"
-      : "填模型ID；可下拉选或手动输入"
+      ? t("可独立指定；也可选择“跟随主模型”")
+      : t("填模型ID；可下拉选或手动输入")
   );
 }
 
@@ -316,7 +321,7 @@ async function fetchHeaderModelsForService(service, options = {}) {
     if (slot.requestToken !== requestToken) {
       return slot.models;
     }
-    slot.error = error?.message || "获取模型列表失败";
+    slot.error = error?.message || t("获取模型列表失败");
     slot.lastKey = fetchKey;
     slot.lastFetchedAt = Date.now();
   } finally {
@@ -455,10 +460,10 @@ export function closeHeaderModelDropdown() {
 }
 
 function createHeaderGroupStatusText(slot) {
-  if (slot?.inFlight) return "加载中";
-  if (slot?.error && !slot?.models?.length) return "获取失败";
-  if (!slot?.models?.length) return "暂无模型";
-  return `${slot.models.length} 个模型`;
+  if (slot?.inFlight) return t("加载中");
+  if (slot?.error && !slot?.models?.length) return t("获取模型列表失败");
+  if (!slot?.models?.length) return t("暂无模型");
+  return t("{count} 个模型", { count: slot.models.length });
 }
 
 export function renderHeaderModelDropdown() {
@@ -470,7 +475,7 @@ export function renderHeaderModelDropdown() {
   if (!services.length) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
-    empty.textContent = "暂无可用服务，请先在设置中添加服务";
+    empty.textContent = t("暂无可用服务，请先在设置中添加服务");
     dropdownEl.appendChild(empty);
     return;
   }
@@ -486,12 +491,12 @@ export function renderHeaderModelDropdown() {
 
   const title = document.createElement("span");
   title.className = "header-model-summary-title";
-  title.textContent = `已发现 ${totalModelCount} 个模型`;
+  title.textContent = t("已发现 {count} 个模型", { count: totalModelCount });
   heading.appendChild(title);
 
   const meta = document.createElement("span");
   meta.className = "header-model-summary-meta";
-  meta.textContent = `${services.length} 个连接`;
+  meta.textContent = t("{count} 个连接", { count: services.length });
   heading.appendChild(meta);
 
   dropdownEl.appendChild(heading);
@@ -500,7 +505,7 @@ export function renderHeaderModelDropdown() {
   if (!hasAnyOptions && !hasAnyServiceModelFetchInFlight()) {
     const empty = document.createElement("div");
     empty.className = "header-model-empty";
-    empty.textContent = "暂无可选模型，请先配置至少一个可拉取模型的连接";
+    empty.textContent = t("暂无可选模型，请先配置至少一个可拉取模型的连接");
     dropdownEl.appendChild(empty);
     return;
   }
@@ -522,14 +527,14 @@ export function renderHeaderModelDropdown() {
     groupMeta.className = "header-model-summary-meta";
     groupMeta.textContent = canFetchServiceModels(service)
       ? createHeaderGroupStatusText(slot)
-      : "未配置";
+      : t("未配置");
     groupHead.appendChild(groupMeta);
     group.appendChild(groupHead);
 
     if (!canFetchServiceModels(service)) {
       const empty = document.createElement("div");
       empty.className = "header-model-empty";
-      empty.textContent = "未配置 API Key 或 API 地址";
+      empty.textContent = t("未配置 API Key 或 API 地址");
       group.appendChild(empty);
       dropdownEl.appendChild(group);
       continue;
@@ -539,8 +544,8 @@ export function renderHeaderModelDropdown() {
       const empty = document.createElement("div");
       empty.className = "header-model-empty";
       empty.textContent = slot.inFlight
-        ? "正在获取模型列表…"
-        : slot.error || "当前连接还没有可选模型";
+        ? t("正在获取模型列表…")
+        : slot.error || t("当前连接还没有可选模型");
       group.appendChild(empty);
       dropdownEl.appendChild(group);
       continue;
@@ -624,12 +629,12 @@ export function renderModelDropdown(side, filterText = null) {
   if (
     side === "Title" &&
     (!String(filterText || "").trim() ||
-      "跟随主模型".toLowerCase().includes(String(filterText || "").trim().toLowerCase()))
+      t("跟随主模型").toLowerCase().includes(String(filterText || "").trim().toLowerCase()))
   ) {
     const followBtn = document.createElement("button");
     followBtn.type = "button";
     followBtn.className = "model-dropdown-item";
-    followBtn.textContent = "跟随主模型";
+    followBtn.textContent = t("跟随主模型");
     followBtn.dataset.value = "";
     if (!currentValue) {
       followBtn.classList.add("is-active");
@@ -652,10 +657,10 @@ export function renderModelDropdown(side, filterText = null) {
     const empty = document.createElement("div");
     empty.className = "model-dropdown-empty";
     empty.textContent = allOptions.length
-      ? "无匹配模型，可继续输入"
+      ? t("无匹配模型，可继续输入")
       : hasAnyServiceModelFetchInFlight()
-      ? "正在获取模型列表…"
-      : "暂无模型列表，请先配置至少一个连接";
+      ? t("正在获取模型列表…")
+      : t("暂无模型列表，请先配置至少一个连接");
     dropdownEl.appendChild(empty);
     return;
   }
@@ -695,7 +700,10 @@ export function renderModelDropdown(side, filterText = null) {
     more.type = "button";
     more.className = "model-dropdown-item";
     more.style.fontFamily = "inherit";
-    more.textContent = `加载更多（已显示 ${shown.length}/${options.length}）`;
+    more.textContent = t("加载更多（已显示 {shown}/{total}）", {
+      shown: shown.length,
+      total: options.length,
+    });
     more.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
     more.addEventListener("click", () => {
       increaseModelDropdownLimit(side, 240);
@@ -873,12 +881,15 @@ export async function fetchModelsOnce(config) {
         ? json.error
         : resp.statusText;
     throw new Error(
-      `获取模型列表失败（${resp.status || 0}）：${detail || "未知错误"}`
+      t("获取模型列表失败（{status}）：{detail}", {
+        status: resp.status || 0,
+        detail: detail || t("未知错误"),
+      })
     );
   }
 
   const ids = Array.isArray(json?.models) ? json.models : [];
-  if (!ids.length) throw new Error("获取到的模型列表为空");
+  if (!ids.length) throw new Error(t("获取到的模型列表为空"));
   return {
     ids,
     connectivityMode:
@@ -962,12 +973,14 @@ export async function fetchAndUpdateModels(side) {
       if (connectivityMode === "messages_probe") {
         setModelHint(
           side,
-          message || "模型列表接口不可用，已验证消息接口；可手动输入模型ID"
+          message || t("模型列表接口不可用，已验证消息接口；可手动输入模型ID")
         );
       } else {
         setModelHint(
           side,
-          `已获取 ${ids.length} 个模型ID，可下拉选或手动输入`
+          t("已获取 {count} 个模型ID，可下拉选或手动输入", {
+            count: ids.length,
+          })
         );
       }
     }
@@ -994,7 +1007,7 @@ export async function fetchAndUpdateModels(side) {
     if (targetServiceId) {
       const headerSlot = getHeaderModelFetchSlot(targetServiceId);
       headerSlot.models = [];
-      headerSlot.error = e?.message || "获取模型列表失败";
+      headerSlot.error = e?.message || t("获取模型列表失败");
       headerSlot.lastKey = fetchKey;
       headerSlot.lastFetchedAt = Date.now();
     }
@@ -1002,7 +1015,7 @@ export async function fetchAndUpdateModels(side) {
       renderHeaderModelDropdown();
     }
     if (side !== "Title") {
-      setModelHint(side, "自动获取失败，请手动输入模型ID");
+      setModelHint(side, t("自动获取失败，请手动输入模型ID"));
     }
   } finally {
     if (slot.datalistFillToken === requestToken) {

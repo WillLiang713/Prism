@@ -2,10 +2,11 @@ import {
   EventStreamContentType,
   fetchEventSource,
 } from "../libs/fetch-event-source/index.js";
+import { t } from "./i18n.js";
 
 class HttpStreamError extends Error {
   constructor(status, statusText, detail = "") {
-    const summary = detail || statusText || "请求失败";
+    const summary = detail || statusText || t("请求失败");
     super(`HTTP ${status}: ${summary}`);
     this.name = "HttpStreamError";
     this.status = Number(status) || 0;
@@ -71,7 +72,10 @@ export async function streamJsonSse(url, options = {}) {
       const contentType = String(response.headers.get("content-type") || "");
       if (!contentType.startsWith(EventStreamContentType)) {
         throw new Error(
-          `期望响应类型为 ${EventStreamContentType}，实际收到 ${contentType || "unknown"}`
+          t("期望响应类型为 {expected}，实际收到 {actual}", {
+            expected: EventStreamContentType,
+            actual: contentType || "unknown",
+          })
         );
       }
     },
@@ -83,7 +87,11 @@ export async function streamJsonSse(url, options = {}) {
       try {
         chunk = JSON.parse(data);
       } catch (error) {
-        throw new Error(`解析流式响应失败: ${error?.message || data}`);
+        throw new Error(
+          t("解析流式响应失败: {message}", {
+            message: error?.message || data,
+          })
+        );
       }
 
       if (typeof onChunk === "function") {

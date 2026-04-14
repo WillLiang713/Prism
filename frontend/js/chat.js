@@ -1,4 +1,5 @@
 import { state, elements, STORAGE_KEYS, createId } from './state.js';
+import { t } from './i18n.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
 import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderToolEvents, mergeToolEventsWithWebSearch, renderSourcesStatus } from './web-search.js';
@@ -33,6 +34,7 @@ export function setSubmitTurnEdit(fn) { _submitTurnEdit = fn; }
 let _regenerateTopicTitle = async () => false;
 export function setRegenerateTopicTitle(fn) { _regenerateTopicTitle = fn; }
 let openTopicActionMenuId = null;
+const DEFAULT_TOPIC_TITLE = "新话题";
 let floatingTopicActionMenuEl = null;
 let floatingTopicActionTriggerEl = null;
 const TOPIC_TITLE_TOOLTIP_MEDIA_QUERY = "(hover: hover) and (pointer: fine)";
@@ -45,10 +47,25 @@ let topicTitleTooltipTimer = 0;
 
 function renderAssistantModelName(el, displayModel) {
   if (!(el instanceof HTMLElement)) return;
-  const normalizedModel = String(displayModel || "").trim() || "未配置";
+  const normalizedModel = String(displayModel || "").trim() || t("未配置");
 
   el.innerHTML = "";
   el.textContent = normalizedModel;
+}
+
+export function isDefaultTopicTitle(title) {
+  const normalized = String(title || "").trim();
+  return (
+    normalized === DEFAULT_TOPIC_TITLE ||
+    /^新话题\s*\d+$/u.test(normalized) ||
+    /^new topic\s*\d+$/iu.test(normalized)
+  );
+}
+
+function getDisplayTopicTitle(title) {
+  const normalized = String(title || "").trim();
+  if (!normalized) return t("未命名话题");
+  return isDefaultTopicTitle(normalized) ? t("新话题") : normalized;
 }
 
 function canShowTopicTitleTooltip() {
@@ -222,11 +239,11 @@ function createEmptyChatState() {
 
   const title = document.createElement("div");
   title.className = "empty-chat-title";
-  title.textContent = "开始新话题";
+  title.textContent = t("开始新话题");
 
   const description = document.createElement("div");
   description.className = "empty-chat-description";
-  description.textContent = "输入问题、任务，或粘贴一段内容，我会直接处理。";
+  description.textContent = t("输入问题、任务，或粘贴一段内容，我会直接处理。");
 
   empty.appendChild(title);
   empty.appendChild(description);
@@ -348,19 +365,21 @@ function createUserImagesContainer(
     imgWrapper.className = `${itemClass} user-image-trigger`;
     imgWrapper.setAttribute(
       "aria-label",
-      `查看图片${image.name ? `：${image.name}` : ""}`
+      image.name
+        ? t("查看图片：{name}", { name: image.name })
+        : t("查看图片")
     );
     imgWrapper.addEventListener("click", () => {
       openImagePreview({
         src: image.dataUrl,
-        alt: image.name || "用户上传的图片",
+        alt: image.name || t("用户上传的图片"),
         trigger: imgWrapper,
       });
     });
 
     const img = document.createElement("img");
     img.src = image.dataUrl;
-    img.alt = image.name || "用户上传的图片";
+    img.alt = image.name || t("用户上传的图片");
     img.loading = "lazy";
     if (imageClass) img.className = imageClass;
 
@@ -408,18 +427,18 @@ export function renderAssistantImages(container, images) {
     const imageButton = document.createElement("button");
     imageButton.type = "button";
     imageButton.className = "assistant-image-item user-image-trigger";
-    imageButton.setAttribute("aria-label", `查看生成图片 ${count}`);
+    imageButton.setAttribute("aria-label", t("查看生成图片 {count}", { count }));
     imageButton.addEventListener("click", () => {
       openImagePreview({
         src: imageUrl,
-        alt: `生成图片 ${count}`,
+        alt: t("生成图片 {count}", { count }),
         trigger: imageButton,
       });
     });
 
     const img = document.createElement("img");
     img.src = imageUrl;
-    img.alt = `生成图片 ${count}`;
+    img.alt = t("生成图片 {count}", { count });
     img.loading = "lazy";
     imageButton.appendChild(img);
     container.appendChild(imageButton);
@@ -523,9 +542,9 @@ export function initChat() {
         for (const topic of state.chat.topics) {
           if (
             typeof topic?.title === "string" &&
-            /^新话题\s*\d+$/.test(topic.title.trim())
+            isDefaultTopicTitle(topic.title)
           ) {
-            topic.title = "新话题";
+            topic.title = DEFAULT_TOPIC_TITLE;
           }
           // 兼容旧数据：将 models.A 迁移为 models.main
           if (Array.isArray(topic.turns)) {
@@ -588,7 +607,7 @@ export function createTopic(forceCreate = false) {
   if (!forceCreate) {
     const emptyNewTopic = state.chat.topics.find(
       (t) =>
-        t.title === "新话题" &&
+        t.title === DEFAULT_TOPIC_TITLE &&
         t.turns.length === 0
     );
 
@@ -600,7 +619,7 @@ export function createTopic(forceCreate = false) {
   const now = Date.now();
   const topic = {
     id: createId(),
-    title: "新话题",
+    title: DEFAULT_TOPIC_TITLE,
     createdAt: now,
     updatedAt: now,
     turns: [],
@@ -661,20 +680,22 @@ export async function requestDeleteTopic(topicId = state.chat.activeTopicId) {
 
   if (isTopicRunning(topic.id)) {
     const stopThenDelete = await showConfirm(
-      "该话题正在生成中，删除前会先停止生成，是否继续？",
+      t("该话题正在生成中，删除前会先停止生成，是否继续？"),
       {
-        title: "删除话题",
-        okText: "继续",
+        title: t("删除话题"),
+        okText: t("继续"),
       }
     );
     if (!stopThenDelete) return false;
   }
 
   const confirmed = await showConfirm(
-    `确定要删除话题「${topic.title || "未命名话题"}」吗？`,
+    t("确定要删除话题「{title}」吗？", {
+      title: getDisplayTopicTitle(topic.title),
+    }),
     {
-      title: "删除话题",
-      okText: "确认",
+      title: t("删除话题"),
+      okText: t("确认"),
       danger: true,
       hint: "",
     }
@@ -697,10 +718,10 @@ export async function requestDeleteTurn(turn, topicId = state.chat.activeTopicId
 
   if (isTopicRunning(topic.id)) {
     const stopThenDelete = await showConfirm(
-      "当前消息正在生成中，删除前会先停止生成，是否继续？",
+      t("当前消息正在生成中，删除前会先停止生成，是否继续？"),
       {
-        title: "删除消息",
-        okText: "继续",
+        title: t("删除消息"),
+        okText: t("继续"),
       }
     );
     if (!stopThenDelete) return false;
@@ -708,11 +729,13 @@ export async function requestDeleteTurn(turn, topicId = state.chat.activeTopicId
 
   const promptPreview = String(targetTurn.prompt || "").trim();
   const messageLabel = promptPreview
-    ? `这条消息“${promptPreview.slice(0, 30)}${promptPreview.length > 30 ? "..." : ""}”`
-    : "这条消息";
-  const confirmed = await showConfirm(`确定要删除${messageLabel}吗？`, {
-    title: "删除消息",
-    okText: "确认",
+    ? t("这条消息“{preview}”", {
+        preview: `${promptPreview.slice(0, 30)}${promptPreview.length > 30 ? "..." : ""}`,
+      })
+    : t("这条消息");
+  const confirmed = await showConfirm(t("确定要删除{messageLabel}吗？", { messageLabel }), {
+    title: t("删除消息"),
+    okText: t("确认"),
     danger: true,
     hint: "",
   });
@@ -894,7 +917,7 @@ export function renderTopicList() {
   const onlyTopic = topics[0] || null;
   const hideDeleteForOnlyNewTopic =
     topics.length === 1 &&
-    (onlyTopic?.title || "").trim().startsWith("新话题") &&
+    isDefaultTopicTitle(onlyTopic?.title || "") &&
     (!Array.isArray(onlyTopic?.turns) || onlyTopic.turns.length === 0);
 
   for (const topic of topics) {
@@ -904,7 +927,7 @@ export function renderTopicList() {
     const isActionMenuOpen = openTopicActionMenuId === topic.id;
     const canRegenerateTitle =
       Array.isArray(topic.turns) && topic.turns.some((turn) => !!String(turn?.prompt || "").trim());
-    const topicTitle = (topic.title || "未命名话题").trim() || "未命名话题";
+    const topicTitle = getDisplayTopicTitle(topic.title);
     item.className = `topic-item${
       topic.id === state.chat.activeTopicId ? " active" : ""
     }${isGeneratingTitle ? " generating-title" : ""}${
@@ -914,7 +937,7 @@ export function renderTopicList() {
     item.dataset.topicId = topic.id;
     item.tabIndex = 0;
     item.setAttribute("role", "button");
-    item.setAttribute("aria-label", `切换到话题：${topicTitle}`);
+    item.setAttribute("aria-label", t("切换到话题：{title}", { title: topicTitle }));
 
     const title = document.createElement("div");
     title.className = "topic-title";
@@ -952,7 +975,10 @@ export function renderTopicList() {
       const moreBtn = document.createElement("button");
       moreBtn.type = "button";
       moreBtn.className = "topic-action-trigger";
-      moreBtn.setAttribute("aria-label", `更多操作：${topic.title || "未命名话题"}`);
+      moreBtn.setAttribute(
+        "aria-label",
+        t("更多操作：{title}", { title: getDisplayTopicTitle(topic.title) })
+      );
       moreBtn.setAttribute("aria-haspopup", "menu");
       moreBtn.setAttribute("aria-expanded", isActionMenuOpen ? "true" : "false");
       moreBtn.innerHTML = `
@@ -961,7 +987,7 @@ export function renderTopicList() {
           <circle cx="12" cy="12" r="1.7"></circle>
           <circle cx="18" cy="12" r="1.7"></circle>
         </svg>
-        <span class="sr-only">更多操作</span>
+        <span class="sr-only">${t("更多操作")}</span>
       `;
       let suppressClickUntil = 0;
       const toggleTopicActionMenu = (e) => {
@@ -999,7 +1025,7 @@ export function renderTopicList() {
           <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
           <path d="M21 3v6h-6"></path>
         </svg>
-        <span>${isGeneratingTitle ? "正在生成标题..." : "重新生成标题"}</span>
+        <span>${isGeneratingTitle ? t("正在生成标题...") : t("重新生成标题")}</span>
       `;
       regenerateBtn.addEventListener("click", async (e) => {
         e.preventDefault();
@@ -1021,7 +1047,7 @@ export function renderTopicList() {
           <path d="M6 7l1 11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-11"></path>
           <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
         </svg>
-        <span>删除话题</span>
+        <span>${t("删除话题")}</span>
       `;
       deleteBtn.addEventListener("click", async (e) => {
         e.preventDefault();
@@ -1133,8 +1159,8 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
     const userEditBtn = createIconActionButton({
       className: "message-copy-btn copy-icon-btn user-edit-trigger",
-      title: "编辑并重新发送",
-      ariaLabel: "编辑并重新发送",
+      title: t("编辑并重新发送"),
+      ariaLabel: t("编辑并重新发送"),
       path: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>',
     });
     userEditBtn.dataset.topicId = topicId || "";
@@ -1147,8 +1173,8 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
     const userRegenerateBtn = createIconActionButton({
       className: "message-copy-btn copy-icon-btn regenerate-btn user-regenerate-btn",
-      title: "重新生成",
-      ariaLabel: "重新生成",
+      title: t("重新生成"),
+      ariaLabel: t("重新生成"),
       path: '<polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>',
     });
     userRegenerateBtn.dataset.topicId = topicId || "";
@@ -1161,8 +1187,8 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
     const userDeleteBtn = createIconActionButton({
       className: "message-copy-btn copy-icon-btn delete-btn user-delete-btn",
-      title: "删除消息",
-      ariaLabel: "删除消息",
+      title: t("删除消息"),
+      ariaLabel: t("删除消息"),
       path: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>',
     });
     userDeleteBtn.dataset.topicId = topicId || "";
@@ -1173,7 +1199,7 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
 
     if (hasUserText) {
       const userCopyBtn = createCopyButton(() => turn.prompt || "", {
-        label: "复制",
+        label: t("复制"),
         icon: true,
       });
       userCopyBtn.classList.add("user-copy-btn");
@@ -1199,7 +1225,7 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       editTextarea.className = "user-edit-input";
       editTextarea.dataset.turnId = turn.id;
       editTextarea.rows = 1;
-      editTextarea.placeholder = "在这里修改这条消息";
+      editTextarea.placeholder = t("在这里修改这条消息");
       editTextarea.value = getTurnEditDraft(turn);
       editTextarea.addEventListener("input", () => {
         state.chat.editDraftByTurnId.set(turn.id, editTextarea.value);
@@ -1225,7 +1251,7 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       const cancelBtn = document.createElement("button");
       cancelBtn.type = "button";
       cancelBtn.className = "user-edit-btn secondary user-edit-cancel";
-      cancelBtn.textContent = "取消";
+      cancelBtn.textContent = t("取消");
       cancelBtn.addEventListener("click", () => {
         cancelEditingTurn(turn.id);
       });
@@ -1233,7 +1259,7 @@ export function createTurnElement(turn, topicId = state.chat.activeTopicId) {
       const submitBtn = document.createElement("button");
       submitBtn.type = "button";
       submitBtn.className = "user-edit-btn primary user-edit-submit";
-      submitBtn.textContent = "重新发送";
+      submitBtn.textContent = t("重新发送");
       submitBtn.dataset.topicId = topicId || "";
       submitBtn.dataset.hasImages = hasUserImages ? "1" : "0";
       submitBtn.disabled =
@@ -1338,7 +1364,7 @@ export function createAssistantCard(
 
   const modelName = document.createElement("span");
   modelName.className = "assistant-model-name";
-  const displayModel = modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || "未配置";
+  const displayModel = modelDisplaySnapshot || modelSnapshot || elements.modelName.textContent || t("未配置");
   renderAssistantModelName(modelName, displayModel);
 
   const statusEl = document.createElement("span");
@@ -1521,7 +1547,7 @@ export function createAssistantCard(
 
   // 复制按钮
   const copyBtn = createCopyButton(() => turn?.models?.[side]?.content || "", {
-    label: "复制",
+    label: t("复制"),
     icon: true,
     className: "action-btn copy-btn message-copy-btn",
   });
@@ -1529,7 +1555,7 @@ export function createAssistantCard(
   const regenerateBtn = document.createElement("button");
   regenerateBtn.type = "button";
   regenerateBtn.className = "action-btn regenerate-btn";
-  regenerateBtn.setAttribute("aria-label", "重新生成");
+  regenerateBtn.setAttribute("aria-label", t("重新生成"));
   regenerateBtn.dataset.topicId = topicId || "";
   regenerateBtn.dataset.status = statusSnapshot;
   regenerateBtn.innerHTML = `
@@ -1548,7 +1574,7 @@ export function createAssistantCard(
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
   deleteBtn.className = "action-btn delete-btn";
-  deleteBtn.setAttribute("aria-label", "删除消息");
+  deleteBtn.setAttribute("aria-label", t("删除消息"));
   deleteBtn.dataset.topicId = topicId || "";
   deleteBtn.innerHTML = `
     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1645,17 +1671,17 @@ export async function clearActiveTopicMessages() {
   if (!topic) return;
   if (isTopicRunning(topic.id)) {
     const stopThenClear = await showConfirm(
-      "当前话题正在生成中，仍要清空并停止生成吗？",
+      t("当前话题正在生成中，仍要清空并停止生成吗？"),
       {
-        title: "清空话题",
-        okText: "继续",
+        title: t("清空话题"),
+        okText: t("继续"),
       }
     );
     if (!stopThenClear) return;
   }
-  const confirmed = await showConfirm("确定要清空当前话题的所有消息吗？", {
-    title: "清空话题",
-    okText: "清空",
+  const confirmed = await showConfirm(t("确定要清空当前话题的所有消息吗？"), {
+    title: t("清空话题"),
+    okText: t("清空"),
     danger: true,
     hint: "",
   });

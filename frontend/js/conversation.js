@@ -1,10 +1,11 @@
 import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, estimateTokensFromText } from './state.js';
+import { t } from './i18n.js';
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
 import { renderMarkdownToElement } from './markdown.js';
 import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSourcesStatus } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
-import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState, renderAssistantImages } from './chat.js';
+import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, isDefaultTopicTitle, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState, renderAssistantImages } from './chat.js';
 import { clearImages } from './images.js';
 import { syncHtmlPreviewForTurn } from './html-preview.js';
 import { streamJsonSse } from './stream-client.js';
@@ -43,7 +44,7 @@ function createMainModelState(config) {
     serviceName: config.serviceName || "",
     displayName: resolveModelDisplayName(config.model, config.customModelName),
     thinking: "",
-    thinkingLabel: "思考中",
+    thinkingLabel: t("思考中"),
     thinkingComplete: false,
     toolEvents: [],
     webSearchEvents: [],
@@ -81,8 +82,8 @@ export async function sendPrompt() {
     state.images.selectedImages && state.images.selectedImages.length > 0;
 
   if (!prompt && !hasImages) {
-    await showAlert("请输入内容或上传图片", {
-      title: "无法发送",
+    await showAlert(t("请输入内容或上传图片"), {
+      title: t("无法发送"),
     });
     return;
   }
@@ -91,8 +92,8 @@ export async function sendPrompt() {
   const webSearchConfig = getWebSearchConfig();
 
   if (!hasEffectiveApiKey(config) || !hasEffectiveModel(config)) {
-    await showAlert("请先配置模型", {
-      title: "缺少配置",
+    await showAlert(t("请先配置模型"), {
+      title: t("缺少配置"),
     });
     return;
   }
@@ -204,8 +205,8 @@ export async function regenerateTurn(turn, options = {}) {
   const webSearchConfig = getWebSearchConfig();
 
   if (!hasEffectiveApiKey(config) || !hasEffectiveModel(config)) {
-    await showAlert("请先配置模型", {
-      title: "缺少配置",
+    await showAlert(t("请先配置模型"), {
+      title: t("缺少配置"),
     });
     return false;
   }
@@ -267,8 +268,8 @@ export async function submitTurnEdit(turn, nextPrompt) {
   const normalizedPrompt = String(nextPrompt || "").trim();
   const hasImages = Array.isArray(turn.images) && turn.images.length > 0;
   if (!normalizedPrompt && !hasImages) {
-    await showAlert("请输入内容或保留图片后再重新发送", {
-      title: "无法重新发送",
+    await showAlert(t("请输入内容或保留图片后再重新发送"), {
+      title: t("无法重新发送"),
     });
     return false;
   }
@@ -297,9 +298,9 @@ export async function callModel(
     applyStatus(initUi.statusEl, "loading");
     const mIdSpan = initUi.modelNameEl.querySelector(".assistant-model-id");
     if (mIdSpan) {
-      mIdSpan.textContent = resolveModelDisplayName(config.model) || "未配置";
+      mIdSpan.textContent = resolveModelDisplayName(config.model) || t("未配置");
     } else {
-      initUi.modelNameEl.textContent = resolveModelDisplayName(config.model) || "未配置";
+      initUi.modelNameEl.textContent = resolveModelDisplayName(config.model) || t("未配置");
     }
 
 
@@ -814,7 +815,9 @@ export async function callModel(
     } else {
       console.error("模型错误:", error);
       turn.models.main.status = "error";
-      turn.models.main.content = `错误: ${error.message}`;
+      turn.models.main.content = t("错误: {message}", {
+        message: error.message,
+      });
       if (uiRef?.responseEl) {
         uiRef.responseEl.dataset.topicId = String(topicId || "");
         uiRef.responseEl.dataset.turnId = String(turn?.id || "");
@@ -840,7 +843,7 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
   if (!topic) return;
 
   // 只在标题为"新话题"且有实际对话时才自动生成
-  if (!topic.title.startsWith("新话题")) return;
+  if (!isDefaultTopicTitle(topic.title)) return;
 
   const realTurns = topic.turns.filter((t) => t.prompt);
   if (realTurns.length < 1) return;
@@ -867,7 +870,7 @@ export async function autoGenerateTitle(topicId = state.chat.activeTopicId) {
     renderTopicList();
   } catch (error) {
     console.warn("自动生成标题失败:", error.message);
-    if (topic.title.startsWith("新话题")) {
+    if (isDefaultTopicTitle(topic.title)) {
       topic.title = fallbackTopicTitleFromTurns(topic);
       scheduleSaveChat();
       renderTopicList();
@@ -890,8 +893,8 @@ export async function regenerateTopicTitle(topicId = state.chat.activeTopicId) {
   };
 
   if (!hasEffectiveApiKey(resolvedTitleConfig) || !hasEffectiveModel(resolvedTitleConfig)) {
-    await showAlert("请先在设置里补全标题生成模型配置", {
-      title: "无法生成标题",
+    await showAlert(t("请先在设置里补全标题生成模型配置"), {
+      title: t("无法生成标题"),
     });
     return false;
   }
@@ -904,8 +907,8 @@ export async function regenerateTopicTitle(topicId = state.chat.activeTopicId) {
     renderTopicList();
     return true;
   } catch (error) {
-    await showAlert(error?.message || "重新生成标题失败", {
-      title: "生成失败",
+    await showAlert(error?.message || t("重新生成标题失败"), {
+      title: t("生成失败"),
     });
     return false;
   }
@@ -914,7 +917,7 @@ export async function regenerateTopicTitle(topicId = state.chat.activeTopicId) {
 export async function generateTopicTitle(topicId, config) {
   const topic = state.chat.topics.find((t) => t.id === topicId);
   if (!topic) {
-    throw new Error("话题不存在");
+    throw new Error(t("话题不存在"));
   }
 
   const normalizedConfig = {
@@ -925,7 +928,7 @@ export async function generateTopicTitle(topicId, config) {
 
   // 检查模型配置
   if (!hasEffectiveApiKey(normalizedConfig) || !hasEffectiveModel(normalizedConfig)) {
-    throw new Error("标题生成配置不完整（需要 API Key 和模型名称）");
+    throw new Error(t("标题生成配置不完整（需要 API Key 和模型名称）"));
   }
 
   // 构建对话历史（最多取前6轮）
@@ -950,7 +953,7 @@ export async function generateTopicTitle(topicId, config) {
   }
 
   if (messages.length === 0) {
-    throw new Error("话题中没有有效的对话内容");
+    throw new Error(t("话题中没有有效的对话内容"));
   }
 
   // 标记正在生成标题
@@ -973,7 +976,7 @@ export async function generateTopicTitle(topicId, config) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `生成失败: ${response.status}`);
+      throw new Error(errorData.detail || `${t("生成失败")}: ${response.status}`);
     }
 
     const data = await response.json();

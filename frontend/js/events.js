@@ -1,4 +1,5 @@
 import { state, elements, STORAGE_KEYS } from './state.js';
+import { toggleLanguage } from './i18n.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import {
   openConfigModal,
@@ -274,6 +275,7 @@ export function bindEvents() {
   });
 
   elements.themeToggleBtn?.addEventListener("click", toggleTheme);
+  elements.languageToggleBtn?.addEventListener("click", toggleLanguage);
   elements.openConfigBtn?.addEventListener("click", openConfigModal);
   elements.closeConfigBtn?.addEventListener("click", closeConfigModal);
   elements.createServiceBtn?.addEventListener("click", () => {

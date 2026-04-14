@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 function stripMarkdownForThinkingSummary(text) {
   return String(text || "")
     .replace(/\r/g, "")
@@ -93,8 +95,10 @@ export function extractThinkingSummary(thinkingText) {
 }
 
 export function formatThinkingCompleteLabel(thinkingTimeSec = null) {
-  if (!Number.isFinite(thinkingTimeSec)) return "思考完成";
-  return `思考完成，用时 ${thinkingTimeSec.toFixed(1)} 秒`;
+  if (!Number.isFinite(thinkingTimeSec)) return t("思考完成");
+  return t("思考完成，用时 {seconds} 秒", {
+    seconds: thinkingTimeSec.toFixed(1),
+  });
 }
 
 export function buildThinkingLabel(
@@ -108,5 +112,5 @@ export function buildThinkingLabel(
   }
   const summary = extractThinkingSummary(thinkingText);
   if (summary) return summary;
-  return previousLabel || "思考中";
+  return previousLabel || t("思考中");
 }

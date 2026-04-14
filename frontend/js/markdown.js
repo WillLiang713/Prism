@@ -1,6 +1,7 @@
 import { isDesktopRuntime } from "./state.js";
 import { openHtmlPreview, openHtmlPreviewForSource } from "./html-preview.js";
 import { openImagePreview } from "./dialog.js";
+import { t } from "./i18n.js";
 
 export function initMarkdown() {
   if (typeof marked === "undefined") return;
@@ -116,7 +117,7 @@ function bindMarkdownImagePreview(root) {
       event.stopPropagation();
       openImagePreview({
         src: img.currentSrc || img.src,
-        alt: img.alt || "图片预览",
+        alt: img.alt || t("图片预览"),
         trigger: img,
       });
     });
@@ -179,7 +180,7 @@ function createPreviewButton(getMarkup, language = "html", sourceMeta = null) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "code-preview-btn";
-  btn.setAttribute("aria-label", "预览 HTML 代码");
+  btn.setAttribute("aria-label", t("预览 HTML 代码"));
   btn.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12s-3.6 6.5-9.5 6.5S2.5 12 2.5 12z"></path>
@@ -245,10 +246,10 @@ export async function copyTextToClipboard(text) {
 export function createCopyButton(getText, options = {}) {
   const {
     className = "message-copy-btn",
-    label = "复制",
-    loadingText = "复制…",
-    successText = "已复制",
-    errorText = "失败",
+    label = t("复制"),
+    loadingText = t("复制…"),
+    successText = t("已复制"),
+    errorText = t("失败"),
     resetDelayMs = 1800,
     icon = false,
   } = options || {};
@@ -381,7 +382,7 @@ export function addCopyButtonsToCodeBlocks(root) {
 
     // 使用统一的createCopyButton函数创建复制按钮
     const btn = createCopyButton(() => codeEl.textContent || "", {
-      label: "复制代码",
+      label: t("复制代码"),
       icon: true,
       className: "code-copy-btn",
     });

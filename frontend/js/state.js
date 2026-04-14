@@ -1,3 +1,5 @@
+import { getCurrentLocale } from './i18n.js';
+
 export const STORAGE_KEYS = {
   config: "prismConfig",
   topics: "prismTopicsV1",
@@ -282,6 +284,7 @@ export const elements = {
   configContent: document.getElementById("configContent"),
   modelStatusPill: document.getElementById("modelStatusPill"),
   webStatusPill: document.getElementById("webStatusPill"),
+  languageToggleBtn: document.getElementById("languageToggleBtn"),
   themeToggleBtn: document.getElementById("themeToggleBtn"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
@@ -439,7 +442,7 @@ export function estimateTokensFromText(text) {
 
 export function formatTime(ts) {
   try {
-    return new Date(ts).toLocaleString("zh-CN", {
+    return new Date(ts).toLocaleString(getCurrentLocale(), {
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",

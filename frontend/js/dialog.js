@@ -5,6 +5,7 @@ import {
   isDesktopRuntime,
   buildApiUrl,
 } from './state.js';
+import { t } from './i18n.js';
 
 let imagePreviewLastTrigger = null;
 
@@ -26,7 +27,7 @@ function blobFromDataUrl(dataUrl) {
   const raw = String(dataUrl || "");
   const parts = raw.split(",", 2);
   if (parts.length !== 2) {
-    throw new Error("无效的图片数据");
+    throw new Error(t("无效的图片数据"));
   }
   const header = parts[0];
   const body = parts[1];
@@ -61,7 +62,7 @@ function buildImageProxyUrl(src) {
 async function resolvePreviewImageFile(src) {
   const normalizedSrc = String(src || "").trim();
   if (!normalizedSrc) {
-    throw new Error("没有可保存的图片");
+    throw new Error(t("没有可保存的图片"));
   }
 
   let blob = null;
@@ -98,7 +99,7 @@ async function saveImageWithDesktopApi(blob, fileName, extension) {
   const save = getDesktopDialogSave();
   const writeFile = getDesktopFsWriteFile();
   if (typeof save !== "function" || typeof writeFile !== "function") {
-    throw new Error("桌面保存接口不可用");
+    throw new Error(t("桌面保存接口不可用"));
   }
 
   const normalizedExtension = String(extension || "png").trim().toLowerCase();
@@ -182,7 +183,7 @@ export function openImagePreview({ src = "", alt = "", trigger = null } = {}) {
 
   imagePreviewLastTrigger = trigger instanceof HTMLElement ? trigger : null;
   elements.imagePreviewImage.src = src;
-  elements.imagePreviewImage.alt = alt || "图片预览";
+  elements.imagePreviewImage.alt = alt || t("图片预览");
 
   if (elements.imagePreviewCaption) {
     elements.imagePreviewCaption.textContent = "";
@@ -237,7 +238,7 @@ export function renderShortcutHelpList() {
 
     const actionTd = document.createElement("td");
     actionTd.className = "shortcut-action";
-    actionTd.textContent = item.action;
+    actionTd.textContent = t(item.action);
 
     const keysTd = document.createElement("td");
     keysTd.appendChild(createShortcutKeysElement(item.keys));
@@ -270,10 +271,10 @@ export function openPromptConfirmDialog(options = {}) {
   }
 
   const {
-    title = "提示",
+    title = t("提示"),
     message = "",
-    okText = "确定",
-    cancelText = "取消",
+    okText = t("确定"),
+    cancelText = t("取消"),
     showCancel = true,
     danger = false,
     hint = "",
@@ -326,7 +327,7 @@ export async function showAlert(message, options = {}) {
     ...options,
     message,
     showCancel: false,
-    okText: options.okText || "知道了",
+    okText: options.okText || t("知道了"),
   });
 }
 

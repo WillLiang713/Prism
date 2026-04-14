@@ -1,10 +1,14 @@
 import { state, elements, isDesktopRuntime, getDesktopWindowBridge, delay, buildApiUrl, BOOTSTRAP_HEALTH_TIMEOUT_MS, BOOTSTRAP_HEALTH_INTERVAL_MS, PRISM_RUNTIME, isDesktopBackendAvailable } from './state.js';
+import { t } from './i18n.js';
 import { setSendButtonMode, autoGrowPromptInput } from './ui.js';
 import { updateModelHint, scheduleFetchModels } from './models.js';
 
 let promptLayoutSyncToken = 0;
-const PROMPT_PLACEHOLDER = "输入问题或粘贴内容";
 const DESKTOP_PREFERENCES_COMMAND = "update_desktop_preferences";
+
+function getPromptPlaceholder() {
+  return t("输入问题或粘贴内容");
+}
 
 function getTauriInvoke() {
   return window.__TAURI__?.core?.invoke || window.__TAURI_INTERNALS__?.invoke || null;
@@ -23,7 +27,7 @@ export async function syncDesktopPreferences(options = {}) {
       },
     });
   } catch (error) {
-    console.error("同步桌面关闭行为失败:", error);
+    console.error(`${t("同步桌面关闭行为失败:")}`, error);
   }
 }
 
@@ -50,7 +54,7 @@ export function applyDesktopWindowState() {
   if (elements.windowMaximizeBtn) {
     elements.windowMaximizeBtn.setAttribute(
     "aria-label",
-    state.runtime.isWindowMaximized ? "还原" : "最大化"
+    state.runtime.isWindowMaximized ? t("还原") : t("最大化")
   );
   }
 }
@@ -145,7 +149,7 @@ export function bindDesktopTitlebarControls(appWindow) {
 
 export function syncDesktopBackendUi() {
   const isReady = isDesktopBackendAvailable();
-  const promptPlaceholder = PROMPT_PLACEHOLDER;
+  const promptPlaceholder = getPromptPlaceholder();
   if (elements.promptInput) {
     elements.promptInput.disabled = false;
     elements.promptInput.readOnly = !isReady;
@@ -223,9 +227,11 @@ export async function waitForDesktopBackend() {
       if (response.ok) {
         const payload = await response.json();
         if (payload?.status === "ok") return payload;
-        lastError = "健康检查返回格式异常";
+        lastError = t("健康检查返回格式异常");
       } else {
-        lastError = `健康检查失败：HTTP ${response.status}`;
+        lastError = t("健康检查失败：HTTP {status}", {
+          status: response.status,
+        });
       }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error || "");
@@ -236,5 +242,5 @@ export async function waitForDesktopBackend() {
     await delay(BOOTSTRAP_HEALTH_INTERVAL_MS);
   }
 
-  throw new Error(lastError || "本地服务启动超时，请检查 sidecar 或端口占用情况");
+  throw new Error(lastError || t("本地服务启动超时，请检查 sidecar 或端口占用情况"));
 }

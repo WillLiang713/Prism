@@ -3,6 +3,7 @@
 // ============================================================
 
 import { state, isDesktopRuntime } from './js/state.js';
+import { initLanguage, onLanguageChange } from './js/i18n.js';
 import { initMarkdown } from './js/markdown.js';
 import { initHtmlPreview } from './js/html-preview.js';
 import { initConfigSelectPickers, syncAllConfigSelectPickers, setCloseModelDropdown } from './js/dropdown.js';
@@ -12,7 +13,7 @@ import { setSendButtonMode, autoGrowPromptInput, startHeaderClock, setConversati
 import { initLayout } from './js/layout.js';
 import { initDesktopWindowShell, syncDesktopBackendUi, beginDesktopBackendBootstrap } from './js/desktop.js';
 import { closeModelDropdown, setConfigFns } from './js/models.js';
-import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm, getRuntimeModelConfig, autoSaveManagedServiceDraft, applyHeaderModelSelection, getServiceDisplayName } from './js/config.js';
+import { loadConfig, updateProviderUi, updateModelNames, getConfigFromForm, getRuntimeModelConfig, autoSaveManagedServiceDraft, applyHeaderModelSelection, getServiceDisplayName, renderServiceManagementUi } from './js/config.js';
 import { updateConfigStatusStrip } from './js/web-search.js';
 import { initChat, renderAll, getActiveTopic, isTopicRunning, setStopGeneration, setRegenerateTurn, setSubmitTurnEdit, setRegenerateTopicTitle } from './js/chat.js';
 import { sendPrompt, stopGeneration, regenerateTurn, submitTurnEdit, regenerateTopicTitle } from './js/conversation.js';
@@ -53,6 +54,7 @@ function bootstrapApplication() {
 }
 
 function startApplication() {
+  initLanguage();
   initTheme();
   document.body.classList.toggle("is-desktop-runtime", isDesktopRuntime());
   initMarkdown();
@@ -74,4 +76,14 @@ function startApplication() {
   initDesktopWindowShell();
   syncDesktopBackendUi();
   autoGrowPromptInput();
+
+  onLanguageChange(() => {
+    renderShortcutHelpList();
+    renderServiceManagementUi({ preserveConnectionForm: true });
+    updateProviderUi();
+    updateModelNames();
+    updateConfigStatusStrip();
+    renderAll();
+    syncDesktopBackendUi();
+  });
 }
