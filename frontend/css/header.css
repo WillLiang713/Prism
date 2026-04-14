@@ -32,7 +32,7 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  width: min(calc(100% - 220px), 680px);
+  width: min(calc(100% - 360px), 680px);
   max-width: 100%;
   padding: 0;
   gap: 10px;
@@ -82,10 +82,12 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  overflow: visible;
-  text-overflow: clip;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
+  flex-shrink: 1;
   line-height: 1.2;
 }
 
@@ -97,13 +99,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: auto;
+  flex: 0 1 auto;
   gap: 8px;
   min-width: 0;
+  max-width: min(100%, 320px);
   min-height: 28px;
   padding: 4px 11px;
   margin: 0;
   border-radius: 999px;
   cursor: pointer;
+  overflow: hidden;
   box-shadow: none;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease,
     box-shadow 0.18s ease, transform 0.14s ease;
@@ -294,6 +300,8 @@
   font-weight: 400;
   line-height: 1.2;
   display: inline-block;
+  min-width: 0;
+  flex: 1 1 auto;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

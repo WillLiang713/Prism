@@ -628,15 +628,15 @@
   }
 
   .header-brand {
-    grid-column: 1 / -1;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    max-width: calc(100% - 160px);
-    width: auto;
+    grid-column: 2;
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    max-width: 100%;
+    width: 100%;
     min-width: 0;
-    pointer-events: none;
+    pointer-events: auto;
     z-index: 1;
     justify-self: center;
   }
@@ -663,7 +663,7 @@
 
   .header-brand .brand-model-trigger {
     width: auto;
-    max-width: min(100%, 200px);
+    max-width: min(100%, 180px);
     flex: 0 1 auto;
     gap: 6px;
     padding: 4px 8px;
