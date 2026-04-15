@@ -192,18 +192,12 @@
   line-height: inherit;
 }
 
-.sources-status-divider {
-  display: inline-flex;
-  align-items: center;
-  color: inherit;
-  opacity: 0.72;
-}
-
 .sources-status-domains {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+  margin-left: 0.35em;
   min-width: 0;
 }
 
@@ -212,13 +206,8 @@
   align-items: center;
   min-width: 0;
   color: inherit;
+  cursor: pointer;
   text-decoration: none;
-  transition: color 0.15s ease, opacity 0.15s ease;
-}
-
-.sources-status-domain:hover {
-  color: var(--text);
-  opacity: 1;
 }
 
 .sources-status-more {

@@ -410,7 +410,6 @@ function applyLanguageTogglePresentation() {
   const label =
     currentLanguage === "en" ? t("切换到中文") : t("切换到英文");
   button.setAttribute("aria-label", label);
-  button.setAttribute("title", label);
 }
 
 export function applyStaticTranslations() {

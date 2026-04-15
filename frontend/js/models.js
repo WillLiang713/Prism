@@ -80,7 +80,6 @@ export function syncTitleModelFollowPresentation() {
   if (!String(inputEl.value || "").trim()) {
     inputEl.placeholder = displayText;
   }
-  inputEl.title = isFollowingMainModel ? displayText : "";
 }
 
 export function updateModelHint(side) {

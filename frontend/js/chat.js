@@ -1397,7 +1397,6 @@ export function createAssistantCard(
     thinkingLabel.classList.add("is-complete");
   }
   thinkingLabel.textContent = thinkingSummary;
-  thinkingLabel.title = thinkingSummary;
   thinkingHeader.appendChild(thinkingLabel);
 
   const thinkingArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");

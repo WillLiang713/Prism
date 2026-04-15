@@ -579,7 +579,6 @@ export async function callModel(
                   );
                   turn.models.main.thinkingLabel = completeLabel;
                   uiRef.thinkingLabelEl.textContent = completeLabel;
-                  uiRef.thinkingLabelEl.title = completeLabel;
                   uiRef.thinkingLabelEl.classList.add("is-complete");
                 } else {
                   const summary = buildThinkingLabel(
@@ -589,7 +588,6 @@ export async function callModel(
                   );
                   turn.models.main.thinkingLabel = summary;
                   uiRef.thinkingLabelEl.textContent = summary;
-                  uiRef.thinkingLabelEl.title = summary;
                   uiRef.thinkingLabelEl.classList.remove("is-complete");
                 }
               }
@@ -618,7 +616,6 @@ export async function callModel(
               );
               turn.models.main.thinkingLabel = completeLabel;
               uiRef.thinkingLabelEl.textContent = completeLabel;
-              uiRef.thinkingLabelEl.title = completeLabel;
               uiRef.thinkingLabelEl.classList.add("is-complete");
             }
             scheduleSaveChat();
@@ -652,7 +649,6 @@ export async function callModel(
               );
               turn.models.main.thinkingLabel = completeLabel;
               uiRef.thinkingLabelEl.textContent = completeLabel;
-              uiRef.thinkingLabelEl.title = completeLabel;
               uiRef.thinkingLabelEl.classList.add("is-complete");
             }
             if (hasNewImages) {
@@ -773,7 +769,6 @@ export async function callModel(
       );
       turn.models.main.thinkingLabel = completeLabel;
       uiRef.thinkingLabelEl.textContent = completeLabel;
-      uiRef.thinkingLabelEl.title = completeLabel;
       uiRef.thinkingLabelEl.classList.add("is-complete");
     }
 

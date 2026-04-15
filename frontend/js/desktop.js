@@ -155,7 +155,6 @@ export function syncDesktopBackendUi() {
     elements.promptInput.readOnly = !isReady;
     elements.promptInput.setAttribute("aria-readonly", String(!isReady));
     elements.promptInput.placeholder = promptPlaceholder;
-    elements.promptInput.title = isReady ? "" : promptPlaceholder;
   }
 
   if (elements.sendBtn) {

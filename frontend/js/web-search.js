@@ -727,11 +727,6 @@ export function renderSourcesStatus(statusEl, sources) {
   });
   statusEl.appendChild(label);
 
-  const divider = document.createElement("span");
-  divider.className = "sources-status-divider";
-  divider.textContent = "·";
-  statusEl.appendChild(divider);
-
   const domains = document.createElement("span");
   domains.className = "sources-status-domains";
 
@@ -1284,9 +1279,7 @@ export function renderWebSearchToolSelector() {
   const enabled = isWebSearchEnabled();
   const options = getAvailableWebSearchToolModes();
   currentEl.hidden = false;
-  const fullLabel = enabled ? getWebSearchToolModeLabel(toolMode) : t("关");
   currentEl.textContent = enabled ? getWebSearchToolButtonLabel(toolMode) : t("关");
-  currentEl.title = fullLabel;
   dropdownEl.innerHTML = "";
   buttonEl.classList.toggle("is-active", enabled);
   elements.webSearchControl?.classList.toggle("is-active", enabled);
