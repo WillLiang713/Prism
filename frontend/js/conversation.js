@@ -396,6 +396,8 @@ export async function callModel(
   let contentRenderFrame = 0;
   let thinkingRenderTimer = null;
   let previewSyncTimer = null;
+  let autoScrollFrame = 0;
+  let autoScrollFollowUpFrame = 0;
   let lastThinkingRenderAt = 0;
   let lastPreviewSyncAt = 0;
   let visibleContent = "";
@@ -408,6 +410,31 @@ export async function callModel(
   let streamRenderSkipCodeHighlight = true;
   let lastThinkingRenderSkipCodeHighlight = true;
   let lastContentRenderSkipCodeHighlight = true;
+
+  const performAutoScroll = (smooth = false) => {
+    if (!state.autoScroll || topicId !== state.chat.activeTopicId) return;
+    scrollToBottom(elements.chatMessages, smooth);
+  };
+
+  // 流式渲染会先收到 chunk，再在下一帧真正写入 DOM。
+  // 这里做两次跟随滚动，避免只滚到正文底部，漏掉底部状态行。
+  const scheduleAutoScroll = ({ smooth = false, followUp = true } = {}) => {
+    if (!state.autoScroll || topicId !== state.chat.activeTopicId) return;
+    if (!elements.chatMessages) return;
+    if (autoScrollFrame) return;
+    autoScrollFrame = requestAnimationFrame(() => {
+      autoScrollFrame = 0;
+      performAutoScroll(smooth);
+      if (!followUp) return;
+      if (autoScrollFollowUpFrame) {
+        cancelAnimationFrame(autoScrollFollowUpFrame);
+      }
+      autoScrollFollowUpFrame = requestAnimationFrame(() => {
+        autoScrollFollowUpFrame = 0;
+        performAutoScroll(false);
+      });
+    });
+  };
 
   const flushThinkingRender = ({ force = false } = {}) => {
     if (thinkingRenderTimer) {
@@ -439,6 +466,7 @@ export async function callModel(
     lastRenderedThinking = normalizedThinking;
     lastThinkingRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
     lastThinkingRenderAt = Date.now();
+    scheduleAutoScroll({ followUp: false });
   };
 
   const scheduleThinkingRender = () => {
@@ -533,6 +561,7 @@ export async function callModel(
     lastRenderedStableContent = renderedSplit.stableText;
     lastRenderedLiveContent = renderedSplit.liveText;
     lastContentRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+    scheduleAutoScroll();
 
     if (!force && visibleContent.length < String(turn.models.main.content || "").length) {
       scheduleContentRender();
@@ -552,6 +581,7 @@ export async function callModel(
     lastRenderedContent = text;
     lastRenderedStableContent = renderedSplit.stableText;
     lastRenderedLiveContent = renderedSplit.liveText;
+    scheduleAutoScroll();
   };
 
   const scheduleContentRender = () => {
@@ -612,6 +642,8 @@ export async function callModel(
       uiRef.speedEl.textContent = `${speed.toFixed(1)} t/s`;
       uiRef.speedEl.style.display = "inline";
     }
+
+    scheduleAutoScroll({ followUp: false });
   };
 
   let timeTimer = setInterval(updateTime, 200);
@@ -750,9 +782,7 @@ export async function callModel(
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
+            scheduleAutoScroll();
           } else if (chunk.type === "content" && chunk.data) {
             if (thinkingStartTime && !thinkingEndTime) {
               thinkingEndTime = Date.now();
@@ -776,9 +806,7 @@ export async function callModel(
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
+            scheduleAutoScroll();
           } else if (chunk.type === "images" && Array.isArray(chunk.data)) {
             if (thinkingStartTime && !thinkingEndTime) {
               thinkingEndTime = Date.now();
@@ -811,9 +839,7 @@ export async function callModel(
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
+            scheduleAutoScroll();
           } else if (chunk.type === "tokens" && Number.isFinite(chunk.data)) {
             turn.models.main.tokens = chunk.data;
             if (uiRef?.tokenEl) {
@@ -844,9 +870,7 @@ export async function callModel(
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
+            scheduleAutoScroll();
           } else if (chunk.type === "web_search" && chunk.data) {
             const payload =
               chunk.data && typeof chunk.data === "object" ? chunk.data : {};
@@ -868,9 +892,7 @@ export async function callModel(
               message.classList.remove("loading");
               message.classList.add("streaming");
             }
-            if (state.autoScroll && topicId === state.chat.activeTopicId) {
-              scrollToBottom(elements.chatMessages, false);
-            }
+            scheduleAutoScroll();
           } else if (chunk.type === "sources" && Array.isArray(chunk.data)) {
             if (!Array.isArray(turn.models.main.sources)) {
               turn.models.main.sources = [];
@@ -950,6 +972,8 @@ export async function callModel(
     }
 
     flushPreviewSync(true);
+    performAutoScroll(false);
+    scheduleAutoScroll();
   } catch (error) {
     streamRenderSkipCodeHighlight = false;
     flushThinkingRender({ force: true });
@@ -970,10 +994,15 @@ export async function callModel(
       if (uiRef?.statusEl) applyStatus(uiRef.statusEl, "error");
     }
     flushPreviewSync(false);
+    performAutoScroll(false);
+    scheduleAutoScroll();
   } finally {
+    performAutoScroll(false);
     if (timeTimer) clearInterval(timeTimer);
     timeTimer = null;
     if (contentRenderFrame) cancelAnimationFrame(contentRenderFrame);
+    if (autoScrollFrame) cancelAnimationFrame(autoScrollFrame);
+    if (autoScrollFollowUpFrame) cancelAnimationFrame(autoScrollFollowUpFrame);
     if (thinkingRenderTimer) clearTimeout(thinkingRenderTimer);
     if (previewSyncTimer) clearTimeout(previewSyncTimer);
     unmarkTopicRunning(topicId, abortController);
