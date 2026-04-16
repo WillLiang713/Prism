@@ -147,6 +147,9 @@ function positionReasoningDropdown() {
 function openReasoningDropdown() {
   if (!elements.reasoningEffortSelector) return;
   elements.reasoningEffortSelector.classList.add("open");
+  elements.reasoningEffortSelector
+    .querySelector(".reasoning-effort-current")
+    ?.setAttribute("aria-expanded", "true");
   if (isMobileLayout()) {
     mountReasoningDropdown();
     positionReasoningDropdown();
@@ -158,6 +161,9 @@ function openReasoningDropdown() {
 function closeReasoningDropdown() {
   if (!elements.reasoningEffortSelector) return;
   elements.reasoningEffortSelector.classList.remove("open");
+  elements.reasoningEffortSelector
+    .querySelector(".reasoning-effort-current")
+    ?.setAttribute("aria-expanded", "false");
   clearReasoningDropdownPosition();
   unmountReasoningDropdown();
 }

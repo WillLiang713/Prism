@@ -1458,7 +1458,13 @@ export function createAssistantCard(
   responseContent.dataset.topicId = String(topicId || "");
   responseContent.dataset.turnId = String(turn?.id || "");
   responseContent.dataset.turnCreatedAt = String(turn?.createdAt || 0);
-  renderMarkdownToElement(responseContent, contentSnapshot);
+  const responseStable = document.createElement("div");
+  responseStable.className = "response-markdown-segment response-content-stable";
+  const responseLive = document.createElement("div");
+  responseLive.className = "response-markdown-segment response-content-live";
+  responseContent.appendChild(responseStable);
+  responseContent.appendChild(responseLive);
+  renderMarkdownToElement(responseStable, contentSnapshot);
   responseSection.appendChild(responseImages);
   responseSection.appendChild(responseContent);
 
@@ -1617,6 +1623,8 @@ export function createAssistantCard(
     statusEl,
     modelNameEl: modelName,
     responseEl: responseContent,
+    responseStableEl: responseStable,
+    responseLiveEl: responseLive,
     responseImagesEl: responseImages,
     toolCallsSectionEl: toolCallsSection,
     toolCallsListEl: toolCallsList,

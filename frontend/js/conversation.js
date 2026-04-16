@@ -2,7 +2,11 @@ import { state, elements, createId, isDesktopBackendAvailable, buildApiUrl, esti
 import { t } from './i18n.js';
 import { showAlert } from './dialog.js';
 import { getConfig, getWebSearchConfig, resolveModelDisplayName } from './config.js';
-import { renderMarkdownToElement } from './markdown.js';
+import {
+  renderMarkdownToElement,
+  splitStreamingMarkdown,
+  tryAppendPlainTextDelta,
+} from './markdown.js';
 import { attachWebSearchToToolEvents, normalizeWebSearchProvider, renderToolEvents, renderSourcesStatus } from './web-search.js';
 import { autoGrowPromptInput, scrollToBottom, updateScrollToBottomButton, applyStatus, setSendButtonMode } from './ui.js';
 import { getActiveTopic, createTopic, setActiveTopic, isTopicRunning, isDefaultTopicTitle, markTopicRunning, unmarkTopicRunning, getLiveTurnUi, scheduleSaveChat, renderTopicList, renderChatMessages, createTurnElement, syncSendButtonModeByActiveTopic, setEmptyThreadState, renderAssistantImages } from './chat.js';
@@ -60,9 +64,87 @@ function createMainModelState(config) {
   };
 }
 
-const STREAM_CONTENT_RENDER_INTERVAL_MS = 16;
 const STREAM_THINKING_RENDER_INTERVAL_MS = 24;
 const STREAM_PREVIEW_INTERVAL_MS = 250;
+const STREAM_CONTENT_BASE_REVEAL_CPS = 48;
+const STREAM_CONTENT_BACKLOG_REVEAL_CPS = 2;
+
+function clearMarkdownElement(element) {
+  if (!(element instanceof HTMLElement)) return;
+  element.innerHTML = "";
+  element.hidden = true;
+}
+
+function syncResponseRenderMeta(responseEl, topicId, turn) {
+  if (!(responseEl instanceof HTMLElement)) return;
+  responseEl.dataset.topicId = String(topicId || "");
+  responseEl.dataset.turnId = String(turn?.id || "");
+  responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
+}
+
+function renderResponseMarkdown(uiRef, topicId, turn, content, options = {}) {
+  const responseEl = uiRef?.responseEl;
+  if (!(responseEl instanceof HTMLElement)) {
+    return {
+      stableText: "",
+      liveText: "",
+    };
+  }
+
+  syncResponseRenderMeta(responseEl, topicId, turn);
+
+  const stableEl = uiRef?.responseStableEl;
+  const liveEl = uiRef?.responseLiveEl;
+  const skipCodeHighlight = options?.skipCodeHighlight === true;
+  const forceFull = options?.forceFull === true;
+  const previousStableText = String(options?.previousStableText || "");
+  const previousLiveText = String(options?.previousLiveText || "");
+  const splitResult = forceFull
+    ? {
+        stableText: String(content || ""),
+        liveText: "",
+      }
+    : splitStreamingMarkdown(content);
+  const stableText = splitResult.stableText;
+  const liveText = splitResult.liveText;
+
+  if (!(stableEl instanceof HTMLElement) || !(liveEl instanceof HTMLElement)) {
+    renderMarkdownToElement(responseEl, content, { skipCodeHighlight });
+    return {
+      stableText,
+      liveText,
+    };
+  }
+
+  if (stableText) {
+    stableEl.hidden = false;
+    if (forceFull || stableText !== previousStableText) {
+      renderMarkdownToElement(stableEl, stableText, { skipCodeHighlight });
+    }
+  } else {
+    clearMarkdownElement(stableEl);
+  }
+
+  if (liveText) {
+    liveEl.hidden = false;
+    if (forceFull || liveText !== previousLiveText) {
+      const appended =
+        !forceFull &&
+        stableText === previousStableText &&
+        tryAppendPlainTextDelta(liveEl, previousLiveText, liveText);
+      if (!appended) {
+        renderMarkdownToElement(liveEl, liveText, { skipCodeHighlight });
+      }
+    }
+  } else {
+    clearMarkdownElement(liveEl);
+  }
+
+  return {
+    stableText,
+    liveText,
+  };
+}
 
 function hasEffectiveApiKey(config) {
   return !!String(config?.apiKey || "").trim();
@@ -311,13 +393,17 @@ export async function callModel(
 
   let thinkingStartTime = null;
   let thinkingEndTime = null;
-  let contentRenderTimer = null;
+  let contentRenderFrame = 0;
   let thinkingRenderTimer = null;
   let previewSyncTimer = null;
-  let lastContentRenderAt = 0;
   let lastThinkingRenderAt = 0;
   let lastPreviewSyncAt = 0;
+  let visibleContent = "";
+  let lastContentRevealAt = 0;
+  let contentRevealBudget = 0;
   let lastRenderedContent = "";
+  let lastRenderedStableContent = "";
+  let lastRenderedLiveContent = "";
   let lastRenderedThinking = "";
   let streamRenderSkipCodeHighlight = true;
   let lastThinkingRenderSkipCodeHighlight = true;
@@ -368,47 +454,112 @@ export async function callModel(
     );
   };
 
+  const advanceVisibleContent = ({ force = false } = {}) => {
+    const targetContent = String(turn.models.main.content || "");
+    if (force || visibleContent.length > targetContent.length) {
+      const changed = visibleContent !== targetContent;
+      visibleContent = targetContent;
+      contentRevealBudget = 0;
+      lastContentRevealAt =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      return changed;
+    }
+
+    const backlog = targetContent.length - visibleContent.length;
+    if (backlog <= 0) return false;
+
+    const now =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    const deltaMs = lastContentRevealAt
+      ? Math.min(34, Math.max(8, now - lastContentRevealAt))
+      : 16;
+    lastContentRevealAt = now;
+
+    const revealRatePerSec =
+      STREAM_CONTENT_BASE_REVEAL_CPS +
+      backlog * STREAM_CONTENT_BACKLOG_REVEAL_CPS;
+    contentRevealBudget += (revealRatePerSec * deltaMs) / 1000;
+    const nextCharCount = Math.min(
+      backlog,
+      Math.floor(contentRevealBudget)
+    );
+
+    if (nextCharCount <= 0) return false;
+
+    contentRevealBudget -= nextCharCount;
+
+    visibleContent = targetContent.slice(0, visibleContent.length + nextCharCount);
+    return true;
+  };
+
   const flushContentRender = ({ force = false } = {}) => {
-    if (contentRenderTimer) {
-      clearTimeout(contentRenderTimer);
-      contentRenderTimer = null;
+    if (contentRenderFrame) {
+      cancelAnimationFrame(contentRenderFrame);
+      contentRenderFrame = 0;
     }
     const uiRef = resolveUi();
     if (!uiRef?.responseEl) return;
-    const nextContent = turn.models.main.content;
+    advanceVisibleContent({ force });
+    const nextContent = force ? turn.models.main.content : visibleContent;
+    const nextSplit = force
+      ? { stableText: nextContent, liveText: "" }
+      : splitStreamingMarkdown(nextContent);
     if (
       !force &&
       nextContent === lastRenderedContent &&
+      nextSplit.stableText === lastRenderedStableContent &&
+      nextSplit.liveText === lastRenderedLiveContent &&
       streamRenderSkipCodeHighlight === lastContentRenderSkipCodeHighlight
     ) {
       return;
     }
-    uiRef.responseEl.dataset.topicId = String(topicId || "");
-    uiRef.responseEl.dataset.turnId = String(turn?.id || "");
-    uiRef.responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
-    renderMarkdownToElement(uiRef.responseEl, nextContent, {
-      skipCodeHighlight: streamRenderSkipCodeHighlight,
-    });
+    const renderedSplit = renderResponseMarkdown(
+      uiRef,
+      topicId,
+      turn,
+      nextContent,
+      {
+        skipCodeHighlight: streamRenderSkipCodeHighlight,
+        forceFull: force,
+        previousStableText: lastRenderedStableContent,
+        previousLiveText: lastRenderedLiveContent,
+      }
+    );
     const tokens = estimateTokensFromText(nextContent);
     if (uiRef.tokenEl) {
       uiRef.tokenEl.textContent = `${tokens} tokens`;
     }
     lastRenderedContent = nextContent;
+    lastRenderedStableContent = renderedSplit.stableText;
+    lastRenderedLiveContent = renderedSplit.liveText;
     lastContentRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
-    lastContentRenderAt = Date.now();
+
+    if (!force && visibleContent.length < String(turn.models.main.content || "").length) {
+      scheduleContentRender();
+    }
+  };
+
+  const renderContentError = (uiRef, text) => {
+    if (!uiRef?.responseEl) return;
+    visibleContent = String(text || "");
+    contentRevealBudget = 0;
+    const renderedSplit = renderResponseMarkdown(uiRef, topicId, turn, text, {
+      skipCodeHighlight: streamRenderSkipCodeHighlight,
+      forceFull: true,
+      previousStableText: lastRenderedStableContent,
+      previousLiveText: lastRenderedLiveContent,
+    });
+    lastRenderedContent = text;
+    lastRenderedStableContent = renderedSplit.stableText;
+    lastRenderedLiveContent = renderedSplit.liveText;
   };
 
   const scheduleContentRender = () => {
-    const elapsed = Date.now() - lastContentRenderAt;
-    if (elapsed >= STREAM_CONTENT_RENDER_INTERVAL_MS) {
+    if (contentRenderFrame) return;
+    contentRenderFrame = requestAnimationFrame(() => {
+      contentRenderFrame = 0;
       flushContentRender();
-      return;
-    }
-    if (contentRenderTimer) return;
-    contentRenderTimer = setTimeout(
-      flushContentRender,
-      STREAM_CONTENT_RENDER_INTERVAL_MS - elapsed
-    );
+    });
   };
 
   const flushPreviewSync = (autoOpen = true) => {
@@ -814,10 +965,7 @@ export async function callModel(
         message: error.message,
       });
       if (uiRef?.responseEl) {
-        uiRef.responseEl.dataset.topicId = String(topicId || "");
-        uiRef.responseEl.dataset.turnId = String(turn?.id || "");
-        uiRef.responseEl.dataset.turnCreatedAt = String(turn?.createdAt || 0);
-        renderMarkdownToElement(uiRef.responseEl, turn.models.main.content);
+        renderContentError(uiRef, turn.models.main.content);
       }
       if (uiRef?.statusEl) applyStatus(uiRef.statusEl, "error");
     }
@@ -825,7 +973,7 @@ export async function callModel(
   } finally {
     if (timeTimer) clearInterval(timeTimer);
     timeTimer = null;
-    if (contentRenderTimer) clearTimeout(contentRenderTimer);
+    if (contentRenderFrame) cancelAnimationFrame(contentRenderFrame);
     if (thinkingRenderTimer) clearTimeout(thinkingRenderTimer);
     if (previewSyncTimer) clearTimeout(previewSyncTimer);
     unmarkTopicRunning(topicId, abortController);

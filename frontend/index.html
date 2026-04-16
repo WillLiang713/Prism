@@ -322,12 +322,11 @@
                               viewBox="0 0 24 24"
                               fill="none"
                               stroke="currentColor"
-                              stroke-width="2.2"
+                              stroke-width="2"
                               stroke-linecap="round"
                               stroke-linejoin="round"
                             >
-                              <path d="M12 5v14"></path>
-                              <path d="M5 12h14"></path>
+                              <path d="M21.44 11.05 12.95 19.54a5.5 5.5 0 0 1-7.78-7.78l8.49-8.48a3.5 3.5 0 1 1 4.95 4.95l-8.49 8.48a1.5 1.5 0 1 1-2.12-2.12l7.78-7.78"></path>
                             </svg>
                           </button>
 
@@ -342,9 +341,23 @@
                             aria-expanded="false"
                             aria-label="选择搜索方式"
                           >
+                            <svg
+                              class="web-search-tool-icon"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              aria-hidden="true"
+                            >
+                              <circle cx="11" cy="11" r="6"></circle>
+                              <path d="m20 20-3.5-3.5"></path>
+                            </svg>
                             <span class="switch-text" id="webSearchSwitchText">搜索</span>
                             <span class="web-search-tool-value" id="webSearchToolValue" hidden>Tavily</span>
                             <svg
+                              class="web-search-tool-caret"
                               viewBox="0 0 12 12"
                               width="10"
                               height="10"
@@ -364,11 +377,22 @@
                         </div>
 
                           <div class="reasoning-effort-selector" id="reasoningEffortSelector">
-                            <span class="reasoning-effort-current">
+                            <button
+                              type="button"
+                              class="reasoning-effort-current"
+                              aria-haspopup="true"
+                              aria-expanded="false"
+                              aria-label="选择思考强度"
+                            >
+                              <svg class="reasoning-effort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 18h6"></path>
+                                <path d="M10 22h4"></path>
+                                <path d="M12 2a7 7 0 0 0-4.3 12.52c.76.61 1.24 1.22 1.48 1.98h5.64c.24-.76.72-1.37 1.48-1.98A7 7 0 0 0 12 2z"></path>
+                              </svg>
                               <span class="reasoning-effort-label">思考</span>
                               <span class="reasoning-effort-value" id="reasoningEffortValue">高</span>
                               <svg class="reasoning-effort-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                            </span>
+                            </button>
                             <div class="reasoning-effort-dropdown" id="reasoningEffortDropdown">
                               <button type="button" data-value="none" data-label="关">关</button>
                               <button type="button" data-value="minimal" data-label="微">微</button>

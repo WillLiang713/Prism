@@ -43,6 +43,113 @@ export function renderMarkdownToElement(element, text, options = {}) {
   element.textContent = text || "";
 }
 
+export function splitStreamingMarkdown(text) {
+  const source = String(text || "");
+  if (!source) {
+    return {
+      stableText: "",
+      liveText: "",
+    };
+  }
+
+  let stableBoundary = 0;
+  let fenceMarker = "";
+  let fenceLength = 0;
+  let lineStart = 0;
+  let justClosedFence = false;
+
+  while (lineStart < source.length) {
+    let lineEnd = source.indexOf("\n", lineStart);
+    if (lineEnd === -1) {
+      lineEnd = source.length;
+    } else {
+      lineEnd += 1;
+    }
+
+    const line = source.slice(lineStart, lineEnd);
+    const trimmed = line.trim();
+    const fenceMatch = trimmed.match(/^([`~]{3,})/);
+
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      const markerLength = fenceMatch[1].length;
+      if (!fenceMarker) {
+        fenceMarker = marker;
+        fenceLength = markerLength;
+        justClosedFence = false;
+      } else if (marker === fenceMarker && markerLength >= fenceLength) {
+        fenceMarker = "";
+        fenceLength = 0;
+        justClosedFence = true;
+      }
+    } else if (!fenceMarker && trimmed === "") {
+      if (justClosedFence) {
+        lineStart = lineEnd;
+        continue;
+      }
+      stableBoundary = lineEnd;
+    } else if (!fenceMarker) {
+      justClosedFence = false;
+    }
+
+    lineStart = lineEnd;
+  }
+
+  if (stableBoundary >= source.length) {
+    return {
+      stableText: source,
+      liveText: "",
+    };
+  }
+
+  return {
+    stableText: source.slice(0, stableBoundary),
+    liveText: source.slice(stableBoundary),
+  };
+}
+
+function isPlainStreamingText(text) {
+  return !/[\n\r`*_[\]<>|]/.test(String(text || ""));
+}
+
+function findLastTextNode(root) {
+  if (!(root instanceof HTMLElement)) return null;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let current = null;
+  let next = walker.nextNode();
+  while (next) {
+    current = next;
+    next = walker.nextNode();
+  }
+  return current;
+}
+
+export function tryAppendPlainTextDelta(root, previousText, nextText) {
+  if (!(root instanceof HTMLElement)) return false;
+
+  const prev = String(previousText || "");
+  const next = String(nextText || "");
+  if (!next.startsWith(prev) || next === prev) return false;
+  if (!isPlainStreamingText(prev)) return false;
+
+  const delta = next.slice(prev.length);
+  if (!delta || !isPlainStreamingText(delta)) return false;
+
+  if (
+    root.querySelector(
+      "pre, code, a, em, strong, del, blockquote, ul, ol, li, table, h1, h2, h3, h4, h5, h6, hr, img, .code-block"
+    )
+  ) {
+    return false;
+  }
+
+  const lastTextNode = findLastTextNode(root);
+  if (!lastTextNode) return false;
+
+  lastTextNode.nodeValue = `${lastTextNode.nodeValue || ""}${delta}`;
+  return true;
+}
+
 export function enhanceRenderedMarkdown(root, options = {}) {
   if (!root) return;
   const skipCodeHighlight = options?.skipCodeHighlight === true;
