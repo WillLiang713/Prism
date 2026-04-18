@@ -142,8 +142,8 @@ body {
   --app-shell-max-width: 1260px;
   --app-shell-side-padding: 12px;
   --app-shell-offset: 3vh;
-  --app-shell-height: 94vh;
-  --desktop-config-modal-max-width: 1160px;
+  --app-shell-height: 88vh;
+  --desktop-config-modal-max-width: 900px;
   --app-panel-gap: 0px;
   --sidebar-panel-width: 264px;
   --sidebar-collapsed-width: 68px;

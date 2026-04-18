@@ -35,7 +35,8 @@
 }
 
 .chat-thread.is-empty .chat-messages {
-  justify-content: center;
+  justify-content: flex-end;
+  padding-bottom: 32px;
 }
 
 .empty-chat-state {

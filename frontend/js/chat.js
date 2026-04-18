@@ -239,11 +239,11 @@ function createEmptyChatState() {
 
   const title = document.createElement("div");
   title.className = "empty-chat-title";
-  title.textContent = t("开始新话题");
+  title.textContent = t("有什么我可以帮您的？");
 
   const description = document.createElement("div");
   description.className = "empty-chat-description";
-  description.textContent = t("输入问题、任务，或粘贴一段内容，我会直接处理。");
+  description.textContent = t("无论你想写代码、分析数据，还是解疑释惑，我都在这里。");
 
   empty.appendChild(title);
   empty.appendChild(description);

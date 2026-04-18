@@ -17,7 +17,7 @@
 }
 
 .modal-content {
-  width: min(720px, 96vw);
+  width: min(900px, 96vw);
   max-height: 92vh;
   overflow: hidden;
   position: relative;
@@ -61,18 +61,14 @@
 
 #configModal .modal-content {
   width: 100%;
-  max-width: var(--app-shell-max-width);
-  height: var(--app-shell-height);
-  max-height: var(--app-shell-height);
-  border: 1px solid var(--modal-border);
-  box-shadow: var(--modal-shadow);
-}
-
-.is-desktop-runtime #configModal .modal-content {
   max-width: min(
     var(--desktop-config-modal-max-width),
     calc(100vw - (var(--app-shell-side-padding) * 2))
   );
+  height: min(720px, var(--app-shell-height));
+  max-height: var(--app-shell-height);
+  border: 1px solid var(--modal-border);
+  box-shadow: var(--modal-shadow);
 }
 
 #configModal .config-panel {
@@ -88,13 +84,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 22px 28px 14px;
+  padding: 16px 24px 10px;
   background: var(--modal-surface-solid);
   border-bottom: none;
 }
 
 #configModal .config-tabs {
-  padding: 14px 28px 12px;
+  padding: 10px 24px 8px;
   background: var(--modal-surface-solid);
   border-bottom: none;
 }
@@ -102,7 +98,7 @@
 #configModal .config-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 20px 28px 18px;
+  padding: 16px 24px 14px;
   background: var(--modal-surface-solid);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -351,7 +347,7 @@
 .config-row {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 16px;
   margin-bottom: 10px;
   align-items: start;
 }
@@ -953,7 +949,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
@@ -1001,9 +997,9 @@
 }
 
 .web-config-layout .form-group > input[type="number"] {
-  min-height: 40px;
-  height: 40px;
-  padding: 10px 12px;
+  min-height: 36px;
+  height: 36px;
+  padding: 8px 12px;
   border-radius: 10px;
 }
 
@@ -1021,11 +1017,11 @@
 .web-config-layout .password-input-wrapper,
 .web-config-layout .model-picker-row,
 .web-config-layout .model-picker-btn {
-  min-height: 40px;
+  min-height: 36px;
 }
 
 .web-config-layout .model-picker-btn {
-  height: 40px;
+  height: 36px;
 }
 
 #webSearchProviderGroup {
@@ -1109,12 +1105,12 @@
 
 /* Form controls */
 .form-group {
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .form-group label {
   display: block;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 5px;
@@ -1170,8 +1166,8 @@
 .form-group select,
 .form-group textarea {
   width: 100%;
-  min-height: 40px;
-  padding: 10px 12px;
+  min-height: 36px;
+  padding: 8px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   font-size: 14px;
@@ -1192,8 +1188,8 @@
 }
 
 #roleSetting {
-  min-height: 300px;
-  max-height: 300px;
+  min-height: 220px;
+  max-height: 220px;
   resize: none;
   overflow-y: auto;
 }
@@ -1687,7 +1683,7 @@
 }
 
 #configModal .config-footer {
-  padding: 14px 28px;
+  padding: 10px 24px;
   background: var(--modal-surface-solid);
   border-top: 1px solid var(--border-subtle);
 }

@@ -105,6 +105,9 @@ const EN_TRANSLATIONS = {
   "开始新话题": "Start A New Topic",
   "输入问题、任务，或粘贴一段内容，我会直接处理。":
     "Type a question, a task, or paste content and I will handle it directly.",
+  "有什么我可以帮您的？": "How can I help you today?",
+  "无论你想写代码、分析数据，还是解疑释惑，我都在这里。":
+    "Whether you want to write code, analyze data, or seek answers, I'm here.",
   "查看图片": "View Image",
   "查看图片：{name}": "View Image: {name}",
   "用户上传的图片": "Uploaded Image",

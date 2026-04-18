@@ -56,10 +56,8 @@ const PRESS_START_EVENT =
 const REASONING_DROPDOWN_MIN_WIDTH = 68;
 
 function isWithinTopicActionUi(target) {
-  const element =
-    target instanceof HTMLElement ? target : target instanceof Node ? target.parentElement : null;
-  if (!(element instanceof HTMLElement)) return false;
-  return !!element.closest(
+  if (!target || typeof target.closest !== "function") return false;
+  return !!target.closest(
     ".topic-action-menu, .topic-action-dropdown.is-floating-topic-menu"
   );
 }
@@ -264,11 +262,8 @@ export function bindEvents() {
   document.addEventListener("click", (e) => {
     const target = e.target;
     if (
-      !(target instanceof HTMLElement) ||
-      (
-        !target.closest(".reasoning-effort-selector") &&
-        !target.closest(".reasoning-effort-dropdown")
-      )
+      !target.closest?.(".reasoning-effort-selector") &&
+      !target.closest?.(".reasoning-effort-dropdown")
     ) {
       closeReasoningDropdown();
     }
@@ -533,7 +528,7 @@ export function bindEvents() {
   document.addEventListener(PRESS_START_EVENT, (e) => {
     const t = e.target;
     if (!(t instanceof Node)) return;
-    if (t instanceof HTMLElement && (t.closest?.(".brand-model-trigger") || t.closest?.(".header-model-dropdown"))) {
+    if (t.closest?.(".brand-model-trigger") || t.closest?.(".header-model-dropdown")) {
       return;
     }
     if (t.closest?.(".model-picker") || t.closest?.(".model-dropdown")) return;
@@ -546,7 +541,7 @@ export function bindEvents() {
   });
   document.addEventListener("focusin", (e) => {
     const t = e.target;
-    if (!(t instanceof HTMLElement)) return;
+    if (!t || typeof t.closest !== "function") return;
     if (t.closest(".brand-model-trigger") || t.closest(".header-model-dropdown")) return;
     if (t.closest(".model-picker") || t.closest(".model-dropdown")) return;
     closeModelDropdown("main");

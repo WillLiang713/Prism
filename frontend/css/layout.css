@@ -92,6 +92,25 @@
   min-width: 0;
 }
 
+.conversation-shell:has(.chat-thread.is-empty) {
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation-shell:has(.chat-thread.is-empty) .chat-header {
+  flex: 0 0 auto;
+}
+
+.conversation-shell:has(.chat-thread.is-empty) .chat-body {
+  flex: 0 0 auto;
+  margin-top: auto;
+}
+
+.conversation-shell:has(.chat-thread.is-empty) .chat-composer {
+  flex: 0 0 auto;
+  margin-bottom: auto;
+}
+
 .chat-body {
   position: relative;
   display: flex;
