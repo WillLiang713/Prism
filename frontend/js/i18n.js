@@ -28,6 +28,9 @@ const EN_TRANSLATIONS = {
   "思考": "Reasoning",
   "发送": "Send",
   "停止": "Stop",
+  "OpenAI Web Search": "OpenAI Web Search",
+  "Anthropic Web Search": "Anthropic Web Search",
+  "Google Search": "Google Search",
   "HTML 预览": "HTML Preview",
   "HTML 预览画布": "HTML Preview Canvas",
   "关闭 HTML 预览": "Close HTML Preview",
@@ -57,6 +60,7 @@ const EN_TRANSLATIONS = {
   "输入API地址": "Enter API URL",
   "打开标题生成模型列表": "Open Title Model List",
   "标题生成模型": "Title Model",
+  "标题生成": "Title Model",
   "选择模型或手动输入": "Choose a model or enter one manually",
   "打开标题生成模型列表": "Open Title Model List",
   "角色设定": "System Prompt",
@@ -268,7 +272,6 @@ const EN_TRANSLATIONS = {
   "自动获取失败，请手动输入模型ID":
     "Automatic fetch failed. Enter a model ID manually.",
   "当前时间": "Current Time",
-  "关闭联网": "Web Search Off",
   "联网搜索": "Web Search",
   "搜索中": "Searching",
   "搜索失败": "Search Failed",
@@ -399,6 +402,9 @@ function applyReasoningTranslations() {
     button.textContent = translated;
   });
 
+  const currentBtn = document.querySelector(".reasoning-effort-current");
+  if (currentBtn) currentBtn.setAttribute("aria-label", t("选择思考强度"));
+
   const activeButton = document.querySelector("#reasoningEffortDropdown button.active");
   const valueEl = document.getElementById("reasoningEffortValue");
   if (valueEl && activeButton instanceof HTMLButtonElement) {
@@ -426,6 +432,7 @@ export function applyStaticTranslations() {
   setAttribute("#expandSidebarBtn", "aria-label", "展开侧栏");
   setAttribute("#newTopicBtn", "aria-label", "新建话题");
   setTextContent("#newTopicBtn .topic-new-text", "新建");
+  setTextContent("#newTopicBtn .sr-only", "新建");
   setAttribute("#toggleSidebarBtn", "aria-label", "收起侧栏");
   setAttribute("#sidebarScrim", "aria-label", "关闭侧栏");
   setAttribute("#mobileExpandSidebarBtn", "aria-label", "展开侧栏");
@@ -464,8 +471,11 @@ export function applyStaticTranslations() {
   setTextContent('.config-tab[data-tab="shortcuts"]', "快捷键");
   setAttribute(".service-toolbar", "aria-label", "服务操作");
   setAttribute("#createServiceBtn", "aria-label", "新建服务");
+  setTextContent("#createServiceBtn .sr-only", "新建");
   setAttribute("#duplicateServiceBtn", "aria-label", "复制");
+  setTextContent("#duplicateServiceBtn .sr-only", "复制");
   setAttribute("#deleteServiceBtn", "aria-label", "删除");
+  setTextContent("#deleteServiceBtn .sr-only", "删除");
   setAttribute("#serviceList", "aria-label", "服务列表");
   setTextContent("#testServiceConnectionBtn", "测试连接");
   setTextContent('label[for="serviceNameInput"]', "服务名称");
@@ -478,7 +488,7 @@ export function applyStaticTranslations() {
   setAttribute('button.password-toggle-btn[data-target="apiKey"]', "aria-label", "显示/隐藏密钥");
   setTextContent('label[for="apiUrl"]', "API 地址");
   setAttribute("#apiUrl", "placeholder", "输入API地址");
-  setTextContent('label[for="titleGenerationModel"]', "标题生成模型");
+  setTextContent('label[for="titleGenerationModel"]', "标题生成");
   setAttribute("#titleGenerationModel", "placeholder", "选择模型或手动输入");
   setAttribute("#modelDropdownBtnTitle", "aria-label", "打开标题生成模型列表");
   setTextContent('label[for="roleSetting"]', "角色设定");

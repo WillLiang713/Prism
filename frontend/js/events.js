@@ -1,4 +1,4 @@
-import { state, elements, STORAGE_KEYS } from './state.js';
+import { state, elements, STORAGE_KEYS, MOBILE_LAYOUT_MEDIA_QUERY } from './state.js';
 import { toggleLanguage } from './i18n.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import {
@@ -54,6 +54,8 @@ const PRESS_START_EVENT =
     ? "pointerdown"
     : "mousedown";
 const REASONING_DROPDOWN_MIN_WIDTH = 68;
+let lastMobileLayoutState =
+  typeof window !== "undefined" ? isMobileLayout() : false;
 
 function isWithinTopicActionUi(target) {
   if (!target || typeof target.closest !== "function") return false;
@@ -172,6 +174,16 @@ function toggleReasoningDropdown() {
     return;
   }
   openReasoningDropdown();
+}
+
+function handleLayoutModeChange(isMobile) {
+  closeModelDropdown("main");
+  closeModelDropdown("Title");
+  closeHeaderModelDropdown();
+  closeAllConfigSelectPickers();
+  closeReasoningDropdown();
+  closeWebSearchToolSelector();
+  lastMobileLayoutState = !!isMobile;
 }
 
 export function bindEvents() {
@@ -556,11 +568,35 @@ export function bindEvents() {
     closeTopicActionMenu();
   });
   window.addEventListener("resize", () => {
+    const nextMobileLayoutState = isMobileLayout();
+    if (nextMobileLayoutState !== lastMobileLayoutState) {
+      handleLayoutModeChange(nextMobileLayoutState);
+    }
     renderWebSearchToolSelector();
     repositionOpenFloatingDropdowns();
     positionWebSearchToolSelector();
     positionReasoningDropdown();
     closeTopicActionMenu();
+  });
+  if (typeof window.matchMedia === "function") {
+    const layoutMedia = window.matchMedia(MOBILE_LAYOUT_MEDIA_QUERY);
+    const onLayoutMediaChange = (event) => {
+      handleLayoutModeChange(event.matches);
+      repositionOpenFloatingDropdowns();
+      positionWebSearchToolSelector();
+      positionReasoningDropdown();
+    };
+    if (typeof layoutMedia.addEventListener === "function") {
+      layoutMedia.addEventListener("change", onLayoutMediaChange);
+    } else if (typeof layoutMedia.addListener === "function") {
+      layoutMedia.addListener(onLayoutMediaChange);
+    }
+  }
+  window.visualViewport?.addEventListener("resize", repositionOpenFloatingDropdowns, {
+    passive: true,
+  });
+  window.visualViewport?.addEventListener("scroll", repositionOpenFloatingDropdowns, {
+    passive: true,
   });
   window.visualViewport?.addEventListener("resize", positionReasoningDropdown, {
     passive: true,

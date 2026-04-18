@@ -96,8 +96,9 @@ export function extractThinkingSummary(thinkingText) {
 
 export function formatThinkingCompleteLabel(thinkingTimeSec = null) {
   if (!Number.isFinite(thinkingTimeSec)) return t("思考完成");
+  const displaySec = Math.max(Math.round(thinkingTimeSec), 1);
   return t("思考完成，用时 {seconds} 秒", {
-    seconds: thinkingTimeSec.toFixed(1),
+    seconds: String(displaySec),
   });
 }
 

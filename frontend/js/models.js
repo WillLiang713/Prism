@@ -1,6 +1,6 @@
 import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl } from './state.js';
 import { t } from './i18n.js';
-import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPickers } from './dropdown.js';
+import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPickers, positionFloatingDropdown } from './dropdown.js';
 
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
 let _updateModelNames = () => {};
@@ -17,6 +17,9 @@ const PRESS_START_EVENT =
     : "mousedown";
 
 const DEFAULT_TITLE_MODEL_PLACEHOLDER = "选择模型或手动输入";
+
+let headerModelSearchQuery = "";
+let titleModelSearchQuery = "";
 
 export function setConfigFns(fns) {
   if (fns.updateModelNames) _updateModelNames = fns.updateModelNames;
@@ -55,9 +58,7 @@ function getTitleFollowDisplayText() {
     return t("当前主模型未设置");
   }
 
-  return serviceName
-    ? `${serviceName} / ${mainModel}`
-    : `${mainModel}`;
+  return mainModel;
 }
 
 export function syncTitleModelFollowPresentation() {
@@ -435,6 +436,7 @@ export function closeModelDropdown(side) {
   if (slot) slot.dropdownQuery = null;
   closeFloatingDropdown(el);
   setModelDropdownButtonState(side, false);
+  if (side === "Title") titleModelSearchQuery = "";
 }
 
 export function isHeaderModelDropdownOpen() {
@@ -456,6 +458,7 @@ export function closeHeaderModelDropdown() {
   dropdownEl.innerHTML = "";
   closeFloatingDropdown(dropdownEl);
   setHeaderModelDropdownButtonState(false);
+  headerModelSearchQuery = "";
 }
 
 function createHeaderGroupStatusText(slot) {
@@ -485,20 +488,34 @@ export function renderHeaderModelDropdown() {
     ? String(runtimeConfig?.modelServiceId || "").trim()
     : "";
   const heading = document.createElement("div");
-  heading.className = "header-model-summary";
-  const totalModelCount = getAggregatedModelOptions().length;
+  heading.className = "header-model-summary header-model-search-row";
 
-  const title = document.createElement("span");
-  title.className = "header-model-summary-title";
-  title.textContent = t("已发现 {count} 个模型", { count: totalModelCount });
-  heading.appendChild(title);
-
-  const meta = document.createElement("span");
-  meta.className = "header-model-summary-meta";
-  meta.textContent = t("{count} 个连接", { count: services.length });
-  heading.appendChild(meta);
+  const searchInput = document.createElement("input");
+  searchInput.type = "search";
+  searchInput.className = "header-model-search-input";
+  searchInput.placeholder = t("搜索模型");
+  searchInput.value = headerModelSearchQuery;
+  searchInput.autocomplete = "off";
+  searchInput.spellcheck = false;
+  searchInput.addEventListener("input", () => {
+    headerModelSearchQuery = searchInput.value.toLowerCase();
+    const cursor = searchInput.selectionStart;
+    renderHeaderModelDropdown();
+    const next = dropdownEl.querySelector(".header-model-search-input");
+    if (next) {
+      next.focus();
+      try { next.setSelectionRange(cursor, cursor); } catch (_) {}
+    }
+  });
+  searchInput.addEventListener(PRESS_START_EVENT, (e) => e.stopPropagation());
+  heading.appendChild(searchInput);
 
   dropdownEl.appendChild(heading);
+
+  const normalizedQuery = headerModelSearchQuery.trim();
+  const matchesSearch = (modelId) =>
+    !normalizedQuery ||
+    String(modelId || "").toLowerCase().includes(normalizedQuery);
 
   const hasAnyOptions = getAggregatedModelOptions().length > 0;
   if (!hasAnyOptions && !hasAnyServiceModelFetchInFlight()) {
@@ -550,7 +567,17 @@ export function renderHeaderModelDropdown() {
       continue;
     }
 
-    for (const modelId of slot.models) {
+    const filteredModels = slot.models.filter(matchesSearch);
+    if (!filteredModels.length) {
+      const empty = document.createElement("div");
+      empty.className = "header-model-empty";
+      empty.textContent = t("无匹配模型");
+      group.appendChild(empty);
+      dropdownEl.appendChild(group);
+      continue;
+    }
+
+    for (const modelId of filteredModels) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "model-dropdown-item";
@@ -576,6 +603,10 @@ export function renderHeaderModelDropdown() {
 
     dropdownEl.appendChild(group);
   }
+
+  if (dropdownEl.classList.contains("is-floating-dropdown")) {
+    positionFloatingDropdown(dropdownEl);
+  }
 }
 
 export function openHeaderModelDropdown() {
@@ -590,6 +621,10 @@ export function openHeaderModelDropdown() {
   renderHeaderModelDropdown();
   openFloatingDropdown(dropdownEl, triggerEl, { host: document.body });
   setHeaderModelDropdownButtonState(true);
+  const input = dropdownEl.querySelector(".header-model-search-input");
+  if (input) {
+    requestAnimationFrame(() => input.focus());
+  }
 }
 
 export function toggleHeaderModelDropdown() {
@@ -612,6 +647,149 @@ export function setModelDropdownQuery(side, query) {
   slot.dropdownQuery = query == null ? null : String(query || "");
 }
 
+function renderTitleGroupedModelDropdown({
+  dropdownEl,
+  inputEl,
+  filterText,
+  currentValue,
+  currentServiceId,
+}) {
+  dropdownEl.classList.add("header-model-dropdown");
+  dropdownEl.innerHTML = "";
+
+  const heading = document.createElement("div");
+  heading.className = "header-model-summary header-model-search-row";
+  const searchInput = document.createElement("input");
+  searchInput.type = "search";
+  searchInput.className = "header-model-search-input";
+  searchInput.placeholder = t("搜索模型");
+  searchInput.value = titleModelSearchQuery;
+  searchInput.autocomplete = "off";
+  searchInput.spellcheck = false;
+  searchInput.addEventListener("input", () => {
+    titleModelSearchQuery = searchInput.value.toLowerCase();
+    const cursor = searchInput.selectionStart;
+    renderModelDropdown("Title", "");
+    const next = dropdownEl.querySelector(".header-model-search-input");
+    if (next) {
+      next.focus();
+      try { next.setSelectionRange(cursor, cursor); } catch (_) {}
+    }
+  });
+  searchInput.addEventListener(PRESS_START_EVENT, (e) => e.stopPropagation());
+  heading.appendChild(searchInput);
+  dropdownEl.appendChild(heading);
+
+  const query = titleModelSearchQuery.trim();
+  const matches = (text) =>
+    !query || String(text || "").toLowerCase().includes(query);
+
+  const services = getHeaderServices();
+  const hasAnyOptions = getAggregatedModelOptions().length > 0;
+
+  if (!services.length) {
+    const empty = document.createElement("div");
+    empty.className = "model-dropdown-empty";
+    empty.textContent = t("暂无可用服务，请先在设置中添加服务");
+    dropdownEl.appendChild(empty);
+    return;
+  }
+
+  if (!hasAnyOptions && !hasAnyServiceModelFetchInFlight()) {
+    const empty = document.createElement("div");
+    empty.className = "header-model-empty";
+    empty.textContent = t("暂无可选模型，请先配置至少一个可拉取模型的连接");
+    dropdownEl.appendChild(empty);
+    return;
+  }
+
+  for (const service of services) {
+    const slot = getHeaderModelFetchSlot(service.id);
+    const group = document.createElement("div");
+    group.className = "header-model-group";
+
+    const groupHead = document.createElement("div");
+    groupHead.className = "header-model-summary";
+
+    const groupTitle = document.createElement("span");
+    groupTitle.className = "header-model-summary-title";
+    groupTitle.textContent = _getServiceDisplayName(service);
+    groupHead.appendChild(groupTitle);
+
+    const groupMeta = document.createElement("span");
+    groupMeta.className = "header-model-summary-meta";
+    groupMeta.textContent = canFetchServiceModels(service)
+      ? createHeaderGroupStatusText(slot)
+      : t("未配置");
+    groupHead.appendChild(groupMeta);
+    group.appendChild(groupHead);
+
+    if (!canFetchServiceModels(service)) {
+      const empty = document.createElement("div");
+      empty.className = "header-model-empty";
+      empty.textContent = t("未配置 API Key 或 API 地址");
+      group.appendChild(empty);
+      dropdownEl.appendChild(group);
+      continue;
+    }
+
+    if (!slot.models.length) {
+      const empty = document.createElement("div");
+      empty.className = "header-model-empty";
+      empty.textContent = slot.inFlight
+        ? t("正在获取模型列表…")
+        : slot.error || t("当前连接还没有可选模型");
+      group.appendChild(empty);
+      dropdownEl.appendChild(group);
+      continue;
+    }
+
+    const filteredModels = slot.models.filter(matches);
+    if (!filteredModels.length) {
+      const empty = document.createElement("div");
+      empty.className = "header-model-empty";
+      empty.textContent = t("无匹配模型");
+      group.appendChild(empty);
+      dropdownEl.appendChild(group);
+      continue;
+    }
+
+    for (const modelId of filteredModels) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "model-dropdown-item";
+      if (modelId === currentValue && String(service.id || "") === currentServiceId) {
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-selected", "true");
+      }
+      btn.dataset.value = modelId;
+      btn.dataset.serviceId = service.id;
+      btn.textContent = modelId;
+      btn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
+      btn.addEventListener("click", () => {
+        if (inputEl) {
+          inputEl.value = modelId;
+          if (service.id) {
+            inputEl.dataset.serviceId = service.id;
+          } else {
+            delete inputEl.dataset.serviceId;
+          }
+          inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        closeModelDropdown("Title");
+        void _autoSaveManagedServiceDraft();
+      });
+      group.appendChild(btn);
+    }
+
+    dropdownEl.appendChild(group);
+  }
+
+  if (dropdownEl.classList.contains("is-floating-dropdown")) {
+    positionFloatingDropdown(dropdownEl);
+  }
+}
+
 export function renderModelDropdown(side, filterText = null) {
   const dropdownEl = side === "Title" ? elements.modelDropdownTitle : elements.modelDropdown;
   const inputEl =
@@ -623,6 +801,17 @@ export function renderModelDropdown(side, filterText = null) {
   const limit = getModelDropdownLimit(side);
   const currentValue = String(inputEl?.value || "").trim();
   const currentServiceId = getCurrentBoundServiceId(side);
+
+  if (side === "Title") {
+    renderTitleGroupedModelDropdown({
+      dropdownEl,
+      inputEl,
+      filterText: filterText == null ? "" : filterText,
+      currentValue,
+      currentServiceId,
+    });
+    return;
+  }
 
   dropdownEl.innerHTML = "";
   if (
@@ -719,11 +908,16 @@ export function openModelDropdown(side) {
   if (!dropdownEl || !inputEl) return;
 
   setModelDropdownQuery(side, null);
+  if (side === "Title") titleModelSearchQuery = "";
   prefetchAllServiceModels();
   renderModelDropdown(side, null);
   const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
   openFloatingDropdown(dropdownEl, anchorEl);
   setModelDropdownButtonState(side, true);
+  if (side === "Title") {
+    const input = dropdownEl.querySelector(".header-model-search-input");
+    if (input) requestAnimationFrame(() => input.focus());
+  }
 
   dropdownEl.onscroll = () => {
     const remaining =

@@ -281,7 +281,7 @@
 .toolbar-btn:not(.icon-only) span {
   font-size: 12px;
   white-space: nowrap;
-  max-width: 112px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -327,7 +327,7 @@
   gap: 4px;
   height: 34px;
   min-width: 56px;
-  max-width: 132px;
+  max-width: 160px;
   padding: 0 9px;
   border-radius: 10px;
   border: 1px solid var(--border-strong);
@@ -382,7 +382,7 @@
   flex: 0 1 auto;
   color: var(--text);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -551,7 +551,7 @@
   height: 34px;
   gap: 4px;
   min-width: 56px;
-  max-width: 96px;
+  max-width: 120px;
   padding: 0 9px;
   border-radius: 10px;
   border: 1px solid var(--border-strong);
@@ -711,12 +711,66 @@
   color: var(--text);
 }
 
+/* Right-aligned actions (model picker + reasoning + send) */
+.composer-actions-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.composer-actions-right .brand-model.composer-model {
+  display: inline-flex;
+  align-items: center;
+}
+
+.composer-actions-right .brand-model-trigger {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-subtle);
+  color: var(--text);
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 220px;
+}
+
+.composer-actions-right .brand-model-trigger:hover,
+.composer-actions-right .brand-model-trigger.open {
+  background: var(--bg-hover);
+  border-color: var(--border-accent);
+  color: var(--text);
+}
+
+.composer-actions-right .brand-model-id {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.composer-actions-right .brand-model-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.composer-actions-right .brand-model-trigger:hover .brand-model-icon,
+.composer-actions-right .brand-model-trigger.open .brand-model-icon {
+  opacity: 1;
+}
+
 /* Send button */
 .send-button {
   height: 34px;
-  min-width: 76px;
-  padding: 0 14px;
-  margin-left: auto;
+  min-width: 34px;
+  padding: 0 10px;
+  margin-left: 0;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
@@ -767,8 +821,29 @@
   color: #ffffff;
 }
 
-.send-button .label-send { display: inline; }
-.send-button .label-stop { display: none; }
+.send-button .send-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  color: #111111;
+  flex-shrink: 0;
+}
+.send-button:disabled .send-icon {
+  color: #111111;
+  opacity: 0.55;
+}
+.send-button:hover .send-icon,
+.send-button:active .send-icon {
+  color: #ffffff;
+}
+.send-button .icon-stop { display: none; }
+.send-button[data-mode="stop"] .icon-send { display: none; }
+.send-button[data-mode="stop"] .icon-stop { display: block; }
+.send-button-icon {
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+}
 
 .send-button[data-mode="stop"] {
   background: #f2f2f3;

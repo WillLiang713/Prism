@@ -7,7 +7,6 @@ import {
   positionBodyDropdown,
   syncConfigSelectPicker,
 } from './dropdown.js';
-import { isMobileLayout } from './layout.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
   builtin: "OpenAI Web Search",
@@ -50,7 +49,7 @@ const TOOL_EVENT_DISPLAY_NAMES = {
   get_current_time: "当前时间",
 };
 
-const WEB_SEARCH_DISABLED_LABEL = "关闭联网";
+const WEB_SEARCH_DISABLED_LABEL = "关闭";
 const WEB_SEARCH_TOOL_DROPDOWN_MIN_WIDTH = 108;
 
 function createCollapseArrowSvg(className = "") {
@@ -1103,20 +1102,18 @@ export function getCurrentWebSearchToolMode() {
 export function getWebSearchToolModeLabel(mode) {
   const normalized = String(mode || "").toLowerCase();
   const fallbackMode = normalizeWebSearchToolMode(mode, true, true, true, "tavily");
-  return WEB_SEARCH_TOOL_MODE_LABELS[normalized]
+  const label = WEB_SEARCH_TOOL_MODE_LABELS[normalized]
     || WEB_SEARCH_TOOL_MODE_LABELS[fallbackMode]
     || "Tavily";
+  return t(label);
 }
 
 function getWebSearchToolButtonLabel(mode) {
   const normalized = String(mode || "").toLowerCase();
   const fallbackMode = normalizeWebSearchToolMode(mode, true, true, true, "tavily");
   const resolvedMode = WEB_SEARCH_TOOL_MODE_LABELS[normalized] ? normalized : fallbackMode;
-  if (isMobileLayout()) {
-    return WEB_SEARCH_TOOL_MODE_COMPACT_LABELS[resolvedMode]
-      || getWebSearchToolModeLabel(resolvedMode);
-  }
-  return getWebSearchToolModeLabel(resolvedMode);
+  return WEB_SEARCH_TOOL_MODE_COMPACT_LABELS[resolvedMode]
+    || getWebSearchToolModeLabel(resolvedMode);
 }
 
 export function getAvailableWebSearchToolModes() {
