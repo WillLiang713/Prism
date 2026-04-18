@@ -21,6 +21,7 @@ const EN_TRANSLATIONS = {
   "关闭": "Close",
   "聊天": "Chat",
   "滚动到底部": "Scroll To Bottom",
+  "想问什么，直接说": "Whatever you want to ask, just say it",
   "输入问题或粘贴内容": "Ask anything or paste content",
   "上传图片": "Upload Image",
   "选择搜索方式": "Choose Search Mode",
@@ -62,6 +63,7 @@ const EN_TRANSLATIONS = {
   "标题生成模型": "Title Model",
   "标题生成": "Title Model",
   "选择模型或手动输入": "Choose a model or enter one manually",
+  "点击选择模型": "Click to choose a model",
   "打开标题生成模型列表": "Open Title Model List",
   "角色设定": "System Prompt",
   "回答应以准确、及时、可核实为目标。\n\n当前时间：\n- {{datetime}}\n- {{date}}\n- {{time}}\n- {{timestamp}}\n\n如果问题涉及时间、最新状态或可能变化的信息，先联网搜索再回答。不要凭记忆猜测最新内容；不确定就明确说不确定，不要编造。回答时先给结论，再给关键依据。稳定知识默认不联网，除非用户明确要求最新资料。":
@@ -239,6 +241,10 @@ const EN_TRANSLATIONS = {
     "Fetched {count} model IDs. Choose one or enter manually.",
   "可独立指定；也可选择“跟随主模型”":
     "You can set it separately or choose “Follow main model”.",
+  "已获取 {count} 个模型ID，可点击选择或跟随主模型":
+    "Fetched {count} model IDs. Click to choose one or follow the main model.",
+  "可点击选择标题模型，也可选择“跟随主模型”":
+    "Click to choose a title model, or choose “Follow main model”.",
   "填模型ID；可下拉选或手动输入":
     "Enter a model ID, choose one, or type manually.",
   "获取模型列表失败": "Failed to fetch model list",
@@ -448,7 +454,7 @@ export function applyStaticTranslations() {
   setAttribute("#windowCloseBtn", "aria-label", "关闭");
   setAttribute(".chat-thread", "aria-label", "聊天");
   setAttribute("#scrollToBottomBtn", "aria-label", "滚动到底部");
-  setAttribute("#promptInput", "placeholder", "输入问题或粘贴内容");
+  setAttribute("#promptInput", "placeholder", "想问什么，直接说");
   setAttribute("#imageUploadBtn", "aria-label", "上传图片");
   setAttribute("#webSearchToolCurrent", "aria-label", "选择搜索方式");
   setTextContent("#webSearchSwitchText", "搜索");
@@ -489,7 +495,7 @@ export function applyStaticTranslations() {
   setTextContent('label[for="apiUrl"]', "API 地址");
   setAttribute("#apiUrl", "placeholder", "输入API地址");
   setTextContent('label[for="titleGenerationModel"]', "标题生成");
-  setAttribute("#titleGenerationModel", "placeholder", "选择模型或手动输入");
+  setAttribute("#titleGenerationModel", "placeholder", "点击选择模型");
   setAttribute("#modelDropdownBtnTitle", "aria-label", "打开标题生成模型列表");
   setTextContent('label[for="roleSetting"]', "角色设定");
   setAttribute("#roleSetting", "placeholder", "回答应以准确、及时、可核实为目标。\n\n当前时间：\n- {{datetime}}\n- {{date}}\n- {{time}}\n- {{timestamp}}\n\n如果问题涉及时间、最新状态或可能变化的信息，先联网搜索再回答。不要凭记忆猜测最新内容；不确定就明确说不确定，不要编造。回答时先给结论，再给关键依据。稳定知识默认不联网，除非用户明确要求最新资料。");

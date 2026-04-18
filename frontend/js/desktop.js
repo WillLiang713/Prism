@@ -7,7 +7,7 @@ let promptLayoutSyncToken = 0;
 const DESKTOP_PREFERENCES_COMMAND = "update_desktop_preferences";
 
 function getPromptPlaceholder() {
-  return t("输入问题或粘贴内容");
+  return t("想问什么，直接说");
 }
 
 function getTauriInvoke() {
@@ -160,7 +160,7 @@ export function syncDesktopBackendUi() {
   if (elements.sendBtn) {
     elements.sendBtn.disabled = !isReady;
     if (!isReady) {
-      elements.sendBtn.setAttribute("aria-label", promptPlaceholder);
+      elements.sendBtn.setAttribute("aria-label", t("发送"));
     } else {
       setSendButtonMode(elements.sendBtn.dataset.mode);
     }

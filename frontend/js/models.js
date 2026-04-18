@@ -9,14 +9,14 @@ let _getRuntimeModelConfig = () => ({});
 let _autoSaveManagedServiceDraft = async () => false;
 let _applyHeaderModelSelection = async () => false;
 let _getServiceDisplayName = (service) =>
-  String(service?.name || "").trim() || t("未命名服务");
+  String(service?.name || "").trim() || t("新服务");
 
 const PRESS_START_EVENT =
   typeof window !== "undefined" && "PointerEvent" in window
     ? "pointerdown"
     : "mousedown";
 
-const DEFAULT_TITLE_MODEL_PLACEHOLDER = "选择模型或手动输入";
+const DEFAULT_TITLE_MODEL_PLACEHOLDER = "点击选择模型";
 
 let headerModelSearchQuery = "";
 let titleModelSearchQuery = "";
@@ -122,7 +122,7 @@ export function updateModelHint(side) {
     setModelHint(
       resolvedSide,
       resolvedSide === "Title"
-        ? t("已获取 {count} 个模型ID，可下拉选或手动输入", {
+        ? t("已获取 {count} 个模型ID，可点击选择或跟随主模型", {
             count: slot.models.length,
           })
         : t("已获取 {count} 个模型ID，可下拉选或手动输入", {
@@ -135,7 +135,7 @@ export function updateModelHint(side) {
   setModelHint(
     resolvedSide,
     resolvedSide === "Title"
-      ? t("可独立指定；也可选择“跟随主模型”")
+      ? t("可点击选择标题模型，也可选择“跟随主模型”")
       : t("填模型ID；可下拉选或手动输入")
   );
 }
@@ -650,7 +650,6 @@ export function setModelDropdownQuery(side, query) {
 function renderTitleGroupedModelDropdown({
   dropdownEl,
   inputEl,
-  filterText,
   currentValue,
   currentServiceId,
 }) {
@@ -683,6 +682,29 @@ function renderTitleGroupedModelDropdown({
   const query = titleModelSearchQuery.trim();
   const matches = (text) =>
     !query || String(text || "").toLowerCase().includes(query);
+
+  if (!query || t("跟随主模型").toLowerCase().includes(query)) {
+    const followBtn = document.createElement("button");
+    followBtn.type = "button";
+    followBtn.className = "model-dropdown-item";
+    followBtn.textContent = t("跟随主模型");
+    followBtn.dataset.value = "";
+    if (!currentValue) {
+      followBtn.classList.add("is-active");
+      followBtn.setAttribute("aria-selected", "true");
+    }
+    followBtn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
+    followBtn.addEventListener("click", () => {
+      if (inputEl) {
+        inputEl.value = "";
+        delete inputEl.dataset.serviceId;
+        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      closeModelDropdown("Title");
+      void _autoSaveManagedServiceDraft();
+    });
+    dropdownEl.appendChild(followBtn);
+  }
 
   const services = getHeaderServices();
   const hasAnyOptions = getAggregatedModelOptions().length > 0;
@@ -806,7 +828,6 @@ export function renderModelDropdown(side, filterText = null) {
     renderTitleGroupedModelDropdown({
       dropdownEl,
       inputEl,
-      filterText: filterText == null ? "" : filterText,
       currentValue,
       currentServiceId,
     });
@@ -814,32 +835,6 @@ export function renderModelDropdown(side, filterText = null) {
   }
 
   dropdownEl.innerHTML = "";
-  if (
-    side === "Title" &&
-    (!String(filterText || "").trim() ||
-      t("跟随主模型").toLowerCase().includes(String(filterText || "").trim().toLowerCase()))
-  ) {
-    const followBtn = document.createElement("button");
-    followBtn.type = "button";
-    followBtn.className = "model-dropdown-item";
-    followBtn.textContent = t("跟随主模型");
-    followBtn.dataset.value = "";
-    if (!currentValue) {
-      followBtn.classList.add("is-active");
-      followBtn.setAttribute("aria-selected", "true");
-    }
-    followBtn.addEventListener(PRESS_START_EVENT, (e) => e.preventDefault());
-    followBtn.addEventListener("click", () => {
-      if (inputEl) {
-        inputEl.value = "";
-        delete inputEl.dataset.serviceId;
-        inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      closeModelDropdown(side);
-      void _autoSaveManagedServiceDraft();
-    });
-    dropdownEl.appendChild(followBtn);
-  }
 
   if (!options.length && !dropdownEl.childElementCount) {
     const empty = document.createElement("div");
@@ -953,10 +948,6 @@ export function updateModelDropdownFilter(side) {
   setModelDropdownQuery(side, nextQuery);
   if (side === "Title") {
     syncTitleModelFollowPresentation();
-  }
-
-  if (side === "Title" && !nextQuery.trim()) {
-    closeModelDropdown(side);
     return;
   }
 

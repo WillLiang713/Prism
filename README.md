@@ -43,10 +43,10 @@ If the repo already includes `venv/`, Windows users should preferably reuse it:
 2. Start the server:
 
 ```bash
-python server.py
+npm run dev:web
 ```
 
-Preferred on Windows:
+If you need to run it directly without npm, Windows users can still use:
 
 ```bash
 .\venv\Scripts\python.exe server.py
@@ -87,13 +87,7 @@ Recommended command:
 
 ```bash
 npm install
-npm run desktop:dev
-```
-
-If you want a full rebuild of desktop runtime data, Node dependencies, Rust/Tauri build outputs, backend logs, and Python cache before starting again, run:
-
-```bash
-npm run desktop:rebuild-dev
+npm run dev:desktop
 ```
 
 This workflow will:
@@ -111,18 +105,9 @@ logs/desktop-dev-backend.stdout.log
 logs/desktop-dev-backend.stderr.log
 ```
 
-Low-level commands are still available:
-
-```bash
-python server.py --host 127.0.0.1 --port 33100
-npm run tauri:dev
-```
-
 Notes:
 
-- `npm run desktop:dev` is the recommended daily workflow.
-- `npm run desktop:rebuild-dev` additionally removes `node_modules`, `src-tauri\\target`, repo logs, and Python cache, then reinstalls dependencies before starting.
-- `npm run tauri:dev` still does not start the Python backend for you, and now also depends on the backend page being reachable.
+- `npm run dev:desktop` is the recommended daily workflow.
 - If you already activated a virtual environment, prefer `python` over `py -3` so you do not bypass the active environment.
 - The desktop frontend connects to `http://127.0.0.1:33100` by default. Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL.
 
@@ -137,12 +122,12 @@ Before the first build, install:
 Build command:
 
 ```bash
-npm run desktop:build
+npm run build
 ```
 
 Notes:
 
-- Prefer `npm run desktop:build` over calling `npm run tauri:build` directly.
+- Use `npm run build` as the only packaged desktop build entry point.
 - The build entry point is `scripts/build-tauri-windows.ps1`.
 - The script now performs a full local rebuild by clearing `node_modules`, `src-tauri\\target`, `build`, `dist`, repo logs, and Python cache before reinstalling dependencies.
 - The script first packages the Python runtime into `prism-runtime.exe`, then runs the Tauri build.

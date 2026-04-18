@@ -265,7 +265,7 @@
                       ></div>
                       <textarea
                         id="promptInput"
-                        placeholder="输入问题或粘贴内容"
+                        placeholder="想问什么，直接说"
                       ></textarea>
 
                       <div class="composer-footer">
@@ -705,11 +705,13 @@
                             <input
                               type="text"
                               id="titleGenerationModel"
-                              placeholder="选择模型或手动输入"
+                              placeholder="点击选择模型"
                               autocomplete="off"
                               autocorrect="off"
                               autocapitalize="off"
                               spellcheck="false"
+                              readonly
+                              aria-readonly="true"
                             />
                           </div>
                           <button

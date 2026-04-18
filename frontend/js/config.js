@@ -41,7 +41,7 @@ import { syncDesktopPreferences } from './desktop.js';
 
 const CONFIG_STORE_VERSION = 2;
 const LEGACY_DEFAULT_SERVICE_NAME = "默认服务";
-const UNNAMED_SERVICE_LABEL = "未命名服务";
+const UNNAMED_SERVICE_LABEL = "新服务";
 const DEFAULT_REASONING_EFFORT = "high";
 const CONNECTIVITY_FEEDBACK_AUTO_HIDE_MS = 3000;
 const DEFAULT_CLOSE_TO_TRAY_ON_CLOSE = true;

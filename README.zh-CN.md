@@ -43,10 +43,10 @@ pip install -r requirements.txt
 2. 启动服务：
 
 ```bash
-python server.py
+npm run dev:web
 ```
 
-Windows 下更推荐：
+如果你不想通过 npm，也可以直接运行：
 
 ```bash
 .\venv\Scripts\python.exe server.py
@@ -87,13 +87,7 @@ https://github.com/WillLiang713/Prism/releases
 
 ```bash
 npm install
-npm run desktop:dev
-```
-
-如果你要把桌面壳缓存、Node 依赖、Rust/Tauri 构建产物、后端日志和 Python 缓存一起清掉并重新安装后再启动，可执行：
-
-```bash
-npm run desktop:rebuild-dev
+npm run dev:desktop
 ```
 
 这套流程会自动：
@@ -111,18 +105,9 @@ logs/desktop-dev-backend.stdout.log
 logs/desktop-dev-backend.stderr.log
 ```
 
-底层命令仍然可用：
-
-```bash
-python server.py --host 127.0.0.1 --port 33100
-npm run tauri:dev
-```
-
 说明：
 
-- 日常开发优先使用 `npm run desktop:dev`
-- `npm run desktop:rebuild-dev` 会进一步删除 `node_modules`、`src-tauri\\target`、仓库内日志与 Python 缓存，并重新安装依赖后再启动
-- `npm run tauri:dev` 仍不会自动帮你启动 Python 后端；现在它也依赖后端首页可访问
+- 日常开发优先使用 `npm run dev:desktop`
 - 如果你已经激活了虚拟环境，优先用 `python`，不要用 `py -3`，避免绕过当前环境
 - 桌面版默认连接到 `http://127.0.0.1:33100`，如果要改后端地址，可设置 `PRISM_DESKTOP_API_BASE`
 
@@ -137,13 +122,12 @@ npm run tauri:dev
 打包命令：
 
 ```bash
-npm run desktop:build
+npm run build
 ```
 
 说明：
 
-- 不建议直接运行 `npm run tauri:build`
-- 推荐完整打包入口是 `npm run desktop:build`
+- 统一使用 `npm run build` 作为桌面版打包入口
 - 实际脚本入口为 `scripts/build-tauri-windows.ps1`
 - 该脚本会先清理 `node_modules`、`src-tauri\\target`、`build`、`dist`、仓库日志与 Python 缓存，再重新安装依赖并打包
 - 该脚本会先把 Python 运行时打成 `prism-runtime.exe`，再执行 Tauri 构建

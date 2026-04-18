@@ -519,6 +519,20 @@ export function bindEvents() {
     updateModelDropdownFilter("Title");
     syncTitleModelFollowPresentation();
   });
+  elements.titleGenerationModel?.addEventListener("click", () => {
+    toggleModelDropdown("Title");
+  });
+  elements.titleGenerationModel?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleModelDropdown("Title");
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeModelDropdown("Title");
+    }
+  });
   elements.titleGenerationModel?.addEventListener("blur", () => {
     window.setTimeout(() => {
       const activeEl = document.activeElement;

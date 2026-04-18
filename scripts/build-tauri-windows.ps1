@@ -420,7 +420,7 @@ Invoke-NativeCommand `
 try {
   Invoke-NativeCommand `
     -FilePath $npmCommand `
-    -Arguments @("run", "tauri:build") `
+    -Arguments @("exec", "tauri", "build") `
     -FailureMessage "Tauri build failed."
 } finally {
   # 构建完成后恢复 index.html 中的占位符，避免污染源文件

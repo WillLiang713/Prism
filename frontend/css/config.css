@@ -1276,6 +1276,11 @@
   border-color: var(--border-strong);
 }
 
+#configModal .model-picker[data-side="title"] .model-picker-row input[readonly] {
+  cursor: pointer;
+  caret-color: transparent;
+}
+
 #configModal .config-static-picker .model-picker-row:has(input[type="text"]:focus),
 #configModal .model-picker[data-side="main"] .model-picker-row:has(input[type="text"]:focus),
 #configModal .model-picker[data-side="title"] .model-picker-row:has(input[type="text"]:focus),
