@@ -371,6 +371,7 @@
 
 .web-search-control.is-open .web-search-tool-caret {
   opacity: 0.9;
+  transform: rotate(180deg);
 }
 
 .web-search-tool-value {
@@ -888,6 +889,21 @@
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
   transform: translateY(0);
+}
+
+:root[data-theme="dark"] .send-button:hover .send-icon,
+:root[data-theme="dark"] .send-button:focus .send-icon,
+:root[data-theme="dark"] .send-button:focus-visible .send-icon,
+:root[data-theme="dark"] .send-button:active .send-icon,
+:root[data-theme="dark"] .send-button.btn-primary:hover .send-icon,
+:root[data-theme="dark"] .send-button.btn-primary:focus .send-icon,
+:root[data-theme="dark"] .send-button.btn-primary:focus-visible .send-icon,
+:root[data-theme="dark"] .send-button.btn-primary:active .send-icon,
+:root[data-theme="dark"] .send-button[data-mode="stop"]:hover .send-icon,
+:root[data-theme="dark"] .send-button[data-mode="stop"]:focus .send-icon,
+:root[data-theme="dark"] .send-button[data-mode="stop"]:focus-visible .send-icon,
+:root[data-theme="dark"] .send-button[data-mode="stop"]:active .send-icon {
+  color: #050506;
 }
 
 @media (hover: none), (pointer: coarse) {

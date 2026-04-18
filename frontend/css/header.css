@@ -126,10 +126,6 @@
   box-shadow: none;
 }
 
-.brand-model-trigger:active {
-  transform: scale(0.98);
-}
-
 .brand-model-caret {
   width: 12px;
   height: 12px;
