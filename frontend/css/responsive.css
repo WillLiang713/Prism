@@ -42,8 +42,8 @@
   }
 
   .model-role-config .model-config-layout {
-    grid-template-columns: minmax(200px, 0.72fr) minmax(0, 1.28fr);
-    gap: 22px;
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .required-credentials-grid {
@@ -52,7 +52,7 @@
   }
 
   .web-config-layout {
-    grid-template-columns: minmax(0, 1.08fr) minmax(200px, 0.92fr);
+    grid-template-columns: 1fr;
     column-gap: 22px;
     row-gap: 14px;
     align-items: start;
@@ -306,7 +306,7 @@
 
   #configModal #configPanelServices .service-list {
     gap: 6px;
-    max-height: min(104px, 22dvh);
+    height: clamp(168px, 30dvh, 240px);
     padding-right: 2px;
   }
 
@@ -689,6 +689,12 @@
     flex: 1 1 0;
   }
 
+  .model-dropdown.header-model-dropdown {
+    max-width: calc(100vw - 16px);
+    padding: 8px;
+    border-radius: 16px;
+  }
+
   .brand-session {
     max-width: 100%;
   }
@@ -914,6 +920,10 @@
     align-items: center;
   }
 
+  .composer-actions-right {
+    min-width: 0;
+  }
+
   .composer-toolbar {
     flex: 0 1 auto;
     width: fit-content;
@@ -941,6 +951,12 @@
     min-width: 80px;
     padding: 0 15px;
     border-radius: 11px;
+  }
+
+  .send-button.send-button-icon {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
   }
 
   .toolbar-btn.icon-only {
@@ -1008,7 +1024,7 @@
   }
 
   #configModal #configPanelServices .service-list {
-    max-height: min(96px, 20dvh);
+    height: clamp(156px, 28dvh, 208px);
   }
 
   #configModal #configPanelServices .service-list-item {
@@ -1123,6 +1139,20 @@
     align-items: center;
   }
 
+  .composer-actions-right {
+    min-width: 0;
+  }
+
+  .composer-actions-right .brand-model.composer-model {
+    min-width: 0;
+    max-width: 180px;
+  }
+
+  .composer-actions-right .brand-model-trigger {
+    min-width: 0;
+    max-width: 180px;
+  }
+
   .composer-toolbar {
     flex: initial;
     width: 100%;
@@ -1144,6 +1174,12 @@
     justify-content: center;
   }
 
+  .send-button.send-button-icon {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
+
   .toolbar-btn,
   .toolbar-switch,
   .composer-toolbar .web-search-tool-current,
@@ -1160,14 +1196,22 @@
 
   .composer-toolbar .web-search-control {
     min-width: 0;
-    max-width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
   }
 
   .composer-toolbar .web-search-tool-current {
     min-width: 0;
-    max-width: 100%;
+    max-width: none;
+    width: auto;
     padding: 0 9px;
     gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .composer-toolbar .web-search-tool-current .web-search-tool-value {
+    max-width: none;
+    overflow: visible;
   }
 
   .composer-toolbar .reasoning-effort-current {

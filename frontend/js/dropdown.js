@@ -181,16 +181,31 @@ export function positionFloatingDropdown(dropdownEl) {
   const rect = anchorEl.getBoundingClientRect();
   const viewportPadding = 12;
   const gap = 6;
+  const isNarrowViewport = window.innerWidth <= 720;
+  const isHeaderModelDropdown = dropdownEl.id === "headerModelDropdown";
   const configuredMinWidth = Math.max(
     220,
     parseInt(dropdownEl.dataset.floatingMinWidth || "", 10) || 220
   );
-  const width = Math.min(
-    Math.max(configuredMinWidth, Math.round(rect.width)),
-    Math.max(220, window.innerWidth - viewportPadding * 2)
-  );
+  const maxAvailableWidth = Math.max(220, window.innerWidth - viewportPadding * 2);
+  const width =
+    isNarrowViewport && isHeaderModelDropdown
+      ? Math.min(maxAvailableWidth, Math.max(260, Math.round(window.innerWidth - 20)))
+      : Math.min(
+          Math.max(configuredMinWidth, Math.round(rect.width)),
+          maxAvailableWidth
+        );
   const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
-  const maxHeight = Math.max(140, Math.min(320, Math.round(spaceBelow)));
+  const spaceAbove = rect.top - viewportPadding - gap;
+  const placementPref = dropdownEl.dataset.floatingPlacement || "";
+  const preferTop =
+    placementPref === "top" ||
+    (placementPref !== "bottom" && spaceBelow < 200 && spaceAbove > spaceBelow);
+  const availableSpace = preferTop ? spaceAbove : spaceBelow;
+  const maxHeight =
+    isNarrowViewport && isHeaderModelDropdown
+      ? Math.max(220, Math.min(420, Math.round(window.innerHeight * 0.52)))
+      : Math.max(140, Math.min(320, Math.round(availableSpace)));
   const alignMode = dropdownEl.dataset.floatingAlign || "start";
   const desiredLeft =
     alignMode === "center"
@@ -200,12 +215,19 @@ export function positionFloatingDropdown(dropdownEl) {
     Math.max(viewportPadding, desiredLeft),
     Math.max(viewportPadding, window.innerWidth - viewportPadding - width)
   );
-  const top = Math.round(rect.bottom + gap);
-
   dropdownEl.style.left = `${left}px`;
-  dropdownEl.style.top = `${top}px`;
   dropdownEl.style.width = `${width}px`;
   dropdownEl.style.maxHeight = `${maxHeight}px`;
+  dropdownEl.style.minHeight = "";
+
+  let top;
+  if (preferTop) {
+    const height = Math.min(dropdownEl.offsetHeight || 0, maxHeight);
+    top = Math.round(rect.top - gap - height);
+  } else {
+    top = Math.round(rect.bottom + gap);
+  }
+  dropdownEl.style.top = `${top}px`;
 }
 
 export function openFloatingDropdown(dropdownEl, anchorEl, options = {}) {
@@ -215,15 +237,15 @@ export function openFloatingDropdown(dropdownEl, anchorEl, options = {}) {
   const host =
     options.host instanceof HTMLElement
       ? options.host
-      : elements.configModal || document.body;
+      : document.body;
   if (dropdownEl.parentElement !== host) {
     host.appendChild(dropdownEl);
   }
   dropdownEl.classList.add("is-floating-dropdown");
   floatingDropdownAnchors.set(dropdownEl, anchorEl);
-  positionFloatingDropdown(dropdownEl);
   dropdownEl.hidden = false;
   dropdownEl.setAttribute("aria-hidden", "false");
+  positionFloatingDropdown(dropdownEl);
 }
 
 export function closeFloatingDropdown(dropdownEl) {
@@ -233,6 +255,7 @@ export function closeFloatingDropdown(dropdownEl) {
   dropdownEl.style.top = "";
   dropdownEl.style.width = "";
   dropdownEl.style.maxHeight = "";
+  dropdownEl.style.minHeight = "";
   floatingDropdownAnchors.delete(dropdownEl);
   restoreDropdownOrigin(dropdownEl);
 }
