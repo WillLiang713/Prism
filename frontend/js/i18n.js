@@ -70,6 +70,9 @@ const EN_TRANSLATIONS = {
     "Aim for answers that are accurate, timely, and verifiable.\n\nCurrent time:\n- {{datetime}}\n- {{date}}\n- {{time}}\n- {{timestamp}}\n\nIf the question involves time, recent status, or information that may have changed, search the web before answering. Do not guess recent facts from memory. If you are unsure, say so clearly instead of inventing details. Give the conclusion first, then the key evidence. For stable knowledge, do not browse by default unless the user explicitly asks for the latest information.",
   "留空用内置提示词。支持 {{datetime}} {{date}} {{time}} {{timestamp}}":
     "Leave empty to use the built-in prompt. Supports {{datetime}} {{date}} {{time}} {{timestamp}}",
+  "默认": "Default",
+  "选择默认": "Choose default",
+  "打开默认列表": "Open Default List",
   "搜索服务": "Search Provider",
   "选择搜索服务": "Choose search provider",
   "打开搜索服务列表": "Open Search Provider List",
@@ -500,6 +503,9 @@ export function applyStaticTranslations() {
   setTextContent('label[for="roleSetting"]', "角色设定");
   setAttribute("#roleSetting", "placeholder", "回答应以准确、及时、可核实为目标。\n\n当前时间：\n- {{datetime}}\n- {{date}}\n- {{time}}\n- {{timestamp}}\n\n如果问题涉及时间、最新状态或可能变化的信息，先联网搜索再回答。不要凭记忆猜测最新内容；不确定就明确说不确定，不要编造。回答时先给结论，再给关键依据。稳定知识默认不联网，除非用户明确要求最新资料。");
   setTextContent("#roleSettingPreview + .form-hint", "留空用内置提示词。支持 {{datetime}} {{date}} {{time}} {{timestamp}}");
+  setTextContent('label[for="webSearchDefaultModePickerInput"]', "默认");
+  setAttribute("#webSearchDefaultModePickerInput", "placeholder", "选择默认");
+  setAttribute("#webSearchDefaultModePickerBtn", "aria-label", "打开默认列表");
   setTextContent('label[for="webSearchProviderPickerInput"]', "搜索服务");
   setAttribute("#webSearchProviderPickerInput", "placeholder", "选择搜索服务");
   setAttribute("#webSearchProviderPickerBtn", "aria-label", "打开搜索服务列表");

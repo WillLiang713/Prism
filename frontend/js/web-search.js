@@ -1151,6 +1151,28 @@ export function getAvailableWebSearchToolModes() {
   return items;
 }
 
+export function syncWebSearchDefaultModeSelect() {
+  const selectEl = elements.webSearchDefaultMode;
+  if (!selectEl) return "off";
+
+  const options = getAvailableWebSearchToolModes();
+  const nextMarkup = options
+    .map(
+      (item) => `<option value="${item.value}">${t(item.label)}</option>`
+    )
+    .join("");
+  if (selectEl.innerHTML !== nextMarkup) {
+    selectEl.innerHTML = nextMarkup;
+  }
+
+  const nextValue = isWebSearchEnabled() ? getCurrentWebSearchToolMode() : "off";
+  if (selectEl.value !== nextValue) {
+    selectEl.value = nextValue;
+  }
+  syncConfigSelectPicker("webSearchDefaultMode");
+  return nextValue;
+}
+
 export function persistWebSearchToolMode(mode) {
   persistWebSearchConfigPatch({ toolMode: mode });
 }
@@ -1196,6 +1218,7 @@ export function setWebSearchEnabled(enabled, options = {}) {
   if (options.persist !== false) {
     persistWebSearchConfigPatch({ enabled: state.webSearch.enabled });
   }
+  syncWebSearchDefaultModeSelect();
   renderWebSearchToolSelector();
   updateWebSearchProviderUi();
   return state.webSearch.enabled;
@@ -1226,6 +1249,7 @@ export function setWebSearchToolMode(mode, options = {}) {
     persistWebSearchToolMode(normalized);
   }
 
+  syncWebSearchDefaultModeSelect();
   renderWebSearchToolSelector();
   updateWebSearchProviderUi();
   return normalized;
@@ -1238,6 +1262,7 @@ export function applyWebSearchSelection(selection, options = {}) {
       persistWebSearchConfigPatch({ enabled: false });
     }
     state.webSearch.enabled = false;
+    syncWebSearchDefaultModeSelect();
     closeWebSearchToolSelector();
     renderWebSearchToolSelector();
     updateWebSearchProviderUi();
@@ -1252,6 +1277,7 @@ export function applyWebSearchSelection(selection, options = {}) {
       toolMode: nextMode,
     });
   }
+  syncWebSearchDefaultModeSelect();
   closeWebSearchToolSelector();
   renderWebSearchToolSelector();
   updateWebSearchProviderUi();
@@ -1270,7 +1296,10 @@ export function renderWebSearchToolSelector() {
   const currentEl = elements.webSearchToolValue;
   const dropdownEl = elements.webSearchToolDropdown;
   const buttonEl = elements.webSearchToolCurrent;
-  if (!currentEl || !dropdownEl || !buttonEl) return;
+  if (!currentEl || !dropdownEl || !buttonEl) {
+    syncWebSearchDefaultModeSelect();
+    return;
+  }
 
   const toolMode = getCurrentWebSearchToolMode();
   const enabled = isWebSearchEnabled();
@@ -1386,6 +1415,10 @@ export function updateWebSearchProviderUi() {
   const isExa = externalProvider === "exa";
 
   renderWebSearchToolSelector();
+  syncWebSearchDefaultModeSelect();
+  if (elements.webSearchDefaultModeGroup) {
+    elements.webSearchDefaultModeGroup.style.display = "";
+  }
   if (elements.webSearchProviderGroup) {
     elements.webSearchProviderGroup.style.display = "";
   }

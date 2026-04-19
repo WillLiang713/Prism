@@ -295,52 +295,6 @@
                             </svg>
                           </button>
 
-                        <div
-                          class="web-search-control"
-                          id="webSearchControl"
-                        >
-                          <button
-                            type="button"
-                            class="web-search-tool-current"
-                            id="webSearchToolCurrent"
-                            aria-expanded="false"
-                            aria-label="选择搜索方式"
-                          >
-                            <svg
-                              class="web-search-tool-icon"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              aria-hidden="true"
-                            >
-                              <circle cx="11" cy="11" r="6"></circle>
-                              <path d="m20 20-3.5-3.5"></path>
-                            </svg>
-                            <span class="switch-text" id="webSearchSwitchText">搜索</span>
-                            <span class="web-search-tool-value" id="webSearchToolValue" hidden>Tavily</span>
-                            <svg
-                              class="web-search-tool-caret"
-                              viewBox="0 0 12 12"
-                              width="10"
-                              height="10"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            >
-                              <polyline points="3 5 6 8 9 5"></polyline>
-                            </svg>
-                          </button>
-                          <div
-                            class="web-search-tool-dropdown"
-                            id="webSearchToolDropdown"
-                          ></div>
-                        </div>
-
                         </div>
 
                       <div class="composer-actions-right">
@@ -764,6 +718,36 @@
             <div class="global-config">
               <div class="web-config-layout">
                 <div class="web-config-main">
+                  <div class="form-group" id="webSearchDefaultModeGroup">
+                    <label for="webSearchDefaultModePickerInput">默认</label>
+                    <select id="webSearchDefaultMode" class="config-native-select" aria-hidden="true" tabindex="-1">
+                      <option value="off">关闭</option>
+                      <option value="tavily">Tavily</option>
+                      <option value="exa">Exa</option>
+                    </select>
+                    <div class="model-picker config-static-picker" data-picker="webSearchDefaultMode">
+                      <div class="model-picker-row">
+                        <input
+                          type="text"
+                          id="webSearchDefaultModePickerInput"
+                          placeholder="选择默认"
+                          readonly
+                        />
+                        <button
+                          type="button"
+                          class="model-picker-btn"
+                          id="webSearchDefaultModePickerBtn"
+                          aria-label="打开默认列表"
+                          aria-expanded="false"
+                        ></button>
+                      </div>
+                      <div
+                        class="model-dropdown"
+                        id="webSearchDefaultModePickerDropdown"
+                        hidden
+                      ></div>
+                    </div>
+                  </div>
                   <div class="form-group" id="webSearchProviderGroup">
                     <label for="webSearchProviderPickerInput">搜索服务</label>
                     <select id="webSearchProvider" class="config-native-select" aria-hidden="true" tabindex="-1">

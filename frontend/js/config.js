@@ -28,10 +28,8 @@ import {
   getCurrentWebSearchToolMode,
   isWebSearchEnabled,
   normalizeExternalWebSearchProvider,
-  normalizeWebSearchProvider,
   normalizeTavilySearchDepth,
   normalizeExaSearchType,
-  resolvePreferredWebSearchState,
   setWebSearchEnabled,
   setWebSearchToolMode,
   updateConfigStatusStrip,
@@ -1187,21 +1185,13 @@ function focusServiceNameInput() {
 }
 
 function syncWebSearchStateWithRuntime(options = {}) {
-  const runtimeState = getResolvedRuntimeRequestState(
-    options.preferLiveForm !== false
-  );
-  const preferredWebSearchState = resolvePreferredWebSearchState(
-    runtimeState.mainSourceConfig,
-    {
-      currentMode: state.webSearch?.toolMode,
-      currentEnabled: isWebSearchEnabled(),
-    }
-  );
+  const currentToolMode = state.webSearch?.toolMode || getCurrentWebSearchToolMode();
+  const currentEnabled = isWebSearchEnabled();
 
-  setWebSearchToolMode(preferredWebSearchState.toolMode, {
+  setWebSearchToolMode(currentToolMode, {
     persist: options.persist !== false,
   });
-  setWebSearchEnabled(preferredWebSearchState.enabled, {
+  setWebSearchEnabled(currentEnabled, {
     persist: options.persist !== false,
   });
 }
@@ -1852,24 +1842,13 @@ export function loadConfig() {
     } else {
       applyEmptyServiceStateToForm();
     }
-    const runtimeState = getResolvedRuntimeRequestState(false);
-    const preferredWebSearchState = resolvePreferredWebSearchState(
-      runtimeState.mainSourceConfig,
-      {
-        currentMode: pendingWebSearchToolMode,
-        currentEnabled: pendingWebSearchEnabled,
-      }
-    );
-
     setWebSearchToolMode(
-      preferredWebSearchState.toolMode ||
-        pendingWebSearchToolMode ||
-        "tavily",
+      pendingWebSearchToolMode || "tavily",
       {
         persist: false,
       }
     );
-    setWebSearchEnabled(preferredWebSearchState.enabled, { persist: false });
+    setWebSearchEnabled(pendingWebSearchEnabled, { persist: false });
   } catch (error) {
     console.error("加载配置失败:", error);
   }

@@ -1024,6 +1024,40 @@
   height: 36px;
 }
 
+#configModal #configPanelWeb .config-static-picker .model-picker-row {
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+#configModal #configPanelWeb .config-static-picker .model-picker-row input[type="text"] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#configModal #configPanelWeb .config-static-picker .model-picker-btn {
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  align-self: stretch;
+}
+
+#configModal #configPanelWeb .config-static-picker .model-picker-row:has(input[type="text"]:focus),
+#configModal #configPanelWeb .config-static-picker:has(.model-picker-btn.open) .model-picker-row {
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+#webSearchDefaultModeGroup {
+  grid-area: defaultMode;
+}
+
 #webSearchProviderGroup {
   grid-area: provider;
 }

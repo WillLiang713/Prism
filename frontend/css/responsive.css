@@ -58,6 +58,7 @@
     align-items: start;
   }
 
+  #configModal #webSearchDefaultModeGroup,
   #configModal #webSearchProviderGroup,
   #configModal #webSearchApiKeyGroup,
   #configModal #webSearchMaxResultsGroup,
@@ -241,6 +242,7 @@
     min-width: 0;
   }
 
+  #configModal #webSearchDefaultModeGroup,
   #configModal #webSearchProviderGroup,
   #configModal #webSearchApiKeyGroup,
   #configModal #webSearchMaxResultsGroup,

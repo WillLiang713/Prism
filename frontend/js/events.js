@@ -17,9 +17,8 @@ import {
   testSelectedServiceConnection,
   autoSaveManagedServiceDraft,
   normalizeApiUrlInputValue,
-  getResolvedRuntimeRequestState,
 } from './config.js';
-import { applyWebSearchApiKeyValue, applyWebSearchModeValue, closeWebSearchToolSelector, getCurrentWebSearchToolMode, isWebSearchEnabled, renderWebSearchToolSelector, resolvePreferredWebSearchState, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, toggleWebSearchToolSelector, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
+import { applyWebSearchApiKeyValue, applyWebSearchModeValue, applyWebSearchSelection, closeWebSearchToolSelector, isWebSearchEnabled, renderWebSearchToolSelector, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
 import { scheduleFetchModels, updateModelHint, toggleModelDropdown, closeModelDropdown, updateModelDropdownFilter, getCachedModelIds, openModelDropdown, toggleHeaderModelDropdown, closeHeaderModelDropdown, syncTitleModelFollowPresentation } from './models.js';
 import {
@@ -213,18 +212,14 @@ export function bindEvents() {
   });
 
   elements.webSearchProvider?.addEventListener("change", () => {
-    const currentMode = getCurrentWebSearchToolMode();
-    if (currentMode !== "builtin") {
-      setWebSearchToolMode(elements.webSearchProvider.value);
-    } else {
-      updateWebSearchProviderUi();
-    }
     updateWebSearchProviderUi();
     updateConfigStatusStrip();
     autoSaveConfigDraft();
   });
-  elements.webSearchToolCurrent?.addEventListener("click", () => {
-    toggleWebSearchToolSelector();
+  elements.webSearchDefaultMode?.addEventListener("change", () => {
+    applyWebSearchSelection(elements.webSearchDefaultMode?.value);
+    updateConfigStatusStrip();
+    autoSaveConfigDraft();
   });
   elements.webSearchApiKey?.addEventListener("input", () => {
     applyWebSearchApiKeyValue(elements.webSearchApiKey?.value);
@@ -422,16 +417,8 @@ export function bindEvents() {
 
   // 监听接口类型变化，更新 API 地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
-    const runtimeState = getResolvedRuntimeRequestState();
-    const preferredWebSearchState = resolvePreferredWebSearchState(
-      runtimeState.mainSourceConfig,
-      {
-        currentMode: state.webSearch?.toolMode,
-        currentEnabled: isWebSearchEnabled(),
-      }
-    );
-    setWebSearchToolMode(preferredWebSearchState.toolMode);
-    setWebSearchEnabled(preferredWebSearchState.enabled);
+    setWebSearchToolMode(state.webSearch?.toolMode);
+    setWebSearchEnabled(isWebSearchEnabled());
     closeWebSearchToolSelector();
     updateProviderUi();
     updateModelHint();
