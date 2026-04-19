@@ -294,10 +294,15 @@ export function repositionOpenFloatingDropdowns() {
     elements.headerModelDropdown,
     ...getConfigSelectPickerDefs().map((item) => item.dropdown),
   ];
+  const activeEl = document.activeElement;
   for (const dropdownEl of dropdowns) {
     if (!(dropdownEl instanceof HTMLElement)) continue;
     if (dropdownEl.hidden) continue;
     if (!dropdownEl.classList.contains("is-floating-dropdown")) continue;
+    // Skip repositioning when user is typing in a search input inside this dropdown.
+    // Keyboard open/close fires resize events; repositioning while the input is focused
+    // disrupts focus, collapses the keyboard, and causes a bounce loop.
+    if (activeEl instanceof HTMLElement && activeEl.tagName === "INPUT" && dropdownEl.contains(activeEl)) continue;
     positionFloatingDropdown(dropdownEl);
   }
 }

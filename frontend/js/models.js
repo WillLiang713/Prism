@@ -1,6 +1,7 @@
 import { state, elements, isDesktopRuntime, isDesktopBackendAvailable, getProviderMode, buildApiUrl } from './state.js';
 import { t } from './i18n.js';
 import { openFloatingDropdown, closeFloatingDropdown, closeAllConfigSelectPickers, positionFloatingDropdown } from './dropdown.js';
+import { isMobileLayout } from './layout.js';
 
 /* ---- late-binding stubs (resolved by config.js via setConfigFns) ---- */
 let _updateModelNames = () => {};
@@ -622,7 +623,7 @@ export function openHeaderModelDropdown() {
   openFloatingDropdown(dropdownEl, triggerEl, { host: document.body });
   setHeaderModelDropdownButtonState(true);
   const input = dropdownEl.querySelector(".header-model-search-input");
-  if (input) {
+  if (input && !isMobileLayout()) {
     requestAnimationFrame(() => input.focus());
   }
 }
@@ -909,7 +910,7 @@ export function openModelDropdown(side) {
   const anchorEl = inputEl.closest?.(".model-picker-row") || inputEl;
   openFloatingDropdown(dropdownEl, anchorEl);
   setModelDropdownButtonState(side, true);
-  if (side === "Title") {
+  if (side === "Title" && !isMobileLayout()) {
     const input = dropdownEl.querySelector(".header-model-search-input");
     if (input) requestAnimationFrame(() => input.focus());
   }
