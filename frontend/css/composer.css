@@ -921,8 +921,24 @@
   .send-button.btn-primary:focus-visible {
     background: #f2f2f3;
     color: #111111;
+    border-color: rgba(17, 17, 17, 0.08);
     box-shadow: none;
     transform: translateY(0);
+  }
+
+  .send-button:hover .send-icon,
+  .send-button:active .send-icon,
+  .send-button:focus .send-icon,
+  .send-button:focus-visible .send-icon,
+  .send-button[data-mode="stop"]:hover .send-icon,
+  .send-button[data-mode="stop"]:active .send-icon,
+  .send-button[data-mode="stop"]:focus .send-icon,
+  .send-button[data-mode="stop"]:focus-visible .send-icon,
+  .send-button.btn-primary:hover .send-icon,
+  .send-button.btn-primary:active .send-icon,
+  .send-button.btn-primary:focus .send-icon,
+  .send-button.btn-primary:focus-visible .send-icon {
+    color: #111111;
   }
 
   :root[data-theme="dark"] .send-button:hover,
@@ -938,6 +954,22 @@
   :root[data-theme="dark"] .send-button.btn-primary:focus,
   :root[data-theme="dark"] .send-button.btn-primary:focus-visible {
     background: #f3f4f6;
+    color: #0d0d0f;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  :root[data-theme="dark"] .send-button:hover .send-icon,
+  :root[data-theme="dark"] .send-button:active .send-icon,
+  :root[data-theme="dark"] .send-button:focus .send-icon,
+  :root[data-theme="dark"] .send-button:focus-visible .send-icon,
+  :root[data-theme="dark"] .send-button[data-mode="stop"]:hover .send-icon,
+  :root[data-theme="dark"] .send-button[data-mode="stop"]:active .send-icon,
+  :root[data-theme="dark"] .send-button[data-mode="stop"]:focus .send-icon,
+  :root[data-theme="dark"] .send-button[data-mode="stop"]:focus-visible .send-icon,
+  :root[data-theme="dark"] .send-button.btn-primary:hover .send-icon,
+  :root[data-theme="dark"] .send-button.btn-primary:active .send-icon,
+  :root[data-theme="dark"] .send-button.btn-primary:focus .send-icon,
+  :root[data-theme="dark"] .send-button.btn-primary:focus-visible .send-icon {
     color: #0d0d0f;
   }
 }

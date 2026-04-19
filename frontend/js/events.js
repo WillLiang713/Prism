@@ -586,6 +586,7 @@ export function bindEvents() {
     if (nextMobileLayoutState !== lastMobileLayoutState) {
       handleLayoutModeChange(nextMobileLayoutState);
     }
+    updateModelNames();
     renderWebSearchToolSelector();
     repositionOpenFloatingDropdowns();
     positionWebSearchToolSelector();

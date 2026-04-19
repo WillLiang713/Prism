@@ -1523,11 +1523,20 @@ export function resolveModelDisplayName(modelId) {
   return (modelId || "").trim();
 }
 
+function resolveHeaderModelPlaceholder() {
+  const shouldUseCompactLabel =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 520px)").matches;
+
+  return shouldUseCompactLabel ? t("模型") : t("选择模型");
+}
+
 export function updateModelNames() {
   const runtimeConfig = getRuntimeModelConfig();
   const modelId = String(runtimeConfig.model || "").trim();
   const displayName = resolveModelDisplayName(modelId);
-  elements.modelName.textContent = displayName || t("选择模型");
+  elements.modelName.textContent = displayName || resolveHeaderModelPlaceholder();
   elements.modelName.classList.toggle("is-placeholder", !displayName);
 
   if (elements.serviceNameLabel) {

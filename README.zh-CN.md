@@ -92,7 +92,7 @@ npm run dev:desktop
 
 这套流程会自动：
 
-- 在 `127.0.0.1:33100` 启动本地 Python 后端
+- 在 `0.0.0.0:33100` 启动本地 Python 后端
 - 等待健康检查通过
 - 让 Tauri 开发壳直接加载后端提供的首页与静态资源，避免桌面端单独缓存旧前端
 - 启动 Tauri 桌面壳
@@ -109,7 +109,8 @@ logs/desktop-dev-backend.stderr.log
 
 - 日常开发优先使用 `npm run dev:desktop`
 - 如果你已经激活了虚拟环境，优先用 `python`，不要用 `py -3`，避免绕过当前环境
-- 桌面版默认连接到 `http://127.0.0.1:33100`，如果要改后端地址，可设置 `PRISM_DESKTOP_API_BASE`
+- 桌面版开发态后端默认监听 `0.0.0.0:33100`，桌面壳默认仍连接 `http://127.0.0.1:33100`
+- 如果要改桌面壳使用的后端地址，可设置 `PRISM_DESKTOP_API_BASE`
 
 ### 打包 Windows 桌面版
 

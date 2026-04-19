@@ -92,7 +92,7 @@ npm run dev:desktop
 
 This workflow will:
 
-- start the local Python backend automatically on `127.0.0.1:33100`
+- start the local Python backend automatically on `0.0.0.0:33100`
 - wait for the health check to pass
 - load the desktop dev window from the backend-served page and static assets to avoid stale desktop-only frontend cache
 - launch the Tauri shell
@@ -109,7 +109,8 @@ Notes:
 
 - `npm run dev:desktop` is the recommended daily workflow.
 - If you already activated a virtual environment, prefer `python` over `py -3` so you do not bypass the active environment.
-- The desktop frontend connects to `http://127.0.0.1:33100` by default. Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL.
+- In desktop dev mode, the backend listens on `0.0.0.0:33100` by default while the desktop shell still connects to `http://127.0.0.1:33100`.
+- Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL for the desktop shell.
 
 ### Build the Windows desktop app
 

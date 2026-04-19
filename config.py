@@ -6,7 +6,7 @@ from datetime import datetime
 
 def _parse_runtime_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--host", default=os.getenv("PRISM_HOST", "localhost"))
+    parser.add_argument("--host", default=os.getenv("PRISM_HOST", "0.0.0.0"))
     parser.add_argument(
         "--port",
         type=int,
@@ -25,4 +25,3 @@ RUNTIME_ARGS = _parse_runtime_args(sys.argv[1:])
 DESKTOP_MODE = bool(RUNTIME_ARGS.desktop_mode)
 DESKTOP_RELEASE_MODE = DESKTOP_MODE and bool(getattr(sys, "frozen", False))
 BUILD_ID = (os.getenv("PRISM_BUILD_ID") or datetime.now().strftime("%Y%m%d%H%M%S")).strip()
-

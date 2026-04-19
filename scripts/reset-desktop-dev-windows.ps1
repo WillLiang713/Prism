@@ -1,5 +1,5 @@
 param(
-  [string]$BackendHost = "127.0.0.1",
+  [string]$BackendHost = "0.0.0.0",
   [int]$Port = 33100
 )
 

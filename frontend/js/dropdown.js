@@ -195,8 +195,16 @@ export function positionFloatingDropdown(dropdownEl) {
           Math.max(configuredMinWidth, Math.round(rect.width)),
           maxAvailableWidth
         );
-  const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
-  const spaceAbove = rect.top - viewportPadding - gap;
+
+  // Use visualViewport for accurate mobile measurements (avoids browser-chrome inflation of window.innerHeight)
+  const vvp = typeof window !== "undefined" ? window.visualViewport : null;
+  const vpHeight = Math.round(vvp ? vvp.height : window.innerHeight);
+  const vpOffsetTop = Math.round(vvp ? vvp.offsetTop : 0);
+  const vpTop = vpOffsetTop + viewportPadding;
+  const vpBottom = vpOffsetTop + vpHeight - viewportPadding;
+
+  const spaceBelow = vpOffsetTop + vpHeight - rect.bottom - viewportPadding - gap;
+  const spaceAbove = rect.top - vpOffsetTop - viewportPadding - gap;
   const placementPref = dropdownEl.dataset.floatingPlacement || "";
   const preferTop =
     placementPref === "top" ||
@@ -204,7 +212,7 @@ export function positionFloatingDropdown(dropdownEl) {
   const availableSpace = preferTop ? spaceAbove : spaceBelow;
   const maxHeight =
     isNarrowViewport && isHeaderModelDropdown
-      ? Math.max(220, Math.min(420, Math.round(window.innerHeight * 0.52)))
+      ? Math.max(120, Math.min(420, Math.round(Math.max(spaceAbove, spaceBelow))))
       : Math.max(140, Math.min(320, Math.round(availableSpace)));
   const alignMode = dropdownEl.dataset.floatingAlign || "start";
   const desiredLeft =
@@ -224,8 +232,27 @@ export function positionFloatingDropdown(dropdownEl) {
   if (preferTop) {
     const height = Math.min(dropdownEl.offsetHeight || 0, maxHeight);
     top = Math.round(rect.top - gap - height);
+    // If dropdown would go above viewport, try placing below the anchor instead
+    if (top < vpTop) {
+      const topBelow = Math.round(rect.bottom + gap);
+      if (topBelow + height <= vpBottom) {
+        top = topBelow;
+      } else {
+        top = Math.max(vpTop, top);
+      }
+    }
   } else {
+    const height = Math.min(dropdownEl.offsetHeight || 0, maxHeight);
     top = Math.round(rect.bottom + gap);
+    // If dropdown would go below viewport, try placing above the anchor instead
+    if (top + height > vpBottom) {
+      const topAbove = Math.round(rect.top - gap - height);
+      if (topAbove >= vpTop) {
+        top = topAbove;
+      } else {
+        top = Math.max(vpTop, Math.min(vpBottom - height, top));
+      }
+    }
   }
   dropdownEl.style.top = `${top}px`;
 }

@@ -1,5 +1,5 @@
 param(
-  [string]$BackendHost = "127.0.0.1",
+  [string]$BackendHost = "0.0.0.0",
   [int]$Port = 33100
 )
 
@@ -102,10 +102,12 @@ $stdoutLog = Join-Path $devLogDir "desktop-dev-backend.stdout.log"
 $stderrLog = Join-Path $devLogDir "desktop-dev-backend.stderr.log"
 $backendArgs = @($pythonArgs + @("server.py", "--host", $BackendHost, "--port", "$Port"))
 $backendProcess = $null
-$apiBase = "http://${BackendHost}:$Port"
+$apiHost = if ($BackendHost -eq "0.0.0.0") { "127.0.0.1" } else { $BackendHost }
+$apiBase = "http://${apiHost}:$Port"
 $tauriExitCode = 0
 
-Write-Host "Starting desktop backend at $apiBase"
+Write-Host "Starting desktop backend on http://${BackendHost}:$Port"
+Write-Host "Desktop shell will connect to $apiBase"
 Write-Host "Using Python interpreter: $pythonCommand"
 $backendProcess = Start-Process `
   -FilePath $pythonCommand `
