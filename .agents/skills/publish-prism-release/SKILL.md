@@ -16,7 +16,7 @@ Use this skill for Prism's Windows desktop release flow. Prefer the smallest nec
 5. Compute the installer SHA256 and record file size.
 6. Commit the version bump, create an annotated tag, and push branch plus tag.
 7. Write a bilingual release body using [references/release-notes-template.md](references/release-notes-template.md).
-8. Publish the GitHub release and upload the installer with [scripts/publish-github-release.ps1](scripts/publish-github-release.ps1).
+8. Publish the GitHub release and upload the installer by following [references/publish-github-release-manual.md](references/publish-github-release-manual.md).
 9. Verify the remote release, asset, and local git state.
 
 ## Repo-specific facts
@@ -126,26 +126,15 @@ Guidelines:
 
 ## Step 7: Publish the GitHub release
 
-Use the bundled PowerShell script:
+Use the manual guide in [references/publish-github-release-manual.md](references/publish-github-release-manual.md).
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\.agents\skills\publish-prism-release\scripts\publish-github-release.ps1 `
-  -Owner WillLiang713 `
-  -Repo Prism `
-  -Tag v<version> `
-  -TargetCommitish <branch> `
-  -Name v<version> `
-  -BodyFile .\.release-notes-v<version>.md `
-  -AssetPath .\src-tauri\target\release\bundle\nsis\Prism_<version>_x64-setup.exe
-```
+Recommended release facts:
 
-The script:
-
-- reads GitHub credentials from `git credential fill`
-- creates the release if missing
-- optionally updates an existing release when `-AllowUpdate` is provided
-- uploads the installer asset
-- replaces an asset with the same name only when `-AllowUpdate` is used
+- release title: `v<version>`
+- release tag: `v<version>`
+- target branch: the current branch from `git status --short --branch`
+- release body: the contents of `.release-notes-v<version>.md`
+- asset: `src-tauri/target/release/bundle/nsis/Prism_<version>_x64-setup.exe`
 
 ## Step 8: Verify
 
@@ -175,8 +164,8 @@ Confirm:
 
 ## Safety rules
 
-- Do not use `gh` unless the environment already has it and it is clearly simpler than the bundled script.
+- Do not use `gh` unless the environment already has it and the user explicitly prefers the CLI flow.
 - Do not print credentials or tokens.
 - Do not commit build artifacts to git.
 - Do not rewrite or delete existing tags unless the user explicitly asks.
-- If GitHub release creation succeeds but asset upload fails, report the partial state clearly and retry the upload instead of recreating everything.
+- If GitHub release creation succeeds but asset upload fails, report the partial state clearly and reuse the existing release to finish the upload.
