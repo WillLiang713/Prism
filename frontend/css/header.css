@@ -265,6 +265,14 @@
   width: 100%;
 }
 
+.is-desktop-runtime .header-model-dropdown .model-dropdown-item {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
 @media (max-width: 720px) {
   .header-model-dropdown {
     min-width: min(92vw, 560px);

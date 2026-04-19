@@ -755,6 +755,21 @@
   text-align: left;
 }
 
+.is-desktop-runtime .composer-actions-right .brand-model-trigger {
+  height: auto;
+  min-height: 34px;
+  max-width: min(520px, calc(100vw - 112px));
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.is-desktop-runtime .composer-actions-right .brand-model-id {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
 .composer-actions-right .brand-model-icon {
   width: 14px;
   height: 14px;

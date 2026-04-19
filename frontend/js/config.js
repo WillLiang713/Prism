@@ -5,6 +5,7 @@ import {
   resolveProviderSelection,
   createId,
   formatTime,
+  isDesktopRuntime,
 } from './state.js';
 import { t } from './i18n.js';
 import { showAlert, showConfirm, syncBodyScrollLock } from './dialog.js';
@@ -1552,6 +1553,7 @@ function formatCompactModelToken(token) {
 function resolveHeaderModelDisplayName(modelId) {
   const rawModelId = String(modelId || "").trim();
   if (!rawModelId) return "";
+  if (isDesktopRuntime()) return rawModelId;
 
   const tailSegment =
     rawModelId.split("/").filter(Boolean).pop()?.split(":", 1)[0] || rawModelId;
