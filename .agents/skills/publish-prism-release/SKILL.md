@@ -1,23 +1,16 @@
 ---
 name: publish-prism-release
-description: Publish a new Prism desktop release for this repository. Use when Codex needs to bump the Prism app version, build the Windows installer, compute SHA256, commit and tag the release, push to GitHub, create a bilingual Chinese/English release note, and upload the installer asset.
+description: Publish a new Prism desktop release for this repository. Use when Codex needs to bump the Prism app version, build the Windows installer, compute SHA256, commit and tag the release, push to GitHub, create a bilingual Chinese/English release note, and publish or repair the GitHub Release page and installer asset.
 ---
 
 # Publish Prism Release
 
-Use this skill for Prism's Windows desktop release flow. Prefer the smallest necessary change: only update version-bearing files, reuse the existing build pipeline, and publish one GitHub release that includes a bilingual body and the generated installer.
+Use this skill for Prism's Windows desktop release flow. Prefer the smallest necessary change: only touch version-bearing files, reuse the existing build pipeline, and publish one GitHub release that includes a bilingual body and the generated installer.
 
-## Release workflow
+Load these references only when needed:
 
-1. Confirm the repo state before touching versions.
-2. Find the previous `v*` release tag and summarize real changes since that tag.
-3. Update Prism version files to the target version.
-4. Build the Windows installer with the existing project script.
-5. Compute the installer SHA256 and record file size.
-6. Commit the version bump, create an annotated tag, and push branch plus tag.
-7. Write a bilingual release body using [references/release-notes-template.md](references/release-notes-template.md).
-8. Publish the GitHub release and upload the installer by following [references/publish-github-release-manual.md](references/publish-github-release-manual.md).
-9. Verify the remote release, asset, and local git state.
+- For release note wording and structure: [references/release-notes-template.md](references/release-notes-template.md)
+- For GitHub Release publishing details: [references/publish-github-release-manual.md](references/publish-github-release-manual.md)
 
 ## Repo-specific facts
 
@@ -38,134 +31,302 @@ Use this skill for Prism's Windows desktop release flow. Prefer the smallest nec
   - Chinese section first, English section second
   - installer filename and SHA256 listed in both sections
 
-## Step 1: Inspect state
+## Release workflow
+
+1. Derive the concrete release inputs.
+2. Inspect repo state before touching versions.
+3. Determine whether this is a fresh release or a continuation of an already-tagged release.
+4. Gather confirmed release facts from git history.
+5. Update version files if a version bump is still needed.
+6. Build the Windows installer and record file facts.
+7. Commit, tag, and push if this is a fresh release.
+8. Write bilingual release notes.
+9. Publish or repair the GitHub Release page and upload the installer.
+10. Verify local and remote release state, then clean up temporary artifacts.
+
+## Step 0: Derive release inputs
+
+Start by deriving explicit variables instead of mentally substituting placeholders.
+
+```powershell
+$version = '1.1.3'
+$tag = "v$version"
+$statusLine = git status --short --branch | Select-Object -First 1
+$branch = if ($statusLine -match '^## ([^.\s]+)') { $Matches[1] } else { throw 'Unable to determine branch name.' }
+$installer = "src-tauri/target/release/bundle/nsis/Prism_${version}_x64-setup.exe"
+$notesFile = ".release-notes-v${version}.md"
+```
+
+Use these same variables throughout the release flow. This reduces copy/paste mistakes and makes it easier to compare local state with the GitHub release later.
+
+## Step 1: Inspect state before making changes
 
 Run these checks first:
 
 ```powershell
 git status --short --branch
-git tag --sort=-creatordate | Select-Object -First 20
+git tag --list "v*" --sort=-creatordate | Select-Object -First 20
 git remote -v
 ```
 
-If the worktree contains unrelated user changes, do not revert them. Decide whether the release should continue on top of them. If the release would accidentally include unrelated work, stop and ask.
+Interpret the output before continuing:
 
-## Step 2: Gather release facts
+- If `git status` shows unrelated tracked file changes that would accidentally ship in the release, stop and ask before proceeding.
+- If the worktree only contains temporary files such as `.release-notes-v<version>.md` or `.playwright-cli/`, continue, but remember to clean them up at the end.
+- If the current branch is not the intended release branch, stop and confirm before creating tags or releases.
 
-Use the most recent stable `v*` tag as the baseline unless the user says otherwise.
+## Step 2: Decide whether this is a fresh release or a continuation
 
-Helpful commands:
+Check both local and remote tag state before changing any version files:
 
 ```powershell
-git log --oneline <previous-tag>..HEAD
-git diff --stat <previous-tag>..HEAD
-git diff --name-only <previous-tag>..HEAD
+git rev-parse --verify "$tag^{}"
+git ls-remote --tags origin $tag
+git rev-parse HEAD
 ```
 
-Base the release notes on confirmed changes from git history, not memory.
+Use the results to decide the path:
 
-Separate your conclusions:
+- Fresh release:
+  - local tag does not exist
+  - remote tag does not exist
+  - continue with version updates, commit, tag, and push
+- Continuation release:
+  - local and/or remote tag already exists
+  - the tag resolves to the same commit as `HEAD`
+  - skip version bump, commit, and tag creation
+  - continue from build or GitHub Release repair steps only
+- Stop and ask:
+  - target tag already exists but points to a different commit than `HEAD`
+  - remote tag exists but local tag is missing and the intended commit is unclear
 
-- Confirmed facts: files changed, commits merged, installer path, SHA256
-- Inference: grouped highlights written from those diffs
-- External result: release page URL or GitHub API verification
+Find the previous stable tag for release notes by excluding the target tag:
 
-## Step 3: Update version files
+```powershell
+$previousTag = git tag --list "v*" --sort=-creatordate |
+  Where-Object { $_ -ne $tag } |
+  Select-Object -First 1
+$previousTag
+```
 
-Update the target version consistently across all version-bearing files. Use `apply_patch` for manual edits.
+If no previous stable tag exists, treat this as the first release and summarize changes from the beginning of the repository history instead of using a tag baseline.
+
+## Step 3: Gather confirmed release facts
+
+Use git history, not memory, to build the release summary.
+
+```powershell
+git log --oneline "$previousTag..HEAD"
+git diff --stat "$previousTag..HEAD"
+git diff --name-only "$previousTag..HEAD"
+```
+
+Optional deeper inspection for a changed file:
+
+```powershell
+git diff "$previousTag..HEAD" -- frontend/index.html
+git diff "$previousTag..HEAD" -- frontend/js/config.js
+```
+
+Separate conclusions clearly:
+
+- Confirmed facts:
+  - commits in the range
+  - changed files
+  - installer filename
+  - installer SHA256
+- Inference:
+  - grouped release highlights written from those diffs
+- External result:
+  - GitHub release URL
+  - remote asset size
+  - remote digest from GitHub API if available
+
+## Step 4: Update version files when needed
+
+Only do this on the fresh-release path. If the target tag already exists on the current commit, skip this section.
+
+Update these files with the same `<version>` value:
+
+- `package.json`
+- `package-lock.json`
+- `src-tauri/Cargo.toml`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/Cargo.lock`
+
+Use `apply_patch` for manual edits. After editing, verify all tracked version files agree:
+
+```powershell
+rg -n --fixed-strings $version package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json src-tauri/Cargo.lock
+Get-Content package.json | Select-String '"version"'
+Get-Content src-tauri/Cargo.toml | Select-String '^version = '
+Get-Content src-tauri/tauri.conf.json | Select-String '"version"'
+Select-String -Path src-tauri/Cargo.lock -Pattern 'name = "prism_desktop"|version = "' -Context 0,2
+```
 
 Typical commit message:
 
 ```text
-chore(version): 发布版本 1.1.1
+chore(version): 发布版本 1.1.3
 ```
 
-## Step 4: Build
+## Step 5: Build the installer and capture artifact facts
 
-Use the existing packaged build flow only:
+Always build before publishing the GitHub Release, even on the continuation path, unless the user explicitly wants to reuse an older verified artifact.
 
 ```powershell
 npm run build
+Get-Item $installer
+$asset = Get-Item $installer
+$hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToUpper()
+$size = $asset.Length
+$mtime = $asset.LastWriteTime
+$asset | Select-Object FullName, Length, LastWriteTime
+$hash
 ```
 
-The build script already syncs `package.json` into Tauri config and Cargo metadata during the build, but still keep the tracked version files updated in git before committing the release.
+Required checks:
 
-After a successful build, verify the installer exists:
+- the installer file exists exactly at `src-tauri/target/release/bundle/nsis/Prism_<version>_x64-setup.exe`
+- the version in the filename matches the target version
+- `Get-FileHash` succeeds
+- the file size is plausible compared with prior releases
+
+If the build fails, stop and debug the build before writing release notes or touching the GitHub release page.
+
+## Step 6: Commit, tag, and push for a fresh release
+
+Skip this section on the continuation path.
+
+Inspect only the intended version file diffs before staging:
 
 ```powershell
-Get-Item src-tauri\target\release\bundle\nsis\Prism_<version>_x64-setup.exe
-Get-FileHash src-tauri\target\release\bundle\nsis\Prism_<version>_x64-setup.exe -Algorithm SHA256
+git diff -- package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json src-tauri/Cargo.lock
 ```
 
-## Step 5: Commit, tag, and push
-
-Stage only the intended version files:
+Then stage, commit, tag, and push:
 
 ```powershell
 git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json src-tauri/Cargo.lock
-git commit -m "chore(version): 发布版本 <version>"
-git tag -a v<version> -m "Release v<version>"
-git push origin <branch>
-git push origin v<version>
+git commit -m "chore(version): 发布版本 $version"
+git tag -a $tag -m "Release $tag"
+git push origin $branch
+git push origin $tag
 ```
 
-Use the current branch name from `git status --short --branch`. Do not assume it is always `master`, even though Prism currently uses `master`.
+Immediately verify the pushed refs:
 
-## Step 6: Write bilingual release notes
+```powershell
+git rev-parse HEAD
+git rev-parse "$tag^{}"
+git ls-remote --tags origin $tag
+```
+
+If the commit succeeds but tag push fails, do not create a second tag. Diagnose the existing tag state and reuse or repair it.
+
+## Step 7: Write bilingual release notes
 
 Follow [references/release-notes-template.md](references/release-notes-template.md).
 
-Guidelines:
+Use the confirmed facts gathered earlier:
 
-- Keep the Chinese and English sections aligned in meaning.
-- Prefer 3-5 real highlights derived from git history.
-- Mention the exact installer filename.
-- Mention the exact SHA256 in uppercase for readability.
-- Put the generated note in a temporary file such as `.release-notes-v<version>.md`.
-- Delete that temporary file after a successful release unless the user wants to keep it.
+- summarize the real change theme in one Chinese sentence and one English sentence
+- keep Chinese and English bullet meaning aligned
+- prefer 3-5 bullets total per language
+- mention the exact installer filename
+- mention the exact SHA256 in uppercase
 
-## Step 7: Publish the GitHub release
+Write the note to a temporary file such as:
 
-Use the manual guide in [references/publish-github-release-manual.md](references/publish-github-release-manual.md).
+```powershell
+$notesFile
+```
 
-Recommended release facts:
+Use `apply_patch` or another precise file-editing method to create the release note file. After writing it, inspect the full contents before publishing:
+
+```powershell
+Get-Content -Raw $notesFile
+```
+
+## Step 8: Publish or repair the GitHub Release
+
+Follow [references/publish-github-release-manual.md](references/publish-github-release-manual.md).
+
+Preferred publishing paths:
+
+- GitHub Web UI first if an authenticated browser session is already available
+- GitHub API fallback if browser login is unavailable but a token exists in `.env` or the environment
+
+Release facts to reuse consistently:
 
 - release title: `v<version>`
 - release tag: `v<version>`
-- target branch: the current branch from `git status --short --branch`
-- release body: the contents of `.release-notes-v<version>.md`
+- target branch: the branch derived in Step 0
+- release body: the full contents of `.release-notes-v<version>.md`
 - asset: `src-tauri/target/release/bundle/nsis/Prism_<version>_x64-setup.exe`
 
-## Step 8: Verify
+If a release already exists:
 
-Verify both locally and remotely:
+- update the existing release instead of creating another one
+- replace the installer asset only if it is missing or incorrect
+- if an asset with the same name already exists and is stale, delete it first, then upload the correct file
+
+## Step 9: Verify local and remote release state
+
+Always verify both local git state and remote release state after publishing.
+
+Local verification:
 
 ```powershell
 git status --short --branch
 git rev-parse HEAD
-git rev-parse "v<version>^{}"
+git rev-parse "$tag^{}"
 ```
 
-Optional remote verification:
+Remote verification via GitHub API:
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing `
   -Headers @{ 'User-Agent' = 'Prism-Release-Verify' } `
-  -Uri "https://api.github.com/repos/<owner>/<repo>/releases/tags/v<version>"
+  -Uri "https://api.github.com/repos/WillLiang713/Prism/releases/tags/$tag"
 ```
 
-Confirm:
+If authenticated API verification is available, also compare asset metadata:
+
+```powershell
+$release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/WillLiang713/Prism/releases/tags/$tag"
+$asset = $release.assets | Where-Object { $_.name -eq "Prism_${version}_x64-setup.exe" } | Select-Object -First 1
+$asset | Select-Object name, size, digest, browser_download_url
+```
+
+Confirm all of the following:
 
 - release page exists
-- asset name matches the built installer
-- remote asset size is plausible
-- remote digest matches the local SHA256 when GitHub reports it
-- local branch is clean after cleanup
+- title is `v<version>`
+- tag is `v<version>`
+- uploaded asset name matches the installer filename exactly
+- remote asset size is plausible compared with the local file
+- remote digest matches the local SHA256 when GitHub reports `digest`
+- local branch is clean except for known user changes or intentional temporary files pending cleanup
+
+## Step 10: Clean up temporary artifacts
+
+Delete temporary files created during the release flow unless the user wants to keep them:
+
+```powershell
+if (Test-Path $notesFile) { Remove-Item -LiteralPath $notesFile -Force }
+if (Test-Path '.playwright-cli') { Remove-Item -LiteralPath '.playwright-cli' -Recurse -Force }
+git status --short --branch
+```
+
+Do not delete or revert unrelated user files. Only clean up artifacts created by the release process itself.
 
 ## Safety rules
 
-- Do not use `gh` unless the environment already has it and the user explicitly prefers the CLI flow.
 - Do not print credentials or tokens.
 - Do not commit build artifacts to git.
 - Do not rewrite or delete existing tags unless the user explicitly asks.
+- Do not assume the release branch is always `master`; derive it first.
+- If the worktree contains unrelated user changes that would alter the release contents, stop and ask.
 - If GitHub release creation succeeds but asset upload fails, report the partial state clearly and reuse the existing release to finish the upload.
+- If the target tag already exists on the current commit, treat the task as a release continuation or repair, not as a fresh version bump.
