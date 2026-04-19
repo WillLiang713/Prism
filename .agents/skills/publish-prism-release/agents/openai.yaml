@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish Prism Release"
+  short_description: "Build and publish Prism desktop releases."
+  default_prompt: "Use $publish-prism-release to publish a new Prism desktop release end-to-end."
