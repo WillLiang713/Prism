@@ -737,7 +737,8 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  max-width: 220px;
+  max-width: 260px;
+  justify-content: flex-start;
 }
 
 .composer-actions-right .brand-model-trigger:hover,
@@ -751,6 +752,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
+  text-align: left;
 }
 
 .composer-actions-right .brand-model-icon {

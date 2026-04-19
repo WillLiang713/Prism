@@ -1523,6 +1523,122 @@ export function resolveModelDisplayName(modelId) {
   return (modelId || "").trim();
 }
 
+function formatCompactModelToken(token) {
+  const normalized = String(token || "").trim().toLowerCase();
+  if (!normalized) return "";
+
+  const tokenLabels = {
+    air: "Air",
+    coder: "Coder",
+    exp: "Exp",
+    flash: "Flash",
+    haiku: "Haiku",
+    instant: "Instant",
+    k2: "K2",
+    latest: "Latest",
+    lite: "Lite",
+    max: "Max",
+    mini: "Mini",
+    nano: "Nano",
+    opus: "Opus",
+    plus: "Plus",
+    preview: "Preview",
+    pro: "Pro",
+    r1: "R1",
+    sonnet: "Sonnet",
+    turbo: "Turbo",
+    v3: "V3",
+  };
+
+  if (tokenLabels[normalized]) return tokenLabels[normalized];
+  if (/^\d+(?:\.\d+)?o$/i.test(normalized)) {
+    return `${normalized.slice(0, -1)}o`;
+  }
+  if (/^\d+(?:\.\d+)?[a-z]?$/i.test(normalized)) return normalized.toUpperCase();
+  if (/^[a-z]+\d+$/i.test(normalized)) return normalized.toUpperCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function resolveHeaderModelDisplayName(modelId) {
+  const rawModelId = String(modelId || "").trim();
+  if (!rawModelId) return "";
+
+  const tailSegment =
+    rawModelId.split("/").filter(Boolean).pop()?.split(":", 1)[0] || rawModelId;
+  const normalized = tailSegment
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+  const tokens = normalized.split("-").filter(Boolean);
+  if (!tokens.length) return rawModelId;
+
+  if (tokens[0] === "gemini") {
+    const parts = ["Gemini"];
+    if (tokens[1]) parts.push(formatCompactModelToken(tokens[1]));
+    if (tokens[2] && ["flash", "pro", "lite", "exp"].includes(tokens[2])) {
+      parts.push(formatCompactModelToken(tokens[2]));
+    }
+    return parts.join(" ");
+  }
+
+  if (tokens[0] === "gpt") {
+    const version = tokens[1] ? `GPT-${tokens[1].toUpperCase()}` : "GPT";
+    const variant =
+      tokens[2] && ["mini", "nano", "turbo"].includes(tokens[2])
+        ? ` ${formatCompactModelToken(tokens[2])}`
+        : "";
+    return `${version}${variant}`;
+  }
+
+  if (tokens[0] === "claude") {
+    const variantToken = tokens.find((token) =>
+      ["sonnet", "haiku", "opus"].includes(token)
+    );
+    let version = "";
+    if (tokens[1] && tokens[2] && /^\d+$/.test(tokens[1]) && /^\d+$/.test(tokens[2])) {
+      version = `${tokens[1]}.${tokens[2]}`;
+    } else if (
+      variantToken &&
+      tokens[1] === variantToken &&
+      tokens[2] &&
+      /^\d+(?:\.\d+)?$/.test(tokens[2])
+    ) {
+      version = tokens[2];
+    } else if (tokens[1] && /^\d+(?:\.\d+)?$/.test(tokens[1])) {
+      version = tokens[1];
+    }
+    return ["Claude", version, formatCompactModelToken(variantToken)]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (tokens[0] === "deepseek") {
+    return ["DeepSeek", formatCompactModelToken(tokens[1])]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (tokens[0] === "qwen") {
+    return ["Qwen", formatCompactModelToken(tokens[1])]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (tokens[0] === "kimi") {
+    return ["Kimi", formatCompactModelToken(tokens[1])]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  if (tokens[0] === "glm") {
+    const version = tokens[1] ? `-${tokens[1].toUpperCase()}` : "";
+    return `GLM${version}`;
+  }
+
+  return rawModelId;
+}
+
 function resolveHeaderModelPlaceholder() {
   const shouldUseCompactLabel =
     typeof window !== "undefined" &&
@@ -1535,9 +1651,12 @@ function resolveHeaderModelPlaceholder() {
 export function updateModelNames() {
   const runtimeConfig = getRuntimeModelConfig();
   const modelId = String(runtimeConfig.model || "").trim();
-  const displayName = resolveModelDisplayName(modelId);
+  const displayName = resolveHeaderModelDisplayName(modelId);
   elements.modelName.textContent = displayName || resolveHeaderModelPlaceholder();
   elements.modelName.classList.toggle("is-placeholder", !displayName);
+  if (elements.headerModelTrigger) {
+    elements.headerModelTrigger.removeAttribute("title");
+  }
 
   if (elements.serviceNameLabel) {
     elements.serviceNameLabel.style.display = "none";

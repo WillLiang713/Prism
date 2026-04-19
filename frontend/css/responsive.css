@@ -1153,19 +1153,19 @@
   }
 
   .composer-actions-right .brand-model.composer-model {
-    flex: 0 0 70px;
-    width: 70px;
-    min-width: 70px;
-    max-width: 70px;
+    flex: 0 0 96px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
   }
 
   .composer-actions-right .brand-model-trigger {
     min-width: 0;
     width: 100%;
     max-width: 100%;
-    justify-content: center;
-    gap: 3px;
-    padding: 0 7px;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 0 6px 0 7px;
   }
 
   .composer-actions-right .brand-model-icon {
@@ -1178,7 +1178,7 @@
   .composer-actions-right .brand-model-id {
     font-size: 11px;
     font-weight: 600;
-    text-align: center;
+    text-align: left;
   }
 
   .composer-actions-right .brand-model-id.is-placeholder {
@@ -1191,10 +1191,10 @@
   }
 
   .composer-actions-right .reasoning-effort-selector {
-    flex: 0 0 70px;
-    width: 70px;
-    min-width: 70px;
-    max-width: 70px;
+    flex: 0 0 64px;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
   }
 
   .composer-actions-right .reasoning-effort-current {
