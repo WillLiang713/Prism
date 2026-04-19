@@ -152,7 +152,46 @@
                     <path d="M7.5 4.5L13 10l-5.5 5.5"></path>
                   </svg>
                 </button>
-                <div class="header-brand desktop-drag-region" aria-label="模型信息" data-tauri-drag-region></div>
+                <div class="header-brand desktop-drag-region" aria-label="模型信息" data-tauri-drag-region>
+                  <span class="brand-model header-model" id="headerModelInfo">
+                    <button
+                      class="brand-model-trigger no-drag"
+                      id="headerModelTrigger"
+                      type="button"
+                      aria-label="选择模型"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                    >
+                      <svg class="brand-model-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path>
+                        <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path>
+                        <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path>
+                      </svg>
+                      <span class="brand-service-name" id="serviceNameLabel" style="display: none;"></span>
+                      <span class="brand-divider" id="serviceModelDivider" style="display: none;">/</span>
+                      <span class="brand-model-id" id="modelName"></span>
+                      <svg class="brand-model-caret" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path
+                          d="M4.25 6.25L8 10l3.75-3.75"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        ></path>
+                      </svg>
+                    </button>
+                    <div
+                      class="model-dropdown header-model-dropdown"
+                      id="headerModelDropdown"
+                      data-floating-min-width="320"
+                      data-floating-align="center"
+                      data-floating-placement="bottom"
+                      role="listbox"
+                      aria-hidden="true"
+                      hidden
+                    ></div>
+                  </span>
+                </div>
                 <div class="chat-actions">
                   <div class="header-utility-actions" aria-label="界面操作">
                     <button class="titlebar-action-btn no-drag language-toggle-btn" id="languageToggleBtn" aria-label="切换到英文">
@@ -298,44 +337,6 @@
                         </div>
 
                       <div class="composer-actions-right">
-                        <span class="brand-model composer-model" id="headerModelInfo">
-                          <button
-                            class="brand-model-trigger no-drag"
-                            id="headerModelTrigger"
-                            type="button"
-                            aria-label="选择模型"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                          >
-                            <svg class="brand-model-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                              <path d="M12 3l1.9 4.7L18.5 9.5l-4.6 1.8L12 16l-1.9-4.7L5.5 9.5l4.6-1.8L12 3z"></path>
-                              <path d="M19 14l.8 2 2 .8-2 .8L19 20l-.8-2.4-2-.8 2-.8L19 14z"></path>
-                            </svg>
-                            <span class="brand-service-name" id="serviceNameLabel" style="display: none;"></span>
-                            <span class="brand-divider" id="serviceModelDivider" style="display: none;">/</span>
-                            <span class="brand-model-id" id="modelName"></span>
-                            <svg class="brand-model-caret" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                              <path
-                                d="M4.25 6.25L8 10l3.75-3.75"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                              ></path>
-                            </svg>
-                          </button>
-                          <div
-                            class="model-dropdown header-model-dropdown"
-                            id="headerModelDropdown"
-                            data-floating-min-width="320"
-                            data-floating-align="center"
-                            data-floating-placement="top"
-                            role="listbox"
-                            aria-hidden="true"
-                            hidden
-                          ></div>
-                        </span>
-
                         <div class="reasoning-effort-selector" id="reasoningEffortSelector">
                           <button
                             type="button"

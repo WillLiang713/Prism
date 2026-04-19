@@ -126,6 +126,19 @@
   box-shadow: none;
 }
 
+.brand-model-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.brand-model-trigger:hover .brand-model-icon,
+.brand-model-trigger.open .brand-model-icon {
+  opacity: 1;
+}
+
 .brand-model-caret {
   width: 12px;
   height: 12px;

@@ -1155,19 +1155,22 @@
   }
 
   .composer-actions-right .brand-model.composer-model {
-    flex: 0 0 96px;
-    width: 96px;
-    min-width: 96px;
-    max-width: 96px;
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: min(68vw, 280px);
   }
 
   .composer-actions-right .brand-model-trigger {
     min-width: 0;
-    width: 100%;
+    width: auto;
     max-width: 100%;
     justify-content: flex-start;
-    gap: 4px;
-    padding: 0 6px 0 7px;
+    height: 36px;
+    min-height: 36px;
+    align-items: center;
+    gap: 3px;
+    padding: 0 5px 0 6px;
   }
 
   .composer-actions-right .brand-model-icon {
@@ -1181,6 +1184,10 @@
     font-size: 11px;
     font-weight: 600;
     text-align: left;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.2;
   }
 
   .composer-actions-right .brand-model-id.is-placeholder {

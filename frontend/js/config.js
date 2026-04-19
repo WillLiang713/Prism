@@ -1550,6 +1550,10 @@ function formatCompactModelToken(token) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function formatModelTokenSequence(tokens = []) {
+  return tokens.map((token) => formatCompactModelToken(token)).filter(Boolean);
+}
+
 function resolveHeaderModelDisplayName(modelId) {
   const rawModelId = String(modelId || "").trim();
   if (!rawModelId) return "";
@@ -1566,66 +1570,58 @@ function resolveHeaderModelDisplayName(modelId) {
   if (!tokens.length) return rawModelId;
 
   if (tokens[0] === "gemini") {
-    const parts = ["Gemini"];
-    if (tokens[1]) parts.push(formatCompactModelToken(tokens[1]));
-    if (tokens[2] && ["flash", "pro", "lite", "exp"].includes(tokens[2])) {
-      parts.push(formatCompactModelToken(tokens[2]));
-    }
-    return parts.join(" ");
+    return ["Gemini", ...formatModelTokenSequence(tokens.slice(1))].join(" ");
   }
 
   if (tokens[0] === "gpt") {
-    const version = tokens[1] ? `GPT-${tokens[1].toUpperCase()}` : "GPT";
-    const variant =
-      tokens[2] && ["mini", "nano", "turbo"].includes(tokens[2])
-        ? ` ${formatCompactModelToken(tokens[2])}`
-        : "";
-    return `${version}${variant}`;
+    return [
+      tokens[1] ? `GPT-${tokens[1].toUpperCase()}` : "GPT",
+      ...formatModelTokenSequence(tokens.slice(2)),
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   if (tokens[0] === "claude") {
-    const variantToken = tokens.find((token) =>
-      ["sonnet", "haiku", "opus"].includes(token)
-    );
+    let nextIndex = 1;
     let version = "";
     if (tokens[1] && tokens[2] && /^\d+$/.test(tokens[1]) && /^\d+$/.test(tokens[2])) {
       version = `${tokens[1]}.${tokens[2]}`;
-    } else if (
-      variantToken &&
-      tokens[1] === variantToken &&
-      tokens[2] &&
-      /^\d+(?:\.\d+)?$/.test(tokens[2])
-    ) {
-      version = tokens[2];
+      nextIndex = 3;
     } else if (tokens[1] && /^\d+(?:\.\d+)?$/.test(tokens[1])) {
       version = tokens[1];
+      nextIndex = 2;
     }
-    return ["Claude", version, formatCompactModelToken(variantToken)]
+    return ["Claude", version, ...formatModelTokenSequence(tokens.slice(nextIndex))]
       .filter(Boolean)
       .join(" ");
   }
 
   if (tokens[0] === "deepseek") {
-    return ["DeepSeek", formatCompactModelToken(tokens[1])]
+    return ["DeepSeek", ...formatModelTokenSequence(tokens.slice(1))]
       .filter(Boolean)
       .join(" ");
   }
 
   if (tokens[0] === "qwen") {
-    return ["Qwen", formatCompactModelToken(tokens[1])]
+    return ["Qwen", ...formatModelTokenSequence(tokens.slice(1))]
       .filter(Boolean)
       .join(" ");
   }
 
   if (tokens[0] === "kimi") {
-    return ["Kimi", formatCompactModelToken(tokens[1])]
+    return ["Kimi", ...formatModelTokenSequence(tokens.slice(1))]
       .filter(Boolean)
       .join(" ");
   }
 
   if (tokens[0] === "glm") {
-    const version = tokens[1] ? `-${tokens[1].toUpperCase()}` : "";
-    return `GLM${version}`;
+    return [
+      tokens[1] ? `GLM-${tokens[1].toUpperCase()}` : "GLM",
+      ...formatModelTokenSequence(tokens.slice(2)),
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   return rawModelId;
