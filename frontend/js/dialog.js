@@ -10,9 +10,13 @@ import { t } from './i18n.js';
 const IMAGE_PREVIEW_MIN_ZOOM = 0.25;
 const IMAGE_PREVIEW_MAX_ZOOM = 5;
 const IMAGE_PREVIEW_WHEEL_STEP = 1.12;
+const IMAGE_PREVIEW_MIN_STAGE_SIZE = 96;
 
 let imagePreviewLastTrigger = null;
 let imagePreviewZoom = 1;
+let imagePreviewBaseWidth = 0;
+let imagePreviewBaseHeight = 0;
+let imagePreviewSizingToken = 0;
 
 function clampImagePreviewZoom(zoom) {
   const normalizedZoom = Number(zoom);
@@ -23,26 +27,82 @@ function clampImagePreviewZoom(zoom) {
   );
 }
 
-function applyImagePreviewZoom(zoom, originEvent = null) {
+function getImagePreviewStage() {
+  return elements.imagePreviewDialog?.querySelector(".image-preview-stage") || null;
+}
+
+function getImagePreviewMaxStageSize() {
+  return {
+    width: Math.min(window.innerWidth * 0.92, 1120),
+    height: Math.min(window.innerHeight * 0.78, 820),
+  };
+}
+
+function getImagePreviewFitSize() {
+  const image = elements.imagePreviewImage;
+  const naturalWidth = image?.naturalWidth || 0;
+  const naturalHeight = image?.naturalHeight || 0;
+  if (naturalWidth <= 0 || naturalHeight <= 0) return null;
+
+  const maxStageSize = getImagePreviewMaxStageSize();
+  const fitScale = Math.min(
+    1,
+    maxStageSize.width / naturalWidth,
+    maxStageSize.height / naturalHeight
+  );
+  return {
+    width: naturalWidth * fitScale,
+    height: naturalHeight * fitScale,
+  };
+}
+
+function ensureImagePreviewBaseSize() {
+  if (imagePreviewBaseWidth > 0 && imagePreviewBaseHeight > 0) return true;
+
+  const fitSize = getImagePreviewFitSize();
+  if (!fitSize) return false;
+
+  imagePreviewBaseWidth = fitSize.width;
+  imagePreviewBaseHeight = fitSize.height;
+  return true;
+}
+
+function applyImagePreviewZoom(zoom) {
   const image = elements.imagePreviewImage;
   if (!image) return;
 
   imagePreviewZoom = clampImagePreviewZoom(zoom);
+  const stage = getImagePreviewStage();
+  const hasBaseSize = imagePreviewBaseWidth > 0 && imagePreviewBaseHeight > 0;
 
-  if (originEvent instanceof WheelEvent) {
-    const rect = image.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      const originX = ((originEvent.clientX - rect.left) / rect.width) * 100;
-      const originY = ((originEvent.clientY - rect.top) / rect.height) * 100;
-      const clampedOriginX = Math.max(0, Math.min(100, originX));
-      const clampedOriginY = Math.max(0, Math.min(100, originY));
-      image.style.transformOrigin = `${clampedOriginX}% ${clampedOriginY}%`;
+  image.classList.toggle("is-zoom-controlled", hasBaseSize);
+
+  if (hasBaseSize) {
+    const imageWidth = imagePreviewBaseWidth * imagePreviewZoom;
+    const imageHeight = imagePreviewBaseHeight * imagePreviewZoom;
+    const maxStageSize = getImagePreviewMaxStageSize();
+    image.style.width = `${imageWidth}px`;
+    image.style.height = `${imageHeight}px`;
+
+    if (stage) {
+      stage.style.width = `${Math.min(
+        maxStageSize.width,
+        Math.max(IMAGE_PREVIEW_MIN_STAGE_SIZE, imageWidth)
+      )}px`;
+      stage.style.height = `${Math.min(
+        maxStageSize.height,
+        Math.max(IMAGE_PREVIEW_MIN_STAGE_SIZE, imageHeight)
+      )}px`;
     }
   } else {
-    image.style.transformOrigin = "";
+    image.style.width = "";
+    image.style.height = "";
+    if (stage) {
+      stage.style.width = "";
+      stage.style.height = "";
+    }
   }
 
-  image.style.setProperty("--image-preview-zoom", imagePreviewZoom.toFixed(3));
   elements.imagePreviewModal?.classList.toggle(
     "is-zoomed",
     imagePreviewZoom > 1.01
@@ -50,7 +110,27 @@ function applyImagePreviewZoom(zoom, originEvent = null) {
 }
 
 function resetImagePreviewZoom() {
+  imagePreviewSizingToken += 1;
+  imagePreviewBaseWidth = 0;
+  imagePreviewBaseHeight = 0;
   applyImagePreviewZoom(1);
+}
+
+function syncImagePreviewBaseSize() {
+  const image = elements.imagePreviewImage;
+  if (!image) return;
+
+  const token = ++imagePreviewSizingToken;
+  window.requestAnimationFrame(() => {
+    if (token !== imagePreviewSizingToken || !isImagePreviewOpen()) return;
+
+    const fitSize = getImagePreviewFitSize();
+    if (!fitSize) return;
+
+    imagePreviewBaseWidth = fitSize.width;
+    imagePreviewBaseHeight = fitSize.height;
+    applyImagePreviewZoom(imagePreviewZoom);
+  });
 }
 
 function handleImagePreviewWheel(e) {
@@ -58,10 +138,12 @@ function handleImagePreviewWheel(e) {
   if (e.target instanceof HTMLElement && e.target.closest("button")) return;
 
   e.preventDefault();
+  if (!ensureImagePreviewBaseSize()) return;
+
   const nextZoom =
     imagePreviewZoom *
     (e.deltaY < 0 ? IMAGE_PREVIEW_WHEEL_STEP : 1 / IMAGE_PREVIEW_WHEEL_STEP);
-  applyImagePreviewZoom(nextZoom, e);
+  applyImagePreviewZoom(nextZoom);
 }
 
 function inferPreviewImageExtension(src = "") {
@@ -238,6 +320,9 @@ export function openImagePreview({ src = "", alt = "", trigger = null } = {}) {
 
   imagePreviewLastTrigger = trigger instanceof HTMLElement ? trigger : null;
   resetImagePreviewZoom();
+  elements.imagePreviewImage.addEventListener("load", syncImagePreviewBaseSize, {
+    once: true,
+  });
   elements.imagePreviewImage.src = src;
   elements.imagePreviewImage.alt = alt || t("图片预览");
 
@@ -249,6 +334,9 @@ export function openImagePreview({ src = "", alt = "", trigger = null } = {}) {
   elements.imagePreviewModal.classList.add("open");
   elements.imagePreviewModal.setAttribute("aria-hidden", "false");
   syncBodyScrollLock();
+  if (elements.imagePreviewImage.complete) {
+    syncImagePreviewBaseSize();
+  }
 
   window.setTimeout(() => {
     elements.imagePreviewCloseBtn?.focus();

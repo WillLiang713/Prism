@@ -675,6 +675,8 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  max-width: min(92vw, 1120px);
+  max-height: min(78vh, 820px);
   border-radius: var(--image-radius);
   background: transparent;
   cursor: zoom-in;
@@ -685,7 +687,6 @@
 }
 
 .image-preview-image {
-  --image-preview-zoom: 1;
   display: block;
   max-width: 100%;
   max-height: min(78vh, 820px);
@@ -694,9 +695,11 @@
   object-fit: contain;
   border-radius: inherit;
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.34);
-  transform: scale(var(--image-preview-zoom));
-  transform-origin: center;
-  will-change: transform;
+}
+
+.image-preview-image.is-zoom-controlled {
+  max-width: none;
+  max-height: none;
 }
 
 .image-preview-caption {
