@@ -66,6 +66,9 @@ function createMainModelState(config) {
 
 const STREAM_THINKING_RENDER_INTERVAL_MS = 24;
 const STREAM_PREVIEW_INTERVAL_MS = 250;
+const STREAM_THINKING_BASE_REVEAL_CPS = 58;
+const STREAM_THINKING_BACKLOG_REVEAL_CPS = 0.22;
+const STREAM_THINKING_MAX_REVEAL_CHARS = 10;
 const STREAM_CONTENT_BASE_REVEAL_CPS = 48;
 const STREAM_CONTENT_BACKLOG_REVEAL_CPS = 2;
 
@@ -274,14 +277,16 @@ export async function regenerateTurn(turn, options = {}) {
     return false;
   }
 
-  const shouldScrollToBottom = options?.scrollToBottom === true;
-
   const topic = state.chat.topics.find((item) =>
     Array.isArray(item?.turns) && item.turns.some((entry) => entry.id === turn.id)
   );
   if (!topic || isTopicRunning(topic.id)) {
     return false;
   }
+  const turnIndex = topic.turns.findIndex((entry) => entry.id === turn.id);
+  const shouldScrollToBottom =
+    options?.scrollToBottom === true ||
+    (options?.scrollToBottom !== false && turnIndex === topic.turns.length - 1);
 
   const config = getConfig();
   const webSearchConfig = getWebSearchConfig();
@@ -321,9 +326,14 @@ export async function regenerateTurn(turn, options = {}) {
 
   if (shouldScrollToBottom) {
     state.autoScroll = true;
+    state.chat.suppressScrollToBottomButton = false;
     scrollToBottom(elements.chatMessages, false);
+    updateScrollToBottomButton();
   } else {
     state.autoScroll = false;
+    state.chat.autoScrollLockUntil = 0;
+    state.chat.suppressScrollToBottomButton = true;
+    updateScrollToBottomButton();
     activeTurnEl?.scrollIntoView({
       block: "nearest",
       inline: "nearest",
@@ -341,6 +351,8 @@ export async function regenerateTurn(turn, options = {}) {
   );
 
   scheduleSaveChat();
+  state.chat.suppressScrollToBottomButton = false;
+  updateScrollToBottomButton();
   return true;
 }
 
@@ -395,11 +407,19 @@ export async function callModel(
   let thinkingEndTime = null;
   let contentRenderFrame = 0;
   let thinkingRenderTimer = null;
+  let thinkingFinalRenderPending = false;
+  let contentFinalRenderPending = false;
+  let thinkingContentGateStartedAt = 0;
+  let resumeAutoScrollAfterThinkingGate = false;
   let previewSyncTimer = null;
+  let previewSyncBlockedAutoOpen = false;
   let autoScrollFrame = 0;
   let autoScrollFollowUpFrame = 0;
   let lastThinkingRenderAt = 0;
   let lastPreviewSyncAt = 0;
+  let visibleThinking = "";
+  let lastThinkingRevealAt = 0;
+  let thinkingRevealBudget = 0;
   let visibleContent = "";
   let lastContentRevealAt = 0;
   let contentRevealBudget = 0;
@@ -407,13 +427,28 @@ export async function callModel(
   let lastRenderedStableContent = "";
   let lastRenderedLiveContent = "";
   let lastRenderedThinking = "";
+  let lastThinkingContentEl = null;
   let streamRenderSkipCodeHighlight = true;
   let lastThinkingRenderSkipCodeHighlight = true;
   let lastContentRenderSkipCodeHighlight = true;
 
+  const lockStreamingAutoScroll = () => {
+    if (!state.autoScroll) return;
+    state.chat.autoScrollLockUntil = Date.now() + 350;
+  };
+
   const performAutoScroll = (smooth = false) => {
     if (!state.autoScroll || topicId !== state.chat.activeTopicId) return;
+    lockStreamingAutoScroll();
     scrollToBottom(elements.chatMessages, smooth);
+    const uiRef = resolveUi();
+    const thinkingDetail = uiRef?.thinkingContentEl?.closest?.(".thinking-detail");
+    if (
+      thinkingDetail instanceof HTMLElement &&
+      !uiRef?.thinkingSectionEl?.classList.contains("collapsed")
+    ) {
+      thinkingDetail.scrollTop = thinkingDetail.scrollHeight;
+    }
   };
 
   // 流式渲染会先收到 chunk，再在下一帧真正写入 DOM。
@@ -421,6 +456,7 @@ export async function callModel(
   const scheduleAutoScroll = ({ smooth = false, followUp = true } = {}) => {
     if (!state.autoScroll || topicId !== state.chat.activeTopicId) return;
     if (!elements.chatMessages) return;
+    lockStreamingAutoScroll();
     if (autoScrollFrame) return;
     autoScrollFrame = requestAnimationFrame(() => {
       autoScrollFrame = 0;
@@ -436,37 +472,104 @@ export async function callModel(
     });
   };
 
+  const isThinkingRevealBlockingContent = () => {
+    if (turn.models.main.thinkingComplete !== true) return false;
+    const normalizedThinking = normalizeThinkingText(turn.models.main.thinking);
+    return (
+      !!normalizedThinking.trim() &&
+      visibleThinking.length < normalizedThinking.length
+    );
+  };
+
+  const hasPendingContentRender = () =>
+    contentFinalRenderPending ||
+    visibleContent.length < String(turn.models.main.content || "").length;
+
+  const releaseContentRenderIfReady = () => {
+    if (isThinkingRevealBlockingContent() || !hasPendingContentRender()) return;
+    if (resumeAutoScrollAfterThinkingGate) {
+      const userScrollIntentAt = Number(state.chat.userScrollIntentAt || 0);
+      if (!userScrollIntentAt || userScrollIntentAt <= thinkingContentGateStartedAt) {
+        state.autoScroll = true;
+      }
+    }
+    thinkingContentGateStartedAt = 0;
+    resumeAutoScrollAfterThinkingGate = false;
+    scheduleContentRender();
+  };
+
+  const requestPreviewSync = (autoOpen = true) => {
+    if (isThinkingRevealBlockingContent()) {
+      previewSyncBlockedAutoOpen = previewSyncBlockedAutoOpen || autoOpen === true;
+      return;
+    }
+    schedulePreviewSync(autoOpen);
+  };
+
   const flushThinkingRender = ({ force = false } = {}) => {
     if (thinkingRenderTimer) {
       clearTimeout(thinkingRenderTimer);
       thinkingRenderTimer = null;
     }
+    lockStreamingAutoScroll();
     const uiRef = resolveUi();
     if (!uiRef?.thinkingSectionEl || !uiRef?.thinkingContentEl) return;
+    if (uiRef.thinkingContentEl !== lastThinkingContentEl) {
+      lastThinkingContentEl = uiRef.thinkingContentEl;
+      visibleThinking = "";
+      thinkingRevealBudget = 0;
+      lastRenderedThinking = "";
+      lastThinkingRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+      resetThinkingRevealClock();
+    }
     const normalizedThinking = normalizeThinkingText(turn.models.main.thinking);
     if (!normalizedThinking.trim()) {
       uiRef.thinkingSectionEl.style.display = "none";
       uiRef.thinkingContentEl.textContent = "";
+      visibleThinking = "";
+      thinkingRevealBudget = 0;
+      thinkingFinalRenderPending = false;
       lastRenderedThinking = "";
       lastThinkingRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
       lastThinkingRenderAt = Date.now();
       return;
     }
+
+    advanceVisibleThinking(normalizedThinking, { force });
+    const nextThinking = force ? normalizedThinking : visibleThinking;
+    const hasHiddenThinkingBacklog =
+      !force && visibleThinking.length < normalizedThinking.length;
+    const skipThinkingCodeHighlight =
+      streamRenderSkipCodeHighlight ||
+      (thinkingFinalRenderPending && hasHiddenThinkingBacklog);
     if (
       !force &&
-      normalizedThinking === lastRenderedThinking &&
-      streamRenderSkipCodeHighlight === lastThinkingRenderSkipCodeHighlight
+      nextThinking === lastRenderedThinking &&
+      skipThinkingCodeHighlight === lastThinkingRenderSkipCodeHighlight
     ) {
+      if (hasHiddenThinkingBacklog) {
+        scheduleThinkingRender();
+      } else {
+        thinkingFinalRenderPending = false;
+        releaseContentRenderIfReady();
+      }
       return;
     }
     uiRef.thinkingSectionEl.style.display = "block";
-    renderMarkdownToElement(uiRef.thinkingContentEl, normalizedThinking, {
-      skipCodeHighlight: streamRenderSkipCodeHighlight,
+    renderMarkdownToElement(uiRef.thinkingContentEl, nextThinking, {
+      skipCodeHighlight: skipThinkingCodeHighlight,
     });
-    lastRenderedThinking = normalizedThinking;
-    lastThinkingRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+    lastRenderedThinking = nextThinking;
+    lastThinkingRenderSkipCodeHighlight = skipThinkingCodeHighlight;
     lastThinkingRenderAt = Date.now();
     scheduleAutoScroll({ followUp: false });
+
+    if (hasHiddenThinkingBacklog) {
+      scheduleThinkingRender();
+    } else {
+      thinkingFinalRenderPending = false;
+      releaseContentRenderIfReady();
+    }
   };
 
   const scheduleThinkingRender = () => {
@@ -480,6 +583,62 @@ export async function callModel(
       flushThinkingRender,
       STREAM_THINKING_RENDER_INTERVAL_MS - elapsed
     );
+  };
+
+  const resetThinkingRevealClock = () => {
+    lastThinkingRevealAt =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+  };
+
+  const advanceVisibleThinking = (targetThinking, { force = false } = {}) => {
+    const target = String(targetThinking || "");
+    if (force) {
+      const changed = visibleThinking !== target;
+      visibleThinking = target;
+      thinkingRevealBudget = 0;
+      resetThinkingRevealClock();
+      return changed;
+    }
+
+    if (!target.startsWith(visibleThinking)) {
+      let commonLength = 0;
+      const maxCommonLength = Math.min(visibleThinking.length, target.length);
+      while (
+        commonLength < maxCommonLength &&
+        visibleThinking[commonLength] === target[commonLength]
+      ) {
+        commonLength += 1;
+      }
+      visibleThinking = target.slice(0, commonLength);
+      thinkingRevealBudget = 0;
+      resetThinkingRevealClock();
+    }
+
+    const backlog = target.length - visibleThinking.length;
+    if (backlog <= 0) return false;
+
+    const now =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    const deltaMs = lastThinkingRevealAt
+      ? Math.min(34, Math.max(8, now - lastThinkingRevealAt))
+      : 16;
+    lastThinkingRevealAt = now;
+
+    const revealRatePerSec =
+      STREAM_THINKING_BASE_REVEAL_CPS +
+      backlog * STREAM_THINKING_BACKLOG_REVEAL_CPS;
+    thinkingRevealBudget += (revealRatePerSec * deltaMs) / 1000;
+    const nextCharCount = Math.min(
+      backlog,
+      STREAM_THINKING_MAX_REVEAL_CHARS,
+      Math.floor(thinkingRevealBudget)
+    );
+
+    if (nextCharCount <= 0) return false;
+
+    thinkingRevealBudget -= nextCharCount;
+    visibleThinking = target.slice(0, visibleThinking.length + nextCharCount);
+    return true;
   };
 
   const advanceVisibleContent = ({ force = false } = {}) => {
@@ -520,20 +679,36 @@ export async function callModel(
     return true;
   };
 
-  const flushContentRender = ({ force = false } = {}) => {
+  const flushContentRender = ({ force = false, ignoreThinkingGate = false } = {}) => {
     if (contentRenderFrame) {
       cancelAnimationFrame(contentRenderFrame);
       contentRenderFrame = 0;
     }
     const uiRef = resolveUi();
     if (!uiRef?.responseEl) return;
-    advanceVisibleContent({ force });
-    const nextContent = force ? turn.models.main.content : visibleContent;
-    const nextSplit = force
+    lockStreamingAutoScroll();
+    if (!ignoreThinkingGate && isThinkingRevealBlockingContent()) {
+      if (!thinkingContentGateStartedAt) {
+        thinkingContentGateStartedAt = Date.now();
+      }
+      resumeAutoScrollAfterThinkingGate =
+        resumeAutoScrollAfterThinkingGate || state.autoScroll === true;
+      if (force) {
+        contentFinalRenderPending = true;
+      }
+      scheduleThinkingRender();
+      scheduleAutoScroll({ followUp: false });
+      return;
+    }
+
+    const shouldForce = force || contentFinalRenderPending;
+    advanceVisibleContent({ force: shouldForce });
+    const nextContent = shouldForce ? turn.models.main.content : visibleContent;
+    const nextSplit = shouldForce
       ? { stableText: nextContent, liveText: "" }
       : splitStreamingMarkdown(nextContent);
     if (
-      !force &&
+      !shouldForce &&
       nextContent === lastRenderedContent &&
       nextSplit.stableText === lastRenderedStableContent &&
       nextSplit.liveText === lastRenderedLiveContent &&
@@ -548,7 +723,7 @@ export async function callModel(
       nextContent,
       {
         skipCodeHighlight: streamRenderSkipCodeHighlight,
-        forceFull: force,
+        forceFull: shouldForce,
         previousStableText: lastRenderedStableContent,
         previousLiveText: lastRenderedLiveContent,
       }
@@ -561,6 +736,14 @@ export async function callModel(
     lastRenderedStableContent = renderedSplit.stableText;
     lastRenderedLiveContent = renderedSplit.liveText;
     lastContentRenderSkipCodeHighlight = streamRenderSkipCodeHighlight;
+    if (shouldForce) {
+      contentFinalRenderPending = false;
+    }
+    if (previewSyncBlockedAutoOpen) {
+      const shouldAutoOpenPreview = previewSyncBlockedAutoOpen;
+      previewSyncBlockedAutoOpen = false;
+      schedulePreviewSync(shouldAutoOpenPreview);
+    }
     scheduleAutoScroll();
 
     if (!force && visibleContent.length < String(turn.models.main.content || "").length) {
@@ -788,17 +971,19 @@ export async function callModel(
               thinkingEndTime = Date.now();
             }
             turn.models.main.content += chunk.data;
-            scheduleContentRender();
-            schedulePreviewSync(true);
-            if (thinkingStartTime && uiRef?.thinkingLabelEl) {
+            if (thinkingStartTime) {
               turn.models.main.thinkingComplete = true;
-              const completeLabel = formatThinkingCompleteLabel(
-                turn.models.main.thinkingTime
-              );
-              turn.models.main.thinkingLabel = completeLabel;
-              uiRef.thinkingLabelEl.textContent = completeLabel;
-              uiRef.thinkingLabelEl.classList.add("is-complete");
+              if (uiRef?.thinkingLabelEl) {
+                const completeLabel = formatThinkingCompleteLabel(
+                  turn.models.main.thinkingTime
+                );
+                turn.models.main.thinkingLabel = completeLabel;
+                uiRef.thinkingLabelEl.textContent = completeLabel;
+                uiRef.thinkingLabelEl.classList.add("is-complete");
+              }
             }
+            scheduleContentRender();
+            requestPreviewSync(true);
             scheduleSaveChat();
             updateScrollToBottomButton();
             const message = uiRef?.statusEl?.closest(".assistant-message");
@@ -911,7 +1096,8 @@ export async function callModel(
     );
 
     streamRenderSkipCodeHighlight = false;
-    flushThinkingRender({ force: true });
+    thinkingFinalRenderPending = true;
+    flushThinkingRender();
     flushContentRender({ force: true });
     updateTime();
     turn.models.main.status = "complete";
@@ -971,13 +1157,14 @@ export async function callModel(
       }
     }
 
-    flushPreviewSync(true);
+    requestPreviewSync(true);
     performAutoScroll(false);
     scheduleAutoScroll();
   } catch (error) {
     streamRenderSkipCodeHighlight = false;
+    thinkingFinalRenderPending = false;
     flushThinkingRender({ force: true });
-    flushContentRender({ force: true });
+    flushContentRender({ force: true, ignoreThinkingGate: true });
     const uiRef = resolveUi();
     if (error?.name === "AbortError") {
       turn.models.main.status = "stopped";
@@ -1003,7 +1190,9 @@ export async function callModel(
     if (contentRenderFrame) cancelAnimationFrame(contentRenderFrame);
     if (autoScrollFrame) cancelAnimationFrame(autoScrollFrame);
     if (autoScrollFollowUpFrame) cancelAnimationFrame(autoScrollFollowUpFrame);
-    if (thinkingRenderTimer) clearTimeout(thinkingRenderTimer);
+    if (thinkingRenderTimer && !thinkingFinalRenderPending) {
+      clearTimeout(thinkingRenderTimer);
+    }
     if (previewSyncTimer) clearTimeout(previewSyncTimer);
     unmarkTopicRunning(topicId, abortController);
   }

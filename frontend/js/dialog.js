@@ -7,7 +7,62 @@ import {
 } from './state.js';
 import { t } from './i18n.js';
 
+const IMAGE_PREVIEW_MIN_ZOOM = 0.25;
+const IMAGE_PREVIEW_MAX_ZOOM = 5;
+const IMAGE_PREVIEW_WHEEL_STEP = 1.12;
+
 let imagePreviewLastTrigger = null;
+let imagePreviewZoom = 1;
+
+function clampImagePreviewZoom(zoom) {
+  const normalizedZoom = Number(zoom);
+  if (!Number.isFinite(normalizedZoom)) return 1;
+  return Math.min(
+    IMAGE_PREVIEW_MAX_ZOOM,
+    Math.max(IMAGE_PREVIEW_MIN_ZOOM, normalizedZoom)
+  );
+}
+
+function applyImagePreviewZoom(zoom, originEvent = null) {
+  const image = elements.imagePreviewImage;
+  if (!image) return;
+
+  imagePreviewZoom = clampImagePreviewZoom(zoom);
+
+  if (originEvent instanceof WheelEvent) {
+    const rect = image.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const originX = ((originEvent.clientX - rect.left) / rect.width) * 100;
+      const originY = ((originEvent.clientY - rect.top) / rect.height) * 100;
+      const clampedOriginX = Math.max(0, Math.min(100, originX));
+      const clampedOriginY = Math.max(0, Math.min(100, originY));
+      image.style.transformOrigin = `${clampedOriginX}% ${clampedOriginY}%`;
+    }
+  } else {
+    image.style.transformOrigin = "";
+  }
+
+  image.style.setProperty("--image-preview-zoom", imagePreviewZoom.toFixed(3));
+  elements.imagePreviewModal?.classList.toggle(
+    "is-zoomed",
+    imagePreviewZoom > 1.01
+  );
+}
+
+function resetImagePreviewZoom() {
+  applyImagePreviewZoom(1);
+}
+
+function handleImagePreviewWheel(e) {
+  if (!isImagePreviewOpen() || e.deltaY === 0) return;
+  if (e.target instanceof HTMLElement && e.target.closest("button")) return;
+
+  e.preventDefault();
+  const nextZoom =
+    imagePreviewZoom *
+    (e.deltaY < 0 ? IMAGE_PREVIEW_WHEEL_STEP : 1 / IMAGE_PREVIEW_WHEEL_STEP);
+  applyImagePreviewZoom(nextZoom, e);
+}
 
 function inferPreviewImageExtension(src = "") {
   const normalized = String(src || "").trim().toLowerCase();
@@ -182,6 +237,7 @@ export function openImagePreview({ src = "", alt = "", trigger = null } = {}) {
   }
 
   imagePreviewLastTrigger = trigger instanceof HTMLElement ? trigger : null;
+  resetImagePreviewZoom();
   elements.imagePreviewImage.src = src;
   elements.imagePreviewImage.alt = alt || t("图片预览");
 
@@ -204,6 +260,7 @@ export function closeImagePreview({ restoreFocus = true } = {}) {
 
   elements.imagePreviewModal.classList.remove("open");
   elements.imagePreviewModal.setAttribute("aria-hidden", "true");
+  resetImagePreviewZoom();
   syncBodyScrollLock();
 
   if (restoreFocus && imagePreviewLastTrigger instanceof HTMLElement) {
@@ -359,6 +416,10 @@ export function bindDialogEvents() {
   elements.imagePreviewSaveBtn?.addEventListener("click", async () => {
     await savePreviewImage();
   });
+
+  elements.imagePreviewDialog
+    ?.querySelector(".image-preview-stage")
+    ?.addEventListener("wheel", handleImagePreviewWheel, { passive: false });
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !isImagePreviewOpen()) return;

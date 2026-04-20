@@ -53,8 +53,29 @@ const PRESS_START_EVENT =
     ? "pointerdown"
     : "mousedown";
 const REASONING_DROPDOWN_MIN_WIDTH = 68;
+const CHAT_SCROLL_USER_INTENT_MS = 1200;
 let lastMobileLayoutState =
   typeof window !== "undefined" ? isMobileLayout() : false;
+
+function markChatScrollIntent() {
+  state.chat.userScrollIntentAt = Date.now();
+  if (state.chat.suppressScrollToBottomButton) {
+    state.chat.suppressScrollToBottomButton = false;
+    updateScrollToBottomButton();
+  }
+}
+
+function markChatScrollbarPointerIntent(e) {
+  if (!elements.chatMessages || typeof e?.clientX !== "number") return;
+  const rect = elements.chatMessages.getBoundingClientRect();
+  const scrollbarGutterPx = 18;
+  if (
+    e.clientX <= rect.left + scrollbarGutterPx ||
+    e.clientX >= rect.right - scrollbarGutterPx
+  ) {
+    markChatScrollIntent();
+  }
+}
 
 function isWithinTopicActionUi(target) {
   if (!target || typeof target.closest !== "function") return false;
@@ -328,16 +349,61 @@ export function bindEvents() {
   // 滚动到底部按钮
   elements.scrollToBottomBtn?.addEventListener("click", () => {
     state.autoScroll = true;
+    state.chat.userScrollIntentAt = 0;
+    state.chat.suppressScrollToBottomButton = false;
     scrollToBottom(elements.chatMessages, true);
+  });
+
+  elements.chatMessages?.addEventListener("wheel", markChatScrollIntent, {
+    passive: true,
+  });
+  elements.chatMessages?.addEventListener("touchmove", markChatScrollIntent, {
+    passive: true,
+  });
+  elements.chatMessages?.addEventListener(
+    PRESS_START_EVENT,
+    markChatScrollbarPointerIntent,
+    { passive: true }
+  );
+  elements.chatMessages?.addEventListener("keydown", (e) => {
+    if (
+      [
+        "ArrowUp",
+        "ArrowDown",
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+        " ",
+      ].includes(e.key)
+    ) {
+      markChatScrollIntent();
+    }
   });
 
   // 监听聊天消息区域的滚动事件，控制按钮显示和自动滚动状态
   elements.chatMessages?.addEventListener("scroll", () => {
     updateScrollToBottomButton();
 
+    const hasRecentUserScrollIntent =
+      Date.now() - Number(state.chat.userScrollIntentAt || 0) <
+      CHAT_SCROLL_USER_INTENT_MS;
+
+    if (Date.now() < Number(state.chat.autoScrollLockUntil || 0)) {
+      if (hasRecentUserScrollIntent) {
+        state.autoScroll = false;
+        state.chat.autoScrollLockUntil = 0;
+        return;
+      }
+      state.autoScroll = true;
+      return;
+    }
+
     // 检测用户是否手动向上滚动（不在底部）
     if (!isNearBottom(elements.chatMessages)) {
-      state.autoScroll = false;
+      if (hasRecentUserScrollIntent) {
+        state.autoScroll = false;
+      }
     } else {
       // 如果用户滚回底部，重新启用自动滚动
       state.autoScroll = true;

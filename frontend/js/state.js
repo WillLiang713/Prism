@@ -235,6 +235,9 @@ export const state = {
     generatingTitleTopicIds: new Set(), // 正在生成标题的话题ID集合
     runningControllers: new Map(), // topicId -> AbortController
     turnUiById: new Map(), // turnId -> 当前可见的卡片UI引用
+    autoScrollLockUntil: 0,
+    userScrollIntentAt: 0,
+    suppressScrollToBottomButton: false,
   },
   images: {
     selectedImages: [], // 存储当前选择的图片 { id, dataUrl, name, size }

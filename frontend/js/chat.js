@@ -1351,6 +1351,8 @@ export function createAssistantCard(
   const tokenSnapshot = turn?.models?.main?.tokens;
   const timeSnapshot = turn?.models?.main?.timeCostSec;
   const statusSnapshot = turn?.models?.main?.status || "ready";
+  const isLiveStreamingSnapshot =
+    statusSnapshot === "loading" && isTopicRunning(topicId);
 
   const message = document.createElement("div");
   message.className = `assistant-message${disableAnimation ? " no-animate" : ""}`;
@@ -1429,7 +1431,7 @@ export function createAssistantCard(
 
   const thinkingContent = document.createElement("div");
   thinkingContent.className = "thinking-content";
-  if (thinkingSnapshot) {
+  if (thinkingSnapshot && !isLiveStreamingSnapshot) {
     renderMarkdownToElement(thinkingContent, thinkingSnapshot);
   }
 
@@ -1439,7 +1441,7 @@ export function createAssistantCard(
 
   if (thinkingSnapshot) {
     thinkingSection.style.display = "block";
-    // 如果有保存的折叠状态，使用该状态；否则默认折叠
+    // 如果有保存的折叠状态，使用该状态；否则默认折叠。
     const shouldCollapse = turn?.models?.[side]?.thinkingCollapsed !== false;
     if (shouldCollapse) {
       thinkingSection.classList.add("collapsed");

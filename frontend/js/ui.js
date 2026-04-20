@@ -81,6 +81,11 @@ export function onSendButtonClick() {
 export function updateScrollToBottomButton() {
   if (!elements.chatMessages || !elements.scrollToBottomBtn) return;
 
+  if (state.chat.suppressScrollToBottomButton) {
+    elements.scrollToBottomBtn.style.display = "none";
+    return;
+  }
+
   const { scrollTop, scrollHeight, clientHeight } = elements.chatMessages;
   const nearBottom = scrollHeight - scrollTop - clientHeight < 100;
 

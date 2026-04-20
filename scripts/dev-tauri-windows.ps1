@@ -100,6 +100,7 @@ if (-not (Test-Path $devLogDir)) {
 
 $stdoutLog = Join-Path $devLogDir "desktop-dev-backend.stdout.log"
 $stderrLog = Join-Path $devLogDir "desktop-dev-backend.stderr.log"
+$tauriDevConfig = Join-Path $projectRoot "src-tauri\tauri.dev.conf.json"
 $backendArgs = @($pythonArgs + @("server.py", "--host", $BackendHost, "--port", "$Port"))
 $backendProcess = $null
 $apiHost = if ($BackendHost -eq "0.0.0.0") { "127.0.0.1" } else { $BackendHost }
@@ -144,7 +145,7 @@ try {
 
   $env:PRISM_DESKTOP_API_BASE = $apiBase
   Write-Host "Starting Tauri desktop shell"
-  & $tauriCli "dev"
+  & $tauriCli "dev" "--config" $tauriDevConfig
   $tauriExitCode = $LASTEXITCODE
 } finally {
   if ($backendProcess -and -not $backendProcess.HasExited) {
