@@ -130,6 +130,22 @@
   border-color: rgba(249, 115, 22, 0.18);
 }
 
+.topic-item.running .topic-content {
+  gap: 7px;
+}
+
+.topic-item.running .topic-content::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--text) 22%, transparent);
+  border-top-color: var(--text);
+  border-radius: 999px;
+  animation: topic-running-spin 0.75s linear infinite;
+}
+
 :root[data-theme="light"] .topic-item {
   background: transparent;
   border-color: transparent;
@@ -199,6 +215,7 @@
 }
 
 .topic-title {
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 500;
   line-height: 1.2;
@@ -394,6 +411,18 @@
   height: 30px;
   flex-basis: 30px;
   border-radius: 11px;
+}
+
+@keyframes topic-running-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-item.running .topic-content::before {
+    animation: none;
+  }
 }
 
 /* Generating title shimmer */
