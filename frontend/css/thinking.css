@@ -135,60 +135,74 @@
 }
 
 .thinking-content .code-block {
+  position: relative;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   background: var(--bg-subtle);
   margin-bottom: 10px;
 }
 
 .thinking-content .code-block .code-toolbar {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  right: 10px;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: var(--bg-hover);
-  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .thinking-content .code-block .code-lang {
   font-size: 12px;
   color: var(--text-muted);
   font-family: var(--font-mono);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  opacity: 0.8;
 }
 
 :root[data-theme="light"] .thinking-content .code-block .code-lang {
-  color: var(--text);
+  color: var(--text-muted);
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) .thinking-content .code-block .code-lang {
-    color: var(--text);
+    color: var(--text-muted);
   }
 }
 
 .thinking-content .code-block .code-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .thinking-content .code-block .code-preview-btn,
 .thinking-content .code-block .code-copy-btn {
-  border: 1px solid var(--border);
+  border: none;
   color: var(--text-muted);
   cursor: pointer;
+  opacity: 0.74;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .thinking-content .code-block .code-preview-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 3px;
   border-radius: 6px;
-  background: var(--bg-subtle);
+  background: transparent;
 }
 
 .thinking-content .code-block .code-preview-btn svg {
@@ -197,22 +211,32 @@
 }
 
 .thinking-content .code-block .code-copy-btn {
-  padding: 4px;
+  padding: 3px;
   border-radius: 6px;
-  background: var(--bg-subtle);
-  width: 28px;
-  height: 28px;
+  background: transparent;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .thinking-content .code-block .code-preview-btn:hover,
-.thinking-content .code-block .code-copy-btn:hover { background: var(--bg-hover); }
+.thinking-content .code-block .code-copy-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+  opacity: 1;
+}
 .thinking-content .code-block .code-preview-btn:disabled,
 .thinking-content .code-block .code-copy-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .thinking-content .code-block .code-copy-btn .icon { width: 16px; height: 16px; }
-.thinking-content .code-block pre { margin: 0; border: none; border-radius: 0; background: transparent; }
+.thinking-content .code-block pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding-top: 38px;
+}
 
 .thinking-content blockquote {
   border-left: 3px solid var(--panel-link);

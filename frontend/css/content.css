@@ -92,61 +92,74 @@
 }
 
 .response-content .code-block {
+  position: relative;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--bg-subtle);
   margin-bottom: 12px;
 }
 
 .response-content .code-block .code-toolbar {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--bg-hover);
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .response-content .code-block .code-lang {
   font-size: 12px;
   color: var(--text-muted);
   font-family: var(--font-mono);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  opacity: 0.82;
 }
 
 :root[data-theme="light"] .response-content .code-block .code-lang {
-  color: var(--text);
+  color: var(--text-muted);
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) .response-content .code-block .code-lang {
-    color: var(--text);
+    color: var(--text-muted);
   }
 }
 
 .response-content .code-block .code-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .response-content .code-block .code-preview-btn,
 .response-content .code-block .code-copy-btn {
-  border: 1px solid var(--border);
+  border: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  opacity: 0.76;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .response-content .code-block .code-preview-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 3px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
 }
 
 .response-content .code-block .code-preview-btn svg {
@@ -155,11 +168,11 @@
 }
 
 .response-content .code-block .code-copy-btn {
-  padding: 4px;
+  padding: 3px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  width: 28px;
-  height: 28px;
+  background: transparent;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,12 +182,19 @@
 .response-content .code-block .code-copy-btn:hover {
   background: var(--bg-hover);
   color: var(--text);
+  opacity: 1;
 }
 
 .response-content .code-block .code-preview-btn:disabled,
 .response-content .code-block .code-copy-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .response-content .code-block .code-copy-btn .icon { width: 16px; height: 16px; }
-.response-content .code-block pre { margin: 0; border: none; border-radius: 0; background: transparent; }
+.response-content .code-block pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding-top: 40px;
+}
 
 .response-content blockquote {
   border-left: 3px solid var(--accent);
