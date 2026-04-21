@@ -472,14 +472,7 @@ export async function callModel(
     });
   };
 
-  const isThinkingRevealBlockingContent = () => {
-    if (turn.models.main.thinkingComplete !== true) return false;
-    const normalizedThinking = normalizeThinkingText(turn.models.main.thinking);
-    return (
-      !!normalizedThinking.trim() &&
-      visibleThinking.length < normalizedThinking.length
-    );
-  };
+  const isThinkingRevealBlockingContent = () => false;
 
   const hasPendingContentRender = () =>
     contentFinalRenderPending ||
