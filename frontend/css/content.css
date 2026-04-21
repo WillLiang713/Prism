@@ -2,7 +2,7 @@
 .response-section {
   font-size: var(--chat-font-size);
   color: var(--text);
-  line-height: 1.8;
+  line-height: var(--line-height-relaxed);
 }
 
 .response-images {
@@ -50,16 +50,16 @@
   margin-top: 20px;
   margin-bottom: 10px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--line-height-compact);
   color: var(--text);
 }
 
-.response-content h1 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.response-content h2 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-.response-content h3 { font-size: 16px; }
-.response-content h4 { font-size: 15px; }
-.response-content h5 { font-size: 14px; }
-.response-content h6 { font-size: 13px; color: var(--text-muted); }
+.response-content h1 { font-size: calc(var(--font-size-body) + 7px); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.response-content h2 { font-size: calc(var(--font-size-body) + 3px); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.response-content h3 { font-size: calc(var(--font-size-body) + 1px); }
+.response-content h4 { font-size: var(--font-size-body); }
+.response-content h5 { font-size: calc(var(--font-size-small) + 2px); }
+.response-content h6 { font-size: calc(var(--font-size-small) + 1px); color: var(--text-muted); }
 
 .response-content p { margin-bottom: 12px; }
 .response-content ul, .response-content ol { margin-bottom: 12px; padding-left: 24px; }
@@ -70,7 +70,7 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: calc(var(--chat-font-size) - 1px);
+  font-size: calc(var(--font-size-small) + 1px);
   color: #c9c9c9;
 }
 
@@ -87,8 +87,8 @@
   background: none;
   padding: 0;
   color: var(--text);
-  font-size: calc(var(--chat-font-size) - 1px);
-  line-height: 1.5;
+  font-size: calc(var(--font-size-small) + 1px);
+  line-height: var(--line-height-body);
 }
 
 .response-content .code-block {
@@ -116,11 +116,11 @@
 }
 
 .response-content .code-block .code-lang {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   letter-spacing: 0.01em;
   opacity: 0.82;
 }
@@ -244,7 +244,7 @@
 .chat-font-size-value {
   min-width: 48px;
   text-align: right;
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -262,7 +262,7 @@
 .response-content pre code,
 .thinking-content code,
 .thinking-content pre code {
-  font-size: calc(var(--chat-font-size) - 1px);
+  font-size: calc(var(--font-size-small) + 1px);
 }
 
 /* ---------- Output footer ---------- */
@@ -272,7 +272,8 @@
   border-top: none;
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-compact);
   color: var(--text-dim);
 }
 
@@ -300,22 +301,22 @@
 }
 
 .confirm-title {
-  font-size: 15px;
+  font-size: var(--font-size-body);
   font-weight: 700;
   color: var(--text);
   margin-bottom: 8px;
 }
 
 .confirm-text {
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   color: var(--text-dim);
   font-weight: 400;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
 }
 
 .confirm-hint {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-dim);
   opacity: 0.7;
 }
@@ -384,14 +385,15 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   position: sticky;
   top: 0;
   z-index: 1;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   color: var(--text-muted);
   background: rgba(24, 24, 24, 0.96);
 }
 
 .shortcut-help-table td {
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
+  line-height: var(--line-height-body);
   color: var(--text);
 }
 
@@ -426,14 +428,14 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   border: 1px solid var(--border-strong);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--font-size-caption);
   font-family: var(--font-body);
   line-height: 1;
 }
 
 .shortcut-sep {
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 /* ---------- Prompt management styles ---------- */
@@ -508,7 +510,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   position: absolute;
   top: 12px;
   right: 12px;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
   padding: 3px 8px;
   border-radius: 999px;
   background: #d4d4d4;
@@ -522,15 +524,15 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 }
 
 .prompt-selector-item-name {
-  font-size: 14px;
+  font-size: calc(var(--font-size-small) + 2px);
   font-weight: 600;
   color: var(--text);
 }
 
 .prompt-selector-item-desc {
-  font-size: 12.5px;
+  font-size: calc(var(--font-size-small) + 0.5px);
   color: var(--text-muted);
-  line-height: 1.45;
+  line-height: var(--line-height-compact);
   margin-top: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -587,7 +589,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 }
 
 .prompt-item-name {
-  font-size: 14px;
+  font-size: calc(var(--font-size-small) + 2px);
   font-weight: 600;
   color: var(--text);
   flex: 1;
@@ -595,7 +597,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.4;
+  line-height: var(--line-height-compact);
 }
 
 .prompt-item-actions {
@@ -606,7 +608,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 
 .prompt-item-btn {
   padding: 3px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   border-radius: 6px;
   border: 1px solid var(--border);
   background: transparent;
@@ -636,9 +638,9 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 }
 
 .prompt-item-content {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-dim);
-  line-height: 1.4;
+  line-height: var(--line-height-compact);
   word-break: break-word;
   max-height: 60px;
   overflow: hidden;
@@ -652,12 +654,12 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 
 .prompt-item-content h1, .prompt-item-content h2, .prompt-item-content h3,
 .prompt-item-content h4, .prompt-item-content h5, .prompt-item-content h6 {
-  margin: 4px 0; font-size: 12px; font-weight: 600; color: var(--text);
+  margin: 4px 0; font-size: var(--font-size-small); font-weight: 600; color: var(--text);
 }
 .prompt-item-content p { margin: 4px 0; }
 .prompt-item-content ul, .prompt-item-content ol { margin: 4px 0; padding-left: 16px; }
 .prompt-item-content li { margin: 2px 0; }
-.prompt-item-content code { font-size: 11px; padding: 1px 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; }
+.prompt-item-content code { font-size: var(--font-size-caption); padding: 1px 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; }
 .prompt-item-content pre { margin: 4px 0; padding: 4px; background: rgba(0, 0, 0, 0.2); border-radius: 3px; overflow-x: auto; }
 .prompt-item-content pre code { padding: 0; background: none; }
 .prompt-item-content blockquote { margin: 4px 0; padding-left: 8px; border-left: 2px solid var(--border); color: var(--text-dim); }
@@ -666,7 +668,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 
 .prompt-item-meta {
   margin-top: auto;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
   color: var(--text-dim);
   padding-top: 8px;
   border-top: none;
@@ -689,7 +691,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   padding: 8px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: calc(var(--font-size-small) + 2px);
   font-family: inherit;
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
@@ -701,10 +703,10 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   padding: 10px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-family: inherit;
   resize: vertical;
-  line-height: 1.5;
+  line-height: var(--line-height-body);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
 }
@@ -725,17 +727,17 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 /* Prompt preview */
 .prompt-preview-content {
   padding: 20px;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
   color: var(--text);
-  font-size: 14px;
+  font-size: calc(var(--font-size-small) + 2px);
   font-family: var(--font-body);
 }
 
-.prompt-preview-content h1 { font-size: 22px; font-weight: 600; margin: 16px 0 12px; color: var(--text); }
-.prompt-preview-content h2 { font-size: 18px; font-weight: 600; margin: 14px 0 10px; }
-.prompt-preview-content h3 { font-size: 16px; font-weight: 600; margin: 12px 0 8px; }
+.prompt-preview-content h1 { font-size: calc(var(--font-size-body) + 7px); font-weight: 600; margin: 16px 0 12px; color: var(--text); }
+.prompt-preview-content h2 { font-size: calc(var(--font-size-body) + 3px); font-weight: 600; margin: 14px 0 10px; }
+.prompt-preview-content h3 { font-size: calc(var(--font-size-body) + 1px); font-weight: 600; margin: 12px 0 8px; }
 .prompt-preview-content h4, .prompt-preview-content h5, .prompt-preview-content h6 {
-  font-size: 15px; font-weight: 600; margin: 10px 0 6px;
+  font-size: var(--font-size-body); font-weight: 600; margin: 10px 0 6px;
 }
 
 .prompt-preview-content p { margin: 8px 0; }
@@ -743,7 +745,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 .prompt-preview-content li { margin: 4px 0; }
 
 .prompt-preview-content code {
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   padding: 2px 6px;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 4px;
@@ -759,7 +761,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   overflow-x: auto;
 }
 
-.prompt-preview-content pre code { padding: 0; background: none; font-size: 13px; color: var(--text); }
+.prompt-preview-content pre code { padding: 0; background: none; font-size: calc(var(--font-size-small) + 1px); color: var(--text); }
 
 .prompt-preview-content blockquote {
   margin: 12px 0;
@@ -803,7 +805,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 }
 
 .prompt-edit-form label {
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -814,7 +816,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   padding: 10px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: calc(var(--font-size-small) + 2px);
   font-family: inherit;
   transition: border-color 0.2s, box-shadow 0.2s;
   background: rgba(255, 255, 255, 0.04);
@@ -831,7 +833,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 .prompt-edit-form textarea {
   min-height: 320px;
   resize: vertical;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
   font-family: var(--font-mono);
 }
 
@@ -845,7 +847,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
 }
 
 #promptEditModal .prompt-edit-form .form-group label {
-  font-size: 12.5px;
+  font-size: calc(var(--font-size-small) + 0.5px);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -856,7 +858,7 @@ html[data-theme="light"] .confirm-footer .btn-danger:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   color: var(--text-muted);
   user-select: none;
   cursor: pointer;

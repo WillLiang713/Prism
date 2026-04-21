@@ -80,9 +80,9 @@
 }
 
 .thinking-content {
-  font-size: 13px;
+  font-size: var(--font-size-body);
   color: var(--panel-text-secondary);
-  line-height: 1.6;
+  line-height: var(--line-height-body);
   padding: 10px 0 0;
   word-wrap: break-word;
 }
@@ -93,16 +93,16 @@
   margin-top: 16px;
   margin-bottom: 8px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--line-height-compact);
   color: var(--text);
 }
 
-.thinking-content h1 { font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-.thinking-content h2 { font-size: 17px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-.thinking-content h3 { font-size: 15px; }
-.thinking-content h4 { font-size: 14px; }
-.thinking-content h5 { font-size: 13px; }
-.thinking-content h6 { font-size: 12px; color: var(--text-dim); }
+.thinking-content h1 { font-size: calc(var(--font-size-body) + 5px); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.thinking-content h2 { font-size: calc(var(--font-size-body) + 2px); border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.thinking-content h3 { font-size: var(--font-size-body); }
+.thinking-content h4 { font-size: calc(var(--font-size-body) - 1px); }
+.thinking-content h5 { font-size: calc(var(--font-size-small) + 1px); }
+.thinking-content h6 { font-size: var(--font-size-small); color: var(--text-dim); }
 
 .thinking-content p { margin-bottom: 10px; }
 .thinking-content ul, .thinking-content ol { margin-bottom: 10px; padding-left: 24px; }
@@ -113,7 +113,7 @@
   padding: 2px 6px;
   border-radius: 3px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--panel-text-primary);
 }
 
@@ -130,8 +130,8 @@
   background: none;
   padding: 0;
   color: inherit;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: calc(var(--font-size-small) + 1px);
+  line-height: var(--line-height-body);
 }
 
 .thinking-content .code-block {
@@ -159,11 +159,11 @@
 }
 
 .thinking-content .code-block .code-lang {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   letter-spacing: 0.01em;
   opacity: 0.8;
 }

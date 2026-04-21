@@ -157,7 +157,7 @@
   border: none;
   border-radius: 0;
   font-size: var(--chat-font-size);
-  line-height: 1.6;
+  line-height: var(--line-height-body);
   font-family: inherit;
   resize: none;
   background: transparent;
@@ -279,7 +279,7 @@
 }
 
 .toolbar-btn:not(.icon-only) span {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   white-space: nowrap;
   max-width: 140px;
   overflow: hidden;
@@ -317,7 +317,7 @@
   align-items: center;
   height: 34px;
   margin-left: 1px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .web-search-tool-current {
@@ -379,10 +379,10 @@
   align-items: center;
   min-width: 0;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   flex: 0 1 auto;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -432,7 +432,7 @@
   all: unset;
   padding: 7px 10px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -460,7 +460,7 @@
   height: 34px;
   padding: 5px 10px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;
@@ -527,7 +527,7 @@
 }
 
 .toolbar-switch .switch-text {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   color: var(--text);
 }
@@ -542,7 +542,7 @@
   display: inline-flex;
   align-items: center;
   height: 34px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .reasoning-effort-current {
@@ -576,13 +576,13 @@
 .reasoning-effort-label {
   font-weight: 500;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
 }
 
 .reasoning-effort-value {
   font-weight: 600;
   color: var(--text);
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
 }
 
 .reasoning-effort-current .reasoning-effort-label {
@@ -688,7 +688,7 @@
   all: unset;
   padding: 6px 14px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -735,7 +735,7 @@
   background: var(--bg-subtle);
   color: var(--text);
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
   max-width: 260px;
   justify-content: flex-start;
@@ -749,9 +749,9 @@
 }
 
 .composer-actions-right .brand-model-id {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   text-align: left;
 }
 
@@ -799,7 +799,7 @@
   background: #f2f2f3;
   color: #111111;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   line-height: 1;
   font-weight: 600;
   box-shadow: none;

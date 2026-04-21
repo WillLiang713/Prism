@@ -45,11 +45,11 @@
 }
 
 .brand-title {
-  font-size: 14.5px;
+  font-size: calc(var(--font-size-body) - 0.5px);
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.4px;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
 }
 
 .brand-meta {
@@ -57,10 +57,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   letter-spacing: 0.2px;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   min-width: 0;
   overflow: hidden;
 }
@@ -88,7 +88,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex-shrink: 1;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
 }
 
 .brand-model-trigger {
@@ -196,7 +196,7 @@
 .header-model-summary-title {
   min-width: 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 400;
   color: var(--text-muted);
   letter-spacing: 0;
@@ -207,14 +207,14 @@
 
 .header-model-summary-meta {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
   color: var(--text-dim);
 }
 
 .header-model-empty {
   grid-column: 1 / -1;
   padding: 4px 10px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-dim);
 }
 
@@ -222,16 +222,16 @@
   display: grid;
   gap: 4px;
   align-content: start;
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
 }
 
 .header-model-group + .header-model-group {
   margin-top: 0;
-  padding-top: 8px;
-  border-top: none;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .header-model-group-heading {
@@ -244,7 +244,7 @@
 
 .header-model-group-title {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.02em;
@@ -255,7 +255,7 @@
 
 .header-model-group-meta {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
   color: var(--text-dim);
 }
 
@@ -264,13 +264,19 @@
 }
 
 .header-model-group.is-active-service {
-  background: rgba(255, 255, 255, 0.035);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: transparent;
+  border-color: transparent;
+}
+
+.header-model-group.is-active-service .header-model-summary {
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--bg-active);
 }
 
 .header-model-group-empty {
   padding: 4px 10px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-dim);
 }
 
@@ -305,12 +311,12 @@
 
   .header-model-summary-title,
   .header-model-group-title {
-    font-size: 12px;
+    font-size: var(--font-size-small);
   }
 
   .header-model-summary-meta,
   .header-model-group-meta {
-    font-size: 10px;
+    font-size: var(--font-size-caption);
   }
 
   .header-model-empty,
@@ -320,8 +326,12 @@
 
   .header-model-group {
     gap: 3px;
-    padding: 6px;
-    border-radius: 14px;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .header-model-group + .header-model-group {
+    padding-top: 8px;
   }
 
   .header-model-dropdown .model-dropdown-item {
@@ -338,14 +348,14 @@
 
 .brand-service-name {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 400;
   color: var(--text-muted);
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
 }
 
 @media (max-width: 720px) {
@@ -356,9 +366,9 @@
 
 .brand-model-id {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   display: inline-block;
   min-width: 0;
   flex: 1 1 auto;
@@ -372,7 +382,7 @@
 
 .brand-model-id.is-placeholder {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -384,7 +394,7 @@
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: calc(var(--font-size-small) + 2px);
   color: var(--text-on-accent);
   background: var(--border-accent);
   box-shadow: none;
@@ -582,7 +592,7 @@
   padding: 0 10px;
   gap: 2px;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 700;
   letter-spacing: 0.02em;
 }

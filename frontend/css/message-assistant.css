@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   margin-bottom: 4px;
   padding-left: 0;
@@ -50,17 +50,17 @@
 .assistant-service-name {
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   letter-spacing: 0.01em;
 }
 
 .assistant-model-id {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: calc(var(--font-size-small) + 1px);
   font-weight: 400;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   letter-spacing: 0.01em;
   color: var(--text);
 }
@@ -92,7 +92,7 @@
 
 .assistant-message-content {
   font-size: var(--chat-font-size);
-  line-height: 1.65;
+  line-height: var(--line-height-body);
   color: var(--text);
   background: transparent;
   border: none;
@@ -109,7 +109,8 @@
   gap: 12px;
   margin-top: 4px;
   padding-left: 0;
-  font-size: 11px;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-compact);
   color: var(--text-dim);
   min-height: 24px;
 }
@@ -124,7 +125,7 @@
 .message-meta .meta-item {
   display: inline-flex;
   align-items: center;
-  line-height: 1.2;
+  line-height: var(--line-height-compact);
   font-variant-numeric: tabular-nums;
 }
 

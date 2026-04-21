@@ -496,6 +496,9 @@ export function renderHeaderModelDropdown() {
     const slot = getHeaderModelFetchSlot(service.id);
     const group = document.createElement("div");
     group.className = "header-model-group";
+    if (String(service.id || "") === activeModelServiceId) {
+      group.classList.add("is-active-service");
+    }
 
     const groupHead = document.createElement("div");
     groupHead.className = "header-model-summary";

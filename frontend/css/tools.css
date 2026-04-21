@@ -132,8 +132,8 @@
 }
 
 .tool-call-item {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-body);
   padding: 8px 0;
   border: none;
   border-radius: 0;
@@ -156,15 +156,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--panel-text-primary);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
 }
 
 .tool-call-item-body {
   margin-top: 6px;
   color: var(--panel-text-secondary);
-  font-size: 11.5px;
-  line-height: 1.45;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-compact);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -293,8 +293,8 @@
 }
 
 .code-execution-item {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-body);
   padding: 8px 0;
   border: none;
   border-radius: 0;
@@ -318,7 +318,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--panel-text-primary);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 600;
 }
 
@@ -337,13 +337,13 @@
 
 .code-execution-block code {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .code-execution-output {
   color: var(--panel-text-secondary);
-  font-size: 11.5px;
-  line-height: 1.5;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
 }
 
 @media (max-width: 520px) {
