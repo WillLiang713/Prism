@@ -60,11 +60,9 @@ const EN_TRANSLATIONS = {
   "接口类型": "API Type",
   "选择接口类型": "Choose API type",
   "打开接口类型列表": "Open API Type List",
-  "使用内置搜索服务": "Use Built-in Search",
-  "选择是否使用内置搜索服务": "Choose whether to use built-in search",
-  "打开内置搜索服务选项": "Open Built-in Search Options",
-  "是": "Yes",
-  "否": "No",
+  "联网默认服务": "Default Web Search",
+  "选择联网默认服务": "Choose default web search",
+  "打开联网默认服务选项": "Open default web search options",
   "API 密钥": "API Key",
   "输入API密钥": "Enter API key",
   "显示/隐藏密钥": "Show/Hide Secret",
@@ -347,14 +345,16 @@ const EN_TRANSLATIONS = {
   "联网：Google Search": "Web: Google Search",
   "联网：Exa · {type} · {count} 条": "Web: Exa · {type} · {count} results",
   "联网：Tavily · {depth} · {count} 条": "Web: Tavily · {depth} · {count} results",
-  "当前服务将使用 {mode}，外部搜索配置已禁用。":
-    "This service will use {mode}, and the external search settings are disabled.",
-  "当前接口类型暂不支持内置搜索，仍需使用外部搜索配置。":
-    "The current API type does not support built-in search yet. External search settings are still required.",
-  "关闭后，可在“搜索”页配置 Tavily 或 Exa。":
-    "When disabled, you can configure Tavily or Exa in the Search tab.",
-  "当前主服务已启用内置搜索：{mode}。下面的外部搜索配置已隐藏。":
-    "The current primary service is using built-in search: {mode}. The external search settings below are hidden.",
+  "仅对 OpenAI Chat Completions 生效。":
+    "Only applies to OpenAI Chat Completions.",
+  "仅对 OpenAI Chat Completions 生效。关闭后，聊天页默认不联网。":
+    "Only applies to OpenAI Chat Completions. When set to Off, chat starts without web search.",
+  "仅对 OpenAI Chat Completions 生效。当前默认使用 {mode}。":
+    "Only applies to OpenAI Chat Completions. The current default is {mode}.",
+  "当前接口类型固定使用内置搜索，外部搜索配置仅供 OpenAI Chat Completions 使用。":
+    "This API type always uses native search. External search settings are only used by OpenAI Chat Completions.",
+  "当前主服务使用内置搜索：{mode}。下面的配置仅对 OpenAI Chat Completions 生效。":
+    "The current primary service uses native search: {mode}. The settings below only apply to OpenAI Chat Completions.",
   "当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000":
     "The page is opened with file://, so local APIs are unavailable. Start the app with python server.py and open http://localhost:3000 instead.",
   "预览 HTML 代码": "Preview HTML Code",
@@ -552,11 +552,9 @@ export function applyStaticTranslations() {
   setTextContent('label[for="providerPickerInput"]', "接口类型");
   setAttribute("#providerPickerInput", "placeholder", "选择接口类型");
   setAttribute("#providerPickerBtn", "aria-label", "打开接口类型列表");
-  setTextContent('label[for="builtinWebSearchPickerInput"]', "使用内置搜索服务");
-  setAttribute("#builtinWebSearchPickerInput", "placeholder", "选择是否使用内置搜索服务");
-  setAttribute("#builtinWebSearchPickerBtn", "aria-label", "打开内置搜索服务选项");
-  setTextContent('#builtinWebSearch option[value="false"]', "否");
-  setTextContent('#builtinWebSearch option[value="true"]', "是");
+  setTextContent('label[for="builtinWebSearchPickerInput"]', "联网默认服务");
+  setAttribute("#builtinWebSearchPickerInput", "placeholder", "选择联网默认服务");
+  setAttribute("#builtinWebSearchPickerBtn", "aria-label", "打开联网默认服务选项");
   setTextContent('label[for="apiKey"]', "API 密钥");
   setAttribute("#apiKey", "placeholder", "输入API密钥");
   setAttribute('button.password-toggle-btn[data-target="apiKey"]', "aria-label", "显示/隐藏密钥");
@@ -568,9 +566,6 @@ export function applyStaticTranslations() {
   setTextContent('label[for="roleSetting"]', "角色设定");
   setAttribute("#roleSetting", "placeholder", "回答应以准确、及时、可核实为目标。\n\n当前时间：\n- {{datetime}}\n- {{date}}\n- {{time}}\n- {{timestamp}}\n\n如果问题涉及时间、最新状态或可能变化的信息，先联网搜索再回答。不要凭记忆猜测最新内容；不确定就明确说不确定，不要编造。回答时先给结论，再给关键依据。稳定知识默认不联网，除非用户明确要求最新资料。");
   setTextContent("#roleSettingPreview + .form-hint", "留空用内置提示词。支持 {{datetime}} {{date}} {{time}} {{timestamp}}");
-  setTextContent('label[for="webSearchDefaultModePickerInput"]', "默认");
-  setAttribute("#webSearchDefaultModePickerInput", "placeholder", "选择默认");
-  setAttribute("#webSearchDefaultModePickerBtn", "aria-label", "打开默认列表");
   setTextContent('label[for="webSearchProviderPickerInput"]', "搜索服务");
   setAttribute("#webSearchProviderPickerInput", "placeholder", "选择搜索服务");
   setAttribute("#webSearchProviderPickerBtn", "aria-label", "打开搜索服务列表");

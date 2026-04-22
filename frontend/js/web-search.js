@@ -5,7 +5,6 @@ import {
   unmountBodyDropdown,
   clearBodyDropdownPosition,
   positionBodyDropdown,
-  closeConfigSelectPicker,
   syncConfigSelectPicker,
 } from './dropdown.js';
 
@@ -844,12 +843,16 @@ function getFormProviderConfig() {
   return resolveProviderSelection(elements.provider?.value);
 }
 
-function normalizeBuiltinWebSearchPreference(value) {
-  return value === true || String(value || "").trim().toLowerCase() === "true";
+function normalizeServiceDefaultWebSearchMode(value, fallback = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "tavily") return "tavily";
+  if (normalized === "exa") return "exa";
+  if (normalized === "off") return "off";
+  return fallback;
 }
 
-function getFormBuiltinWebSearchPreference() {
-  return normalizeBuiltinWebSearchPreference(elements.builtinWebSearch?.value);
+function getFormServiceDefaultWebSearchMode() {
+  return normalizeServiceDefaultWebSearchMode(elements.builtinWebSearch?.value, "off");
 }
 
 function getServiceProviderConfig(service) {
@@ -859,9 +862,10 @@ function getServiceProviderConfig(service) {
   );
 }
 
-function getServiceBuiltinWebSearchPreference(service) {
-  return normalizeBuiltinWebSearchPreference(
-    service?.model?.preferBuiltinWebSearch
+function getServiceDefaultWebSearchMode(service) {
+  return normalizeServiceDefaultWebSearchMode(
+    service?.model?.defaultWebSearchMode,
+    ""
   );
 }
 
@@ -888,23 +892,23 @@ function getRuntimeMainSourceProviderConfig() {
   return getFormProviderConfig();
 }
 
-function prefersBuiltinWebSearchForRuntimeService() {
+function getRuntimeServiceDefaultWebSearchMode() {
   const mainSourceServiceId = getRuntimeMainSourceServiceId();
   if (!mainSourceServiceId) {
-    return getFormBuiltinWebSearchPreference();
+    return getFormServiceDefaultWebSearchMode();
   }
 
   if (
     isConfigModalOpen() &&
     String(state.serviceManagerSelectedId || "").trim() === mainSourceServiceId
   ) {
-    return getFormBuiltinWebSearchPreference();
+    return getFormServiceDefaultWebSearchMode();
   }
 
   const sourceService = state.services.find(
     (service) => String(service?.id || "").trim() === mainSourceServiceId
   );
-  return getServiceBuiltinWebSearchPreference(sourceService);
+  return getServiceDefaultWebSearchMode(sourceService);
 }
 
 function resolveWebSearchCapabilityProviderConfig(configLike = {}) {
@@ -915,6 +919,88 @@ function resolveWebSearchCapabilityProviderConfig(configLike = {}) {
       baseConfig.selection,
     configLike.endpointMode ?? baseConfig.endpointMode
   );
+}
+
+function isOpenAIChatCompletionsProviderConfig(configLike = {}) {
+  const providerConfig = resolveWebSearchCapabilityProviderConfig(configLike);
+  return (
+    String(providerConfig.provider || "").toLowerCase() === "openai"
+    && normalizeEndpointMode(
+      configLike.endpointMode ?? providerConfig.endpointMode
+    ) === "chat_completions"
+  );
+}
+
+function getForcedNativeWebSearchToolMode(configLike = {}) {
+  if (isOpenAIChatCompletionsProviderConfig(configLike)) {
+    return "";
+  }
+  return getNativeWebSearchToolMode(configLike);
+}
+
+function getLegacyExternalWebSearchToolMode(
+  fallbackProvider = normalizeExternalWebSearchProvider(
+    elements.webSearchProvider?.value
+  )
+) {
+  const currentMode = String(state.webSearch?.toolMode || "").toLowerCase();
+  if (currentMode === "exa" || currentMode === "tavily") {
+    return currentMode;
+  }
+  return fallbackProvider === "exa" ? "exa" : "tavily";
+}
+
+export function getRuntimeWebSearchStateDefaults(configLike = {}) {
+  const forcedNativeMode = getForcedNativeWebSearchToolMode(configLike);
+  if (forcedNativeMode) {
+    return {
+      toolMode: forcedNativeMode,
+      enabled: isWebSearchEnabled(),
+    };
+  }
+
+  const defaultMode = getRuntimeServiceDefaultWebSearchMode();
+  if (defaultMode === "tavily" || defaultMode === "exa") {
+    return {
+      toolMode: defaultMode,
+      enabled: true,
+    };
+  }
+  if (!defaultMode) {
+    return {
+      toolMode: getLegacyExternalWebSearchToolMode(),
+      enabled: isWebSearchEnabled(),
+    };
+  }
+
+  return {
+    toolMode: getLegacyExternalWebSearchToolMode(),
+    enabled: false,
+  };
+}
+
+function syncServiceDefaultWebSearchSelect() {
+  if (!elements.builtinWebSearch) return "off";
+  const options = [
+    { value: "off", label: WEB_SEARCH_DISABLED_LABEL },
+    { value: "tavily", label: WEB_SEARCH_TOOL_MODE_LABELS.tavily },
+    { value: "exa", label: WEB_SEARCH_TOOL_MODE_LABELS.exa },
+  ];
+  const nextMarkup = options
+    .map((item) => `<option value="${item.value}">${t(item.label)}</option>`)
+    .join("");
+  if (elements.builtinWebSearch.innerHTML !== nextMarkup) {
+    elements.builtinWebSearch.innerHTML = nextMarkup;
+  }
+  const nextValue = normalizeServiceDefaultWebSearchMode(
+    elements.builtinWebSearch.value,
+    "off"
+  );
+  if (elements.builtinWebSearch.value !== nextValue) {
+    elements.builtinWebSearch.value = nextValue;
+  }
+  syncConfigSelectPicker("builtinWebSearch");
+  return nextValue;
 }
 
 function getCurrentWebSearchApiKey(provider = getCurrentExternalWebSearchProvider()) {
@@ -1040,8 +1126,15 @@ export function getPreferredWebSearchToolMode(
     elements.webSearchProvider?.value
   )
 ) {
-  const nativeMode = getNativeWebSearchToolMode(configLike);
-  if (nativeMode) return nativeMode;
+  const forcedNativeMode = getForcedNativeWebSearchToolMode(configLike);
+  if (forcedNativeMode) return forcedNativeMode;
+  const defaultMode = getRuntimeServiceDefaultWebSearchMode();
+  if (defaultMode === "exa" || defaultMode === "tavily") {
+    return defaultMode;
+  }
+  if (!defaultMode) {
+    return getLegacyExternalWebSearchToolMode(fallbackProvider);
+  }
   return fallbackProvider === "exa" ? "exa" : "tavily";
 }
 
@@ -1058,30 +1151,31 @@ export function resolvePreferredWebSearchState(
   configLike = {},
   options = {}
 ) {
-  const toolMode = getPreferredWebSearchToolMode(
-    configLike,
-    options.fallbackProvider
-  );
-  const currentMode = String(options.currentMode || "").toLowerCase();
-  const currentEnabled = options.currentEnabled === true;
-
-  if (isNativeWebSearchToolMode(toolMode)) {
+  const forcedNativeMode = getForcedNativeWebSearchToolMode(configLike);
+  if (forcedNativeMode) {
     return {
-      toolMode,
-      enabled: currentMode === toolMode ? currentEnabled : true,
+      toolMode: forcedNativeMode,
+      enabled: options.currentEnabled === true,
     };
   }
 
-  if (currentEnabled && isNativeWebSearchToolMode(currentMode)) {
+  const defaultMode = getRuntimeServiceDefaultWebSearchMode();
+  if (defaultMode === "exa" || defaultMode === "tavily") {
     return {
-      toolMode,
-      enabled: false,
+      toolMode: defaultMode,
+      enabled: true,
+    };
+  }
+  if (!defaultMode) {
+    return {
+      toolMode: getLegacyExternalWebSearchToolMode(options.fallbackProvider),
+      enabled: options.currentEnabled === true,
     };
   }
 
   return {
-    toolMode,
-    enabled: currentEnabled,
+    toolMode: getLegacyExternalWebSearchToolMode(options.fallbackProvider),
+    enabled: false,
   };
 }
 
@@ -1130,18 +1224,17 @@ function persistWebSearchConfigPatch(patch) {
 }
 
 export function getCurrentWebSearchToolMode() {
-  const forcedNativeMode = prefersBuiltinWebSearchForRuntimeService()
-    ? getNativeWebSearchToolMode()
-    : "";
+  const forcedNativeMode = getForcedNativeWebSearchToolMode();
   if (forcedNativeMode) {
     return forcedNativeMode;
   }
+  const runtimeDefaults = getRuntimeWebSearchStateDefaults();
   return normalizeWebSearchToolMode(
     state.webSearch?.toolMode,
     canUseBuiltinWebSearch(),
     canUseAnthropicWebSearch(),
     canUseGeminiGoogleSearch(),
-    normalizeWebSearchProvider(elements.webSearchProvider?.value)
+    runtimeDefaults.toolMode || normalizeWebSearchProvider(elements.webSearchProvider?.value)
   );
 }
 
@@ -1169,9 +1262,7 @@ export function getAvailableWebSearchToolModes() {
       label: t(WEB_SEARCH_DISABLED_LABEL),
     },
   ];
-  const forcedNativeMode = prefersBuiltinWebSearchForRuntimeService()
-    ? getNativeWebSearchToolMode()
-    : "";
+  const forcedNativeMode = getForcedNativeWebSearchToolMode();
   if (forcedNativeMode) {
     items.push({
       value: forcedNativeMode,
@@ -1187,25 +1278,7 @@ export function getAvailableWebSearchToolModes() {
 }
 
 export function syncWebSearchDefaultModeSelect() {
-  const selectEl = elements.webSearchDefaultMode;
-  if (!selectEl) return "off";
-
-  const options = getAvailableWebSearchToolModes();
-  const nextMarkup = options
-    .map(
-      (item) => `<option value="${item.value}">${t(item.label)}</option>`
-    )
-    .join("");
-  if (selectEl.innerHTML !== nextMarkup) {
-    selectEl.innerHTML = nextMarkup;
-  }
-
-  const nextValue = isWebSearchEnabled() ? getCurrentWebSearchToolMode() : "off";
-  if (selectEl.value !== nextValue) {
-    selectEl.value = nextValue;
-  }
-  syncConfigSelectPicker("webSearchDefaultMode");
-  return nextValue;
+  return isWebSearchEnabled() ? getCurrentWebSearchToolMode() : "off";
 }
 
 export function persistWebSearchToolMode(mode) {
@@ -1215,7 +1288,7 @@ export function persistWebSearchToolMode(mode) {
 function disableBuiltinWebSearchWhenUnavailable(options = {}) {
   if (state.webSearch?.toolMode !== "builtin") return false;
   if (canUseBuiltinWebSearch()) return false;
-  if (prefersBuiltinWebSearchForRuntimeService() && getNativeWebSearchToolMode()) {
+  if (getForcedNativeWebSearchToolMode() === "builtin") {
     return false;
   }
 
@@ -1230,7 +1303,7 @@ function disableBuiltinWebSearchWhenUnavailable(options = {}) {
 function disableGeminiGoogleSearchWhenUnavailable(options = {}) {
   if (state.webSearch?.toolMode !== "gemini_search") return false;
   if (canUseGeminiGoogleSearch()) return false;
-  if (prefersBuiltinWebSearchForRuntimeService() && getNativeWebSearchToolMode()) {
+  if (getForcedNativeWebSearchToolMode() === "gemini_search") {
     return false;
   }
 
@@ -1245,7 +1318,7 @@ function disableGeminiGoogleSearchWhenUnavailable(options = {}) {
 function disableAnthropicWebSearchWhenUnavailable(options = {}) {
   if (state.webSearch?.toolMode !== "anthropic_search") return false;
   if (canUseAnthropicWebSearch()) return false;
-  if (prefersBuiltinWebSearchForRuntimeService() && getNativeWebSearchToolMode()) {
+  if (getForcedNativeWebSearchToolMode() === "anthropic_search") {
     return false;
   }
 
@@ -1269,9 +1342,8 @@ export function setWebSearchEnabled(enabled, options = {}) {
 }
 
 export function setWebSearchToolMode(mode, options = {}) {
-  const forcedNativeMode = prefersBuiltinWebSearchForRuntimeService()
-    ? getNativeWebSearchToolMode()
-    : "";
+  const forcedNativeMode = getForcedNativeWebSearchToolMode();
+  const runtimeDefaults = getRuntimeWebSearchStateDefaults();
   const supportsBuiltin = canUseBuiltinWebSearch();
   const supportsAnthropicWebSearch = canUseAnthropicWebSearch();
   const supportsGeminiGoogleSearch = canUseGeminiGoogleSearch();
@@ -1280,7 +1352,7 @@ export function setWebSearchToolMode(mode, options = {}) {
     supportsBuiltin,
     supportsAnthropicWebSearch,
     supportsGeminiGoogleSearch,
-    normalizeWebSearchProvider(elements.webSearchProvider?.value)
+    runtimeDefaults.toolMode || normalizeWebSearchProvider(elements.webSearchProvider?.value)
   );
   state.webSearch.toolMode = normalized;
 
@@ -1455,59 +1527,39 @@ export function updateWebSearchProviderUi() {
   disableGeminiGoogleSearchWhenUnavailable();
   state.webSearch.toolMode = getCurrentWebSearchToolMode();
   state.webSearch.enabled = isWebSearchEnabled();
-  const formBuiltinPreferenceEnabled = getFormBuiltinWebSearchPreference();
-  const formBuiltinMode = formBuiltinPreferenceEnabled
-    ? getNativeWebSearchToolMode(getFormProviderConfig())
-    : "";
-  const runtimeBuiltinMode = prefersBuiltinWebSearchForRuntimeService()
-    ? getNativeWebSearchToolMode()
-    : "";
+  const formProviderConfig = getFormProviderConfig();
+  const formIsOpenAIChat = isOpenAIChatCompletionsProviderConfig(formProviderConfig);
+  const formDefaultMode = syncServiceDefaultWebSearchSelect();
+  const runtimeBuiltinMode = getForcedNativeWebSearchToolMode();
   const externalProvider = normalizeExternalWebSearchProvider(
     elements.webSearchProvider?.value
   );
-  const hideExternalConfig = !!runtimeBuiltinMode;
 
   if (elements.builtinWebSearchHint) {
-    elements.builtinWebSearchHint.textContent = formBuiltinPreferenceEnabled
-      ? formBuiltinMode
-        ? t("当前服务将使用 {mode}，外部搜索配置已禁用。", {
-            mode: getWebSearchToolModeLabel(formBuiltinMode),
+    elements.builtinWebSearchHint.textContent = formIsOpenAIChat
+      ? formDefaultMode === "off"
+        ? t("仅对 OpenAI Chat Completions 生效。关闭后，聊天页默认不联网。")
+        : t("仅对 OpenAI Chat Completions 生效。当前默认使用 {mode}。", {
+            mode: getWebSearchToolModeLabel(formDefaultMode),
           })
-        : t("当前接口类型暂不支持内置搜索，仍需使用外部搜索配置。")
-      : t("关闭后，可在“搜索”页配置 Tavily 或 Exa。");
+      : t("当前接口类型固定使用内置搜索，外部搜索配置仅供 OpenAI Chat Completions 使用。");
   }
 
   renderWebSearchToolSelector();
   syncWebSearchDefaultModeSelect();
-  if (elements.webSearchDefaultModeGroup) {
-    elements.webSearchDefaultModeGroup.style.display = "";
+  if (elements.builtinWebSearchGroup) {
+    elements.builtinWebSearchGroup.style.display = formIsOpenAIChat ? "" : "none";
   }
   if (elements.webSearchBuiltinHint) {
-    elements.webSearchBuiltinHint.hidden = !hideExternalConfig;
-    if (hideExternalConfig) {
+    elements.webSearchBuiltinHint.hidden = !runtimeBuiltinMode;
+    if (runtimeBuiltinMode) {
       elements.webSearchBuiltinHint.textContent = t(
-        "当前主服务已启用内置搜索：{mode}。下面的外部搜索配置已隐藏。",
+        "当前主服务使用内置搜索：{mode}。下面的配置仅对 OpenAI Chat Completions 生效。",
         {
           mode: getWebSearchToolModeLabel(runtimeBuiltinMode),
         }
       );
     }
-  }
-  if (elements.webSearchProviderGroup) {
-    elements.webSearchProviderGroup.style.display = hideExternalConfig ? "none" : "";
-  }
-  if (elements.webSearchApiKeyGroup) {
-    elements.webSearchApiKeyGroup.style.display = hideExternalConfig ? "none" : "";
-  }
-  if (elements.webSearchMaxResultsGroup) {
-    elements.webSearchMaxResultsGroup.style.display = hideExternalConfig ? "none" : "";
-  }
-  if (elements.webSearchModeGroup) {
-    elements.webSearchModeGroup.style.display = hideExternalConfig ? "none" : "";
-  }
-  if (hideExternalConfig) {
-    closeConfigSelectPicker("webSearchProvider");
-    closeConfigSelectPicker("webSearchMode");
   }
   syncConfigSelectPicker("webSearchProvider");
   syncWebSearchApiKeyInput(externalProvider);

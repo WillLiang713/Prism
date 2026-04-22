@@ -19,6 +19,7 @@ import {
   testSelectedServiceConnection,
   autoSaveManagedServiceDraft,
   normalizeApiUrlInputValue,
+  syncWebSearchStateWithRuntime,
 } from './config.js';
 import { applyWebSearchApiKeyValue, applyWebSearchModeValue, applyWebSearchSelection, closeWebSearchToolSelector, isWebSearchEnabled, renderWebSearchToolSelector, positionWebSearchToolSelector, setWebSearchEnabled, setWebSearchToolMode, updateConfigStatusStrip, updateWebSearchProviderUi } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
@@ -262,11 +263,6 @@ export function bindEvents() {
 
   elements.webSearchProvider?.addEventListener("change", () => {
     updateWebSearchProviderUi();
-    updateConfigStatusStrip();
-    autoSaveConfigDraft();
-  });
-  elements.webSearchDefaultMode?.addEventListener("change", () => {
-    applyWebSearchSelection(elements.webSearchDefaultMode?.value);
     updateConfigStatusStrip();
     autoSaveConfigDraft();
   });
@@ -517,8 +513,7 @@ export function bindEvents() {
 
   // 监听接口类型变化，更新 API 地址提示 + 自动获取模型列表
   elements.provider.addEventListener("change", () => {
-    setWebSearchToolMode(state.webSearch?.toolMode);
-    setWebSearchEnabled(isWebSearchEnabled());
+    syncWebSearchStateWithRuntime();
     closeWebSearchToolSelector();
     updateProviderUi();
     updateModelHint();
@@ -529,8 +524,7 @@ export function bindEvents() {
     autoSaveConfigDraft();
   });
   elements.builtinWebSearch?.addEventListener("change", () => {
-    setWebSearchToolMode(state.webSearch?.toolMode);
-    setWebSearchEnabled(isWebSearchEnabled());
+    syncWebSearchStateWithRuntime();
     closeWebSearchToolSelector();
     updateProviderUi();
     updateConfigStatusStrip();

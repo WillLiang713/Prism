@@ -27,6 +27,7 @@ import {
 import { renderMarkdownToElement } from './markdown.js';
 import {
   getCurrentWebSearchToolMode,
+  getRuntimeWebSearchStateDefaults,
   isWebSearchEnabled,
   normalizeExternalWebSearchProvider,
   normalizeTavilySearchDepth,
@@ -401,7 +402,7 @@ function createServiceTemplate(name = "") {
       provider: providerDefaults.provider,
       providerSelection: providerDefaults.selection,
       endpointMode: providerDefaults.endpointMode,
-      preferBuiltinWebSearch: false,
+      defaultWebSearchMode: "off",
       apiKey: "",
       model: "",
       modelServiceId: "",
@@ -501,6 +502,20 @@ function normalizeReasoningEffortValue(value) {
   return normalized || DEFAULT_REASONING_EFFORT;
 }
 
+function normalizeServiceDefaultWebSearchMode(value, fallback = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "tavily") return "tavily";
+  if (normalized === "exa") return "exa";
+  if (normalized === "off") return "off";
+  return fallback;
+}
+
+function resolveServiceDefaultWebSearchModeForForm(value) {
+  const normalized = normalizeServiceDefaultWebSearchMode(value, "");
+  if (normalized) return normalized;
+  return normalizeExternalWebSearchProvider(elements.webSearchProvider?.value);
+}
+
 function normalizeService(service, index = 0) {
   const providerConfig = resolveProviderSelection(
     service?.model?.providerSelection || service?.model?.provider,
@@ -514,8 +529,10 @@ function normalizeService(service, index = 0) {
       provider: providerConfig.provider,
       providerSelection: providerConfig.selection,
       endpointMode: providerConfig.endpointMode,
-      preferBuiltinWebSearch:
-        service?.model?.preferBuiltinWebSearch === true,
+      defaultWebSearchMode: normalizeServiceDefaultWebSearchMode(
+        service?.model?.defaultWebSearchMode,
+        ""
+      ),
       apiKey: String(service?.model?.apiKey || ""),
       model: String(service?.model?.model || ""),
       modelServiceId: String(service?.model?.modelServiceId || ""),
@@ -556,7 +573,7 @@ function migrateLegacyConfig(rawConfig = {}) {
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
-        preferBuiltinWebSearch: false,
+        defaultWebSearchMode: "off",
         apiKey: legacyModelConfig.apiKey || "",
         model: legacyModelConfig.model || "",
         modelServiceId: "",
@@ -922,7 +939,10 @@ function getManagedServiceConnectionFormSnapshot() {
   return {
     providerSelection: getEffectiveProviderSelectionValue(),
     endpointMode: getEffectiveEndpointModeValue(),
-    preferBuiltinWebSearch: elements.builtinWebSearch?.value === "true",
+    defaultWebSearchMode: normalizeServiceDefaultWebSearchMode(
+      elements.builtinWebSearch?.value,
+      "off"
+    ),
     apiKey: String(elements.apiKey?.value || ""),
     apiUrl: normalizeApiUrlForProvider(
       elements.apiUrl?.value || "",
@@ -936,7 +956,9 @@ function getServiceConnectionStoreSnapshot(service) {
   return {
     providerSelection: String(service.model?.providerSelection || ""),
     endpointMode: String(service.model?.endpointMode || ""),
-    preferBuiltinWebSearch: service.model?.preferBuiltinWebSearch === true,
+    defaultWebSearchMode: resolveServiceDefaultWebSearchModeForForm(
+      service.model?.defaultWebSearchMode
+    ),
     apiKey: String(service.model?.apiKey || ""),
     apiUrl: String(service.model?.apiUrl || ""),
   };
@@ -956,7 +978,10 @@ function getManagedServiceFormSnapshot() {
     name: String(elements.serviceNameInput?.value || "").trim(),
     providerSelection: getEffectiveProviderSelectionValue(),
     endpointMode: getEffectiveEndpointModeValue(),
-    preferBuiltinWebSearch: elements.builtinWebSearch?.value === "true",
+    defaultWebSearchMode: normalizeServiceDefaultWebSearchMode(
+      elements.builtinWebSearch?.value,
+      "off"
+    ),
     apiKey: String(elements.apiKey?.value || ""),
     apiUrl: normalizeApiUrlForProvider(
       elements.apiUrl?.value || "",
@@ -971,7 +996,9 @@ function getServiceFormStoreSnapshot(service) {
     name: String(service.name || "").trim(),
     providerSelection: String(service.model?.providerSelection || ""),
     endpointMode: String(service.model?.endpointMode || ""),
-    preferBuiltinWebSearch: service.model?.preferBuiltinWebSearch === true,
+    defaultWebSearchMode: resolveServiceDefaultWebSearchModeForForm(
+      service.model?.defaultWebSearchMode
+    ),
     apiKey: String(service.model?.apiKey || ""),
     apiUrl: String(service.model?.apiUrl || ""),
   };
@@ -1079,9 +1106,9 @@ function applyManagedServiceConnectionToForm(service) {
     elements.apiUrl.value = service.model?.apiUrl || "";
   }
   if (elements.builtinWebSearch) {
-    elements.builtinWebSearch.value = service.model?.preferBuiltinWebSearch === true
-      ? "true"
-      : "false";
+    elements.builtinWebSearch.value = resolveServiceDefaultWebSearchModeForForm(
+      service.model?.defaultWebSearchMode
+    );
   }
   syncConfigSelectPicker("provider");
   syncConfigSelectPicker("builtinWebSearch");
@@ -1136,7 +1163,7 @@ function applyEmptyServiceStateToForm() {
     elements.apiUrl.value = "";
   }
   if (elements.builtinWebSearch) {
-    elements.builtinWebSearch.value = "false";
+    elements.builtinWebSearch.value = "off";
   }
   if (elements.model) {
     elements.model.value = "";
@@ -1175,7 +1202,10 @@ function readManagedServiceConnectionFromForm(existingService = null) {
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
-        preferBuiltinWebSearch: elements.builtinWebSearch?.value === "true",
+        defaultWebSearchMode: normalizeServiceDefaultWebSearchMode(
+          elements.builtinWebSearch?.value,
+          "off"
+        ),
         apiKey: String(elements.apiKey?.value || ""),
         apiUrl: normalizeApiUrlForProvider(
           elements.apiUrl?.value || "",
@@ -1399,14 +1429,27 @@ function focusServiceNameInput() {
   });
 }
 
-function syncWebSearchStateWithRuntime(options = {}) {
+export function syncWebSearchStateWithRuntime(options = {}) {
+  const defaults = getRuntimeWebSearchStateDefaults();
   const currentToolMode = state.webSearch?.toolMode || getCurrentWebSearchToolMode();
   const currentEnabled = isWebSearchEnabled();
+  const nextToolMode = defaults.enabled
+    ? defaults.toolMode
+    : (
+        currentToolMode === "tavily" || currentToolMode === "exa"
+          ? currentToolMode
+          : defaults.toolMode
+      );
+  const nextEnabled = defaults.enabled
+    ? true
+    : options.preserveEnabled === true
+      ? currentEnabled
+      : false;
 
-  setWebSearchToolMode(currentToolMode, {
+  setWebSearchToolMode(nextToolMode, {
     persist: options.persist !== false,
   });
-  setWebSearchEnabled(currentEnabled, {
+  setWebSearchEnabled(nextEnabled, {
     persist: options.persist !== false,
   });
 }
@@ -2058,6 +2101,7 @@ export function loadConfig() {
       }
     );
     setWebSearchEnabled(pendingWebSearchEnabled, { persist: false });
+    syncWebSearchStateWithRuntime({ persist: false });
   } catch (error) {
     console.error("加载配置失败:", error);
   }

@@ -58,7 +58,6 @@
     align-items: start;
   }
 
-  #configModal #webSearchDefaultModeGroup,
   #configModal #webSearchProviderGroup,
   #configModal #webSearchApiKeyGroup,
   #configModal #webSearchMaxResultsGroup,
@@ -242,7 +241,6 @@
     min-width: 0;
   }
 
-  #configModal #webSearchDefaultModeGroup,
   #configModal #webSearchProviderGroup,
   #configModal #webSearchApiKeyGroup,
   #configModal #webSearchMaxResultsGroup,
@@ -343,7 +341,7 @@
   }
 
   #configModal #configPanelServices .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 0;
   }
 
   #configModal #configPanelServices .form-group:last-child {
@@ -1046,6 +1044,11 @@
     padding: 7px;
   }
 
+  #configModal #configPanelServices .service-detail-form,
+  #configModal #configPanelServices .service-detail-main {
+    gap: 7px;
+  }
+
   #configModal #configPanelServices .service-list {
     height: clamp(156px, 28dvh, 208px);
   }
@@ -1055,11 +1058,24 @@
   }
 
   #configModal #configPanelServices .form-group {
-    margin-bottom: 8px;
+    margin-bottom: 0;
   }
 
   #configModal #configPanelServices .form-group label {
-    margin-bottom: 3px;
+    margin-bottom: 2px;
+  }
+
+  #configModal #configPanelServices .form-hint {
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  #configModal #configPanelServices .required-credentials-grid {
+    gap: 7px;
+  }
+
+  #configModal #configPanelServices #builtinWebSearchGroup {
+    margin-top: 0;
   }
 
   #configModal #configPanelServices .form-group input[type="text"],
@@ -1084,6 +1100,10 @@
     width: 34px;
     min-width: 34px;
     flex-basis: 34px;
+  }
+
+  #configModal #configPanelServices .form-group:last-child {
+    margin-bottom: 0;
   }
 
   #configModal #configPanelModel .model-config-layout,

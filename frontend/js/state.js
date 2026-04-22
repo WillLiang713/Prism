@@ -306,17 +306,6 @@ export const elements = {
   webSearchToolCurrent: document.getElementById("webSearchToolCurrent"),
   webSearchToolValue: document.getElementById("webSearchToolValue"),
   webSearchToolDropdown: document.getElementById("webSearchToolDropdown"),
-  webSearchDefaultMode: document.getElementById("webSearchDefaultMode"),
-  webSearchDefaultModeGroup: document.getElementById("webSearchDefaultModeGroup"),
-  webSearchDefaultModePickerInput: document.getElementById(
-    "webSearchDefaultModePickerInput"
-  ),
-  webSearchDefaultModePickerBtn: document.getElementById(
-    "webSearchDefaultModePickerBtn"
-  ),
-  webSearchDefaultModePickerDropdown: document.getElementById(
-    "webSearchDefaultModePickerDropdown"
-  ),
   webSearchProvider: document.getElementById("webSearchProvider"),
   webSearchProviderGroup: document.getElementById("webSearchProviderGroup"),
   webSearchApiKey: document.getElementById("webSearchApiKey"),
@@ -384,6 +373,7 @@ export const elements = {
   providerPickerInput: document.getElementById("providerPickerInput"),
   providerPickerBtn: document.getElementById("providerPickerBtn"),
   providerPickerDropdown: document.getElementById("providerPickerDropdown"),
+  builtinWebSearchGroup: document.getElementById("builtinWebSearchGroup"),
   builtinWebSearch: document.getElementById("builtinWebSearch"),
   builtinWebSearchPickerInput: document.getElementById(
     "builtinWebSearchPickerInput"
