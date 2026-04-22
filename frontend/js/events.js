@@ -1,5 +1,5 @@
 import { state, elements, STORAGE_KEYS, MOBILE_LAYOUT_MEDIA_QUERY } from './state.js';
-import { toggleLanguage } from './i18n.js';
+import { toggleLanguage, onLanguageChange } from './i18n.js';
 import { showConfirm, isPromptConfirmDialogOpen, resolvePromptConfirmDialog } from './dialog.js';
 import {
   openConfigModal,
@@ -7,6 +7,8 @@ import {
   updateProviderUi,
   updateModelNames,
   clearConfig,
+  exportConfigBackup,
+  importConfigBackup,
   setActiveConfigTab,
   syncRoleSettingPreview,
   showRoleSettingPreview,
@@ -35,8 +37,12 @@ import {
   triggerCreateTopic,
   isTopicRunning,
   requestDeleteTopic,
+  requestClearAllTopics,
+  exportTopicsBackup,
+  importTopicsBackup,
   closeTopicActionMenu,
   getActiveTopic,
+  refreshChatDataPanel,
   setActiveTopic,
   renderAll,
 } from './chat.js';
@@ -44,6 +50,7 @@ import { addImages } from './images.js';
 import {
   toggleSidebar,
   isMobileLayout,
+  collapseSidebarForMobile,
   beginMobileNativePickerSession,
   endMobileNativePickerSession,
 } from './layout.js';
@@ -197,6 +204,9 @@ function toggleReasoningDropdown() {
 }
 
 function handleLayoutModeChange(isMobile) {
+  if (isMobile) {
+    collapseSidebarForMobile();
+  }
   closeModelDropdown("main");
   closeModelDropdown("Title");
   closeHeaderModelDropdown();
@@ -209,11 +219,29 @@ function handleLayoutModeChange(isMobile) {
 export function bindEvents() {
   initScrollbarAutoHide();
   initTopicListHeaderAlignment();
+  onLanguageChange(() => {
+    refreshChatDataPanel();
+  });
   const autoSaveConfigDraft = () => {
     void autoSaveManagedServiceDraft();
   };
 
   elements.clearConfig?.addEventListener("click", clearConfig);
+  elements.exportTopicsBtn?.addEventListener("click", () => {
+    void exportTopicsBackup();
+  });
+  
+  elements.importDataBtn?.addEventListener("click", () => {
+    elements.importDataInput?.click();
+  });
+
+  elements.importDataInput?.addEventListener("change", () => {
+    void importTopicsBackup();
+  });
+
+  elements.clearTopicsBtn?.addEventListener("click", () => {
+    void requestClearAllTopics();
+  });
 
   elements.closeToTrayOnClose?.addEventListener("change", () => {
     try {
@@ -315,6 +343,12 @@ export function bindEvents() {
   });
   elements.deleteServiceBtn?.addEventListener("click", () => {
     void deleteService();
+  });
+  elements.exportConfigBtn?.addEventListener("click", () => {
+    void exportConfigBackup();
+  });
+  elements.importConfigBtn?.addEventListener("click", () => {
+    void importConfigBackup();
   });
   elements.testServiceConnectionBtn?.addEventListener("click", () => {
     void testSelectedServiceConnection();
@@ -492,6 +526,14 @@ export function bindEvents() {
     updateConfigStatusStrip();
     scheduleFetchModels("main", 0);
     scheduleFetchModels("Title", 0);
+    autoSaveConfigDraft();
+  });
+  elements.builtinWebSearch?.addEventListener("change", () => {
+    setWebSearchToolMode(state.webSearch?.toolMode);
+    setWebSearchEnabled(isWebSearchEnabled());
+    closeWebSearchToolSelector();
+    updateProviderUi();
+    updateConfigStatusStrip();
     autoSaveConfigDraft();
   });
 

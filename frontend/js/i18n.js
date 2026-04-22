@@ -14,6 +14,7 @@ const EN_TRANSLATIONS = {
   "设置": "Settings",
   "关闭设置": "Close Settings",
   "配置分组": "Configuration Groups",
+  "版本号": "Version",
   "窗口控制": "Window Controls",
   "最小化": "Minimize",
   "最大化": "Maximize",
@@ -26,6 +27,8 @@ const EN_TRANSLATIONS = {
   "上传图片": "Upload Image",
   "选择搜索方式": "Choose Search Mode",
   "搜索": "Search",
+  "数据": "Data",
+  "聊天数据": "Chat Data",
   "思考": "Reasoning",
   "发送": "Send",
   "停止": "Stop",
@@ -48,12 +51,20 @@ const EN_TRANSLATIONS = {
   "复制": "Copy",
   "删除": "Delete",
   "服务列表": "Service List",
+  "导出配置": "Export Config",
+  "导出备份": "Export Backup",
+  "导入配置": "Import Config",
   "测试连接": "Test Connection",
   "服务名称": "Service Name",
   "输入服务名称": "Enter service name",
   "接口类型": "API Type",
   "选择接口类型": "Choose API type",
   "打开接口类型列表": "Open API Type List",
+  "使用内置搜索服务": "Use Built-in Search",
+  "选择是否使用内置搜索服务": "Choose whether to use built-in search",
+  "打开内置搜索服务选项": "Open Built-in Search Options",
+  "是": "Yes",
+  "否": "No",
   "API 密钥": "API Key",
   "输入API密钥": "Enter API key",
   "显示/隐藏密钥": "Show/Hide Secret",
@@ -87,6 +98,27 @@ const EN_TRANSLATIONS = {
   "确定": "Confirm",
   "图片预览": "Image Preview",
   "保存图片": "Save Image",
+  "配置已导出": "Configuration exported",
+  "备份已导出": "Backup exported",
+  "配置文件格式不正确": "Invalid configuration file format",
+  "配置文件解析失败": "Failed to parse configuration file",
+  "备份文件格式不正确": "Invalid backup file format",
+  "备份文件解析失败": "Failed to parse backup file",
+  "导入配置会覆盖当前本地配置，是否继续？": "Importing configuration will overwrite the current local configuration. Continue?",
+  "导入备份会覆盖当前本地聊天数据，是否继续？":
+    "Importing the backup will overwrite the local chat data on this device. Continue?",
+  "当前编辑中的未保存修改也会丢失": "Unsaved edits in the current form will also be lost",
+  "当前本地配置将被覆盖": "The current local configuration will be overwritten",
+  "导入成功": "Import Successful",
+  "配置已导入": "Configuration imported",
+  "备份已导入": "Backup imported",
+  "导出失败": "Export failed",
+  "导出备份失败": "Failed to export backup",
+  "导入失败": "Import failed",
+  "导出配置失败": "Failed to export configuration",
+  "导入配置失败": "Failed to import configuration",
+  "导入配置": "Import Config",
+  "导入备份": "Import Backup",
   "切换到英文": "Switch to English",
   "切换到中文": "Switch to Chinese",
   "切换语言": "Switch Language",
@@ -148,8 +180,12 @@ const EN_TRANSLATIONS = {
   "当前话题正在生成中，仍要清空并停止生成吗？":
     "This topic is still generating. Clear it and stop generation anyway?",
   "清空话题": "Clear Topic",
+  "清空全部": "Clear All",
+  "清空全部话题": "Clear All Topics",
   "确定要清空当前话题的所有消息吗？":
     "Clear all messages in the current topic?",
+  "确定要删除当前设备上保存的 {count} 个话题吗？":
+    "Delete the {count} topics saved on this device?",
   "清空": "Clear",
   "思考中": "Thinking",
   "请输入内容或上传图片": "Enter some text or upload an image",
@@ -172,6 +208,9 @@ const EN_TRANSLATIONS = {
     "Title generation config is incomplete (API key and model name are required)",
   "话题中没有有效的对话内容": "No valid conversation content in this topic",
   "新话题": "New Topic",
+  "{count} 个话题": "{count} topics",
+  "{count} 个含消息": "{count} with messages",
+  "{count} 个空话题": "{count} empty topics",
   "默认服务": "Default Service",
   "未命名服务": "Unnamed Service",
   "新服务": "New Service",
@@ -308,6 +347,14 @@ const EN_TRANSLATIONS = {
   "联网：Google Search": "Web: Google Search",
   "联网：Exa · {type} · {count} 条": "Web: Exa · {type} · {count} results",
   "联网：Tavily · {depth} · {count} 条": "Web: Tavily · {depth} · {count} results",
+  "当前服务将使用 {mode}，外部搜索配置已禁用。":
+    "This service will use {mode}, and the external search settings are disabled.",
+  "当前接口类型暂不支持内置搜索，仍需使用外部搜索配置。":
+    "The current API type does not support built-in search yet. External search settings are still required.",
+  "关闭后，可在“搜索”页配置 Tavily 或 Exa。":
+    "When disabled, you can configure Tavily or Exa in the Search tab.",
+  "当前主服务已启用内置搜索：{mode}。下面的外部搜索配置已隐藏。":
+    "The current primary service is using built-in search: {mode}. The external search settings below are hidden.",
   "当前是 file:// 打开页面，无法调用本地接口；请用 python server.py 方式访问 http://localhost:3000":
     "The page is opened with file://, so local APIs are unavailable. Start the app with python server.py and open http://localhost:3000 instead.",
   "预览 HTML 代码": "Preview HTML Code",
@@ -472,12 +519,15 @@ export function applyStaticTranslations() {
   setTextContent("#htmlPreviewEmpty .html-preview-empty-title", "等待预览内容");
   setTextContent("#htmlPreviewEmpty .html-preview-empty-text", "在 AI 回复里的 HTML 代码块上点击“预览”，右侧会打开页面内预览面板。");
   setTextContent(".config-header h2", "设置");
+  setAttribute("#configVersion", "aria-label", "版本号");
   setAttribute("#closeConfigBtn", "aria-label", "关闭设置");
   setAttribute("#configTabs", "aria-label", "配置分组");
   setTextContent('.config-tab[data-tab="services"]', "服务");
   setTextContent('.config-tab[data-tab="model"]', "模型");
   setTextContent('.config-tab[data-tab="web"]', "搜索");
+  setTextContent('.config-tab[data-tab="data"]', "数据");
   setTextContent('.config-tab[data-tab="shortcuts"]', "快捷键");
+  setAttribute(".chat-data-stats", "aria-label", "聊天数据");
   setAttribute(".service-toolbar", "aria-label", "服务操作");
   setAttribute("#createServiceBtn", "aria-label", "新建服务");
   setTextContent("#createServiceBtn .sr-only", "新建");
@@ -486,12 +536,27 @@ export function applyStaticTranslations() {
   setAttribute("#deleteServiceBtn", "aria-label", "删除");
   setTextContent("#deleteServiceBtn .sr-only", "删除");
   setAttribute("#serviceList", "aria-label", "服务列表");
+  setTextContent("#exportConfigBtn", "导出配置");
+  setAttribute("#exportConfigBtn", "aria-label", "导出配置");
+  setTextContent("#importConfigBtn", "导入配置");
+  setAttribute("#importConfigBtn", "aria-label", "导入配置");
+  setTextContent("#importDataBtn", "导入备份");
+  setAttribute("#importDataBtn", "aria-label", "导入备份");
+  setTextContent("#exportTopicsBtn", "导出备份");
+  setAttribute("#exportTopicsBtn", "aria-label", "导出备份");
+  setTextContent("#clearTopicsBtn", "清空全部");
+  setAttribute("#clearTopicsBtn", "aria-label", "清空全部");
   setTextContent("#testServiceConnectionBtn", "测试连接");
   setTextContent('label[for="serviceNameInput"]', "服务名称");
   setAttribute("#serviceNameInput", "placeholder", "输入服务名称");
   setTextContent('label[for="providerPickerInput"]', "接口类型");
   setAttribute("#providerPickerInput", "placeholder", "选择接口类型");
   setAttribute("#providerPickerBtn", "aria-label", "打开接口类型列表");
+  setTextContent('label[for="builtinWebSearchPickerInput"]', "使用内置搜索服务");
+  setAttribute("#builtinWebSearchPickerInput", "placeholder", "选择是否使用内置搜索服务");
+  setAttribute("#builtinWebSearchPickerBtn", "aria-label", "打开内置搜索服务选项");
+  setTextContent('#builtinWebSearch option[value="false"]', "否");
+  setTextContent('#builtinWebSearch option[value="true"]', "是");
   setTextContent('label[for="apiKey"]', "API 密钥");
   setAttribute("#apiKey", "placeholder", "输入API密钥");
   setAttribute('button.password-toggle-btn[data-target="apiKey"]', "aria-label", "显示/隐藏密钥");

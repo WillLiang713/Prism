@@ -37,8 +37,12 @@ import {
   updateWebSearchProviderUi,
 } from './web-search.js';
 import { syncDesktopPreferences } from './desktop.js';
+import { updateTheme } from './ui.js';
+import { updateLayoutUi } from './layout.js';
 
 const CONFIG_STORE_VERSION = 2;
+const CONFIG_BACKUP_SCHEMA = "prism-config-backup";
+const CONFIG_BACKUP_VERSION = 1;
 const LEGACY_DEFAULT_SERVICE_NAME = "默认服务";
 const UNNAMED_SERVICE_LABEL = "新服务";
 const DEFAULT_REASONING_EFFORT = "high";
@@ -57,6 +61,194 @@ function cloneValue(value) {
     }
   }
   return JSON.parse(JSON.stringify(value));
+}
+
+function formatLocalDateStamp(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function triggerTextDownload(text, fileName, mimeType = "application/json;charset=utf-8") {
+  const blob = new Blob([text], { type: mimeType });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 1000);
+}
+
+function getDesktopDialogSave() {
+  if (!isDesktopRuntime()) return null;
+  return window.__TAURI__?.dialog?.save || null;
+}
+
+function getDesktopFsWriteFile() {
+  if (!isDesktopRuntime()) return null;
+  return window.__TAURI__?.fs?.writeFile || null;
+}
+
+async function saveTextWithDesktopApi(text, fileName) {
+  const save = getDesktopDialogSave();
+  const writeFile = getDesktopFsWriteFile();
+  if (typeof save !== "function" || typeof writeFile !== "function") {
+    throw new Error(t("导出配置失败"));
+  }
+
+  const savePath = await save({
+    defaultPath: fileName,
+    filters: [
+      {
+        name: "JSON",
+        extensions: ["json"],
+      },
+    ],
+  });
+  if (!savePath) {
+    return false;
+  }
+
+  const bytes = new TextEncoder().encode(text);
+  await writeFile(savePath, bytes);
+  return true;
+}
+
+function resetImportConfigInput() {
+  if (elements.importConfigInput) {
+    elements.importConfigInput.value = "";
+  }
+}
+
+function readImportConfigFile() {
+  const input = elements.importConfigInput;
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(t("导入配置失败"));
+  }
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      input.removeEventListener("change", handleChange);
+      input.removeEventListener("cancel", handleCancel);
+    };
+
+    const handleChange = async () => {
+      cleanup();
+      const [file] = Array.from(input.files || []);
+      resetImportConfigInput();
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      try {
+        const text = await file.text();
+        resolve(text);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resetImportConfigInput();
+      resolve(null);
+    };
+
+    input.addEventListener("change", handleChange, { once: true });
+    input.addEventListener("cancel", handleCancel, { once: true });
+    input.click();
+  });
+}
+
+function getCurrentThemeValue() {
+  const storedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+  if (storedTheme === "light" || storedTheme === "dark") {
+    return storedTheme;
+  }
+  return state.theme === "dark" ? "dark" : "light";
+}
+
+function getCurrentSidebarCollapsedValue() {
+  const storedValue = localStorage.getItem(STORAGE_KEYS.isSidebarCollapsed);
+  if (storedValue === "true") return true;
+  if (storedValue === "false") return false;
+  return state.isSidebarCollapsed === true;
+}
+
+function buildConfigBackupPayload() {
+  const store = readConfigStore();
+  return {
+    schema: CONFIG_BACKUP_SCHEMA,
+    version: CONFIG_BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    payload: {
+      config: cloneValue(store),
+      theme: getCurrentThemeValue(),
+      isSidebarCollapsed: getCurrentSidebarCollapsedValue(),
+    },
+  };
+}
+
+function parseConfigBackupPayload(rawText) {
+  let parsed = null;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (_error) {
+    throw new Error(t("配置文件解析失败"));
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error(t("配置文件格式不正确"));
+  }
+
+  const payload =
+    parsed.schema === CONFIG_BACKUP_SCHEMA
+      ? parsed.payload
+      : parsed;
+
+  if (!payload || typeof payload !== "object") {
+    throw new Error(t("配置文件格式不正确"));
+  }
+
+  const configSource =
+    payload.config !== undefined ? payload.config : payload;
+
+  return {
+    config: normalizeConfigStore(configSource),
+    theme:
+      payload.theme === "light" || payload.theme === "dark"
+        ? payload.theme
+        : null,
+    isSidebarCollapsed:
+      typeof payload.isSidebarCollapsed === "boolean"
+        ? payload.isSidebarCollapsed
+        : null,
+  };
+}
+
+async function applyImportedConfigBackup(backup) {
+  writeConfigStore(backup.config);
+
+  if (backup.theme === "light" || backup.theme === "dark") {
+    updateTheme(backup.theme);
+  }
+
+  if (typeof backup.isSidebarCollapsed === "boolean") {
+    state.isSidebarCollapsed = backup.isSidebarCollapsed;
+    localStorage.setItem(
+      STORAGE_KEYS.isSidebarCollapsed,
+      String(backup.isSidebarCollapsed)
+    );
+    updateLayoutUi();
+  }
+
+  loadConfig();
 }
 
 function escapeHtml(value) {
@@ -209,6 +401,7 @@ function createServiceTemplate(name = "") {
       provider: providerDefaults.provider,
       providerSelection: providerDefaults.selection,
       endpointMode: providerDefaults.endpointMode,
+      preferBuiltinWebSearch: false,
       apiKey: "",
       model: "",
       modelServiceId: "",
@@ -321,6 +514,8 @@ function normalizeService(service, index = 0) {
       provider: providerConfig.provider,
       providerSelection: providerConfig.selection,
       endpointMode: providerConfig.endpointMode,
+      preferBuiltinWebSearch:
+        service?.model?.preferBuiltinWebSearch === true,
       apiKey: String(service?.model?.apiKey || ""),
       model: String(service?.model?.model || ""),
       modelServiceId: String(service?.model?.modelServiceId || ""),
@@ -361,6 +556,7 @@ function migrateLegacyConfig(rawConfig = {}) {
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
+        preferBuiltinWebSearch: false,
         apiKey: legacyModelConfig.apiKey || "",
         model: legacyModelConfig.model || "",
         modelServiceId: "",
@@ -705,6 +901,9 @@ function setServiceFormDisabled(disabled) {
     elements.provider,
     elements.providerPickerInput,
     elements.providerPickerBtn,
+    elements.builtinWebSearch,
+    elements.builtinWebSearchPickerInput,
+    elements.builtinWebSearchPickerBtn,
     elements.apiKey,
     elements.apiUrl,
     elements.model,
@@ -723,6 +922,7 @@ function getManagedServiceConnectionFormSnapshot() {
   return {
     providerSelection: getEffectiveProviderSelectionValue(),
     endpointMode: getEffectiveEndpointModeValue(),
+    preferBuiltinWebSearch: elements.builtinWebSearch?.value === "true",
     apiKey: String(elements.apiKey?.value || ""),
     apiUrl: normalizeApiUrlForProvider(
       elements.apiUrl?.value || "",
@@ -736,6 +936,7 @@ function getServiceConnectionStoreSnapshot(service) {
   return {
     providerSelection: String(service.model?.providerSelection || ""),
     endpointMode: String(service.model?.endpointMode || ""),
+    preferBuiltinWebSearch: service.model?.preferBuiltinWebSearch === true,
     apiKey: String(service.model?.apiKey || ""),
     apiUrl: String(service.model?.apiUrl || ""),
   };
@@ -755,6 +956,7 @@ function getManagedServiceFormSnapshot() {
     name: String(elements.serviceNameInput?.value || "").trim(),
     providerSelection: getEffectiveProviderSelectionValue(),
     endpointMode: getEffectiveEndpointModeValue(),
+    preferBuiltinWebSearch: elements.builtinWebSearch?.value === "true",
     apiKey: String(elements.apiKey?.value || ""),
     apiUrl: normalizeApiUrlForProvider(
       elements.apiUrl?.value || "",
@@ -769,6 +971,7 @@ function getServiceFormStoreSnapshot(service) {
     name: String(service.name || "").trim(),
     providerSelection: String(service.model?.providerSelection || ""),
     endpointMode: String(service.model?.endpointMode || ""),
+    preferBuiltinWebSearch: service.model?.preferBuiltinWebSearch === true,
     apiKey: String(service.model?.apiKey || ""),
     apiUrl: String(service.model?.apiUrl || ""),
   };
@@ -875,7 +1078,13 @@ function applyManagedServiceConnectionToForm(service) {
   if (elements.apiUrl) {
     elements.apiUrl.value = service.model?.apiUrl || "";
   }
+  if (elements.builtinWebSearch) {
+    elements.builtinWebSearch.value = service.model?.preferBuiltinWebSearch === true
+      ? "true"
+      : "false";
+  }
   syncConfigSelectPicker("provider");
+  syncConfigSelectPicker("builtinWebSearch");
   updateProviderUi();
 }
 
@@ -926,6 +1135,9 @@ function applyEmptyServiceStateToForm() {
   if (elements.apiUrl) {
     elements.apiUrl.value = "";
   }
+  if (elements.builtinWebSearch) {
+    elements.builtinWebSearch.value = "false";
+  }
   if (elements.model) {
     elements.model.value = "";
     setModelSourceInputServiceId(elements.model, "");
@@ -940,6 +1152,7 @@ function applyEmptyServiceStateToForm() {
   setReasoningEffortValue(DEFAULT_REASONING_EFFORT);
 
   syncConfigSelectPicker("provider");
+  syncConfigSelectPicker("builtinWebSearch");
   syncRoleSettingPreview(false);
   updateProviderUi();
   updateModelHint("main");
@@ -962,6 +1175,7 @@ function readManagedServiceConnectionFromForm(existingService = null) {
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
+        preferBuiltinWebSearch: elements.builtinWebSearch?.value === "true",
         apiKey: String(elements.apiKey?.value || ""),
         apiUrl: normalizeApiUrlForProvider(
           elements.apiUrl?.value || "",
@@ -1746,10 +1960,7 @@ export function getWebSearchConfig() {
     endpointMode: runtimeState.mainSourceConfig.endpointMode,
     toolMode,
     enabled: isWebSearchEnabled(),
-    provider:
-      toolMode === "builtin"
-        ? normalizeExternalWebSearchProvider(elements.webSearchProvider?.value)
-        : toolMode,
+    provider: toolMode,
     tavilyApiKey: (elements.tavilyApiKey?.value || "").trim(),
     exaApiKey: (elements.exaApiKey?.value || "").trim(),
     exaSearchType: normalizeExaSearchType(elements.exaSearchType?.value),
@@ -1859,6 +2070,76 @@ export function loadConfig() {
   });
   updateWebSearchProviderUi();
   updateConfigStatusStrip();
+}
+
+export async function exportConfigBackup() {
+  await autoSaveManagedServiceDraft();
+
+  const backup = buildConfigBackupPayload();
+  const fileName = `prism-config-${formatLocalDateStamp()}.json`;
+  const text = JSON.stringify(backup, null, 2);
+
+  try {
+    let saved = false;
+    if (isDesktopRuntime()) {
+      saved = await saveTextWithDesktopApi(text, fileName);
+    } else {
+      triggerTextDownload(text, fileName);
+      saved = true;
+    }
+
+    if (!saved) return;
+
+    await showAlert(t("配置已导出"), {
+      title: t("操作完成"),
+    });
+  } catch (error) {
+    console.error("导出配置失败:", error);
+    await showAlert(
+      error instanceof Error && error.message
+        ? error.message
+        : t("导出配置失败"),
+      {
+        title: t("导出失败"),
+      }
+    );
+  }
+}
+
+export async function importConfigBackup() {
+  try {
+    const rawText = await readImportConfigFile();
+    if (!rawText) return;
+
+    const backup = parseConfigBackupPayload(rawText);
+    const confirmed = await showConfirm(t("导入配置会覆盖当前本地配置，是否继续？"), {
+      title: t("导入配置"),
+      okText: t("导入配置"),
+      cancelText: t("取消"),
+      danger: true,
+      hint: hasUnsavedConfigChanges()
+        ? t("当前编辑中的未保存修改也会丢失")
+        : "",
+    });
+    if (!confirmed) return;
+
+    await applyImportedConfigBackup(backup);
+    await showAlert(t("配置已导入"), {
+      title: t("导入成功"),
+    });
+  } catch (error) {
+    console.error("导入配置失败:", error);
+    await showAlert(
+      error instanceof Error && error.message
+        ? error.message
+        : t("导入配置失败"),
+      {
+        title: t("导入失败"),
+      }
+    );
+  } finally {
+    resetImportConfigInput();
+  }
 }
 
 export async function clearConfig() {

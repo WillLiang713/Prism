@@ -846,14 +846,16 @@ export async function callModel(
       useWebSearchTool &&
       webSearchToolMode === "builtin";
     const isAnthropicProvider = config.provider === "anthropic";
-    const webSearchProvider = normalizeWebSearchProvider(
-      webSearchToolMode === "anthropic_search" ||
-      webSearchToolMode === "exa" ||
-      webSearchToolMode === "tavily" ||
-      webSearchToolMode === "gemini_search"
-        ? webSearchToolMode
-        : webSearchConfig?.provider
-    );
+    const webSearchProvider = useBuiltinWebSearch
+      ? "builtin"
+      : normalizeWebSearchProvider(
+          webSearchToolMode === "anthropic_search" ||
+          webSearchToolMode === "exa" ||
+          webSearchToolMode === "tavily" ||
+          webSearchToolMode === "gemini_search"
+            ? webSearchToolMode
+            : webSearchConfig?.provider
+        );
     const isGeminiProvider = config.provider === "gemini";
     const useAnthropicWebSearch =
       isAnthropicProvider &&

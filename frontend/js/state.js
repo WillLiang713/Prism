@@ -155,12 +155,14 @@ export function resolveRuntimeConfig() {
   const params = new URLSearchParams(window.location.search);
   const queryApiBase = (params.get("apiBase") || "").trim();
   const injectedApiBase = String(runtime.apiBase || "").trim();
+  const injectedAppVersion = String(runtime.appVersion || "").trim();
   const apiBase = (queryApiBase || injectedApiBase || "").replace(/\/+$/, "");
   const platform = runtime.platform || (apiBase ? "desktop" : "web");
 
   return {
     platform,
     apiBase: apiBase || (platform === "desktop" ? DESKTOP_DEFAULT_API_BASE : ""),
+    appVersion: injectedAppVersion,
     backendManagedByDesktop:
       runtime.backendManagedByDesktop === true || platform === "desktop",
     startupError: String(runtime.startupError || "").trim(),
@@ -291,6 +293,7 @@ export const elements = {
   themeToggleBtn: document.getElementById("themeToggleBtn"),
   openConfigBtn: document.getElementById("openConfigBtn"),
   closeConfigBtn: document.getElementById("closeConfigBtn"),
+  configVersion: document.getElementById("configVersion"),
   shortcutHelpList: document.getElementById("shortcutHelpList"),
   toggleSidebarBtn: document.getElementById("toggleSidebarBtn"),
   expandSidebarBtn: document.getElementById("expandSidebarBtn"),
@@ -318,6 +321,7 @@ export const elements = {
   webSearchProviderGroup: document.getElementById("webSearchProviderGroup"),
   webSearchApiKey: document.getElementById("webSearchApiKey"),
   webSearchApiKeyGroup: document.getElementById("webSearchApiKeyGroup"),
+  webSearchBuiltinHint: document.getElementById("webSearchBuiltinHint"),
   webSearchMode: document.getElementById("webSearchMode"),
   webSearchModeGroup: document.getElementById("webSearchModeGroup"),
   webSearchModePickerInput: document.getElementById("webSearchModePickerInput"),
@@ -349,6 +353,13 @@ export const elements = {
   topicList: document.getElementById("topicList"),
   chatMessages: document.getElementById("chatMessages"),
   scrollToBottomBtn: document.getElementById("scrollToBottomBtn"),
+  chatDataTotalCount: document.getElementById("chatDataTotalCount"),
+  chatDataNonEmptyCount: document.getElementById("chatDataNonEmptyCount"),
+  chatDataEmptyCount: document.getElementById("chatDataEmptyCount"),
+  exportTopicsBtn: document.getElementById("exportTopicsBtn"),
+  importDataBtn: document.getElementById("importDataBtn"),
+  importDataInput: document.getElementById("importDataInput"),
+  clearTopicsBtn: document.getElementById("clearTopicsBtn"),
   desktopTitlebar: document.getElementById("desktopTitlebar"),
   desktopWindowControls: document.getElementById("desktopWindowControls"),
   windowMinimizeBtn: document.getElementById("windowMinimizeBtn"),
@@ -365,11 +376,23 @@ export const elements = {
   createServiceBtn: document.getElementById("createServiceBtn"),
   duplicateServiceBtn: document.getElementById("duplicateServiceBtn"),
   deleteServiceBtn: document.getElementById("deleteServiceBtn"),
+  exportConfigBtn: document.getElementById("exportConfigBtn"),
+  importConfigBtn: document.getElementById("importConfigBtn"),
+  importConfigInput: document.getElementById("importConfigInput"),
   testServiceConnectionBtn: document.getElementById("testServiceConnectionBtn"),
   provider: document.getElementById("provider"),
   providerPickerInput: document.getElementById("providerPickerInput"),
   providerPickerBtn: document.getElementById("providerPickerBtn"),
   providerPickerDropdown: document.getElementById("providerPickerDropdown"),
+  builtinWebSearch: document.getElementById("builtinWebSearch"),
+  builtinWebSearchPickerInput: document.getElementById(
+    "builtinWebSearchPickerInput"
+  ),
+  builtinWebSearchPickerBtn: document.getElementById("builtinWebSearchPickerBtn"),
+  builtinWebSearchPickerDropdown: document.getElementById(
+    "builtinWebSearchPickerDropdown"
+  ),
+  builtinWebSearchHint: document.getElementById("builtinWebSearchHint"),
   providerHint: document.getElementById("providerHint"),
   endpointModeHint: document.getElementById("endpointModeHint"),
   apiKey: document.getElementById("apiKey"),

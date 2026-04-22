@@ -19,6 +19,13 @@ export function getConfigSelectPickerDefs() {
       dropdown: elements.providerPickerDropdown,
     },
     {
+      key: "builtinWebSearch",
+      select: elements.builtinWebSearch,
+      input: elements.builtinWebSearchPickerInput,
+      btn: elements.builtinWebSearchPickerBtn,
+      dropdown: elements.builtinWebSearchPickerDropdown,
+    },
+    {
       key: "webSearchDefaultMode",
       select: elements.webSearchDefaultMode,
       input: elements.webSearchDefaultModePickerInput,

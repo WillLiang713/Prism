@@ -168,6 +168,7 @@ $stderrLog = Join-Path $devLogDir "desktop-dev-backend.stderr.log"
 $tauriDevConfig = Join-Path $projectRoot "src-tauri\tauri.dev.conf.json"
 $backendArgs = @($pythonArgs + @("server.py", "--host", $BackendHost, "--port", "$Port"))
 $backendProcess = $null
+$tauriProcess = $null
 $apiHost = if ($BackendHost -eq "0.0.0.0") { "127.0.0.1" } else { $BackendHost }
 $apiBase = "http://${apiHost}:$Port"
 $tauriExitCode = 0
@@ -213,12 +214,32 @@ try {
 
   $env:PRISM_DESKTOP_API_BASE = $apiBase
   Write-Host "Starting Tauri desktop shell"
-  & $bunCommand "x" "@tauri-apps/cli" "dev" "--config" $tauriDevConfig
-  $tauriExitCode = $LASTEXITCODE
+  $tauriProcess = Start-Process `
+    -FilePath $bunCommand `
+    -ArgumentList @("x", "@tauri-apps/cli", "dev", "--config", $tauriDevConfig) `
+    -WorkingDirectory $projectRoot `
+    -PassThru `
+    -NoNewWindow
+  Wait-Process -Id $tauriProcess.Id
+  $tauriProcess.Refresh()
+  $tauriExitCode = $tauriProcess.ExitCode
 } finally {
+  if ($tauriProcess) {
+    try {
+      $tauriProcess.Refresh()
+      if (-not $tauriProcess.HasExited) {
+        Stop-ProcessTree -ProcessId $tauriProcess.Id
+      }
+    } catch {
+      # ignore tauri cleanup failure
+    }
+  }
+
   if ($backendProcess -and -not $backendProcess.HasExited) {
     Stop-ProcessTree -ProcessId $backendProcess.Id
   }
+
+  Stop-PrismDesktopProcess -ProjectRoot $projectRoot
 }
 
 exit $tauriExitCode

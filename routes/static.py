@@ -18,6 +18,7 @@ mimetypes.add_type("application/json", ".json")
 router = APIRouter()
 
 INDEX_HTML_PATH = frontend_path("index.html")
+PACKAGE_JSON_PATH = Path(__file__).resolve().parents[1] / "package.json"
 DEV_FRONTEND_ASSET_VERSION = str(time.time_ns())
 NO_CACHE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate",
@@ -48,6 +49,15 @@ def _get_frontend_asset_version() -> str:
     if _should_disable_frontend_cache():
         return DEV_FRONTEND_ASSET_VERSION
     return BUILD_ID
+
+
+def _get_app_version() -> str:
+    try:
+        with open(PACKAGE_JSON_PATH, "r", encoding="utf-8") as f:
+            package_json = json.load(f)
+        return str(package_json.get("version") or "").strip()
+    except Exception:
+        return ""
 
 
 def _get_cache_headers(
@@ -124,6 +134,7 @@ def _serve_versioned_js_asset(
 def _inject_runtime_script(html: str) -> str:
     runtime_payload = {
         "platform": "desktop" if DESKTOP_MODE else "web",
+        "appVersion": _get_app_version(),
     }
     runtime_json = json.dumps(runtime_payload, ensure_ascii=False).replace("</", "<\\/")
     runtime_script = (

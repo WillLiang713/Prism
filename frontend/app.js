@@ -9,7 +9,7 @@ import { initHtmlPreview } from './js/html-preview.js';
 import { initConfigSelectPickers, syncAllConfigSelectPickers, setCloseModelDropdown } from './js/dropdown.js';
 import { renderShortcutHelpList, bindDialogEvents } from './js/dialog.js';
 import { bindEvents } from './js/events.js';
-import { setSendButtonMode, autoGrowPromptInput, startHeaderClock, setConversationFns, setChatFns, initTheme } from './js/ui.js';
+import { setSendButtonMode, autoGrowPromptInput, startHeaderClock, setConversationFns, setChatFns, initTheme, initConfigVersionDisplay } from './js/ui.js';
 import { initLayout } from './js/layout.js';
 import { initDesktopWindowShell, syncDesktopBackendUi, beginDesktopBackendBootstrap } from './js/desktop.js';
 import { closeModelDropdown, setConfigFns } from './js/models.js';
@@ -73,6 +73,7 @@ function startApplication() {
   initLayout();
   renderAll();
   startHeaderClock();
+  void initConfigVersionDisplay();
   initDesktopWindowShell();
   syncDesktopBackendUi();
   autoGrowPromptInput();

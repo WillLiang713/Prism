@@ -32,6 +32,12 @@
   box-shadow: none;
 }
 
+.btn-primary:disabled:hover {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  box-shadow: none;
+}
+
 .btn-secondary {
   background: var(--bg-subtle);
   color: var(--text-muted);
@@ -49,6 +55,30 @@
   color: var(--text-dim);
   cursor: not-allowed;
   border-color: var(--border);
+}
+
+.btn-secondary:disabled:hover {
+  background: var(--bg-subtle);
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-outline:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-accent);
+  color: var(--text);
+}
+
+.btn-outline:disabled:hover {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-dim);
 }
 
 .btn-small {
@@ -132,7 +162,15 @@
 }
 
 .btn-danger:hover {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  color: #fff;
   box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:disabled:hover {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  box-shadow: none;
 }
 
 /* Pill button */

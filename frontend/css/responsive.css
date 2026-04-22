@@ -626,6 +626,7 @@
     column-gap: 10px;
     position: relative;
     isolation: isolate;
+    z-index: 81;
   }
 
   .header-brand {
@@ -789,6 +790,26 @@
   .topic-list {
     margin-right: 0;
     padding-right: 0;
+  }
+
+  .data-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-action-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .data-action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .data-action-buttons .btn {
+    width: 100%;
+    justify-content: center;
   }
 
   /* 移动端收起侧栏时直接整块滑出，不再切换到桌面端的迷你侧栏布局。 */

@@ -445,6 +445,7 @@
           <div class="config-header">
             <div class="config-header-title">
               <h2>设置</h2>
+              <p id="configVersion" hidden aria-label="版本号"></p>
             </div>
             <button
               type="button"
@@ -491,6 +492,17 @@
               aria-controls="configPanelWeb"
             >
               搜索
+            </button>
+            <button
+              type="button"
+              class="config-tab"
+              id="configTabData"
+              data-tab="data"
+              role="tab"
+              aria-selected="false"
+              aria-controls="configPanelData"
+            >
+              数据
             </button>
             <button
               type="button"
@@ -547,16 +559,36 @@
                 </div>
                 <div class="service-detail-panel">
                   <div class="service-detail-topbar">
+                    <button
+                      type="button"
+                      class="btn btn-outline btn-small"
+                      id="exportConfigBtn"
+                    >
+                      导出配置
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline btn-small"
+                      id="importConfigBtn"
+                    >
+                      导入配置
+                    </button>
                     <div class="service-connectivity-mini-card">
                       <button
                         type="button"
-                        class="btn btn-secondary btn-small"
+                        class="btn btn-outline btn-small"
                         id="testServiceConnectionBtn"
                         data-status="idle"
                       >
                         测试连接
                       </button>
                     </div>
+                    <input
+                      type="file"
+                      id="importConfigInput"
+                      accept=".json,application/json"
+                      hidden
+                    />
                   </div>
                   <div class="form-group">
                     <label for="serviceNameInput">服务名称</label>
@@ -598,6 +630,38 @@
                             id="providerPickerDropdown"
                             hidden
                           ></div>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="builtinWebSearchPickerInput">使用内置搜索服务</label>
+                        <select id="builtinWebSearch" class="config-native-select" aria-hidden="true" tabindex="-1">
+                          <option value="false">否</option>
+                          <option value="true">是</option>
+                        </select>
+                        <div class="model-picker config-static-picker" data-picker="builtinWebSearch">
+                          <div class="model-picker-row">
+                            <input
+                              type="text"
+                              id="builtinWebSearchPickerInput"
+                              placeholder="选择是否使用内置搜索服务"
+                              readonly
+                            />
+                            <button
+                              type="button"
+                              class="model-picker-btn"
+                              id="builtinWebSearchPickerBtn"
+                              aria-label="打开内置搜索服务选项"
+                              aria-expanded="false"
+                            ></button>
+                          </div>
+                          <div
+                            class="model-dropdown"
+                            id="builtinWebSearchPickerDropdown"
+                            hidden
+                          ></div>
+                        </div>
+                        <div class="form-hint" id="builtinWebSearchHint">
+                          关闭后，可在“搜索”页配置 Tavily 或 Exa。
                         </div>
                       </div>
                       <div class="form-group">
@@ -715,6 +779,9 @@
             <div class="global-config">
               <div class="web-config-layout">
                 <div class="web-config-main">
+                  <div class="web-config-tips" id="webSearchBuiltinHint" hidden>
+                    当前主服务已启用内置搜索。下面的外部搜索配置已隐藏。
+                  </div>
                   <div class="form-group" id="webSearchDefaultModeGroup">
                     <label for="webSearchDefaultModePickerInput">默认</label>
                     <select id="webSearchDefaultMode" class="config-native-select" aria-hidden="true" tabindex="-1">
@@ -849,6 +916,67 @@
                       </select>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+            </section>
+            <section
+              class="config-tab-panel"
+              id="configPanelData"
+              data-panel="data"
+              role="tabpanel"
+              aria-labelledby="configTabData"
+              hidden
+            >
+            <div class="global-config data-config">
+              <div class="data-stats-grid">
+                <div class="data-stat-card">
+                  <div class="data-stat-content">
+                    <span class="data-stat-label">总话题数</span>
+                    <span class="data-stat-value" id="chatDataTotalCount">0</span>
+                  </div>
+                </div>
+                <div class="data-stat-card">
+                  <div class="data-stat-content">
+                    <span class="data-stat-label">活跃话题</span>
+                    <span class="data-stat-value" id="chatDataNonEmptyCount">0</span>
+                  </div>
+                </div>
+                <div class="data-stat-card">
+                  <div class="data-stat-content">
+                    <span class="data-stat-label">空话题</span>
+                    <span class="data-stat-value" id="chatDataEmptyCount">0</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="data-actions-section">
+                <h4>数据管理操作</h4>
+                <div class="data-action-item">
+                  <div class="data-action-info">
+                    <h5>导入与导出</h5>
+                    <p>将您的全部话题及配置数据打包导出为 JSON 文件，或从本地文件中恢复数据。</p>
+                  </div>
+                  <div class="data-action-buttons">
+                    <button type="button" class="btn btn-outline btn-small" id="importDataBtn">
+                      导入备份
+                    </button>
+                    <input type="file" id="importDataInput" accept=".json,application/json" hidden />
+                    <button type="button" class="btn btn-outline btn-small" id="exportTopicsBtn">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                      导出备份
+                    </button>
+                  </div>
+                </div>
+                <div class="data-action-item danger-zone">
+                  <div class="data-action-info">
+                    <h5>清空全部</h5>
+                    <p>删除所有本地保存的话题内容，此操作不可撤销。</p>
+                  </div>
+                  <button type="button" class="btn btn-primary btn-small btn-danger" id="clearTopicsBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    清空全部
+                  </button>
                 </div>
               </div>
             </div>

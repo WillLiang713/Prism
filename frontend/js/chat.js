@@ -1,10 +1,10 @@
-import { state, elements, STORAGE_KEYS, createId } from './state.js';
+import { state, elements, STORAGE_KEYS, createId, isDesktopRuntime } from './state.js';
 import { t } from './i18n.js';
 import { renderMarkdownToElement, createCopyButton } from './markdown.js';
 import { reconcileHtmlPreviewWithTopic } from './html-preview.js';
 import { renderToolEvents, mergeToolEventsWithWebSearch, renderSourcesStatus } from './web-search.js';
 import { setSendButtonMode, applyStatus, scrollToBottom, syncTopicListHeaderAlignment, updateScrollToBottomButton, updateHeaderMeta } from './ui.js';
-import { showConfirm, openImagePreview } from './dialog.js';
+import { showAlert, showConfirm, openImagePreview } from './dialog.js';
 import { collapseSidebarForMobile, isMobileLayout } from './layout.js';
 import { syncDesktopBackendUi } from './desktop.js';
 import { resolveModelDisplayName } from './config.js';
@@ -39,11 +39,387 @@ let floatingTopicActionMenuEl = null;
 let floatingTopicActionTriggerEl = null;
 const TOPIC_TITLE_TOOLTIP_MEDIA_QUERY = "(hover: hover) and (pointer: fine)";
 const TOPIC_TITLE_TOOLTIP_DELAY_MS = 420;
+const TOPICS_BACKUP_SCHEMA = "prism-topics-backup";
+const TOPICS_BACKUP_VERSION = 1;
 let topicTitleTooltipEl = null;
 let topicTitleTooltipAnchorEl = null;
 let topicTitleTooltipId = "";
 let topicTitleTooltipBound = false;
 let topicTitleTooltipTimer = 0;
+
+function cloneSerializable(value) {
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(value);
+    } catch (_error) {
+      // Fall through to JSON cloning.
+    }
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function formatLocalDateStamp(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function triggerTextDownload(text, fileName, mimeType = "application/json;charset=utf-8") {
+  const blob = new Blob([text], { type: mimeType });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 1000);
+}
+
+function getDesktopDialogSave() {
+  if (!isDesktopRuntime()) return null;
+  return window.__TAURI__?.dialog?.save || null;
+}
+
+function getDesktopFsWriteFile() {
+  if (!isDesktopRuntime()) return null;
+  return window.__TAURI__?.fs?.writeFile || null;
+}
+
+async function saveTextWithDesktopApi(text, fileName) {
+  const save = getDesktopDialogSave();
+  const writeFile = getDesktopFsWriteFile();
+  if (typeof save !== "function" || typeof writeFile !== "function") {
+    throw new Error(t("导出备份失败"));
+  }
+
+  const savePath = await save({
+    defaultPath: fileName,
+    filters: [
+      {
+        name: "JSON",
+        extensions: ["json"],
+      },
+    ],
+  });
+  if (!savePath) return false;
+
+  const bytes = new TextEncoder().encode(text);
+  await writeFile(savePath, bytes);
+  return true;
+}
+
+function resetImportTopicsInput() {
+  if (elements.importDataInput) {
+    elements.importDataInput.value = "";
+  }
+}
+
+async function readImportTopicsFile() {
+  const input = elements.importDataInput;
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(t("导入备份失败"));
+  }
+
+  const [file] = Array.from(input.files || []);
+  resetImportTopicsInput();
+  if (!file) return null;
+  return file.text();
+}
+
+function normalizeImportedTopics(rawTopics) {
+  if (!Array.isArray(rawTopics)) return [];
+
+  return rawTopics
+    .filter((topic) => topic && typeof topic === "object")
+    .map((topic) => {
+      const now = Date.now();
+      const createdAt = Number(topic.createdAt) || now;
+      const updatedAt = Number(topic.updatedAt) || createdAt;
+      const turns = Array.isArray(topic.turns) ? topic.turns : [];
+
+      return {
+        ...cloneSerializable(topic),
+        id: String(topic.id || createId()),
+        title:
+          typeof topic.title === "string" && topic.title.trim()
+            ? (isDefaultTopicTitle(topic.title) ? DEFAULT_TOPIC_TITLE : topic.title)
+            : DEFAULT_TOPIC_TITLE,
+        createdAt,
+        updatedAt,
+        turns: turns
+          .filter((turn) => turn && typeof turn === "object")
+          .map((turn) => {
+            const models =
+              turn.models && typeof turn.models === "object"
+                ? cloneSerializable(turn.models)
+                : {};
+            if (models.A && !models.main) {
+              models.main = models.A;
+            }
+            delete models.A;
+            delete models.B;
+
+            return {
+              ...cloneSerializable(turn),
+              id: String(turn.id || createId()),
+              prompt: String(turn.prompt || ""),
+              createdAt: Number(turn.createdAt) || updatedAt,
+              models,
+              images: Array.isArray(turn.images)
+                ? cloneSerializable(turn.images)
+                : [],
+            };
+          }),
+      };
+    });
+}
+
+function parseTopicsBackupPayload(rawText) {
+  let parsed = null;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (_error) {
+    throw new Error(t("备份文件解析失败"));
+  }
+
+  if (Array.isArray(parsed)) {
+    const topics = normalizeImportedTopics(parsed);
+    return {
+      topics,
+      activeTopicId: topics[0]?.id || "",
+    };
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error(t("备份文件格式不正确"));
+  }
+
+  const payload =
+    parsed.schema === TOPICS_BACKUP_SCHEMA
+      ? parsed.payload
+      : parsed;
+
+  if (!payload || typeof payload !== "object") {
+    throw new Error(t("备份文件格式不正确"));
+  }
+
+  const topics = normalizeImportedTopics(payload.topics);
+  const activeTopicId = String(payload.activeTopicId || "");
+  return { topics, activeTopicId };
+}
+
+function applyImportedTopicsBackup(backup) {
+  if (state.chat.saveTimer) {
+    clearTimeout(state.chat.saveTimer);
+    state.chat.saveTimer = null;
+  }
+
+  for (const topicId of [...state.chat.runningControllers.keys()]) {
+    _stopGeneration(topicId);
+  }
+  for (const topic of state.chat.topics) {
+    if (!Array.isArray(topic?.turns)) continue;
+    for (const turn of topic.turns) {
+      clearTurnEditState(turn?.id);
+    }
+  }
+
+  openTopicActionMenuId = null;
+  state.chat.topics = backup.topics;
+  state.chat.turnUiById.clear();
+  state.chat.runningControllers.clear();
+  state.chat.generatingTitleTopicIds.clear();
+  state.chat.turnIdsWithoutAnimation.clear();
+  state.chat.editDraftByTurnId.clear();
+  state.chat.editingTurnId = null;
+
+  if (!state.chat.topics.length) {
+    const topic = createTopic(true);
+    state.chat.activeTopicId = topic.id;
+  } else if (
+    backup.activeTopicId &&
+    state.chat.topics.some((topic) => topic.id === backup.activeTopicId)
+  ) {
+    state.chat.activeTopicId = backup.activeTopicId;
+  } else {
+    state.chat.activeTopicId = state.chat.topics[0].id;
+  }
+
+  saveChatState();
+}
+
+function topicHasMessages(topic) {
+  return Array.isArray(topic?.turns) &&
+    topic.turns.some((turn) => {
+      const hasPrompt = !!String(turn?.prompt || "").trim();
+      const hasImages = Array.isArray(turn?.images) && turn.images.length > 0;
+      const hasAssistantContent = !!String(turn?.models?.main?.content || "").trim();
+      return hasPrompt || hasImages || hasAssistantContent;
+    });
+}
+
+function getChatDataStats() {
+  const topics = Array.isArray(state.chat.topics) ? state.chat.topics : [];
+  const totalTopics = topics.length;
+  const topicsWithMessages = topics.filter((topic) => topicHasMessages(topic)).length;
+  return {
+    totalTopics,
+    topicsWithMessages,
+    emptyTopics: Math.max(0, totalTopics - topicsWithMessages),
+  };
+}
+
+export function refreshChatDataPanel() {
+  const { totalTopics, topicsWithMessages, emptyTopics } = getChatDataStats();
+
+  if (elements.chatDataTotalCount) {
+    elements.chatDataTotalCount.textContent = t("{count} 个话题", {
+      count: totalTopics,
+    });
+  }
+  if (elements.chatDataNonEmptyCount) {
+    elements.chatDataNonEmptyCount.textContent = t("{count} 个含消息", {
+      count: topicsWithMessages,
+    });
+  }
+  if (elements.chatDataEmptyCount) {
+    elements.chatDataEmptyCount.textContent = t("{count} 个空话题", {
+      count: emptyTopics,
+    });
+  }
+
+  if (elements.clearTopicsBtn) {
+    elements.clearTopicsBtn.disabled = totalTopics <= 1 && topicsWithMessages === 0;
+  }
+}
+
+export async function exportTopicsBackup() {
+  const backup = {
+    schema: TOPICS_BACKUP_SCHEMA,
+    version: TOPICS_BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    payload: {
+      topics: cloneSerializable(state.chat.topics),
+      activeTopicId: String(state.chat.activeTopicId || ""),
+    },
+  };
+  const fileName = `prism-topics-${formatLocalDateStamp()}.json`;
+  const text = JSON.stringify(backup, null, 2);
+
+  try {
+    let saved = false;
+    if (isDesktopRuntime()) {
+      saved = await saveTextWithDesktopApi(text, fileName);
+    } else {
+      triggerTextDownload(text, fileName);
+      saved = true;
+    }
+
+    if (!saved) return false;
+
+    await showAlert(t("备份已导出"), {
+      title: t("操作完成"),
+    });
+    return true;
+  } catch (error) {
+    console.error("导出备份失败:", error);
+    await showAlert(
+      error instanceof Error && error.message
+        ? error.message
+        : t("导出备份失败"),
+      {
+        title: t("导出失败"),
+      }
+    );
+    return false;
+  }
+}
+
+export async function importTopicsBackup() {
+  try {
+    const rawText = await readImportTopicsFile();
+    if (!rawText) return false;
+
+    const backup = parseTopicsBackupPayload(rawText);
+    const confirmed = await showConfirm(
+      t("导入备份会覆盖当前本地聊天数据，是否继续？"),
+      {
+        title: t("导入备份"),
+        okText: t("导入备份"),
+        cancelText: t("取消"),
+        danger: true,
+        hint: "",
+      }
+    );
+    if (!confirmed) return false;
+
+    applyImportedTopicsBackup(backup);
+    renderAll();
+    await showAlert(t("备份已导入"), {
+      title: t("导入成功"),
+    });
+    return true;
+  } catch (error) {
+    console.error("导入备份失败:", error);
+    await showAlert(
+      error instanceof Error && error.message
+        ? error.message
+        : t("导入备份失败"),
+      {
+        title: t("导入失败"),
+      }
+    );
+    return false;
+  } finally {
+    resetImportTopicsInput();
+  }
+}
+
+export async function requestClearAllTopics() {
+  const { totalTopics } = getChatDataStats();
+  const confirmed = await showConfirm(
+    t("确定要删除当前设备上保存的 {count} 个话题吗？", {
+      count: totalTopics,
+    }),
+    {
+      title: t("清空全部话题"),
+      okText: t("清空全部"),
+      danger: true,
+      hint: "",
+    }
+  );
+  if (!confirmed) return false;
+
+  for (const topicId of [...state.chat.runningControllers.keys()]) {
+    _stopGeneration(topicId);
+  }
+  for (const topic of state.chat.topics) {
+    if (!Array.isArray(topic?.turns)) continue;
+    for (const turn of topic.turns) {
+      clearTurnEditState(turn?.id);
+    }
+  }
+
+  openTopicActionMenuId = null;
+  state.chat.topics = [];
+  state.chat.turnUiById.clear();
+  state.chat.runningControllers.clear();
+  state.chat.generatingTitleTopicIds.clear();
+  state.chat.turnIdsWithoutAnimation.clear();
+  state.chat.editDraftByTurnId.clear();
+  state.chat.editingTurnId = null;
+
+  const topic = createTopic(true);
+  setActiveTopic(topic.id);
+  scheduleSaveChat();
+  renderAll();
+  return true;
+}
 
 function renderAssistantModelName(el, displayModel) {
   if (!(el instanceof HTMLElement)) return;
@@ -576,9 +952,12 @@ export function initChat() {
   if (!state.chat.activeTopicId) {
     state.chat.activeTopicId = state.chat.topics[0].id;
   }
+
+  refreshChatDataPanel();
 }
 
 export function scheduleSaveChat() {
+  refreshChatDataPanel();
   if (state.chat.saveTimer) clearTimeout(state.chat.saveTimer);
   state.chat.saveTimer = setTimeout(() => {
     state.chat.saveTimer = null;
@@ -768,6 +1147,7 @@ export function setActiveTopic(topicId) {
 export function renderAll() {
   renderTopicList();
   renderChatMessages();
+  refreshChatDataPanel();
   syncSendButtonModeByActiveTopic();
 }
 

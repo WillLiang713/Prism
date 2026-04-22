@@ -1,4 +1,4 @@
-import { state, elements, estimateTokensFromText, STORAGE_KEYS } from './state.js';
+import { state, elements, estimateTokensFromText, STORAGE_KEYS, PRISM_RUNTIME, isDesktopRuntime } from './state.js';
 import { t } from './i18n.js';
 import { renderMarkdownToElement } from './markdown.js';
 
@@ -21,6 +21,7 @@ let topicListAlignmentBound = false;
 let topicListAlignmentFrame = 0;
 let topicListAlignmentResizeObserver = null;
 const DEFAULT_TOPIC_TITLE = "新话题";
+let configVersionDisplayInitialized = false;
 
 // Late-bound to avoid circular dependencies
 let _sendPrompt = () => {};
@@ -234,6 +235,54 @@ export function initScrollbarAutoHide() {
     },
     true
   );
+}
+
+function formatAppVersion(version) {
+  const normalized = String(version || "").trim();
+  if (!normalized) return "";
+  return normalized.startsWith("v") ? normalized : `v${normalized}`;
+}
+
+function applyConfigVersion(version) {
+  if (!elements.configVersion) return;
+
+  const displayVersion = formatAppVersion(version);
+  if (!displayVersion) {
+    elements.configVersion.hidden = true;
+    elements.configVersion.textContent = "";
+    return;
+  }
+
+  elements.configVersion.textContent = displayVersion;
+  elements.configVersion.hidden = false;
+}
+
+async function resolveDesktopAppVersion() {
+  try {
+    const getVersion =
+      window.__TAURI__?.app?.getVersion ||
+      window.__TAURI_INTERNALS__?.app?.getVersion ||
+      null;
+    if (typeof getVersion !== "function") return "";
+    const version = await getVersion();
+    return String(version || "").trim();
+  } catch (_error) {
+    return "";
+  }
+}
+
+export async function initConfigVersionDisplay() {
+  if (configVersionDisplayInitialized) return;
+  configVersionDisplayInitialized = true;
+
+  applyConfigVersion(PRISM_RUNTIME.appVersion);
+
+  if (!isDesktopRuntime()) return;
+
+  const desktopVersion = await resolveDesktopAppVersion();
+  if (desktopVersion) {
+    applyConfigVersion(desktopVersion);
+  }
 }
 
 export function updateHeaderMeta() {
