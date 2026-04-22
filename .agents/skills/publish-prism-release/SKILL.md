@@ -21,7 +21,7 @@ Load these references only when needed:
   - `src-tauri/Cargo.toml`
   - `src-tauri/tauri.conf.json`
   - `src-tauri/Cargo.lock` for the `prism_desktop` package entry
-- Windows build entry point: `npm run build`
+- Windows build entry point: `bun run build`
 - Build script: `scripts/build-tauri-windows.ps1`
 - Expected installer output:
   - `src-tauri/target/release/bundle/nsis/Prism_<version>_x64-setup.exe`
@@ -175,7 +175,7 @@ chore(version): 发布版本 1.1.3
 Always build before publishing the GitHub Release, even on the continuation path, unless the user explicitly wants to reuse an older verified artifact.
 
 ```powershell
-npm run build
+bun run build
 Get-Item $installer
 $asset = Get-Item $installer
 $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToUpper()
