@@ -8,6 +8,25 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
+function Resolve-BunCommand {
+  $bunCommand = Get-Command bun.exe -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
+  }
+
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
+  }
+
+  $defaultBunPath = Join-Path $HOME ".bun\bin\bun.exe"
+  if (Test-Path $defaultBunPath) {
+    return $defaultBunPath
+  }
+
+  throw "bun was not found. Install it from https://bun.sh/docs/installation"
+}
+
 function Resolve-PythonFromPyLauncher {
   param(
     [Parameter(Mandatory = $true)]
@@ -41,6 +60,55 @@ function Stop-ProcessTree {
     } catch {
       # ignore cleanup failure
     }
+  }
+}
+
+function Stop-PrismDesktopProcess {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ProjectRoot
+  )
+
+  $targetExe = Join-Path $ProjectRoot "src-tauri\target\debug\prism_desktop.exe"
+  $desktopProcesses = Get-Process -Name "prism_desktop" -ErrorAction SilentlyContinue
+  if (-not $desktopProcesses) {
+    return
+  }
+
+  foreach ($process in $desktopProcesses) {
+    try {
+      if ($process.Path -and $process.Path -ieq $targetExe) {
+        Write-Host "Stopping lingering desktop process: $($process.Id)"
+        Stop-ProcessTree -ProcessId $process.Id
+      }
+    } catch {
+      # ignore per-process inspection failure
+    }
+  }
+}
+
+function Stop-PrismBackendProcess {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ProjectRoot
+  )
+
+  $escapedProjectRoot = [Regex]::Escape($ProjectRoot)
+  $backendProcesses = Get-CimInstance Win32_Process | Where-Object {
+    $commandLine = $_.CommandLine
+    if (-not $commandLine) {
+      return $false
+    }
+
+    return $commandLine -match "server\.py" -and $commandLine -match $escapedProjectRoot
+  }
+
+  foreach ($process in $backendProcesses) {
+    if ($process.ProcessId -eq $PID) {
+      continue
+    }
+    Write-Host "Stopping lingering backend process: $($process.ProcessId)"
+    Stop-ProcessTree -ProcessId $process.ProcessId
   }
 }
 
@@ -88,10 +156,7 @@ if (-not $pythonCommand) {
   throw "Python 3.12+ was not found."
 }
 
-$tauriCli = Join-Path $projectRoot "node_modules\.bin\tauri.cmd"
-if (-not (Test-Path $tauriCli)) {
-  throw "Tauri CLI was not found. Run: npm install"
-}
+$bunCommand = Resolve-BunCommand
 
 $devLogDir = Join-Path $projectRoot "logs"
 if (-not (Test-Path $devLogDir)) {
@@ -106,6 +171,9 @@ $backendProcess = $null
 $apiHost = if ($BackendHost -eq "0.0.0.0") { "127.0.0.1" } else { $BackendHost }
 $apiBase = "http://${apiHost}:$Port"
 $tauriExitCode = 0
+
+Stop-PrismDesktopProcess -ProjectRoot $projectRoot
+Stop-PrismBackendProcess -ProjectRoot $projectRoot
 
 Write-Host "Starting desktop backend on http://${BackendHost}:$Port"
 Write-Host "Desktop shell will connect to $apiBase"
@@ -145,7 +213,7 @@ try {
 
   $env:PRISM_DESKTOP_API_BASE = $apiBase
   Write-Host "Starting Tauri desktop shell"
-  & $tauriCli "dev" "--config" $tauriDevConfig
+  & $bunCommand "x" "@tauri-apps/cli" "dev" "--config" $tauriDevConfig
   $tauriExitCode = $LASTEXITCODE
 } finally {
   if ($backendProcess -and -not $backendProcess.HasExited) {

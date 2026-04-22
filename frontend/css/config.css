@@ -65,7 +65,7 @@
     var(--desktop-config-modal-max-width),
     calc(100vw - (var(--app-shell-side-padding) * 2))
   );
-  height: min(720px, var(--app-shell-height));
+  height: min(640px, var(--app-shell-height));
   max-height: var(--app-shell-height);
   border: 1px solid var(--modal-border);
   box-shadow: var(--modal-shadow);
@@ -84,13 +84,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 16px 24px 10px;
+  padding: 14px 22px 8px;
   background: var(--modal-surface-solid);
   border-bottom: none;
 }
 
 #configModal .config-tabs {
-  padding: 10px 24px 8px;
+  padding: 8px 22px 6px;
   background: var(--modal-surface-solid);
   border-bottom: none;
 }
@@ -98,7 +98,7 @@
 #configModal .config-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px 24px 14px;
+  padding: 12px 20px 12px;
   background: var(--modal-surface-solid);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -381,7 +381,7 @@
 .service-config-layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 18px;
+  gap: 14px;
   align-items: start;
   min-height: 0;
 }
@@ -390,22 +390,22 @@
 .service-detail-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
   min-height: 0;
   height: 100%;
   border: 1px solid var(--border-subtle);
   border-radius: 18px;
   background: var(--bg-subtle);
-  padding: 16px;
+  padding: 12px;
   transition: border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease;
 }
 
 .service-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 10px;
   flex: 0 0 auto;
 }
 
@@ -515,7 +515,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
   max-height: none;
   overflow-y: auto;
@@ -529,7 +529,7 @@
 .service-detail-form,
 .service-detail-main {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .service-detail-panel .form-group,
@@ -546,7 +546,7 @@
   gap: 12px;
   min-height: 0;
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 8px;
   order: 99;
 }
 
@@ -566,10 +566,10 @@
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   background: var(--bg-subtle);
-  padding: 14px 16px 12px 16px;
+  padding: 12px 14px 10px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   text-align: left;
   color: var(--text-muted);
   cursor: pointer;
@@ -1123,6 +1123,36 @@
   max-height: none;
   overflow: visible;
   background: transparent;
+}
+
+.shortcuts-config .shortcut-help-table th,
+.shortcuts-config .shortcut-help-table td {
+  padding: 10px 14px;
+}
+
+.shortcuts-config .shortcut-help-table th {
+  font-size: var(--font-size-caption);
+}
+
+.shortcuts-config .shortcut-help-table td {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-compact);
+}
+
+.shortcuts-config .shortcut-keys {
+  gap: 4px;
+}
+
+.shortcuts-config .shortcut-keys kbd {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.shortcuts-config .shortcut-sep {
+  font-size: var(--font-size-caption);
 }
 
 .shortcut-help-inline-body .shortcut-help-table th {

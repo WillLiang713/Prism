@@ -840,8 +840,8 @@
 }
 
 .send-button .send-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   display: block;
   color: #111111;
   flex-shrink: 0;

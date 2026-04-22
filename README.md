@@ -43,10 +43,10 @@ If the repo already includes `venv/`, Windows users should preferably reuse it:
 2. Start the server:
 
 ```bash
-npm run dev:web
+bun run dev:web
 ```
 
-If you need to run it directly without npm, Windows users can still use:
+If you need to run it directly without Bun, Windows users can still use:
 
 ```bash
 .\venv\Scripts\python.exe server.py
@@ -86,8 +86,8 @@ https://github.com/WillLiang713/Prism/releases
 Recommended command:
 
 ```bash
-npm install
-npm run dev:desktop
+bun install
+bun run dev:desktop
 ```
 
 This workflow will:
@@ -107,7 +107,7 @@ logs/desktop-dev-backend.stderr.log
 
 Notes:
 
-- `npm run dev:desktop` is the recommended daily workflow.
+- `bun run dev:desktop` is the recommended daily workflow.
 - If you already activated a virtual environment, prefer `python` over `py -3` so you do not bypass the active environment.
 - In desktop dev mode, the backend listens on `0.0.0.0:33100` by default while the desktop shell still connects to `http://127.0.0.1:33100`.
 - Set `PRISM_DESKTOP_API_BASE` if you need a different backend URL for the desktop shell.
@@ -123,12 +123,12 @@ Before the first build, install:
 Build command:
 
 ```bash
-npm run build
+bun run build
 ```
 
 Notes:
 
-- Use `npm run build` as the only packaged desktop build entry point.
+- Use `bun run build` as the only packaged desktop build entry point.
 - The build entry point is `scripts/build-tauri-windows.ps1`.
 - The script now performs a full local rebuild by clearing `node_modules`, `src-tauri\\target`, `build`, `dist`, repo logs, and Python cache before reinstalling dependencies.
 - The script first packages the Python runtime into `prism-runtime.exe`, then runs the Tauri build.

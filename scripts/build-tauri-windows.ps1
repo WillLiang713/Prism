@@ -182,18 +182,23 @@ function Resolve-PythonFromPyLauncher {
   return $null
 }
 
-function Resolve-NpmCommand {
-  $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  if ($npmCommand) {
-    return $npmCommand.Source
+function Resolve-BunCommand {
+  $bunCommand = Get-Command bun.exe -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
   }
 
-  $npmCommand = Get-Command npm -ErrorAction SilentlyContinue
-  if ($npmCommand) {
-    return $npmCommand.Source
+  $bunCommand = Get-Command bun -ErrorAction SilentlyContinue
+  if ($bunCommand) {
+    return $bunCommand.Source
   }
 
-  throw "npm was not found."
+  $defaultBunPath = Join-Path $HOME ".bun\bin\bun.exe"
+  if (Test-Path $defaultBunPath) {
+    return $defaultBunPath
+  }
+
+  throw "bun was not found. Install it from https://bun.sh/docs/installation"
 }
 
 function Get-PackageVersion {
@@ -287,7 +292,7 @@ if (-not $pythonCommand) {
   throw "Python 3.12+ was not found."
 }
 
-$npmCommand = Resolve-NpmCommand
+$bunCommand = Resolve-BunCommand
 $runtimeResourceDir = Join-Path $projectRoot "src-tauri\runtime"
 $legacySidecarPath = Join-Path $projectRoot "src-tauri\binaries\prism-backend-x86_64-pc-windows-msvc.exe"
 $nuitkaOutputDir = Join-Path $projectRoot "build\nuitka"
@@ -414,13 +419,13 @@ $stampedContent = $originalContent -replace '__BUILD__', $buildStamp
 Write-Utf8NoBom -Path $indexHtml -Content $stampedContent
 
 Invoke-NativeCommand `
-  -FilePath $npmCommand `
+  -FilePath $bunCommand `
   -Arguments @("install") `
-  -FailureMessage "npm install failed."
+  -FailureMessage "bun install failed."
 try {
   Invoke-NativeCommand `
-    -FilePath $npmCommand `
-    -Arguments @("exec", "tauri", "build") `
+    -FilePath $bunCommand `
+    -Arguments @("x", "@tauri-apps/cli", "build") `
     -FailureMessage "Tauri build failed."
 } finally {
   # 构建完成后恢复 index.html 中的占位符，避免污染源文件

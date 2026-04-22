@@ -63,7 +63,9 @@ struct DesktopPreferences {
 impl Default for DesktopPreferences {
     fn default() -> Self {
         Self {
-            close_to_tray: true,
+            // In dev, closing to tray keeps the running exe locked and breaks
+            // Cargo/Tauri rebuilds on Windows.
+            close_to_tray: !cfg!(debug_assertions),
         }
     }
 }
@@ -275,6 +277,10 @@ fn show_main_window(app: &tauri::AppHandle) {
 }
 
 fn should_close_to_tray(app: &tauri::AppHandle) -> bool {
+    if cfg!(debug_assertions) {
+        return false;
+    }
+
     app.state::<DesktopPreferencesState>()
         .0
         .lock()

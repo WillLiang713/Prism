@@ -43,10 +43,10 @@ pip install -r requirements.txt
 2. 启动服务：
 
 ```bash
-npm run dev:web
+bun run dev:web
 ```
 
-如果你不想通过 npm，也可以直接运行：
+如果你不想通过 Bun，也可以直接运行：
 
 ```bash
 .\venv\Scripts\python.exe server.py
@@ -86,8 +86,8 @@ https://github.com/WillLiang713/Prism/releases
 推荐命令：
 
 ```bash
-npm install
-npm run dev:desktop
+bun install
+bun run dev:desktop
 ```
 
 这套流程会自动：
@@ -107,7 +107,7 @@ logs/desktop-dev-backend.stderr.log
 
 说明：
 
-- 日常开发优先使用 `npm run dev:desktop`
+- 日常开发优先使用 `bun run dev:desktop`
 - 如果你已经激活了虚拟环境，优先用 `python`，不要用 `py -3`，避免绕过当前环境
 - 桌面版开发态后端默认监听 `0.0.0.0:33100`，桌面壳默认仍连接 `http://127.0.0.1:33100`
 - 如果要改桌面壳使用的后端地址，可设置 `PRISM_DESKTOP_API_BASE`
@@ -123,12 +123,12 @@ logs/desktop-dev-backend.stderr.log
 打包命令：
 
 ```bash
-npm run build
+bun run build
 ```
 
 说明：
 
-- 统一使用 `npm run build` 作为桌面版打包入口
+- 统一使用 `bun run build` 作为桌面版打包入口
 - 实际脚本入口为 `scripts/build-tauri-windows.ps1`
 - 该脚本会先清理 `node_modules`、`src-tauri\\target`、`build`、`dist`、仓库日志与 Python 缓存，再重新安装依赖并打包
 - 该脚本会先把 Python 运行时打成 `prism-runtime.exe`，再执行 Tauri 构建
