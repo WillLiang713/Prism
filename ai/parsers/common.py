@@ -239,7 +239,7 @@ def build_web_search_event_from_grounding(
     return {
         "status": "ready",
         "round": current_round,
-        "name": "google_search",
+        "name": "web_search",
         "query": query,
         "answer": "",
         "totalResults": len(sources),

@@ -9,17 +9,17 @@ import {
 } from './dropdown.js';
 
 const WEB_SEARCH_TOOL_MODE_LABELS = {
-  builtin: "OpenAI Web Search",
-  anthropic_search: "Anthropic Web Search",
-  gemini_search: "Google Search",
+  builtin: "Web Search",
+  anthropic_search: "Web Search",
+  gemini_search: "Web Search",
   tavily: "Tavily",
   exa: "Exa",
 };
 
 const WEB_SEARCH_TOOL_MODE_COMPACT_LABELS = {
-  builtin: "OpenAI",
-  anthropic_search: "Anthropic",
-  gemini_search: "Google",
+  builtin: "Web",
+  anthropic_search: "Web",
+  gemini_search: "Web",
   tavily: "Tavily",
   exa: "Exa",
 };
@@ -39,11 +39,13 @@ const EXA_SEARCH_MODE_OPTIONS = [
   { value: "instant", label: "instant" },
 ];
 
+// Builtin search providers may differ internally, but they share one display label.
 const TOOL_EVENT_DISPLAY_NAMES = {
-  web_search: "OpenAI Web Search",
-  web_search_preview: "OpenAI Web Search",
-  anthropic_search: "Anthropic Web Search",
-  gemini_search: "Google Search",
+  web_search: "Web Search",
+  web_search_preview: "Web Search",
+  anthropic_search: "Web Search",
+  gemini_search: "Web Search",
+  google_search: "Web Search",
   tavily_search: "Tavily Search",
   exa_search: "Exa Search",
   get_current_time: "当前时间",
@@ -261,7 +263,8 @@ export function formatToolEventDisplay(event) {
   }
 
   const rawName = (event.name || "未知工具").trim();
-  const name = t(TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName);
+  const explicitDisplayName = String(event.displayName || "").trim();
+  const name = t(explicitDisplayName || TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName);
   const status = event.status || "info";
   const rawArgs = event.arguments;
   const normalizedArgs = rawArgs && typeof rawArgs === "object"
@@ -340,6 +343,7 @@ function mergeToolEventState(previousEvent, nextEvent) {
     ...previous,
     ...next,
     callId: String(next.callId || previous.callId || "").trim(),
+    displayName: next.displayName || previous.displayName || "",
     arguments: next.arguments ?? previous.arguments,
     resultSummary: next.resultSummary || previous.resultSummary || "",
     error: next.error || previous.error || "",
@@ -393,14 +397,42 @@ function isSameToolCall(event, webSearchEvent) {
 
 function createNormalizedWebSearchEvent(webSearchEvent) {
   if (!webSearchEvent || typeof webSearchEvent !== "object") return null;
-  const rawName = String(webSearchEvent.name || "").trim();
+  const rawName = String(webSearchEvent.name || "").trim() || "web_search";
   return {
     ...webSearchEvent,
     callId: String(webSearchEvent.callId || "").trim(),
-    name: TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName || "Web Search",
+    name: rawName,
+    displayName: TOOL_EVENT_DISPLAY_NAMES[rawName] || rawName || "Web Search",
     query: String(webSearchEvent.query || "").trim(),
     answer: String(webSearchEvent.answer || "").trim(),
     results: Array.isArray(webSearchEvent.results) ? webSearchEvent.results : [],
+  };
+}
+
+function createToolEventFromWebSearch(webSearchEvent) {
+  const normalized = createNormalizedWebSearchEvent(webSearchEvent);
+  if (!normalized) return null;
+
+  const totalResults = Number(normalized.totalResults || normalized.results?.length || 0);
+  const status = normalized.status === "error"
+    ? "error"
+    : normalized.status === "loading"
+    ? "start"
+    : "success";
+  const resultSummary = status === "error"
+    ? normalized.error || t("联网搜索失败")
+    : totalResults > 0
+    ? t("返回 {count} 条结果", { count: totalResults })
+    : t("搜索完成");
+
+  return {
+    callId: normalized.callId,
+    round: normalizeToolEventRound(normalized.round),
+    name: String(normalized.name || "").trim() || "web_search",
+    displayName: String(normalized.displayName || "").trim() || "Web Search",
+    status,
+    resultSummary,
+    webSearch: normalized,
   };
 }
 
@@ -434,6 +466,11 @@ export function attachWebSearchToToolEvents(toolEvents, webSearchEvent) {
       webSearch: normalized,
     };
     return items;
+  }
+
+  const synthesizedEvent = createToolEventFromWebSearch(normalized);
+  if (synthesizedEvent) {
+    items.push(synthesizedEvent);
   }
 
   return items;
@@ -1503,12 +1540,8 @@ export function updateConfigStatusStrip() {
   const exaType = normalizeExaSearchType(elements.exaSearchType?.value);
   const webText = !webSearchEnabled
     ? t("联网：关闭")
-    : toolMode === "builtin"
-      ? t("联网：OpenAI Web Search")
-      : toolMode === "anthropic_search"
-      ? t("联网：Anthropic Web Search")
-      : toolMode === "gemini_search"
-      ? t("联网：Google Search")
+    : toolMode === "builtin" || toolMode === "anthropic_search" || toolMode === "gemini_search"
+      ? t("联网：Web Search")
       : toolMode === "exa"
       ? t("联网：Exa · {type} · {count} 条", {
           type: exaType,
