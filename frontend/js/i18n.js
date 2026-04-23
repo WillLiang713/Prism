@@ -35,6 +35,7 @@ const EN_TRANSLATIONS = {
   "OpenAI Web Search": "OpenAI Web Search",
   "Anthropic Web Search": "Anthropic Web Search",
   "Google Search": "Google Search",
+  "Web Search": "Web Search",
   "HTML 预览": "HTML Preview",
   "HTML 预览画布": "HTML Preview Canvas",
   "关闭 HTML 预览": "Close HTML Preview",
@@ -340,6 +341,7 @@ const EN_TRANSLATIONS = {
   "模型：待完成（需 Key + 地址 + 模型）":
     "Model: incomplete (key + URL + model required)",
   "联网：关闭": "Web: Off",
+  "联网：Web Search": "Web: Web Search",
   "联网：OpenAI Web Search": "Web: OpenAI Web Search",
   "联网：Anthropic Web Search": "Web: Anthropic Web Search",
   "联网：Google Search": "Web: Google Search",

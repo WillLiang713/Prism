@@ -526,6 +526,33 @@ class AIService:
                                 web_search_event,
                                 ensure_ascii=False,
                             )
+                            yield AIService._sse_chunk(
+                                "tool",
+                                {
+                                    "callId": str(
+                                        web_search_event.get("callId") or ""
+                                    ).strip(),
+                                    "status": (
+                                        "error"
+                                        if web_search_event.get("status") == "error"
+                                        else "success"
+                                    ),
+                                    "round": current_round,
+                                    "name": str(
+                                        web_search_event.get("name") or "web_search"
+                                    ),
+                                    "resultSummary": (
+                                        str(web_search_event.get("error") or "").strip()
+                                        if web_search_event.get("status") == "error"
+                                        else (
+                                            f"返回 {int(web_search_event.get('totalResults') or 0)} 条结果"
+                                            if int(web_search_event.get("totalResults") or 0)
+                                            > 0
+                                            else "搜索完成"
+                                        )
+                                    ),
+                                },
+                            )
 
         if compat_adapter is not None:
             compat_flush = compat_adapter.flush()

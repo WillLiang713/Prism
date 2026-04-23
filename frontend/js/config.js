@@ -29,6 +29,7 @@ import {
   getCurrentWebSearchToolMode,
   getRuntimeWebSearchStateDefaults,
   isWebSearchEnabled,
+  isNativeWebSearchToolMode,
   normalizeExternalWebSearchProvider,
   normalizeTavilySearchDepth,
   normalizeExaSearchType,
@@ -503,10 +504,14 @@ function normalizeReasoningEffortValue(value) {
 }
 
 function normalizeServiceDefaultWebSearchMode(value, fallback = "") {
+  if (value === false) return "off";
+  if (value === true) return fallback;
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "tavily") return "tavily";
   if (normalized === "exa") return "exa";
   if (normalized === "off") return "off";
+  if (normalized === "false") return "off";
+  if (normalized === "true") return fallback;
   return fallback;
 }
 
@@ -530,7 +535,8 @@ function normalizeService(service, index = 0) {
       providerSelection: providerConfig.selection,
       endpointMode: providerConfig.endpointMode,
       defaultWebSearchMode: normalizeServiceDefaultWebSearchMode(
-        service?.model?.defaultWebSearchMode,
+        service?.model?.defaultWebSearchMode
+          ?? service?.model?.preferBuiltinWebSearch,
         ""
       ),
       apiKey: String(service?.model?.apiKey || ""),
@@ -573,7 +579,11 @@ function migrateLegacyConfig(rawConfig = {}) {
         provider: providerConfig.provider,
         providerSelection: providerConfig.selection,
         endpointMode: providerConfig.endpointMode,
-        defaultWebSearchMode: "off",
+        defaultWebSearchMode: normalizeServiceDefaultWebSearchMode(
+          legacyModelConfig.defaultWebSearchMode
+            ?? legacyModelConfig.preferBuiltinWebSearch,
+          ""
+        ),
         apiKey: legacyModelConfig.apiKey || "",
         model: legacyModelConfig.model || "",
         modelServiceId: "",
@@ -1433,6 +1443,9 @@ export function syncWebSearchStateWithRuntime(options = {}) {
   const defaults = getRuntimeWebSearchStateDefaults();
   const currentToolMode = state.webSearch?.toolMode || getCurrentWebSearchToolMode();
   const currentEnabled = isWebSearchEnabled();
+  const shouldAutoEnableNativeMode =
+    isNativeWebSearchToolMode(defaults.toolMode)
+    && currentToolMode !== defaults.toolMode;
   const nextToolMode = defaults.enabled
     ? defaults.toolMode
     : (
@@ -1440,7 +1453,7 @@ export function syncWebSearchStateWithRuntime(options = {}) {
           ? currentToolMode
           : defaults.toolMode
       );
-  const nextEnabled = defaults.enabled
+  const nextEnabled = defaults.enabled || shouldAutoEnableNativeMode
     ? true
     : options.preserveEnabled === true
       ? currentEnabled
