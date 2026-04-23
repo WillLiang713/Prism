@@ -29,3 +29,4 @@ venv
 *.err
 
 tmp
+.ruff_cache/

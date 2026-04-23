@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-[简体中文](./README.zh-CN.md)
+[简体中文](./docs/README.zh-CN.md)
 
 Prism is a lightweight AI chat client with a Python backend and a static frontend. It provides unified model access, web search tools, local topic management, and a Windows desktop build powered by Tauri.
 
@@ -23,6 +23,20 @@ Prism is a lightweight AI chat client with a Python backend and a static fronten
 - Markdown rendering and code highlighting
 - Image upload support
 - Quick new-topic shortcut: `Ctrl + Alt + O`
+
+## Screenshots
+
+### Chat Workspace
+
+![Prism chat workspace](docs/screenshots/prism-chat-overview.png)
+
+### Service Settings
+
+![Prism service settings](docs/screenshots/prism-settings-services.png)
+
+### Web Search Settings
+
+![Prism web search settings](docs/screenshots/prism-settings-web-search.png)
 
 ## Quick Start
 
